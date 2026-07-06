@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Drawer from 'primevue/drawer'
 import Tag from 'primevue/tag'
-import { componentsByType, dishesForMealType } from '@/data/mockLibrary'
+import { componentsByType, dishesForMealType } from '@/data/localLibrary'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
 import type { ComponentType, MealComponent, MealSlot } from '@/types'
 

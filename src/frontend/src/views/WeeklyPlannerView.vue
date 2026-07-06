@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import Button from 'primevue/button'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
-import { activities } from '@/data/mockLibrary'
+import { activities } from '@/data/localLibrary'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
 import type { MealType, WeekPlan } from '@/types'
 
@@ -21,28 +21,6 @@ const mealTypeLabels: Record<MealType, string> = {
   breakfast: 'Petit-déjeuner',
   lunch: 'Déjeuner',
   dinner: 'Dîner',
-}
-
-const activityDurationByName: Record<string, string | undefined> = {
-  Repos: undefined,
-  Marche: '30 min',
-  Running: '35 min',
-  'Running long': '55 min',
-  Renforcement: '40 min',
-  Mobilité: '20 min',
-  Vélo: '45 min',
-  'Activité familiale': '60 min',
-}
-
-const activityIconByName: Record<string, string> = {
-  Repos: '☕',
-  Marche: '🚶',
-  Running: '🏃',
-  'Running long': '🏃',
-  Renforcement: '🏋️',
-  Mobilité: '🧘',
-  Vélo: '🚲',
-  'Activité familiale': '👨‍👩‍👧‍👦',
 }
 
 const displayedWeekPlan = computed<WeekPlan>(() => shiftWeekPlan(weekPlan.value, weekOffset.value))
@@ -134,12 +112,8 @@ function updateActivity(dayId: string, activityId: string): void {
   activeActivityDayId.value = null
 }
 
-function activityDuration(activityName: string): string | undefined {
-  return activityDurationByName[activityName]
-}
-
-function activityIcon(activityName: string): string {
-  return activityIconByName[activityName] ?? '🏃'
+function activityDuration(durationMinutes: number | undefined): string | undefined {
+  return durationMinutes ? `${durationMinutes} min` : undefined
 }
 
 function resetDemoWeek(): void {
@@ -322,10 +296,12 @@ onBeforeUnmount(() => {
                 :aria-expanded="activeActivityDayId === day.id"
                 @click="openActivity(day.id)"
               >
-                <span class="activity-symbol" aria-hidden="true">{{ activityIcon(day.activity.name) }}</span>
+                <span class="activity-symbol" aria-hidden="true">{{ day.activity.icon }}</span>
                 <span>
                   <strong>{{ day.activity.name }}</strong>
-                  <small v-if="activityDuration(day.activity.name)">{{ activityDuration(day.activity.name) }}</small>
+                  <small v-if="activityDuration(day.activity.defaultDurationMinutes)">
+                    {{ activityDuration(day.activity.defaultDurationMinutes) }}
+                  </small>
                 </span>
               </button>
 
@@ -338,7 +314,7 @@ onBeforeUnmount(() => {
                   :class="{ 'is-selected': activity.id === day.activity.id }"
                   @click="updateActivity(day.id, activity.id)"
                 >
-                  <span aria-hidden="true">{{ activityIcon(activity.name) }}</span>
+                  <span aria-hidden="true">{{ activity.icon }}</span>
                   <span>{{ activity.name }}</span>
                 </button>
               </div>

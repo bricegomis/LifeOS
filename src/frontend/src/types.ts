@@ -52,6 +52,8 @@ export interface MealSlot {
 export interface Activity {
   id: string
   name: string
+  icon: string
+  defaultDurationMinutes?: number
 }
 
 export interface DayPlan {

@@ -18,17 +18,6 @@ const mealTypeLabels: Record<MealType, string> = {
   dinner: 'Dîner',
 }
 
-const activityDurationByName: Record<string, string | undefined> = {
-  Repos: undefined,
-  Marche: '30 min',
-  Running: '35 min',
-  'Running long': '55 min',
-  Renforcement: '40 min',
-  Mobilité: '20 min',
-  Vélo: '45 min',
-  'Activité familiale': '60 min',
-}
-
 const displayedMeal = computed(() => {
   if (!today.value || !selectedMealType.value) {
     return null
@@ -81,7 +70,9 @@ const activityDuration = computed(() => {
     return undefined
   }
 
-  return activityDurationByName[today.value.activity.name]
+  return today.value.activity.defaultDurationMinutes
+    ? `${today.value.activity.defaultDurationMinutes} min`
+    : undefined
 })
 
 function mealName(slot: MealSlot): string {
@@ -233,7 +224,7 @@ onBeforeUnmount(() => {
 
       <section class="today-activity" aria-label="Activité du jour">
         <span class="activity-icon" aria-hidden="true">
-          <i class="pi pi-heart"></i>
+          {{ today.activity.icon }}
         </span>
         <div>
           <p class="eyebrow">Activité physique</p>

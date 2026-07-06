@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { activities, componentsByType, dishesForMealType } from '@/data/mockLibrary'
+import { activities, componentsByType, dishesForMealType } from '@/data/localLibrary'
 import { createDemoWeekPlan, totalsForMeal } from '@/data/demoWeek'
 import type { ComponentType, MealSlot, MealType, WeekPlan } from '@/types'
 

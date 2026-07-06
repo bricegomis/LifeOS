@@ -1,4 +1,4 @@
-import { activities, compositeDishes, mealComponents } from '@/data/mockLibrary'
+import { activities, compositeDishes, mealComponents } from '@/data/localLibrary'
 import type {
   Activity,
   AssembledMeal,
