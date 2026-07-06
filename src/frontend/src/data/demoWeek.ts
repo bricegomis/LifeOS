@@ -129,7 +129,7 @@ const assembledMeals = [
   createAssembledMeal('breakfast-eggs-potatoes-zucchini', ['eggs', 'potatoes', 'zucchini'], 12),
   createAssembledMeal('lunch-steak-potatoes-broccoli', ['steak', 'potatoes', 'broccoli'], 18),
   createAssembledMeal('breakfast-whey-millet-carrots', ['whey', 'millet', 'carrots'], 10),
-  createAssembledMeal('lunch-sardines-rice-mixed', ['sardines', 'rice', 'mixed-vegetables'], 12),
+  createAssembledMeal('lunch-sardines-rice-green-beans', ['sardines', 'rice', 'green-beans'], 12),
   createAssembledMeal('breakfast-eggs-quinoa-broccoli', ['eggs', 'quinoa', 'broccoli'], 14),
   createAssembledMeal(
     'dinner-tempeh-buckwheat-zucchini',
@@ -137,7 +137,7 @@ const assembledMeals = [
     20,
   ),
   createAssembledMeal('breakfast-whey-quinoa-carrots', ['whey', 'quinoa', 'carrots'], 8),
-  createAssembledMeal('lunch-steak-millet-mixed', ['steak', 'millet', 'mixed-vegetables'], 16),
+  createAssembledMeal('lunch-steak-millet-peppers', ['steak', 'millet', 'peppers'], 16),
   createAssembledMeal('breakfast-eggs-rice-broccoli', ['eggs', 'rice', 'broccoli'], 15),
   createAssembledMeal('lunch-sardines-potatoes-zucchini', ['sardines', 'potatoes', 'zucchini'], 14),
   createAssembledMeal('dinner-tempeh-quinoa-broccoli', ['tempeh', 'quinoa', 'broccoli'], 22),
@@ -147,12 +147,12 @@ const assembledMeals = [
     9,
   ),
   createAssembledMeal(
-    'lunch-steak-buckwheat-pasta-mixed',
-    ['steak', 'buckwheat-pasta', 'mixed-vegetables'],
+    'lunch-steak-buckwheat-pasta-green-beans',
+    ['steak', 'buckwheat-pasta', 'green-beans'],
     18,
   ),
   createAssembledMeal('breakfast-eggs-millet-zucchini', ['eggs', 'millet', 'zucchini'], 13),
-  createAssembledMeal('lunch-sardines-quinoa-carrots', ['sardines', 'quinoa', 'carrots'], 15),
+  createAssembledMeal('lunch-sardines-quinoa-peppers', ['sardines', 'quinoa', 'peppers'], 15),
 ]
 
 export function createDemoWeekPlan(): WeekPlan {
@@ -218,52 +218,12 @@ export function createDemoWeekPlan(): WeekPlan {
       day(
         6,
         [
-          requireArrayValue(assembledMeals, 12, 'assembled meal'),
           requireArrayValue(assembledMeals, 13, 'assembled meal'),
-          dish('lentil-rice-dhal'),
+          requireArrayValue(assembledMeals, 14, 'assembled meal'),
+          dish('lasagna'),
         ],
         'family',
       ),
     ],
-  }
-}
-
-export function generateDemoWeekPlan(rotation: number): WeekPlan {
-  const dishRotation = rotation % compositeDishes.length
-  const activityRotation = rotation % activities.length
-  const rotatedDishes = [...compositeDishes.slice(dishRotation), ...compositeDishes.slice(0, dishRotation)]
-  const rotatedActivities = [
-    ...activities.slice(activityRotation),
-    ...activities.slice(0, activityRotation),
-  ]
-  const dinnerDishes = rotatedDishes.filter((item) => item.suitableForDinner)
-  const breakfastDish = rotatedDishes.find((item) => item.suitableForBreakfast)
-  const lunchDish = rotatedDishes.find((item) => item.suitableForLunch)
-
-  return {
-    ...createDemoWeekPlan(),
-    id: `week-2026-07-06-generated-${rotation}`,
-    days: createDemoWeekPlan().days.map((existingDay, index) => {
-      const breakfast =
-        index % 3 === 0 && breakfastDish
-          ? breakfastDish
-          : requireArrayValue(assembledMeals, (index + rotation) % assembledMeals.length, 'breakfast')
-      const lunch =
-        index % 2 === 0 || !lunchDish
-          ? requireArrayValue(assembledMeals, (index + rotation + 3) % assembledMeals.length, 'lunch')
-          : lunchDish
-      const dinner = requireArrayValue(
-        dinnerDishes,
-        index % dinnerDishes.length,
-        'dinner composite dish',
-      )
-      const rotatedActivity = requireArrayValue(
-        rotatedActivities,
-        index % rotatedActivities.length,
-        'activity',
-      )
-
-      return day(index, [breakfast, lunch, dinner], rotatedActivity.id)
-    }),
   }
 }

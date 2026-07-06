@@ -1,12 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { activities, componentsByType, dishesForMealType } from '@/data/mockLibrary'
-import { createDemoWeekPlan, generateDemoWeekPlan, totalsForMeal } from '@/data/demoWeek'
-import type { ComponentType, DayPlan, MealSlot, MealType, WeekPlan } from '@/types'
+import { createDemoWeekPlan, totalsForMeal } from '@/data/demoWeek'
+import type { ComponentType, MealSlot, MealType, WeekPlan } from '@/types'
 
 export const useWeekPlannerStore = defineStore('weekPlanner', () => {
   const weekPlan = ref<WeekPlan>(createDemoWeekPlan())
-  const generationCount = ref(0)
 
   function mealSlot(dayId: string, mealType: MealType): MealSlot | null {
     const day = weekPlan.value.days.find((item) => item.id === dayId)
@@ -18,14 +17,14 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
     Object.assign(slot, totalsForMeal(slot.mealDefinition))
   }
 
-  function generateWeek(): void {
-    generationCount.value += 1
-    weekPlan.value = generateDemoWeekPlan(generationCount.value)
+  function resetDemoWeek(): void {
+    weekPlan.value = createDemoWeekPlan()
   }
 
   function replaceComponent(
     dayId: string,
     mealType: MealType,
+    componentIndex: number,
     componentType: ComponentType,
     componentId: string,
   ): void {
@@ -36,11 +35,9 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
       return
     }
 
-    const componentIndex = slot.mealDefinition.components.findIndex(
-      (component) => component.componentType === componentType,
-    )
+    const currentComponent = slot.mealDefinition.components[componentIndex]
 
-    if (componentIndex >= 0) {
+    if (currentComponent?.componentType === componentType) {
       slot.mealDefinition.components.splice(componentIndex, 1, replacement)
       refreshSlotTotals(slot)
     }
@@ -58,17 +55,18 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
     refreshSlotTotals(slot)
   }
 
-  function updateActivity(dayPlan: DayPlan, activityId: string): void {
+  function updateActivity(dayId: string, activityId: string): void {
+    const dayPlan = weekPlan.value.days.find((day) => day.id === dayId)
     const replacement = activities.find((activity) => activity.id === activityId)
 
-    if (replacement) {
+    if (dayPlan && replacement) {
       dayPlan.activity = replacement
     }
   }
 
   return {
     weekPlan,
-    generateWeek,
+    resetDemoWeek,
     replaceComponent,
     replaceDish,
     updateActivity,
