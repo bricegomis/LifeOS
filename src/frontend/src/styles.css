@@ -303,6 +303,13 @@ a {
   align-items: center;
 }
 
+.week-title-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
 .week-controls {
   display: flex;
   align-items: center;
@@ -311,10 +318,37 @@ a {
   gap: 8px;
 }
 
+.week-summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.week-summary-strip div {
+  display: grid;
+  min-width: 150px;
+  gap: 3px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgb(255 253 248 / 62%);
+}
+
+.week-summary-strip span {
+  color: var(--lifeos-text-soft);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.week-summary-strip strong {
+  font-size: 1.14rem;
+}
+
 .week-planner-surface {
-  border-radius: 28px;
-  background: rgb(255 253 248 / 72%);
-  padding: 12px;
+  border-radius: 24px;
+  background: rgb(255 253 248 / 54%);
+  padding: 14px;
 }
 
 .planner-scroll {
@@ -322,52 +356,42 @@ a {
   padding-bottom: 4px;
 }
 
-.week-table {
-  width: 100%;
-  min-width: 1060px;
-  border-collapse: separate;
-  border-spacing: 0 12px;
+.week-grid {
+  display: grid;
+  min-width: 1120px;
+  gap: 10px;
 }
 
-.week-table th,
-.week-table td {
-  padding: 0;
-  vertical-align: top;
+.week-grid-header,
+.week-grid-row {
+  display: grid;
+  grid-template-columns: 128px repeat(3, minmax(190px, 1fr)) 178px;
+  gap: 10px;
 }
 
-.week-table thead th {
-  padding: 0 12px 4px;
+.week-grid-header {
+  padding: 0 8px 2px;
+}
+
+.week-grid-header span {
   color: var(--lifeos-text-soft);
   font-size: 0.74rem;
   font-weight: 850;
   letter-spacing: 0.06em;
-  text-align: left;
   text-transform: uppercase;
 }
 
-.week-table thead th:first-child {
-  width: 132px;
-}
-
-.week-table thead th:last-child {
-  width: 174px;
-}
-
-.week-table tbody th,
-.week-table tbody td {
-  background: var(--lifeos-surface);
-  padding: 12px;
-}
-
-.week-table tbody th:first-child {
-  border-radius: 22px 0 0 22px;
-}
-
-.week-table tbody td:last-child {
-  border-radius: 0 22px 22px 0;
+.week-grid-row {
+  align-items: stretch;
 }
 
 .week-day-cell {
+  display: grid;
+  align-content: start;
+  min-height: 156px;
+  padding: 16px 14px;
+  border-radius: 18px;
+  background: rgb(255 253 248 / 74%);
   text-align: left;
 }
 
@@ -388,6 +412,11 @@ a {
   font-weight: 650;
 }
 
+.week-meal-cell,
+.activity-cell {
+  min-width: 0;
+}
+
 .week-meal-card {
   display: flex;
   width: 100%;
@@ -397,7 +426,8 @@ a {
   padding: 14px;
   border: 0;
   border-radius: 18px;
-  background: var(--lifeos-surface-soft);
+  background: var(--lifeos-surface);
+  box-shadow: 0 8px 26px rgb(68 55 35 / 7%);
   color: inherit;
   cursor: pointer;
   text-align: left;
@@ -409,6 +439,7 @@ a {
 .week-meal-card:hover,
 .week-meal-card:focus-visible {
   background: var(--lifeos-accent-soft);
+  box-shadow: 0 12px 30px rgb(68 55 35 / 10%);
   outline: none;
   transform: translateY(-1px);
 }
@@ -426,29 +457,86 @@ a {
   padding-top: 10px;
 }
 
-.activity-cell {
-  min-width: 164px;
-}
-
 .activity-button {
-  display: inline-flex;
+  display: flex;
   width: 100%;
-  align-items: center;
-  gap: 9px;
-  padding: 12px 13px;
+  min-height: 86px;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 15px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 18px;
   background: var(--lifeos-accent-soft);
   color: #27523c;
   cursor: pointer;
-  font-weight: 850;
   text-align: left;
+  transition:
+    background-color 0.16s ease,
+    transform 0.16s ease;
 }
 
 .activity-button:hover,
 .activity-button:focus-visible {
   background: #d7e8dc;
   outline: none;
+  transform: translateY(-1px);
+}
+
+.activity-symbol {
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.activity-button strong,
+.activity-button small {
+  display: block;
+}
+
+.activity-button strong {
+  font-weight: 850;
+}
+
+.activity-button small {
+  margin-top: 5px;
+  color: var(--lifeos-text-soft);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.activity-choice-panel {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid rgb(228 218 203 / 74%);
+  border-radius: 18px;
+  background: var(--lifeos-surface);
+  box-shadow: 0 14px 34px rgb(68 55 35 / 12%);
+}
+
+.activity-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.activity-choice:hover,
+.activity-choice:focus-visible,
+.activity-choice.is-selected {
+  background: var(--lifeos-accent-soft);
+  outline: none;
+}
+
+.activity-choice.is-selected {
+  font-weight: 850;
 }
 
 .editor-heading {
@@ -683,6 +771,31 @@ a {
     margin-top: 16px;
   }
 
+  .week-title-row {
+    grid-template-columns: auto auto;
+    justify-content: start;
+  }
+
+  .week-title-row > div {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .week-title-row > .p-button:first-child {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .week-title-row > .p-button:last-child {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .week-summary-strip {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .today-card {
     padding: 18px;
   }
@@ -709,19 +822,14 @@ a {
     padding: 8px 0 8px 16px;
   }
 
-  .week-table {
-    min-width: 920px;
-    border-spacing: 0 10px;
+  .week-grid {
+    min-width: 940px;
   }
 
-  .week-table thead th {
-    padding-right: 10px;
-    padding-left: 10px;
-  }
-
-  .week-table tbody th,
-  .week-table tbody td {
-    padding: 10px;
+  .week-grid-header,
+  .week-grid-row {
+    grid-template-columns: 112px repeat(3, 180px) 168px;
+    gap: 8px;
   }
 
   .week-meal-card {

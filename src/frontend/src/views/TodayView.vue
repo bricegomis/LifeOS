@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import Button from 'primevue/button'
-import Drawer from 'primevue/drawer'
-import Tag from 'primevue/tag'
-import { componentsByType, dishesForMealType } from '@/data/mockLibrary'
+import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
-import type { ComponentType, MealComponent, MealSlot, MealType } from '@/types'
+import type { MealSlot, MealType } from '@/types'
 
 const plannerStore = useWeekPlannerStore()
 const { weekPlan } = storeToRefs(plannerStore)
@@ -14,8 +11,6 @@ const { weekPlan } = storeToRefs(plannerStore)
 const today = computed(() => weekPlan.value.days[0] ?? null)
 const isMobile = ref(false)
 const selectedMealType = ref<MealType | null>(null)
-const selectedComponent = ref<{ componentIndex: number; componentType: ComponentType } | null>(null)
-const showDishChoices = ref(false)
 
 const mealTypeLabels: Record<MealType, string> = {
   breakfast: 'Petit-déjeuner',
@@ -73,22 +68,6 @@ const todaySummary = computed(() => {
   )
 })
 
-const compatibleComponents = computed<MealComponent[]>(() => {
-  if (!selectedComponent.value) {
-    return []
-  }
-
-  return componentsByType(selectedComponent.value.componentType)
-})
-
-const availableDishes = computed(() => {
-  if (!selectedMealType.value) {
-    return []
-  }
-
-  return dishesForMealType(selectedMealType.value)
-})
-
 const mealEditorTitle = computed(() => {
   if (!today.value || !selectedMealType.value) {
     return ''
@@ -115,43 +94,10 @@ function mealName(slot: MealSlot): string {
 
 function openMeal(mealType: MealType): void {
   selectedMealType.value = mealType
-  selectedComponent.value = null
-  showDishChoices.value = false
 }
 
 function closeEditor(): void {
   selectedMealType.value = null
-  selectedComponent.value = null
-  showDishChoices.value = false
-}
-
-function openComponentChoices(componentIndex: number, componentType: ComponentType): void {
-  selectedComponent.value = { componentIndex, componentType }
-  showDishChoices.value = false
-}
-
-function replaceComponent(componentId: string): void {
-  if (!today.value || !selectedMealType.value || !selectedComponent.value) {
-    return
-  }
-
-  plannerStore.replaceComponent(
-    today.value.id,
-    selectedMealType.value,
-    selectedComponent.value.componentIndex,
-    selectedComponent.value.componentType,
-    componentId,
-  )
-  selectedComponent.value = null
-}
-
-function replaceDish(dishId: string): void {
-  if (!today.value || !selectedMealType.value) {
-    return
-  }
-
-  plannerStore.replaceDish(today.value.id, selectedMealType.value, dishId)
-  showDishChoices.value = false
 }
 
 function syncViewport(): void {
@@ -302,117 +248,13 @@ onBeforeUnmount(() => {
       </RouterLink>
     </div>
 
-    <Drawer
+    <MealEditorDrawer
       v-model:visible="drawerVisible"
-      class="planner-editor-drawer"
+      :day-id="today?.id ?? null"
+      :meal-slot="displayedMeal"
+      :title="mealEditorTitle"
       :position="drawerPosition"
-      :style="drawerStyle"
-      modal
-      block-scroll
-      :dismissable="true"
-      :header="mealEditorTitle"
-    >
-      <template #header>
-        <div class="editor-heading">
-          <p class="eyebrow">Édition repas</p>
-          <h2>{{ mealEditorTitle }}</h2>
-        </div>
-      </template>
-
-      <template v-if="displayedMeal && today && selectedMealType">
-        <div class="editor-content">
-          <p class="editor-summary">{{ mealName(displayedMeal) }}</p>
-
-          <template v-if="displayedMeal.mealDefinition.kind === 'assembled'">
-            <button
-              v-for="(component, componentIndex) in displayedMeal.mealDefinition.components"
-              :key="`${component.componentType}-${component.id}-${componentIndex}`"
-              class="editor-row"
-              type="button"
-              @click="openComponentChoices(componentIndex, component.componentType)"
-            >
-              <span>
-                <span aria-hidden="true">{{ component.icon }}</span>
-                {{ component.name }}
-              </span>
-              <i class="pi pi-chevron-right" aria-hidden="true"></i>
-            </button>
-
-            <section v-if="selectedComponent" class="choice-list" aria-label="Alternatives composant">
-              <div class="choice-list-header">
-                <h3>Choisir un remplacement</h3>
-                <Button
-                  label="Retour"
-                  icon="pi pi-arrow-left"
-                  severity="secondary"
-                  text
-                  size="small"
-                  @click="selectedComponent = null"
-                />
-              </div>
-              <button
-                v-for="component in compatibleComponents"
-                :key="component.id"
-                class="choice-row"
-                type="button"
-                @click="replaceComponent(component.id)"
-              >
-                <span>
-                  <span aria-hidden="true">{{ component.icon }}</span>
-                  {{ component.name }}
-                </span>
-                <small>{{ component.estimatedCalories }} kcal · {{ component.estimatedProteinGrams }} g prot.</small>
-              </button>
-            </section>
-          </template>
-
-          <template v-else>
-            <button class="editor-row" type="button" @click="showDishChoices = !showDishChoices">
-              <span>
-                <span aria-hidden="true">{{ displayedMeal.mealDefinition.icon }}</span>
-                {{ displayedMeal.mealDefinition.name }}
-              </span>
-              <i class="pi pi-chevron-right" aria-hidden="true"></i>
-            </button>
-
-            <section v-if="showDishChoices" class="choice-list" aria-label="Alternatives plat composé">
-              <h3>Plats compatibles</h3>
-              <button
-                v-for="dish in availableDishes"
-                :key="dish.id"
-                class="choice-row"
-                type="button"
-                @click="replaceDish(dish.id)"
-              >
-                <span>
-                  <span aria-hidden="true">{{ dish.icon }}</span>
-                  {{ dish.name }}
-                </span>
-                <small>{{ dish.estimatedCalories }} kcal · {{ dish.estimatedProteinGrams }} g prot.</small>
-              </button>
-            </section>
-          </template>
-        </div>
-      </template>
-
-      <template #footer>
-        <footer v-if="displayedMeal" class="editor-footer">
-          <div class="editor-tags">
-            <Tag
-              :value="`${displayedMeal.estimatedCalories} kcal · ${displayedMeal.estimatedProteinGrams} g prot.`"
-              severity="secondary"
-              rounded
-            />
-            <Tag
-              :value="`${displayedMeal.preparationTimeMinutes} min`"
-              icon="pi pi-clock"
-              severity="info"
-              rounded
-            />
-          </div>
-          <Button class="editor-validate" label="Valider" icon="pi pi-check" @click="closeEditor" />
-        </footer>
-      </template>
-    </Drawer>
+      :drawer-style="drawerStyle"
+    />
   </section>
 </template>
