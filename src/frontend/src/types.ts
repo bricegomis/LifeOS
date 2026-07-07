@@ -11,6 +11,20 @@ export type Weekday =
   | 'saturday'
   | 'sunday'
 
+export type WeekMode = 'kids' | 'solo'
+
+export type WorkLocation = 'home' | 'office' | 'off'
+
+export interface DayContext {
+  workLocation: WorkLocation
+  bikeCommute: boolean
+}
+
+export interface WeekContext {
+  weekMode: WeekMode
+  days: Record<Weekday, DayContext>
+}
+
 export interface Nutrition {
   estimatedCalories: number
   estimatedProteinGrams: number
@@ -44,6 +58,8 @@ export interface CompositeDish extends Nutrition {
   suitableForBreakfast: boolean
   suitableForLunch: boolean
   suitableForDinner: boolean
+  childFriendly?: boolean
+  suitableForBatchCooking?: boolean
   active: boolean
 }
 

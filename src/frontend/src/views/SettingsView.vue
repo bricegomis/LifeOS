@@ -6,6 +6,12 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import { compositeDishes, mealComponents } from '@/data/localLibrary'
 import { usePlanningRulesStore } from '@/stores/planningRules'
+import {
+  useWeekContextStore,
+  weekdayLabels,
+  weekdays,
+  workLocationLabels,
+} from '@/stores/weekContext'
 import type {
   ComponentType,
   FrequencyRule,
@@ -13,7 +19,9 @@ import type {
   MealType,
   PlanningRule,
   PlanningRuleTarget,
+  WeekMode,
   Weekday,
+  WorkLocation,
 } from '@/types'
 
 interface SelectOption<T extends string = string> {
@@ -29,6 +37,7 @@ interface TargetOption {
 }
 
 const planningRulesStore = usePlanningRulesStore()
+const weekContextStore = useWeekContextStore()
 
 const weekdayOptions: SelectOption<Weekday>[] = [
   { label: 'Lundi', value: 'monday' },
@@ -44,6 +53,22 @@ const mealTypeOptions: SelectOption<MealType>[] = [
   { label: 'Petit-déjeuner', value: 'breakfast' },
   { label: 'Déjeuner', value: 'lunch' },
   { label: 'Dîner', value: 'dinner' },
+]
+
+const weekModeOptions: SelectOption<WeekMode>[] = [
+  { label: 'Avec enfants', value: 'kids' },
+  { label: 'Solo', value: 'solo' },
+]
+
+const workLocationOptions: SelectOption<WorkLocation>[] = [
+  { label: 'Télétravail', value: 'home' },
+  { label: 'Bureau', value: 'office' },
+  { label: 'Off', value: 'off' },
+]
+
+const bikeCommuteOptions = [
+  { label: 'Sans vélo', value: false },
+  { label: 'Vélo', value: true },
 ]
 
 const componentTypeLabels: Record<ComponentType, string> = {
@@ -209,6 +234,18 @@ function savePlanningRule(): void {
 function updateFrequency(rule: FrequencyRule, value: number | null): void {
   planningRulesStore.updateFrequencyRule(rule.id, value ?? 0)
 }
+
+function updateWeekMode(value: WeekMode): void {
+  weekContextStore.updateWeekMode(value)
+}
+
+function updateWorkLocation(weekday: Weekday, value: WorkLocation): void {
+  weekContextStore.updateWorkLocation(weekday, value)
+}
+
+function updateBikeCommute(weekday: Weekday, value: boolean): void {
+  weekContextStore.updateBikeCommute(weekday, value)
+}
 </script>
 
 <template>
@@ -218,6 +255,60 @@ function updateFrequency(rule: FrequencyRule, value: number | null): void {
       <h1>Règles de planification alimentaire</h1>
       <p>Configuration locale simple pour préparer le futur générateur de semaine.</p>
     </header>
+
+    <section class="settings-section" aria-labelledby="weekly-context-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Contexte semaine</p>
+          <h2 id="weekly-context-title">Organisation réelle</h2>
+        </div>
+      </div>
+
+      <label class="form-field week-mode-field">
+        <span>Mode semaine</span>
+        <Select
+          :model-value="weekContextStore.weekContext.weekMode"
+          :options="weekModeOptions"
+          option-label="label"
+          option-value="value"
+          @update:model-value="updateWeekMode($event)"
+        />
+      </label>
+
+      <div class="context-grid" aria-label="Organisation des journées">
+        <article v-for="weekday in weekdays" :key="weekday" class="context-row">
+          <strong>{{ weekdayLabels[weekday] }}</strong>
+
+          <div class="context-controls">
+            <Select
+              :model-value="weekContextStore.weekContext.days[weekday].workLocation"
+              :options="workLocationOptions"
+              option-label="label"
+              option-value="value"
+              :aria-label="`Lieu de travail ${weekdayLabels[weekday]}`"
+              @update:model-value="updateWorkLocation(weekday, $event)"
+            />
+
+            <Select
+              :model-value="weekContextStore.weekContext.days[weekday].bikeCommute"
+              :options="bikeCommuteOptions"
+              option-label="label"
+              option-value="value"
+              :disabled="weekContextStore.weekContext.days[weekday].workLocation !== 'office'"
+              :aria-label="`Trajet vélo ${weekdayLabels[weekday]}`"
+              @update:model-value="updateBikeCommute(weekday, $event)"
+            />
+          </div>
+
+          <small>
+            {{ workLocationLabels[weekContextStore.weekContext.days[weekday].workLocation] }}
+            <template v-if="weekContextStore.weekContext.days[weekday].bikeCommute">
+              · Vélo
+            </template>
+          </small>
+        </article>
+      </div>
+    </section>
 
     <section class="settings-section" aria-labelledby="fixed-planning-title">
       <div class="section-heading">
@@ -396,13 +487,15 @@ function updateFrequency(rule: FrequencyRule, value: number | null): void {
 
 .rule-list,
 .frequency-list,
+.context-grid,
 .rule-form {
   display: grid;
   gap: 0.75rem;
 }
 
 .rule-row,
-.frequency-row {
+.frequency-row,
+.context-row {
   min-height: 4.25rem;
   padding: 0.85rem 0;
   border-top: 1px solid var(--surface-border);
@@ -420,8 +513,26 @@ function updateFrequency(rule: FrequencyRule, value: number | null): void {
 .frequency-main span,
 .form-field span,
 .select-option span,
-.empty-state {
+.empty-state,
+.context-row small {
   color: var(--text-color-secondary);
+}
+
+.week-mode-field {
+  max-width: 18rem;
+}
+
+.context-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.7fr) minmax(18rem, 1.5fr) minmax(8rem, 0.8fr);
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.context-controls {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(8rem, 0.8fr);
+  gap: 0.5rem;
 }
 
 .rule-actions {
@@ -448,9 +559,15 @@ function updateFrequency(rule: FrequencyRule, value: number | null): void {
 @media (max-width: 640px) {
   .section-heading,
   .rule-row,
-  .frequency-row {
+  .frequency-row,
+  .context-row {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .context-row,
+  .context-controls {
+    grid-template-columns: 1fr;
   }
 
   .rule-actions,

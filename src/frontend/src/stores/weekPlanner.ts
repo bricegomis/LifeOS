@@ -9,7 +9,15 @@ import {
   mealComponents,
 } from '@/data/localLibrary'
 import { createDemoWeekPlan, totalsForMeal } from '@/data/demoWeek'
-import type { ComponentType, FrequencyRule, MealSlot, MealType, PlanningRule, WeekPlan } from '@/types'
+import type {
+  ComponentType,
+  FrequencyRule,
+  MealSlot,
+  MealType,
+  PlanningRule,
+  WeekContext,
+  WeekPlan,
+} from '@/types'
 
 interface StoredWeekPlan {
   schemaVersion: 1
@@ -74,7 +82,11 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
     saveWeekPlan(weekPlan.value)
   }
 
-  function generateWeek(planningRules: PlanningRule[], frequencyRules: FrequencyRule[]): void {
+  function generateWeek(
+    planningRules: PlanningRule[],
+    frequencyRules: FrequencyRule[],
+    weekContext: WeekContext,
+  ): void {
     weekPlan.value = createGeneratedWeekPlan({
       library: {
         mealComponents,
@@ -83,6 +95,7 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
       },
       planningRules,
       frequencyRules,
+      weekContext,
       startDate: weekPlan.value.startDate,
     })
     saveWeekPlan(weekPlan.value)

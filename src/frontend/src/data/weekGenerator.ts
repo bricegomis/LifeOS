@@ -12,7 +12,9 @@ import type {
   MealType,
   PlanningRule,
   WeekPlan,
+  WeekContext,
   Weekday,
+  WorkLocation,
 } from '@/types'
 
 interface MealLibrary {
@@ -25,6 +27,7 @@ interface GenerateWeekPlanOptions {
   library: MealLibrary
   planningRules: PlanningRule[]
   frequencyRules: FrequencyRule[]
+  weekContext: WeekContext
   startDate: string
 }
 
@@ -51,23 +54,25 @@ const weekdays: Weekday[] = [
 ]
 
 const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner']
-const activityPlan = ['running', 'strength', 'mobility', 'running', 'strength', 'long-running', 'rest']
+const soloActivityPlan = ['running', 'strength', 'running', 'mobility', 'strength', 'long-running', 'rest']
+const kidsActivityPlan = ['running', 'mobility', 'strength', 'running', 'walk', 'family', 'rest']
 const pleasureDishIds = new Set(['homemade-pizza', 'lasagna', 'buckwheat-cheese-pasta'])
 
 export function createGeneratedWeekPlan({
   library,
   planningRules,
   frequencyRules,
+  weekContext,
   startDate,
 }: GenerateWeekPlanOptions): WeekPlan {
-  const state = createGeneratorState(library)
+  const state = createGeneratorState(library, weekContext)
   const days = createEmptyWeek(startDate)
   const fixedSlots = new Set<string>()
 
   applyFixedRules(days, planningRules, state, fixedSlots)
   applyFrequencyRules(days, frequencyRules, state, fixedSlots)
   completeMeals(days, state, frequencyRules)
-  generateActivities(days, state.activities)
+  generateActivities(days, state.activities, weekContext)
 
   return {
     id: `week-${startDate}`,
@@ -83,7 +88,7 @@ export function createGeneratedWeekPlan({
   }
 }
 
-function createGeneratorState(library: MealLibrary) {
+function createGeneratorState(library: MealLibrary, weekContext: WeekContext) {
   const activeComponents = library.mealComponents.filter((component) => component.active)
   const activeDishes = library.compositeDishes.filter((dish) => dish.active)
 
@@ -96,6 +101,7 @@ function createGeneratorState(library: MealLibrary) {
     },
     dishes: activeDishes,
     activities: library.activities,
+    weekContext,
     rotation: {
       breakfast: 0,
       protein: 0,
@@ -323,7 +329,11 @@ function nextBreakfast(
     ),
   ].filter(Boolean)
 
-  const mealDefinition = chooseDifferentMeal(options, previousMeal, state.rotation.breakfast)
+  const mealDefinition = chooseDifferentMeal(
+    prioritizeMealsForContext(options, dayIndex, 'breakfast', state.weekContext),
+    previousMeal,
+    state.rotation.breakfast,
+  )
   state.rotation.breakfast += 1
 
   return createMealSlot(dayIndex, 'breakfast', mealDefinition)
@@ -341,7 +351,7 @@ function nextLunchOrDinner(
   state.rotation.dish += 1
 
   if (shouldUseDish) {
-    const dish = nextCompatibleDish(state, mealType, previousMeal, days, frequencyRules)
+    const dish = nextCompatibleDish(dayIndex, state, mealType, previousMeal, days, frequencyRules)
 
     if (dish) {
       return createMealSlot(dayIndex, mealType, cloneDish(dish))
@@ -382,11 +392,9 @@ function createVariedAssembledMeal(
   )
 }
 
-function generateActivities(days: DraftDayPlan[], activities: Activity[]): void {
+function generateActivities(days: DraftDayPlan[], activities: Activity[], weekContext: WeekContext): void {
   for (const [index, day] of days.entries()) {
-    day.activity =
-      activities.find((activity) => activity.id === activityPlan[index]) ??
-      requireArrayValue(activities, index % activities.length, 'activity')
+    day.activity = activityForContext(index, activities, weekContext)
   }
 }
 
@@ -498,7 +506,7 @@ function nextProtein(
   state: ReturnType<typeof createGeneratorState>,
   frequencyRules: FrequencyRule[],
 ): MealComponent {
-  const proteins = state.componentsByType.protein
+  const proteins = prioritizeProteinsForContext(state.componentsByType.protein, state.weekContext)
 
   for (let offset = 0; offset < proteins.length; offset += 1) {
     const index = (state.rotation.protein + offset) % proteins.length
@@ -522,13 +530,19 @@ function componentById(state: ReturnType<typeof createGeneratorState>, component
 }
 
 function nextCompatibleDish(
+  dayIndex: number,
   state: ReturnType<typeof createGeneratorState>,
   mealType: MealType,
   previousMeal: MealSlot | null,
   days: DraftDayPlan[],
   frequencyRules: FrequencyRule[],
 ): CompositeDish | null {
-  const dishes = dishesForMealType(state.dishes, mealType)
+  const dishes = prioritizeDishesForContext(
+    dishesForMealType(state.dishes, mealType),
+    dayIndex,
+    mealType,
+    state.weekContext,
+  )
   const previousKey = previousMeal ? mealIdentity(previousMeal.mealDefinition) : null
 
   if (dishes.length === 0) {
@@ -586,6 +600,133 @@ function dishesForMealType(dishes: CompositeDish[], mealType: MealType): Composi
 
     return dish.suitableForDinner
   })
+}
+
+function prioritizeMealsForContext(
+  meals: MealDefinition[],
+  dayIndex: number,
+  mealType: MealType,
+  weekContext: WeekContext,
+): MealDefinition[] {
+  return [...meals].sort(
+    (left, right) =>
+      mealContextScore(right, dayIndex, mealType, weekContext) -
+      mealContextScore(left, dayIndex, mealType, weekContext),
+  )
+}
+
+function prioritizeDishesForContext(
+  dishes: CompositeDish[],
+  dayIndex: number,
+  mealType: MealType,
+  weekContext: WeekContext,
+): CompositeDish[] {
+  return [...dishes].sort(
+    (left, right) =>
+      mealContextScore(right, dayIndex, mealType, weekContext) -
+      mealContextScore(left, dayIndex, mealType, weekContext),
+  )
+}
+
+function mealContextScore(
+  mealDefinition: MealDefinition,
+  dayIndex: number,
+  mealType: MealType,
+  weekContext: WeekContext,
+): number {
+  const dayContext = contextForDayIndex(weekContext, dayIndex)
+  let score = 0
+
+  if (mealDefinition.kind === 'composite') {
+    if (weekContext.weekMode === 'kids') {
+      score += mealDefinition.childFriendly ? 4 : -4
+      score += mealDefinition.preparationTimeMinutes <= 35 ? 2 : -2
+
+      if (mealType === 'dinner' && isWeekday(dayIndex) && mealDefinition.preparationTimeMinutes > 35) {
+        score -= 3
+      }
+    } else {
+      score += mealDefinition.suitableForBatchCooking ? 2 : 0
+      score += mealDefinition.childFriendly ? 0 : 2
+    }
+
+    if (dayContext.workLocation === 'office' && mealDefinition.preparationTimeMinutes > 35) {
+      score -= 2
+    }
+  }
+
+  return score
+}
+
+function prioritizeProteinsForContext(
+  proteins: MealComponent[],
+  weekContext: WeekContext,
+): MealComponent[] {
+  if (weekContext.weekMode === 'solo') {
+    return proteins
+  }
+
+  return [...proteins].sort((left, right) => proteinKidsScore(right) - proteinKidsScore(left))
+}
+
+function proteinKidsScore(component: MealComponent): number {
+  if (component.id === 'tempeh') {
+    return -3
+  }
+
+  if (component.id === 'chicken' || component.id === 'eggs') {
+    return 3
+  }
+
+  return 0
+}
+
+function activityForContext(
+  dayIndex: number,
+  activities: Activity[],
+  weekContext: WeekContext,
+): Activity {
+  const dayContext = contextForDayIndex(weekContext, dayIndex)
+  const preferredIds = activityIdsForContext(dayIndex, dayContext.workLocation, weekContext)
+
+  return (
+    preferredIds
+      .map((id) => activities.find((activity) => activity.id === id))
+      .find((activity): activity is Activity => Boolean(activity)) ??
+    requireArrayValue(activities, dayIndex % activities.length, 'activity')
+  )
+}
+
+function activityIdsForContext(
+  dayIndex: number,
+  workLocation: WorkLocation,
+  weekContext: WeekContext,
+): string[] {
+  const dayContext = contextForDayIndex(weekContext, dayIndex)
+
+  if (workLocation === 'office' && dayContext.bikeCommute) {
+    return ['mobility', 'walk', 'rest']
+  }
+
+  if (workLocation === 'home') {
+    const plan = weekContext.weekMode === 'solo' ? soloActivityPlan : kidsActivityPlan
+
+    return [plan[dayIndex] ?? 'running', 'strength', 'running', 'mobility']
+  }
+
+  if (weekContext.weekMode === 'kids') {
+    return dayIndex >= 5 ? ['family', 'walk', 'rest'] : ['mobility', 'walk', 'rest']
+  }
+
+  return [soloActivityPlan[dayIndex] ?? 'rest', 'long-running', 'walk', 'rest']
+}
+
+function contextForDayIndex(weekContext: WeekContext, dayIndex: number) {
+  return weekContext.days[requireArrayValue(weekdays, dayIndex, 'weekday')]
+}
+
+function isWeekday(dayIndex: number): boolean {
+  return dayIndex >= 0 && dayIndex <= 4
 }
 
 function chooseDifferentMeal(

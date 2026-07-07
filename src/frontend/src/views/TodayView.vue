@@ -2,11 +2,14 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
+import { useWeekContextStore, workLocationLabels } from '@/stores/weekContext'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
 import type { MealSlot, MealType } from '@/types'
 
 const plannerStore = useWeekPlannerStore()
+const weekContextStore = useWeekContextStore()
 const { weekPlan } = storeToRefs(plannerStore)
+const { weekContext } = storeToRefs(weekContextStore)
 
 const today = computed(() => weekPlan.value.days[0] ?? null)
 const isMobile = ref(false)
@@ -75,6 +78,19 @@ const activityDuration = computed(() => {
     : undefined
 })
 
+const todayContextLabel = computed(() => {
+  const context = weekContext.value.days.monday
+  const labels = [workLocationLabels[context.workLocation]]
+
+  if (context.bikeCommute) {
+    labels.push('Vélo')
+  }
+
+  labels.push(weekContext.value.weekMode === 'kids' ? 'Enfants' : 'Solo')
+
+  return labels.join(' · ')
+})
+
 function mealName(slot: MealSlot): string {
   if (slot.mealDefinition.kind === 'composite') {
     return slot.mealDefinition.name
@@ -112,6 +128,7 @@ onBeforeUnmount(() => {
         <p class="eyebrow">Aujourd'hui</p>
         <h1>{{ today.dateLabel }} {{ today.shortDateLabel }}</h1>
         <p>Une journée claire, sans bruit inutile.</p>
+        <p class="today-context">{{ todayContextLabel }}</p>
       </div>
     </header>
 

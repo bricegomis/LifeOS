@@ -5,13 +5,20 @@ import Button from 'primevue/button'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
 import { activities } from '@/data/localLibrary'
 import { usePlanningRulesStore } from '@/stores/planningRules'
+import {
+  useWeekContextStore,
+  weekdays,
+  workLocationShortLabels,
+} from '@/stores/weekContext'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
-import type { MealType, WeekPlan } from '@/types'
+import type { MealType, WeekPlan, Weekday } from '@/types'
 
 const plannerStore = useWeekPlannerStore()
 const planningRulesStore = usePlanningRulesStore()
+const weekContextStore = useWeekContextStore()
 const { weekPlan } = storeToRefs(plannerStore)
 const { planningRules, frequencyRules } = storeToRefs(planningRulesStore)
+const { weekContext } = storeToRefs(weekContextStore)
 
 const selectedMeal = ref<{ dayId: string; mealType: MealType } | null>(null)
 const activeActivityDayId = ref<string | null>(null)
@@ -120,9 +127,31 @@ function activityDuration(durationMinutes: number | undefined): string | undefin
 }
 
 function resetDemoWeek(): void {
-  plannerStore.generateWeek(planningRules.value, frequencyRules.value)
+  plannerStore.generateWeek(planningRules.value, frequencyRules.value, weekContext.value)
   weekOffset.value = 0
   closeEditors()
+}
+
+function weekdayForIndex(index: number): Weekday {
+  return weekdays[index % weekdays.length] ?? 'monday'
+}
+
+function dayContextBadges(dayIndex: number): string[] {
+  const context = weekContext.value.days[weekdayForIndex(dayIndex)]
+  const badges = [context.workLocation === 'home' ? '🏠' : context.workLocation === 'office' ? '🏢' : '•']
+  badges.push(workLocationShortLabels[context.workLocation])
+
+  if (context.bikeCommute) {
+    badges.push('🚲 Vélo')
+  }
+
+  if (weekContext.value.weekMode === 'kids') {
+    badges.push('Enfants')
+  } else {
+    badges.push('Solo')
+  }
+
+  return badges
 }
 
 function previousWeek(): void {
@@ -258,10 +287,13 @@ onBeforeUnmount(() => {
             <span role="columnheader">Activité</span>
           </div>
 
-          <div v-for="day in displayedWeekPlan.days" :key="day.id" class="week-grid-row" role="row">
+          <div v-for="(day, dayIndex) in displayedWeekPlan.days" :key="day.id" class="week-grid-row" role="row">
             <div class="week-day-cell" role="rowheader">
               <span class="day-name">{{ day.dateLabel }}</span>
               <span class="day-date">{{ day.shortDateLabel }}</span>
+              <span class="day-context">
+                <span v-for="badge in dayContextBadges(dayIndex)" :key="badge">{{ badge }}</span>
+              </span>
             </div>
 
             <div v-for="mealType in mealTypes" :key="mealType" class="week-meal-cell" role="cell">

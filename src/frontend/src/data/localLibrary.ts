@@ -303,6 +303,8 @@ export const compositeDishes: CompositeDish[] = [
     suitableForBreakfast: false,
     suitableForLunch: true,
     suitableForDinner: true,
+    childFriendly: false,
+    suitableForBatchCooking: true,
     active: true,
   },
   {
@@ -318,6 +320,8 @@ export const compositeDishes: CompositeDish[] = [
     suitableForBreakfast: false,
     suitableForLunch: true,
     suitableForDinner: true,
+    childFriendly: false,
+    suitableForBatchCooking: true,
     active: true,
   },
   {
@@ -333,6 +337,8 @@ export const compositeDishes: CompositeDish[] = [
     suitableForBreakfast: false,
     suitableForLunch: true,
     suitableForDinner: true,
+    childFriendly: true,
+    suitableForBatchCooking: true,
     active: true,
   },
   {
@@ -348,6 +354,8 @@ export const compositeDishes: CompositeDish[] = [
     suitableForBreakfast: true,
     suitableForLunch: false,
     suitableForDinner: false,
+    childFriendly: true,
+    suitableForBatchCooking: false,
     active: true,
   },
   {
@@ -363,6 +371,8 @@ export const compositeDishes: CompositeDish[] = [
     suitableForBreakfast: false,
     suitableForLunch: true,
     suitableForDinner: true,
+    childFriendly: true,
+    suitableForBatchCooking: false,
     active: true,
   },
   {
@@ -378,6 +388,8 @@ export const compositeDishes: CompositeDish[] = [
     suitableForBreakfast: false,
     suitableForLunch: true,
     suitableForDinner: true,
+    childFriendly: true,
+    suitableForBatchCooking: true,
     active: true,
   },
   {
@@ -393,6 +405,8 @@ export const compositeDishes: CompositeDish[] = [
     suitableForBreakfast: false,
     suitableForLunch: true,
     suitableForDinner: true,
+    childFriendly: true,
+    suitableForBatchCooking: true,
     active: true,
   },
   {
@@ -408,6 +422,8 @@ export const compositeDishes: CompositeDish[] = [
     suitableForBreakfast: false,
     suitableForLunch: true,
     suitableForDinner: true,
+    childFriendly: true,
+    suitableForBatchCooking: false,
     active: true,
   },
 ]
