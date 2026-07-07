@@ -4,11 +4,14 @@ import { storeToRefs } from 'pinia'
 import Button from 'primevue/button'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
 import { activities } from '@/data/localLibrary'
+import { usePlanningRulesStore } from '@/stores/planningRules'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
 import type { MealType, WeekPlan } from '@/types'
 
 const plannerStore = useWeekPlannerStore()
+const planningRulesStore = usePlanningRulesStore()
 const { weekPlan } = storeToRefs(plannerStore)
+const { planningRules, frequencyRules } = storeToRefs(planningRulesStore)
 
 const selectedMeal = ref<{ dayId: string; mealType: MealType } | null>(null)
 const activeActivityDayId = ref<string | null>(null)
@@ -117,7 +120,7 @@ function activityDuration(durationMinutes: number | undefined): string | undefin
 }
 
 function resetDemoWeek(): void {
-  plannerStore.resetDemoWeek()
+  plannerStore.generateWeek(planningRules.value, frequencyRules.value)
   weekOffset.value = 0
   closeEditors()
 }

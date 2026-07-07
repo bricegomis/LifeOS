@@ -2,6 +2,15 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner'
 
 export type ComponentType = 'protein' | 'starch' | 'vegetable' | 'optional'
 
+export type Weekday =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday'
+
 export interface Nutrition {
   estimatedCalories: number
   estimatedProteinGrams: number
@@ -71,4 +80,43 @@ export interface WeekPlan {
   startDate: string
   status: 'Draft' | 'Generated' | 'Validated' | 'Archived'
   days: DayPlan[]
+}
+
+export type PlanningRuleTarget =
+  | {
+      kind: 'component'
+      componentId: string
+      componentType: ComponentType
+    }
+  | {
+      kind: 'dish'
+      dishId: string
+    }
+
+export interface PlanningRule {
+  id: string
+  weekday: Weekday
+  mealType: MealType
+  target: PlanningRuleTarget
+}
+
+export type FrequencyRuleTarget =
+  | {
+      kind: 'component'
+      componentId: string
+    }
+  | {
+      kind: 'dish'
+      dishId: string
+    }
+  | {
+      kind: 'category'
+      categoryId: string
+      label: string
+    }
+
+export interface FrequencyRule {
+  id: string
+  target: FrequencyRuleTarget
+  targetCountPerWeek: number
 }
