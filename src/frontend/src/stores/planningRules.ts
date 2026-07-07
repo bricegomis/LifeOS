@@ -1,6 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import type { FrequencyRule, PlanningRule } from '@/types'
+import { compositeDishes, mealComponents } from '@/data/localLibrary'
+import { weekdays } from '@/stores/weekContext'
+import type {
+  ComponentType,
+  FrequencyRule,
+  FrequencyRuleTarget,
+  MealType,
+  PlanningRule,
+  PlanningRuleTarget,
+  Weekday,
+} from '@/types'
 
 interface PlanningRulesState {
   planningRules: PlanningRule[]
@@ -60,10 +70,127 @@ const defaultFrequencyRules: FrequencyRule[] = [
   },
 ]
 
+const activeComponentIds = new Set(mealComponents.filter((component) => component.active).map((component) => component.id))
+const activeDishIds = new Set(compositeDishes.filter((dish) => dish.active).map((dish) => dish.id))
+
 function cloneDefaultState(): PlanningRulesState {
   return {
     planningRules: defaultPlanningRules.map((rule) => ({ ...rule, target: { ...rule.target } })),
     frequencyRules: defaultFrequencyRules.map((rule) => ({ ...rule, target: { ...rule.target } })),
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isWeekday(value: unknown): value is Weekday {
+  return typeof value === 'string' && (weekdays as readonly string[]).includes(value)
+}
+
+function isMealType(value: unknown): value is MealType {
+  return value === 'breakfast' || value === 'lunch' || value === 'dinner'
+}
+
+function isPlanningRuleTarget(value: unknown): value is PlanningRuleTarget {
+  if (!isRecord(value) || typeof value.kind !== 'string') {
+    return false
+  }
+
+  if (value.kind === 'component') {
+    return (
+      typeof value.componentId === 'string' &&
+      typeof value.componentType === 'string' &&
+      ['protein', 'starch', 'vegetable', 'optional'].includes(value.componentType)
+    )
+  }
+
+  return value.kind === 'dish' && typeof value.dishId === 'string'
+}
+
+function isFrequencyRuleTarget(value: unknown): value is FrequencyRuleTarget {
+  if (!isRecord(value) || typeof value.kind !== 'string') {
+    return false
+  }
+
+  if (value.kind === 'component') {
+    return typeof value.componentId === 'string'
+  }
+
+  if (value.kind === 'dish') {
+    return typeof value.dishId === 'string'
+  }
+
+  return (
+    value.kind === 'category' &&
+    typeof value.categoryId === 'string' &&
+    typeof value.label === 'string'
+  )
+}
+
+function normalizePlanningRule(value: unknown): PlanningRule | null {
+  if (!isRecord(value) || typeof value.id !== 'string') {
+    return null
+  }
+
+  if (!isWeekday(value.weekday) || !isMealType(value.mealType) || !isPlanningRuleTarget(value.target)) {
+    return null
+  }
+
+  if (value.target.kind === 'component') {
+    return activeComponentIds.has(value.target.componentId)
+      ? {
+          id: value.id,
+          weekday: value.weekday,
+          mealType: value.mealType,
+          target: {
+            kind: 'component',
+            componentId: value.target.componentId,
+            componentType: value.target.componentType as ComponentType,
+          },
+        }
+      : null
+  }
+
+  return activeDishIds.has(value.target.dishId)
+    ? {
+        id: value.id,
+        weekday: value.weekday,
+        mealType: value.mealType,
+        target: {
+          kind: 'dish',
+          dishId: value.target.dishId,
+        },
+      }
+    : null
+}
+
+function normalizeFrequencyRule(value: unknown): FrequencyRule | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || !isFrequencyRuleTarget(value.target)) {
+    return null
+  }
+
+  if (value.target.kind === 'component' && !activeComponentIds.has(value.target.componentId)) {
+    return null
+  }
+
+  if (value.target.kind === 'dish' && !activeDishIds.has(value.target.dishId)) {
+    return null
+  }
+
+  if (value.target.kind === 'category' && value.target.categoryId !== 'pleasure-meal') {
+    return null
+  }
+
+  return {
+    id: value.id,
+    target: {
+      ...value.target,
+    },
+    targetCountPerWeek:
+      typeof value.targetCountPerWeek === 'number'
+        ? normalizedFrequency(value.targetCountPerWeek)
+        : 0,
   }
 }
 
@@ -80,10 +207,17 @@ function loadState(): PlanningRulesState {
     }
 
     const parsedState = JSON.parse(rawState) as Partial<PlanningRulesState>
+    const defaultState = cloneDefaultState()
+    const planningRules = Array.isArray(parsedState.planningRules)
+      ? parsedState.planningRules.map(normalizePlanningRule).filter((rule): rule is PlanningRule => Boolean(rule))
+      : []
+    const frequencyRules = Array.isArray(parsedState.frequencyRules)
+      ? parsedState.frequencyRules.map(normalizeFrequencyRule).filter((rule): rule is FrequencyRule => Boolean(rule))
+      : []
 
     return {
-      planningRules: parsedState.planningRules ?? cloneDefaultState().planningRules,
-      frequencyRules: parsedState.frequencyRules ?? cloneDefaultState().frequencyRules,
+      planningRules: planningRules.length ? planningRules : defaultState.planningRules,
+      frequencyRules: frequencyRules.length ? frequencyRules : defaultState.frequencyRules,
     }
   } catch {
     return cloneDefaultState()

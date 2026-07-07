@@ -159,7 +159,7 @@ export function createDemoWeekPlan(): WeekPlan {
   return {
     id: 'week-2026-07-06',
     startDate: '2026-07-06',
-    status: 'Generated',
+    status: 'Draft',
     days: [
       day(
         0,

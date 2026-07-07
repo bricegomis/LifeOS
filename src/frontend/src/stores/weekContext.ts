@@ -64,6 +64,47 @@ function cloneWeekContext(context: WeekContext): WeekContext {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isWeekMode(value: unknown): value is WeekMode {
+  return value === 'kids' || value === 'solo'
+}
+
+function isWorkLocation(value: unknown): value is WorkLocation {
+  return value === 'home' || value === 'office' || value === 'off'
+}
+
+function normalizeDayContext(value: unknown, fallback: DayContext): DayContext {
+  if (!isRecord(value)) {
+    return { ...fallback }
+  }
+
+  return {
+    workLocation: isWorkLocation(value.workLocation) ? value.workLocation : fallback.workLocation,
+    bikeCommute: typeof value.bikeCommute === 'boolean' ? value.bikeCommute : fallback.bikeCommute,
+  }
+}
+
+function normalizeWeekContext(value: unknown): WeekContext | null {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  const days = isRecord(value.days) ? value.days : {}
+
+  return {
+    weekMode: isWeekMode(value.weekMode) ? value.weekMode : defaultWeekContext.weekMode,
+    days: Object.fromEntries(
+      weekdays.map((weekday) => [
+        weekday,
+        normalizeDayContext(days[weekday], defaultWeekContext.days[weekday]),
+      ]),
+    ) as Record<Weekday, DayContext>,
+  }
+}
+
 function loadWeekContext(): WeekContext {
   if (typeof window === 'undefined') {
     return cloneWeekContext(defaultWeekContext)
@@ -82,13 +123,7 @@ function loadWeekContext(): WeekContext {
       return cloneWeekContext(defaultWeekContext)
     }
 
-    return {
-      weekMode: parsedState.data.weekMode ?? defaultWeekContext.weekMode,
-      days: {
-        ...cloneWeekContext(defaultWeekContext).days,
-        ...parsedState.data.days,
-      },
-    }
+    return cloneWeekContext(normalizeWeekContext(parsedState.data) ?? defaultWeekContext)
   } catch {
     return cloneWeekContext(defaultWeekContext)
   }
@@ -142,3 +177,11 @@ export const useWeekContextStore = defineStore('weekContext', () => {
     updateBikeCommute,
   }
 })
+
+export function weekdayForIndex(index: number): Weekday {
+  return weekdays[((index % weekdays.length) + weekdays.length) % weekdays.length] ?? 'monday'
+}
+
+export function contextForDayIndex(context: WeekContext, dayIndex: number): DayContext {
+  return context.days[weekdayForIndex(dayIndex)]
+}

@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
-import { useWeekContextStore, workLocationLabels } from '@/stores/weekContext'
+import { contextForDayIndex, useWeekContextStore, workLocationLabels } from '@/stores/weekContext'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
 import type { MealSlot, MealType } from '@/types'
 
@@ -79,7 +79,7 @@ const activityDuration = computed(() => {
 })
 
 const todayContextLabel = computed(() => {
-  const context = weekContext.value.days.monday
+  const context = contextForDayIndex(weekContext.value, 0)
   const labels = [workLocationLabels[context.workLocation]]
 
   if (context.bikeCommute) {

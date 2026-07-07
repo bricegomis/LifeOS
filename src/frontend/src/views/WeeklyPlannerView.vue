@@ -5,13 +5,9 @@ import Button from 'primevue/button'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
 import { activities } from '@/data/localLibrary'
 import { usePlanningRulesStore } from '@/stores/planningRules'
-import {
-  useWeekContextStore,
-  weekdays,
-  workLocationShortLabels,
-} from '@/stores/weekContext'
+import { contextForDayIndex, useWeekContextStore, workLocationShortLabels } from '@/stores/weekContext'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
-import type { MealType, WeekPlan, Weekday } from '@/types'
+import type { MealType, WeekPlan } from '@/types'
 
 const plannerStore = useWeekPlannerStore()
 const planningRulesStore = usePlanningRulesStore()
@@ -75,6 +71,9 @@ const mealEditorSubtitle = computed(() => {
 })
 
 const weekLabel = computed(() => formatWeekLabel(weekPlan.value.startDate, weekOffset.value))
+const regenerateButtonLabel = computed(() =>
+  weekPlan.value.status === 'Draft' ? 'Générer la semaine' : 'Régénérer la semaine',
+)
 
 const weekSummary = computed(() => {
   const dayCount = displayedWeekPlan.value.days.length || 1
@@ -85,7 +84,7 @@ const weekSummary = computed(() => {
       return {
         calories: summary.calories + meals.reduce((total, meal) => total + meal.estimatedCalories, 0),
         protein: summary.protein + meals.reduce((total, meal) => total + meal.estimatedProteinGrams, 0),
-        activities: summary.activities + (day.activity.id === 'rest' ? 0 : 1),
+        activities: summary.activities + (day.activity?.id === 'rest' ? 0 : 1),
       }
     },
     { calories: 0, protein: 0, activities: 0 },
@@ -126,18 +125,8 @@ function activityDuration(durationMinutes: number | undefined): string | undefin
   return durationMinutes ? `${durationMinutes} min` : undefined
 }
 
-function resetDemoWeek(): void {
-  plannerStore.generateWeek(planningRules.value, frequencyRules.value, weekContext.value)
-  weekOffset.value = 0
-  closeEditors()
-}
-
-function weekdayForIndex(index: number): Weekday {
-  return weekdays[index % weekdays.length] ?? 'monday'
-}
-
 function dayContextBadges(dayIndex: number): string[] {
-  const context = weekContext.value.days[weekdayForIndex(dayIndex)]
+  const context = contextForDayIndex(weekContext.value, dayIndex)
   const badges = [context.workLocation === 'home' ? '🏠' : context.workLocation === 'office' ? '🏢' : '•']
   badges.push(workLocationShortLabels[context.workLocation])
 
@@ -161,6 +150,18 @@ function previousWeek(): void {
 
 function nextWeek(): void {
   weekOffset.value += 1
+  closeEditors()
+}
+
+function generateWeek(): void {
+  plannerStore.generateWeek(planningRules.value, frequencyRules.value, weekContext.value)
+  weekOffset.value = 0
+  closeEditors()
+}
+
+function restoreDemoWeek(): void {
+  plannerStore.resetDemoWeek()
+  weekOffset.value = 0
   closeEditors()
 }
 
@@ -257,8 +258,19 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="week-controls" aria-label="Navigation semaine">
-        <Button label="Générer la semaine" icon="pi pi-refresh" @click="resetDemoWeek" />
+        <Button :label="regenerateButtonLabel" icon="pi pi-refresh" @click="generateWeek" />
+        <Button
+          label="Restaurer l'exemple"
+          icon="pi pi-undo"
+          severity="secondary"
+          text
+          @click="restoreDemoWeek"
+        />
       </div>
+
+      <p class="planner-note">
+        La génération remplace le planning actuel. Les ajustements manuels sont effacés.
+      </p>
     </header>
 
     <section class="week-summary-strip" aria-label="Résumé de semaine">
