@@ -9,7 +9,7 @@ import {
   weekModeLabels,
   workLocationLabels,
 } from '@/stores/weekContext'
-import { useWeekPlannerStore } from '@/stores/weekPlanner'
+import { resolveDayPlanForDate, useWeekPlannerStore } from '@/stores/weekPlanner'
 import type { MealSlot, MealType } from '@/types'
 
 const plannerStore = useWeekPlannerStore()
@@ -17,17 +17,18 @@ const weekContextStore = useWeekContextStore()
 const { weekPlan } = storeToRefs(plannerStore)
 const { weekContext } = storeToRefs(weekContextStore)
 
-const today = computed(() => weekPlan.value.days[0] ?? null)
+const currentDate = new Date()
+const resolvedToday = computed(() => resolveDayPlanForDate(weekPlan.value, currentDate))
+const today = computed(() => resolvedToday.value?.dayPlan ?? null)
+const todayDayIndex = computed(() => resolvedToday.value?.dayIndex ?? -1)
 const isMobile = ref(false)
 const selectedMealType = ref<MealType | null>(null)
 const resolvedWeekMode = computed(() =>
-  today.value
-    ? getWeekMode(
-        weekPlan.value.startDate,
-        weekContext.value.alternatingWeekConfig,
-        weekContext.value.weekModeOverrides,
-      )
-    : 'kids',
+  getWeekMode(
+    weekPlan.value.startDate,
+    weekContext.value.alternatingWeekConfig,
+    weekContext.value.weekModeOverrides,
+  ),
 )
 
 const mealTypeLabels: Record<MealType, string> = {
@@ -94,7 +95,11 @@ const activityDuration = computed(() => {
 })
 
 const todayContextLabel = computed(() => {
-  const context = contextForDayIndex(weekContext.value, 0)
+  if (!today.value || todayDayIndex.value < 0) {
+    return ''
+  }
+
+  const context = contextForDayIndex(weekContext.value, todayDayIndex.value)
   const labels = [workLocationLabels[context.workLocation], weekModeLabels[resolvedWeekMode.value]]
 
   if (context.bikeCommute) {
@@ -136,12 +141,14 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="page-stack today-page">
-    <header v-if="today" class="page-hero today-hero">
+    <header class="page-hero today-hero">
       <div>
         <p class="eyebrow">Aujourd'hui</p>
-        <h1>{{ today.dateLabel }} {{ today.shortDateLabel }}</h1>
-        <p>Une journée claire, sans bruit inutile.</p>
-        <small class="today-context">{{ todayContextLabel }}</small>
+        <h1 v-if="today">{{ today.dateLabel }} {{ today.shortDateLabel }}</h1>
+        <h1 v-else>Aucun planning pour aujourd'hui</h1>
+        <p v-if="today">Une journée claire, sans bruit inutile.</p>
+        <p v-else>Le planning chargé ne contient pas la date locale actuelle.</p>
+        <small v-if="today" class="today-context">{{ todayContextLabel }}</small>
       </div>
     </header>
 
@@ -267,6 +274,12 @@ onBeforeUnmount(() => {
         <span>Voir toute la semaine</span>
         <i class="pi pi-arrow-right" aria-hidden="true"></i>
       </RouterLink>
+    </div>
+
+    <div v-else class="today-empty">
+      <p class="empty-state">
+        Ouvre le planning semaine et charge ou génère la semaine correspondant à aujourd'hui.
+      </p>
     </div>
 
     <MealEditorDrawer

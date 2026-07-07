@@ -54,6 +54,50 @@ function isValidDateString(value: string): boolean {
   return !Number.isNaN(new Date(`${value}T00:00:00`).getTime())
 }
 
+export function toLocalDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function parseLocalDateKey(dateKey: string): Date | null {
+  const date = new Date(`${dateKey}T00:00:00`)
+
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function weekPlanDayKey(startDate: string, dayIndex: number): string | null {
+  const weekStart = parseLocalDateKey(startDate)
+
+  if (!weekStart) {
+    return null
+  }
+
+  const day = new Date(weekStart)
+  day.setDate(day.getDate() + dayIndex)
+
+  return toLocalDateKey(day)
+}
+
+export function resolveDayPlanForDate(
+  weekPlan: WeekPlan,
+  referenceDate: Date = new Date(),
+): { dayIndex: number; dayPlan: DayPlan } | null {
+  const targetKey = toLocalDateKey(referenceDate)
+
+  for (const [dayIndex, dayPlan] of weekPlan.days.entries()) {
+    const dayKey = weekPlanDayKey(weekPlan.startDate, dayIndex)
+
+    if (dayKey === targetKey) {
+      return { dayIndex, dayPlan }
+    }
+  }
+
+  return null
+}
+
 function isDishCompatible(dish: CompositeDish, mealType: MealType): boolean {
   if (mealType === 'breakfast') {
     return dish.suitableForBreakfast
