@@ -2,7 +2,13 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
-import { contextForDayIndex, useWeekContextStore, workLocationLabels } from '@/stores/weekContext'
+import {
+  contextForDayIndex,
+  getWeekMode,
+  useWeekContextStore,
+  weekModeLabels,
+  workLocationLabels,
+} from '@/stores/weekContext'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
 import type { MealSlot, MealType } from '@/types'
 
@@ -14,6 +20,15 @@ const { weekContext } = storeToRefs(weekContextStore)
 const today = computed(() => weekPlan.value.days[0] ?? null)
 const isMobile = ref(false)
 const selectedMealType = ref<MealType | null>(null)
+const resolvedWeekMode = computed(() =>
+  today.value
+    ? getWeekMode(
+        weekPlan.value.startDate,
+        weekContext.value.alternatingWeekConfig,
+        weekContext.value.weekModeOverrides,
+      )
+    : 'kids',
+)
 
 const mealTypeLabels: Record<MealType, string> = {
   breakfast: 'Petit-déjeuner',
@@ -80,13 +95,11 @@ const activityDuration = computed(() => {
 
 const todayContextLabel = computed(() => {
   const context = contextForDayIndex(weekContext.value, 0)
-  const labels = [workLocationLabels[context.workLocation]]
+  const labels = [workLocationLabels[context.workLocation], weekModeLabels[resolvedWeekMode.value]]
 
   if (context.bikeCommute) {
     labels.push('Vélo')
   }
-
-  labels.push(weekContext.value.weekMode === 'kids' ? 'Enfants' : 'Solo')
 
   return labels.join(' · ')
 })
@@ -128,7 +141,7 @@ onBeforeUnmount(() => {
         <p class="eyebrow">Aujourd'hui</p>
         <h1>{{ today.dateLabel }} {{ today.shortDateLabel }}</h1>
         <p>Une journée claire, sans bruit inutile.</p>
-        <p class="today-context">{{ todayContextLabel }}</p>
+        <small class="today-context">{{ todayContextLabel }}</small>
       </div>
     </header>
 

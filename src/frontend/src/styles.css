@@ -169,6 +169,15 @@ a {
   line-height: 1.55;
 }
 
+.today-context,
+.planner-context {
+  margin: 10px 0 0;
+  color: var(--lifeos-text-soft);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: var(--lifeos-accent);

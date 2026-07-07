@@ -20,8 +20,19 @@ export interface DayContext {
   bikeCommute: boolean
 }
 
+export interface AlternatingWeekConfig {
+  referenceWeekStartDate: string
+  referenceWeekMode: WeekMode
+}
+
+export interface WeekModeOverride {
+  weekStartDate: string
+  mode: WeekMode
+}
+
 export interface WeekContext {
-  weekMode: WeekMode
+  alternatingWeekConfig: AlternatingWeekConfig
+  weekModeOverrides: WeekModeOverride[]
   days: Record<Weekday, DayContext>
 }
 

@@ -14,8 +14,10 @@ import type {
   WeekPlan,
   WeekContext,
   Weekday,
+  WeekMode,
   WorkLocation,
 } from '@/types'
+import { getWeekMode } from '@/stores/weekContext'
 
 interface MealLibrary {
   mealComponents: MealComponent[]
@@ -65,14 +67,19 @@ export function createGeneratedWeekPlan({
   weekContext,
   startDate,
 }: GenerateWeekPlanOptions): WeekPlan {
-  const state = createGeneratorState(library, weekContext)
+  const weekMode = getWeekMode(
+    startDate,
+    weekContext.alternatingWeekConfig,
+    weekContext.weekModeOverrides,
+  )
+  const state = createGeneratorState(library, weekContext, weekMode)
   const days = createEmptyWeek(startDate)
   const fixedSlots = new Set<string>()
 
   applyFixedRules(days, planningRules, state, fixedSlots)
   applyFrequencyRules(days, frequencyRules, state, fixedSlots)
   completeMeals(days, state, frequencyRules)
-  generateActivities(days, state.activities, weekContext)
+  generateActivities(days, state.activities, weekContext, weekMode)
 
   return {
     id: `week-${startDate}`,
@@ -88,7 +95,11 @@ export function createGeneratedWeekPlan({
   }
 }
 
-function createGeneratorState(library: MealLibrary, weekContext: WeekContext) {
+function createGeneratorState(
+  library: MealLibrary,
+  weekContext: WeekContext,
+  weekMode: WeekMode,
+) {
   const activeComponents = library.mealComponents.filter((component) => component.active)
   const activeDishes = library.compositeDishes.filter((dish) => dish.active)
 
@@ -102,6 +113,7 @@ function createGeneratorState(library: MealLibrary, weekContext: WeekContext) {
     dishes: activeDishes,
     activities: library.activities,
     weekContext,
+    weekMode,
     rotation: {
       breakfast: 0,
       protein: 0,
@@ -330,7 +342,7 @@ function nextBreakfast(
   ].filter(Boolean)
 
   const mealDefinition = chooseDifferentMeal(
-    prioritizeMealsForContext(options, dayIndex, 'breakfast', state.weekContext),
+    prioritizeMealsForContext(options, dayIndex, 'breakfast', state.weekContext, state.weekMode),
     previousMeal,
     state.rotation.breakfast,
   )
@@ -392,9 +404,14 @@ function createVariedAssembledMeal(
   )
 }
 
-function generateActivities(days: DraftDayPlan[], activities: Activity[], weekContext: WeekContext): void {
+function generateActivities(
+  days: DraftDayPlan[],
+  activities: Activity[],
+  weekContext: WeekContext,
+  weekMode: WeekMode,
+): void {
   for (const [index, day] of days.entries()) {
-    day.activity = activityForContext(index, activities, weekContext)
+    day.activity = activityForContext(index, activities, weekContext, weekMode)
   }
 }
 
@@ -506,7 +523,10 @@ function nextProtein(
   state: ReturnType<typeof createGeneratorState>,
   frequencyRules: FrequencyRule[],
 ): MealComponent {
-  const proteins = prioritizeProteinsForContext(state.componentsByType.protein, state.weekContext)
+  const proteins = prioritizeProteinsForContext(
+    state.componentsByType.protein,
+    state.weekMode,
+  )
 
   for (let offset = 0; offset < proteins.length; offset += 1) {
     const index = (state.rotation.protein + offset) % proteins.length
@@ -542,6 +562,7 @@ function nextCompatibleDish(
     dayIndex,
     mealType,
     state.weekContext,
+    state.weekMode,
   )
   const previousKey = previousMeal ? mealIdentity(previousMeal.mealDefinition) : null
 
@@ -607,11 +628,12 @@ function prioritizeMealsForContext(
   dayIndex: number,
   mealType: MealType,
   weekContext: WeekContext,
+  weekMode: WeekMode,
 ): MealDefinition[] {
   return [...meals].sort(
     (left, right) =>
-      mealContextScore(right, dayIndex, mealType, weekContext) -
-      mealContextScore(left, dayIndex, mealType, weekContext),
+      mealContextScore(right, dayIndex, mealType, weekContext, weekMode) -
+      mealContextScore(left, dayIndex, mealType, weekContext, weekMode),
   )
 }
 
@@ -620,11 +642,12 @@ function prioritizeDishesForContext(
   dayIndex: number,
   mealType: MealType,
   weekContext: WeekContext,
+  weekMode: WeekMode,
 ): CompositeDish[] {
   return [...dishes].sort(
     (left, right) =>
-      mealContextScore(right, dayIndex, mealType, weekContext) -
-      mealContextScore(left, dayIndex, mealType, weekContext),
+      mealContextScore(right, dayIndex, mealType, weekContext, weekMode) -
+      mealContextScore(left, dayIndex, mealType, weekContext, weekMode),
   )
 }
 
@@ -633,12 +656,13 @@ function mealContextScore(
   dayIndex: number,
   mealType: MealType,
   weekContext: WeekContext,
+  weekMode: WeekMode,
 ): number {
   const dayContext = contextForDayIndex(weekContext, dayIndex)
   let score = 0
 
   if (mealDefinition.kind === 'composite') {
-    if (weekContext.weekMode === 'kids') {
+    if (weekMode === 'kids') {
       score += mealDefinition.childFriendly ? 4 : -4
       score += mealDefinition.preparationTimeMinutes <= 35 ? 2 : -2
 
@@ -660,9 +684,9 @@ function mealContextScore(
 
 function prioritizeProteinsForContext(
   proteins: MealComponent[],
-  weekContext: WeekContext,
+  weekMode: WeekMode,
 ): MealComponent[] {
-  if (weekContext.weekMode === 'solo') {
+  if (weekMode === 'solo') {
     return proteins
   }
 
@@ -685,9 +709,10 @@ function activityForContext(
   dayIndex: number,
   activities: Activity[],
   weekContext: WeekContext,
+  weekMode: WeekMode,
 ): Activity {
   const dayContext = contextForDayIndex(weekContext, dayIndex)
-  const preferredIds = activityIdsForContext(dayIndex, dayContext.workLocation, weekContext)
+  const preferredIds = activityIdsForContext(dayIndex, dayContext.workLocation, weekContext, weekMode)
 
   return (
     preferredIds
@@ -701,6 +726,7 @@ function activityIdsForContext(
   dayIndex: number,
   workLocation: WorkLocation,
   weekContext: WeekContext,
+  weekMode: WeekMode,
 ): string[] {
   const dayContext = contextForDayIndex(weekContext, dayIndex)
 
@@ -709,12 +735,12 @@ function activityIdsForContext(
   }
 
   if (workLocation === 'home') {
-    const plan = weekContext.weekMode === 'solo' ? soloActivityPlan : kidsActivityPlan
+    const plan = weekMode === 'solo' ? soloActivityPlan : kidsActivityPlan
 
     return [plan[dayIndex] ?? 'running', 'strength', 'running', 'mobility']
   }
 
-  if (weekContext.weekMode === 'kids') {
+  if (weekMode === 'kids') {
     return dayIndex >= 5 ? ['family', 'walk', 'rest'] : ['mobility', 'walk', 'rest']
   }
 

@@ -7,9 +7,14 @@ import Select from 'primevue/select'
 import { compositeDishes, mealComponents } from '@/data/localLibrary'
 import { usePlanningRulesStore } from '@/stores/planningRules'
 import {
+  addWeeksToDateString,
+  getWeekMode,
+  getWeekModeOverride,
+  getWeekRangeLabel,
   useWeekContextStore,
   weekdayLabels,
   weekdays,
+  weekModeLabels,
   workLocationLabels,
 } from '@/stores/weekContext'
 import type {
@@ -20,6 +25,7 @@ import type {
   PlanningRule,
   PlanningRuleTarget,
   WeekMode,
+  WeekModeOverride,
   Weekday,
   WorkLocation,
 } from '@/types'
@@ -143,6 +149,44 @@ const ruleDialogTitle = computed(() =>
   editingRuleId.value ? 'Modifier une règle fixe' : 'Ajouter une règle fixe',
 )
 
+const overrideDialogVisible = ref(false)
+const editingOverrideWeekStartDate = ref<string | null>(null)
+const overrideForm = reactive<{
+  weekStartDate: string
+  mode: WeekMode
+}>({
+  weekStartDate: addWeeksToDateString(
+    weekContextStore.weekContext.alternatingWeekConfig.referenceWeekStartDate,
+    1,
+  ),
+  mode: 'kids',
+})
+
+const alternatingWeekConfig = computed(() => weekContextStore.weekContext.alternatingWeekConfig)
+
+const sortedWeekModeOverrides = computed(() =>
+  [...weekContextStore.weekContext.weekModeOverrides].sort((left, right) =>
+    left.weekStartDate.localeCompare(right.weekStartDate),
+  ),
+)
+
+const alternatingWeekPreview = computed(() => {
+  const config = alternatingWeekConfig.value
+
+  return Array.from({ length: 4 }, (_, index) => {
+    const weekStartDate = addWeeksToDateString(config.referenceWeekStartDate, index)
+    const mode = getWeekMode(weekStartDate, config, weekContextStore.weekContext.weekModeOverrides)
+    const override = getWeekModeOverride(weekStartDate, weekContextStore.weekContext.weekModeOverrides)
+
+    return {
+      weekStartDate,
+      label: getWeekRangeLabel(weekStartDate),
+      modeLabel: weekModeLabels[mode],
+      overrideLabel: override ? `Exception : ${weekModeLabels[override.mode]}` : '',
+    }
+  })
+})
+
 function weekdayLabel(weekday: Weekday): string {
   return weekdayOptions.find((option) => option.value === weekday)?.label ?? weekday
 }
@@ -173,6 +217,54 @@ function targetLabel(target: PlanningRuleTarget | FrequencyRuleTarget): string {
 
 function targetDescription(target: PlanningRuleTarget | FrequencyRuleTarget): string {
   return targetOption(target)?.description ?? ''
+}
+
+function updateReferenceWeekStartDate(value: string): void {
+  weekContextStore.setReferenceWeekStartDate(value)
+}
+
+function updateReferenceWeekStartDateFromEvent(event: Event): void {
+  const target = event.target as HTMLInputElement | null
+
+  if (target) {
+    updateReferenceWeekStartDate(target.value)
+  }
+}
+
+function updateReferenceWeekMode(value: WeekMode): void {
+  weekContextStore.setReferenceWeekMode(value)
+}
+
+function openNewOverrideDialog(): void {
+  editingOverrideWeekStartDate.value = null
+  overrideForm.weekStartDate = addWeeksToDateString(
+    weekContextStore.weekContext.alternatingWeekConfig.referenceWeekStartDate,
+    1,
+  )
+  overrideForm.mode = 'kids'
+  overrideDialogVisible.value = true
+}
+
+function openEditOverrideDialog(override: WeekModeOverride): void {
+  editingOverrideWeekStartDate.value = override.weekStartDate
+  overrideForm.weekStartDate = override.weekStartDate
+  overrideForm.mode = override.mode
+  overrideDialogVisible.value = true
+}
+
+function saveWeekModeOverride(): void {
+  weekContextStore.upsertWeekModeOverride(
+    {
+      weekStartDate: overrideForm.weekStartDate,
+      mode: overrideForm.mode,
+    },
+    editingOverrideWeekStartDate.value,
+  )
+  overrideDialogVisible.value = false
+}
+
+function deleteWeekModeOverride(weekStartDate: string): void {
+  weekContextStore.deleteWeekModeOverride(weekStartDate)
 }
 
 function clonePlanningTarget(target: PlanningRuleTarget | FrequencyRuleTarget): PlanningRuleTarget {
@@ -235,10 +327,6 @@ function updateFrequency(rule: FrequencyRule, value: number | null): void {
   planningRulesStore.updateFrequencyRule(rule.id, value ?? 0)
 }
 
-function updateWeekMode(value: WeekMode): void {
-  weekContextStore.updateWeekMode(value)
-}
-
 function updateWorkLocation(weekday: Weekday, value: WorkLocation): void {
   weekContextStore.updateWorkLocation(weekday, value)
 }
@@ -256,6 +344,90 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
       <p>Configuration locale simple pour préparer le futur générateur de semaine.</p>
     </header>
 
+    <section class="settings-section" aria-labelledby="alternating-week-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Alternance par défaut</p>
+          <h2 id="alternating-week-title">Semaine de référence</h2>
+        </div>
+
+        <Button label="Ajouter une exception" icon="pi pi-plus" size="small" @click="openNewOverrideDialog" />
+      </div>
+
+      <div class="alternating-grid">
+        <label class="form-field">
+          <span>Semaine de référence</span>
+          <input
+            class="text-input"
+            type="date"
+            :value="alternatingWeekConfig.referenceWeekStartDate"
+            @change="updateReferenceWeekStartDateFromEvent"
+          />
+        </label>
+
+        <label class="form-field">
+          <span>Mode de référence</span>
+          <Select
+            :model-value="alternatingWeekConfig.referenceWeekMode"
+            :options="weekModeOptions"
+            option-label="label"
+            option-value="value"
+            @update:model-value="updateReferenceWeekMode($event)"
+          />
+        </label>
+      </div>
+
+      <div class="alternating-preview" aria-label="Prévisualisation de l'alternance">
+        <article v-for="week in alternatingWeekPreview" :key="week.weekStartDate" class="alternating-preview-row">
+          <div>
+            <strong>{{ week.label }}</strong>
+            <span>{{ week.modeLabel }}</span>
+          </div>
+          <small v-if="week.overrideLabel">{{ week.overrideLabel }}</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="settings-section" aria-labelledby="exceptions-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Exceptions</p>
+          <h2 id="exceptions-title">Surcharges ponctuelles</h2>
+        </div>
+
+        <Button label="Ajouter" icon="pi pi-plus" size="small" @click="openNewOverrideDialog" />
+      </div>
+
+      <div v-if="sortedWeekModeOverrides.length" class="override-list">
+        <article v-for="override in sortedWeekModeOverrides" :key="override.weekStartDate" class="override-row">
+          <div class="rule-main">
+            <strong>Semaine du {{ getWeekRangeLabel(override.weekStartDate) }}</strong>
+            <span>{{ weekModeLabels[override.mode] }}</span>
+          </div>
+
+          <div class="rule-actions">
+            <Button
+              icon="pi pi-pencil"
+              aria-label="Modifier l'exception"
+              text
+              rounded
+              @click="openEditOverrideDialog(override)"
+            />
+            <Button
+              icon="pi pi-trash"
+              aria-label="Supprimer l'exception"
+              severity="danger"
+              text
+              rounded
+              @click="deleteWeekModeOverride(override.weekStartDate)"
+            />
+          </div>
+        </article>
+      </div>
+
+      <p v-else class="empty-state">Aucune exception configurée.</p>
+    </section>
+
     <section class="settings-section" aria-labelledby="weekly-context-title">
       <div class="section-heading">
         <div>
@@ -263,17 +435,6 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
           <h2 id="weekly-context-title">Organisation réelle</h2>
         </div>
       </div>
-
-      <label class="form-field week-mode-field">
-        <span>Mode semaine</span>
-        <Select
-          :model-value="weekContextStore.weekContext.weekMode"
-          :options="weekModeOptions"
-          option-label="label"
-          option-value="value"
-          @update:model-value="updateWeekMode($event)"
-        />
-      </label>
 
       <div class="context-grid" aria-label="Organisation des journées">
         <article v-for="weekday in weekdays" :key="weekday" class="context-row">
@@ -393,6 +554,36 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
     </section>
 
     <Dialog
+      v-model:visible="overrideDialogVisible"
+      :header="editingOverrideWeekStartDate ? 'Modifier une exception' : 'Ajouter une exception'"
+      modal
+      class="rule-dialog"
+      :style="{ width: 'min(92vw, 32rem)' }"
+    >
+      <form class="rule-form" @submit.prevent="saveWeekModeOverride">
+        <label class="form-field">
+          <span>Semaine</span>
+          <input class="text-input" type="date" v-model="overrideForm.weekStartDate" />
+        </label>
+
+        <label class="form-field">
+          <span>Mode</span>
+          <Select
+            v-model="overrideForm.mode"
+            :options="weekModeOptions"
+            option-label="label"
+            option-value="value"
+          />
+        </label>
+
+        <div class="dialog-actions">
+          <Button label="Annuler" severity="secondary" text @click="overrideDialogVisible = false" />
+          <Button label="Enregistrer" type="submit" />
+        </div>
+      </form>
+    </Dialog>
+
+    <Dialog
       v-model:visible="ruleDialogVisible"
       :header="ruleDialogTitle"
       modal
@@ -464,6 +655,44 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
   background: var(--surface-card);
 }
 
+.alternating-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.alternating-preview,
+.override-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.alternating-preview-row,
+.override-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--surface-border);
+}
+
+.alternating-preview-row strong,
+.override-row strong {
+  display: block;
+}
+
+.alternating-preview-row span,
+.override-row span {
+  color: var(--text-color-secondary);
+}
+
+.alternating-preview-row small {
+  color: var(--text-color-secondary);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
 .section-heading,
 .rule-row,
 .frequency-row,
@@ -518,10 +747,6 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
   color: var(--text-color-secondary);
 }
 
-.week-mode-field {
-  max-width: 18rem;
-}
-
 .context-row {
   display: grid;
   grid-template-columns: minmax(7rem, 0.7fr) minmax(18rem, 1.5fr) minmax(8rem, 0.8fr);
@@ -549,6 +774,17 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
   font-weight: 600;
 }
 
+.text-input {
+  width: 100%;
+  min-height: 2.6rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  background: var(--surface-ground);
+  color: var(--text-color);
+  font: inherit;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -570,9 +806,19 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
     grid-template-columns: 1fr;
   }
 
+  .alternating-grid {
+    grid-template-columns: 1fr;
+  }
+
   .rule-actions,
   .frequency-control {
     justify-content: flex-start;
+  }
+
+  .alternating-preview-row,
+  .override-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

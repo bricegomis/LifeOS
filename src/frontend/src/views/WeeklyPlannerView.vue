@@ -5,7 +5,14 @@ import Button from 'primevue/button'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
 import { activities } from '@/data/localLibrary'
 import { usePlanningRulesStore } from '@/stores/planningRules'
-import { contextForDayIndex, useWeekContextStore, workLocationShortLabels } from '@/stores/weekContext'
+import {
+  addWeeksToDateString,
+  contextForDayIndex,
+  getWeekMode,
+  useWeekContextStore,
+  weekModeLabels,
+  workLocationShortLabels,
+} from '@/stores/weekContext'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
 import type { MealType, WeekPlan } from '@/types'
 
@@ -30,6 +37,13 @@ const mealTypeLabels: Record<MealType, string> = {
 }
 
 const displayedWeekPlan = computed<WeekPlan>(() => shiftWeekPlan(weekPlan.value, weekOffset.value))
+const displayedWeekMode = computed(() =>
+  getWeekMode(
+    displayedWeekPlan.value.startDate,
+    weekContext.value.alternatingWeekConfig,
+    weekContext.value.weekModeOverrides,
+  ),
+)
 
 const displayedSelectedDay = computed(() => {
   if (!selectedMeal.value) {
@@ -71,6 +85,7 @@ const mealEditorSubtitle = computed(() => {
 })
 
 const weekLabel = computed(() => formatWeekLabel(weekPlan.value.startDate, weekOffset.value))
+const weekModeLabel = computed(() => weekModeLabels[displayedWeekMode.value])
 const regenerateButtonLabel = computed(() =>
   weekPlan.value.status === 'Draft' ? 'Générer la semaine' : 'Régénérer la semaine',
 )
@@ -132,12 +147,6 @@ function dayContextBadges(dayIndex: number): string[] {
 
   if (context.bikeCommute) {
     badges.push('🚲 Vélo')
-  }
-
-  if (weekContext.value.weekMode === 'kids') {
-    badges.push('Enfants')
-  } else {
-    badges.push('Solo')
   }
 
   return badges
@@ -214,10 +223,7 @@ function shiftWeekPlan(plan: WeekPlan, offsetWeeks: number): WeekPlan {
 }
 
 function shiftDate(startDate: string, offsetDays: number): string {
-  const date = new Date(`${startDate}T00:00:00`)
-  date.setDate(date.getDate() + offsetDays)
-
-  return date.toISOString().slice(0, 10)
+  return addWeeksToDateString(startDate, offsetDays / 7)
 }
 
 onMounted(() => {
@@ -246,6 +252,7 @@ onBeforeUnmount(() => {
           <p class="eyebrow">Planning semaine</p>
           <h1>{{ weekLabel }}</h1>
           <p>Une vue claire pour préparer la semaine sans la transformer en tableur.</p>
+          <small class="planner-context">{{ weekModeLabel }}</small>
         </div>
         <Button
           icon="pi pi-chevron-right"
