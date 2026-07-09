@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { compositeDishes, mealComponents } from '@/data/localLibrary'
 import { weekdays } from '@/stores/weekContext'
+import { getCurrentUserId } from '@/services/supabase/auth'
+import { replacePlanningRules } from '@/services/supabase/lifeosRepository'
 import type {
   ComponentType,
   FrequencyRule,
@@ -256,6 +258,15 @@ export const usePlanningRulesStore = defineStore('planningRules', () => {
         planningRules: planningRules.value,
         frequencyRules: frequencyRules.value,
       })
+
+      const userId = getCurrentUserId()
+
+      if (userId) {
+        void replacePlanningRules(userId, {
+          planningRules: planningRules.value,
+          frequencyRules: frequencyRules.value,
+        })
+      }
     },
     { deep: true },
   )

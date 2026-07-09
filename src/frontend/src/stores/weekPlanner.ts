@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { getCurrentUserId } from '@/services/supabase/auth'
 import { createGeneratedWeekPlan } from '@/data/weekGenerator'
 import {
   activities,
@@ -10,6 +11,7 @@ import {
 } from '@/data/localLibrary'
 import { createDemoWeekPlan, createMealSlot, totalsForMeal } from '@/data/demoWeek'
 import { weekdays } from '@/stores/weekContext'
+import { upsertWeekPlan } from '@/services/supabase/lifeosRepository'
 import type {
   ComponentType,
   FrequencyRule,
@@ -276,6 +278,16 @@ function saveWeekPlan(weekPlan: WeekPlan): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
 }
 
+function persistWeekPlan(weekPlan: WeekPlan): void {
+  saveWeekPlan(weekPlan)
+
+  const userId = getCurrentUserId()
+
+  if (userId) {
+    void upsertWeekPlan(userId, weekPlan)
+  }
+}
+
 export const useWeekPlannerStore = defineStore('weekPlanner', () => {
   const weekPlan = ref<WeekPlan>(loadWeekPlan())
 
@@ -291,7 +303,7 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
 
   function resetDemoWeek(): void {
     weekPlan.value = createDemoWeekPlan()
-    saveWeekPlan(weekPlan.value)
+    persistWeekPlan(weekPlan.value)
   }
 
   function generateWeek(
@@ -315,7 +327,7 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
       weekPlan.value = createDemoWeekPlan()
     }
 
-    saveWeekPlan(weekPlan.value)
+    persistWeekPlan(weekPlan.value)
   }
 
   function replaceComponent(
@@ -337,7 +349,7 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
     if (currentComponent?.componentType === componentType) {
       slot.mealDefinition.components.splice(componentIndex, 1, replacement)
       refreshSlotTotals(slot)
-      saveWeekPlan(weekPlan.value)
+      persistWeekPlan(weekPlan.value)
     }
   }
 
@@ -351,7 +363,7 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
 
     slot.mealDefinition = { ...replacement }
     refreshSlotTotals(slot)
-    saveWeekPlan(weekPlan.value)
+    persistWeekPlan(weekPlan.value)
   }
 
   function updateActivity(dayId: string, activityId: string): void {
@@ -360,7 +372,7 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
 
     if (dayPlan && replacement) {
       dayPlan.activity = replacement
-      saveWeekPlan(weekPlan.value)
+      persistWeekPlan(weekPlan.value)
     }
   }
 

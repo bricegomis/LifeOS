@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { getCurrentUserId } from '@/services/supabase/auth'
+import {
+  replaceWeekModeOverrides,
+  saveUserSettings,
+  saveWeekContextConfig,
+} from '@/services/supabase/lifeosRepository'
 import type {
   AlternatingWeekConfig,
   DayContext,
@@ -400,6 +406,16 @@ export const useWeekContextStore = defineStore('weekContext', () => {
     weekContext,
     () => {
       persistWeekContext(weekContext.value)
+
+      const userId = getCurrentUserId()
+
+      if (userId) {
+        void saveUserSettings(userId, {
+          weekContextDays: weekContext.value.days,
+        })
+        void saveWeekContextConfig(userId, weekContext.value.alternatingWeekConfig)
+        void replaceWeekModeOverrides(userId, weekContext.value.weekModeOverrides)
+      }
     },
     { deep: true },
   )
