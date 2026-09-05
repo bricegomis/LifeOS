@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>LifeOS</title>
+  <rect width="64" height="64" rx="18" fill="#356d4f"/>
+  <path d="M16 31.5c0 9.1 7.2 16.5 16 16.5s16-7.4 16-16.5H16Z" fill="#fffdf8"/>
+  <path d="M19 31.5h26M23 51h18" stroke="#fffdf8" stroke-width="4" stroke-linecap="round"/>
+  <path d="M34 29c0-8.8 5.2-14.1 13.5-15.5-1.1 8.2-5.4 13.6-13.5 15.5Z" fill="#f0b35b"/>
+  <path d="M34 29c1.9-3.7 5.4-7 10.4-9.4" fill="none" stroke="#356d4f" stroke-width="2.4" stroke-linecap="round"/>
+</svg>
