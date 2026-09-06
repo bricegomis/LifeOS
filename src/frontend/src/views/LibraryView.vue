@@ -1,30 +1,20 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Tag from 'primevue/tag'
 import { activities, compositeDishes, mealComponents } from '@/data/localLibrary'
-import { useGroceryStoresStore } from '@/stores/groceryStores'
-import type { ComponentType, CompositeDish, GroceryStore } from '@/types'
+import type { ComponentType, CompositeDish } from '@/types'
 
-type LibraryTab = 'components' | 'dishes' | 'activities' | 'stores'
+type LibraryTab = 'components' | 'dishes' | 'activities'
 
 const activeTab = ref<LibraryTab>('components')
 const searchQuery = ref('')
-const storeName = ref('')
-const storeAddress = ref('')
-const editingStoreId = ref<string | null>(null)
-const storeFormError = ref('')
-
-const groceryStoresStore = useGroceryStoresStore()
-const { stores } = storeToRefs(groceryStoresStore)
 
 const tabs = computed<{ id: LibraryTab; label: string; count: number }[]>(() => [
   { id: 'components', label: 'Composants', count: mealComponents.length },
   { id: 'dishes', label: 'Plats composés', count: compositeDishes.length },
   { id: 'activities', label: 'Activités', count: activities.length },
-  { id: 'stores', label: 'Magasins', count: stores.value.length },
 ])
 
 const componentTypeLabels: Record<ComponentType, string> = {
@@ -46,12 +36,6 @@ const filteredDishes = computed(() => compositeDishes.filter((dish) => matchesSe
 
 const filteredActivities = computed(() =>
   activities.filter((activity) => matchesSearch(activity.name)),
-)
-
-const filteredStores = computed(() =>
-  stores.value.filter(
-    (store) => matchesSearch(store.name) || matchesSearch(store.address),
-  ),
 )
 
 const groupedComponents = computed(() =>
@@ -78,44 +62,6 @@ function dishMealLabels(dish: CompositeDish): string[] {
   ].filter((label): label is string => Boolean(label))
 }
 
-function resetStoreForm(): void {
-  editingStoreId.value = null
-  storeName.value = ''
-  storeAddress.value = ''
-  storeFormError.value = ''
-}
-
-function startStoreEdition(store: GroceryStore): void {
-  editingStoreId.value = store.id
-  storeName.value = store.name
-  storeAddress.value = store.address
-  storeFormError.value = ''
-}
-
-function submitStoreForm(): void {
-  const payload = {
-    name: storeName.value,
-    address: storeAddress.value,
-  }
-  const success = editingStoreId.value
-    ? groceryStoresStore.updateStore(editingStoreId.value, payload)
-    : groceryStoresStore.createStore(payload)
-
-  if (!success) {
-    storeFormError.value = 'Le nom du magasin est requis.'
-    return
-  }
-
-  resetStoreForm()
-}
-
-function removeStore(id: string): void {
-  groceryStoresStore.deleteStore(id)
-
-  if (editingStoreId.value === id) {
-    resetStoreForm()
-  }
-}
 </script>
 
 <template>
@@ -207,61 +153,6 @@ function removeStore(id: string): void {
       </div>
 
       <p v-else class="library-empty">Aucun plat composé trouvé.</p>
-    </section>
-
-    <section v-else-if="activeTab === 'stores'" class="library-content" aria-label="Magasins">
-      <article class="library-card library-store-form">
-        <div class="library-group-heading">
-          <h2>{{ editingStoreId ? 'Modifier un magasin' : 'Ajouter un magasin' }}</h2>
-        </div>
-        <div class="library-store-fields">
-          <InputText
-            v-model="storeName"
-            placeholder="Nom du magasin"
-            aria-label="Nom du magasin"
-          />
-          <InputText
-            v-model="storeAddress"
-            placeholder="Adresse (optionnelle)"
-            aria-label="Adresse du magasin"
-          />
-        </div>
-        <p v-if="storeFormError" class="library-empty">{{ storeFormError }}</p>
-        <div class="library-store-actions">
-          <Button
-            :label="editingStoreId ? 'Enregistrer' : 'Ajouter'"
-            size="small"
-            @click="submitStoreForm"
-          />
-          <Button
-            v-if="editingStoreId"
-            label="Annuler"
-            severity="secondary"
-            outlined
-            size="small"
-            @click="resetStoreForm"
-          />
-        </div>
-      </article>
-
-      <div v-if="filteredStores.length" class="library-card-grid library-card-grid-wide">
-        <article v-for="store in filteredStores" :key="store.id" class="library-card">
-          <div class="library-card-title">
-            <span class="library-item-icon" aria-hidden="true">🏪</span>
-            <div>
-              <h3>{{ store.name }}</h3>
-              <p>{{ store.address || 'Adresse non renseignée' }}</p>
-            </div>
-          </div>
-
-          <div class="library-store-actions">
-            <Button label="Modifier" severity="secondary" outlined size="small" @click="startStoreEdition(store)" />
-            <Button label="Supprimer" severity="danger" text size="small" @click="removeStore(store.id)" />
-          </div>
-        </article>
-      </div>
-
-      <p v-else class="library-empty">Aucun magasin trouvé.</p>
     </section>
 
     <section v-else class="library-content" aria-label="Activités physiques">
