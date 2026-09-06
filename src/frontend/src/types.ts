@@ -92,6 +92,14 @@ export interface Activity {
   defaultDurationMinutes?: number
 }
 
+export interface GroceryStore {
+  id: string
+  name: string
+  address: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DayPlan {
   id: string
   dateLabel: string
