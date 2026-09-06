@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import LibraryView from '@/views/LibraryView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SettingsView from '@/views/SettingsView.vue'
+import StoresView from '@/views/StoresView.vue'
 import TodayView from '@/views/TodayView.vue'
 import WeeklyPlannerView from '@/views/WeeklyPlannerView.vue'
 
@@ -33,6 +34,11 @@ const router = createRouter({
           path: 'library',
           name: 'library',
           component: LibraryView,
+        },
+        {
+          path: 'stores',
+          name: 'stores',
+          component: StoresView,
         },
         {
           path: 'settings',

@@ -22,5 +22,8 @@ export function buildSupabaseRedirectUrl(path = '/login'): string | null {
     return null
   }
 
-  return new URL(path, window.location.origin).toString()
+  const redirectUrl = new URL(import.meta.env.BASE_URL, window.location.origin)
+  redirectUrl.hash = path.startsWith('/') ? path : `/${path}`
+
+  return redirectUrl.toString()
 }

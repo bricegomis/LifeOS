@@ -8,6 +8,7 @@ const navigationItems = [
   { to: '/', label: "Aujourd'hui", mobileLabel: 'Auj.', icon: 'pi pi-sun' },
   { to: '/planner', label: 'Planning', mobileLabel: 'Planning', icon: 'pi pi-calendar' },
   { to: '/library', label: 'Bibliothèque', mobileLabel: 'Biblio', icon: 'pi pi-book' },
+  { to: '/stores', label: 'Magasins', mobileLabel: 'Magasins', icon: 'pi pi-shop' },
   { to: '/settings', label: 'Réglages', mobileLabel: 'Réglages', icon: 'pi pi-cog' },
 ]
 
