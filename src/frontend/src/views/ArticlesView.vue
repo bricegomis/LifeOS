@@ -31,6 +31,7 @@ const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', cu
 
 const searchQuery = ref('')
 const itemName = ref('')
+const itemDescription = ref('')
 const itemUnit = ref<GroceryItemUnit>('unit')
 const editingItemId = ref<string | null>(null)
 const itemFormError = ref('')
@@ -59,7 +60,11 @@ const filteredItems = computed(() =>
   items.value.filter((item) => {
     const query = normalizedSearch.value
 
-    return !query || item.name.toLocaleLowerCase('fr-FR').includes(query)
+    return (
+      !query
+      || item.name.toLocaleLowerCase('fr-FR').includes(query)
+      || item.description.toLocaleLowerCase('fr-FR').includes(query)
+    )
   }),
 )
 
@@ -80,6 +85,7 @@ function latestPrice(item: GroceryItem): string {
 function resetItemForm(): void {
   editingItemId.value = null
   itemName.value = ''
+  itemDescription.value = ''
   itemUnit.value = 'unit'
   itemFormError.value = ''
 }
@@ -87,6 +93,7 @@ function resetItemForm(): void {
 function startItemEdition(item: GroceryItem): void {
   editingItemId.value = item.id
   itemName.value = item.name
+  itemDescription.value = item.description
   itemUnit.value = item.unit
   itemFormError.value = ''
 }
@@ -94,6 +101,7 @@ function startItemEdition(item: GroceryItem): void {
 function submitItemForm(): void {
   const payload = {
     name: itemName.value,
+    description: itemDescription.value,
     unit: itemUnit.value,
   }
   const success = editingItemId.value
@@ -206,6 +214,11 @@ function removePriceEntry(itemId: string, priceEntryId: string): void {
         </label>
 
         <label class="stores-field">
+          <span>Description</span>
+          <InputText v-model="itemDescription" placeholder="Ex. Riz complet en vrac" />
+        </label>
+
+        <label class="stores-field">
           <span>Unité de référence</span>
           <Select v-model="itemUnit" :options="unitOptions" option-label="label" option-value="value" />
         </label>
@@ -244,6 +257,7 @@ function removePriceEntry(itemId: string, priceEntryId: string): void {
               <div class="store-row-icon" aria-hidden="true"><i class="pi pi-box"></i></div>
               <div class="store-row-content">
                 <h3>{{ item.name }}</h3>
+                <p v-if="item.description" class="article-description">{{ item.description }}</p>
                 <p>{{ latestPrice(item) }} · prix {{ unitLabels[item.unit] }}</p>
               </div>
               <div class="store-row-actions">

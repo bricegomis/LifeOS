@@ -115,6 +115,7 @@ export interface GroceryPriceEntry {
 export interface GroceryItem {
   id: string
   name: string
+  description: string
   unit: GroceryItemUnit
   priceHistory: GroceryPriceEntry[]
   createdAt: string
