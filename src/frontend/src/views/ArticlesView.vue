@@ -27,6 +27,7 @@ const unitLabels: Record<GroceryItemUnit, string> = {
 }
 
 const dateFormatter = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+const currencyFormatter = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
 
 const searchQuery = ref('')
 const itemName = ref('')
@@ -49,7 +50,7 @@ function storeName(storeId: string): string {
 }
 
 function formatPrice(price: number): string {
-  return `${price.toFixed(2)} €`
+  return currencyFormatter.format(price)
 }
 
 const normalizedSearch = computed(() => searchQuery.value.trim().toLocaleLowerCase('fr-FR'))
@@ -121,26 +122,34 @@ function removeItem(id: string): void {
   delete priceForms[id]
 }
 
-function priceForm(itemId: string) {
+function defaultPriceForm(): { storeId: string; price: number | null; observedAt: string; error: string } {
+  return {
+    storeId: '',
+    price: null,
+    observedAt: new Date().toISOString().slice(0, 10),
+    error: '',
+  }
+}
+
+function ensurePriceForm(itemId: string) {
   if (!priceForms[itemId]) {
-    priceForms[itemId] = {
-      storeId: '',
-      price: null,
-      observedAt: new Date().toISOString().slice(0, 10),
-      error: '',
-    }
+    priceForms[itemId] = defaultPriceForm()
   }
 
   return priceForms[itemId]
 }
 
+function priceForm(itemId: string) {
+  return priceForms[itemId] ?? defaultPriceForm()
+}
+
 function toggleItemExpansion(itemId: string): void {
   expandedItemId.value = expandedItemId.value === itemId ? null : itemId
-  priceForm(itemId)
+  ensurePriceForm(itemId)
 }
 
 function submitPriceForm(itemId: string): void {
-  const form = priceForm(itemId)
+  const form = ensurePriceForm(itemId)
 
   if (!form.storeId || form.price === null || !form.observedAt) {
     form.error = 'Renseignez le magasin, le prix et la date d’achat.'
