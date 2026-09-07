@@ -10,6 +10,8 @@ interface StoredGroceryStoresState {
 type GroceryStorePayload = {
   name: string
   address?: string
+  isOrganic?: boolean
+  isLocal?: boolean
 }
 
 const STORAGE_KEY = 'lifeos.groceryStores.v1'
@@ -57,6 +59,8 @@ function sanitizeStore(value: unknown): GroceryStore | null {
     id: value.id,
     name: normalizedName,
     address: typeof value.address === 'string' ? value.address.trim() : '',
+    isOrganic: value.isOrganic === true,
+    isLocal: value.isLocal === true,
     createdAt,
     updatedAt,
   }
@@ -117,6 +121,8 @@ export const useGroceryStoresStore = defineStore('groceryStores', () => {
         id: createStoreId(),
         name,
         address: payload.address?.trim() ?? '',
+        isOrganic: payload.isOrganic === true,
+        isLocal: payload.isLocal === true,
         createdAt: timestamp,
         updatedAt: timestamp,
       },
@@ -146,6 +152,8 @@ export const useGroceryStoresStore = defineStore('groceryStores', () => {
         ...store,
         name,
         address: payload.address?.trim() ?? '',
+        isOrganic: payload.isOrganic === true,
+        isLocal: payload.isLocal === true,
         updatedAt: nowIso(),
       }
     })
