@@ -120,3 +120,21 @@ Consequences:
 - localStorage remains the default storage model
 - remote persistence is configured only when env vars are present
 - future cross-device sync can evolve without rewriting the base app architecture
+
+## 2026 — Grocery stores and articles as local, price-tracking building blocks
+Context:
+Meal planning benefits from knowing where groceries are bought and how their prices evolve, without turning the app into a full shopping or budgeting tool.
+
+Decision:
+Grocery stores (`GroceryStore`) and grocery articles (`GroceryItem`) are managed through dedicated CRUD views (`StoresView`, `ArticlesView`), each backed by its own local-first Pinia store. Each article keeps a reference unit (per kilogram, per liter, or per unit) and a price history (`GroceryPriceEntry`) of store + price + date observations.
+
+Reasons:
+- knowing "where" and "for how much" an article was bought is directly useful for the food-planning workflow, without requiring a shopping-list or budgeting feature
+- keeping stores and articles as narrow, independent entities matches the existing CRUD pattern already used for stores
+- price history as an append-only list per article is simple to reason about and does not require a backend
+
+Consequences:
+- `lifeos.groceryStores.v1` and `lifeos.groceryItems.v1` are added as new local-first `localStorage` keys, following the same schema-versioned persistence pattern as other stores
+- these entities are not yet synced to Supabase; they remain local-only until a clear need for cross-device sync emerges
+- shopping lists, budgeting, and automatic price analytics remain out of scope for now
+- deleting a store does not cascade into existing price history entries; the UI tolerates orphaned `storeId` references and falls back to a "Magasin supprimé" label

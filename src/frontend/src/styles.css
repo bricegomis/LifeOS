@@ -1325,6 +1325,61 @@ a {
   place-items: center;
 }
 
+.article-row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.article-row-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.article-price-panel {
+  display: grid;
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--lifeos-line);
+}
+
+.article-price-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.article-price-list {
+  display: grid;
+  gap: 8px;
+}
+
+.article-price-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--lifeos-line);
+  border-radius: 12px;
+}
+
+.article-price-entry div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stores-empty-inline {
+  color: var(--lifeos-text-soft);
+  font-size: 0.9rem;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

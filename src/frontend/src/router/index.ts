@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
+import ArticlesView from '@/views/ArticlesView.vue'
 import LibraryView from '@/views/LibraryView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SettingsView from '@/views/SettingsView.vue'
@@ -39,6 +40,11 @@ const router = createRouter({
           path: 'stores',
           name: 'stores',
           component: StoresView,
+        },
+        {
+          path: 'articles',
+          name: 'articles',
+          component: ArticlesView,
         },
         {
           path: 'settings',
