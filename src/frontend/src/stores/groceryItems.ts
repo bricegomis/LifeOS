@@ -9,6 +9,7 @@ interface StoredGroceryItemsState {
 
 type GroceryItemPayload = {
   name: string
+  description: string
   unit: GroceryItemUnit
 }
 
@@ -98,6 +99,7 @@ function sanitizeItem(value: unknown): GroceryItem | null {
   return {
     id: value.id,
     name: normalizedName,
+    description: typeof value.description === 'string' ? value.description.trim() : '',
     unit: isGroceryItemUnit(value.unit) ? value.unit : 'unit',
     priceHistory,
     createdAt,
@@ -147,6 +149,7 @@ export const useGroceryItemsStore = defineStore('groceryItems', () => {
 
   function createItem(payload: GroceryItemPayload): boolean {
     const name = payload.name.trim()
+    const description = payload.description.trim()
 
     if (!name || !isGroceryItemUnit(payload.unit)) {
       return false
@@ -159,6 +162,7 @@ export const useGroceryItemsStore = defineStore('groceryItems', () => {
       {
         id: createId('item'),
         name,
+        description,
         unit: payload.unit,
         priceHistory: [],
         createdAt: timestamp,
@@ -172,6 +176,7 @@ export const useGroceryItemsStore = defineStore('groceryItems', () => {
 
   function updateItem(id: string, payload: GroceryItemPayload): boolean {
     const name = payload.name.trim()
+    const description = payload.description.trim()
 
     if (!name || !isGroceryItemUnit(payload.unit)) {
       return false
@@ -189,6 +194,7 @@ export const useGroceryItemsStore = defineStore('groceryItems', () => {
       return {
         ...item,
         name,
+        description,
         unit: payload.unit,
         updatedAt: nowIso(),
       }
