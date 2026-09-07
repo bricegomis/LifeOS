@@ -143,6 +143,18 @@ function priceForm(itemId: string) {
   return priceForms[itemId] ?? defaultPriceForm()
 }
 
+const activePriceForm = computed(() =>
+  expandedItemId.value ? priceForm(expandedItemId.value) : defaultPriceForm(),
+)
+
+const activePriceHistory = computed(() => {
+  const expandedItem = expandedItemId.value
+    ? items.value.find((item) => item.id === expandedItemId.value)
+    : undefined
+
+  return expandedItem ? sortedPriceHistory(expandedItem) : []
+})
+
 function toggleItemExpansion(itemId: string): void {
   expandedItemId.value = expandedItemId.value === itemId ? null : itemId
   ensurePriceForm(itemId)
@@ -265,7 +277,7 @@ function removePriceEntry(itemId: string, priceEntryId: string): void {
                 <label class="stores-field">
                   <span>Magasin</span>
                   <Select
-                    v-model="priceForm(item.id).storeId"
+                    v-model="activePriceForm.storeId"
                     :options="storeOptions"
                     option-label="label"
                     option-value="value"
@@ -276,7 +288,7 @@ function removePriceEntry(itemId: string, priceEntryId: string): void {
                 <label class="stores-field">
                   <span>Prix</span>
                   <InputNumber
-                    v-model="priceForm(item.id).price"
+                    v-model="activePriceForm.price"
                     mode="currency"
                     currency="EUR"
                     locale="fr-FR"
@@ -286,18 +298,18 @@ function removePriceEntry(itemId: string, priceEntryId: string): void {
 
                 <label class="stores-field">
                   <span>Date d’achat</span>
-                  <input class="text-input" type="date" v-model="priceForm(item.id).observedAt" />
+                  <input class="text-input" type="date" v-model="activePriceForm.observedAt" />
                 </label>
 
                 <Button label="Ajouter le prix" type="submit" size="small" />
               </form>
 
-              <p v-if="priceForm(item.id).error" class="stores-form-error" role="alert">
-                {{ priceForm(item.id).error }}
+              <p v-if="activePriceForm.error" class="stores-form-error" role="alert">
+                {{ activePriceForm.error }}
               </p>
 
-              <div v-if="sortedPriceHistory(item).length" class="article-price-list">
-                <article v-for="entry in sortedPriceHistory(item)" :key="entry.id" class="article-price-entry">
+              <div v-if="activePriceHistory.length" class="article-price-list">
+                <article v-for="entry in activePriceHistory" :key="entry.id" class="article-price-entry">
                   <div>
                     <strong>{{ formatPrice(entry.price) }}</strong>
                     <span>{{ storeName(entry.storeId) }} · {{ dateFormatter.format(new Date(`${entry.observedAt}T00:00:00`)) }}</span>
