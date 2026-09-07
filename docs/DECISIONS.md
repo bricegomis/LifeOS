@@ -137,3 +137,4 @@ Consequences:
 - `lifeos.groceryStores.v1` and `lifeos.groceryItems.v1` are added as new local-first `localStorage` keys, following the same schema-versioned persistence pattern as other stores
 - these entities are not yet synced to Supabase; they remain local-only until a clear need for cross-device sync emerges
 - shopping lists, budgeting, and automatic price analytics remain out of scope for now
+- deleting a store does not cascade into existing price history entries; the UI tolerates orphaned `storeId` references and falls back to a "Magasin supprimé" label

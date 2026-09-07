@@ -100,7 +100,7 @@ function submitItemForm(): void {
     : groceryItemsStore.createItem(payload)
 
   if (!success) {
-    itemFormError.value = 'Indiquez le nom et l’unité de l’article pour l’enregistrer.'
+    itemFormError.value = 'Indiquez le nom de l’article pour l’enregistrer.'
     return
   }
 
@@ -117,6 +117,8 @@ function removeItem(id: string): void {
   if (expandedItemId.value === id) {
     expandedItemId.value = null
   }
+
+  delete priceForms[id]
 }
 
 function priceForm(itemId: string) {
