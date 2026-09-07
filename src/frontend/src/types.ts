@@ -96,6 +96,8 @@ export interface GroceryStore {
   id: string
   name: string
   address: string
+  isOrganic: boolean
+  isLocal: boolean
   createdAt: string
   updatedAt: string
 }

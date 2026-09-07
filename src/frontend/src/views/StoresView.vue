@@ -9,6 +9,8 @@ import type { GroceryStore } from '@/types'
 const searchQuery = ref('')
 const storeName = ref('')
 const storeAddress = ref('')
+const storeIsOrganic = ref(false)
+const storeIsLocal = ref(false)
 const editingStoreId = ref<string | null>(null)
 const storeFormError = ref('')
 
@@ -31,6 +33,8 @@ function resetStoreForm(): void {
   editingStoreId.value = null
   storeName.value = ''
   storeAddress.value = ''
+  storeIsOrganic.value = false
+  storeIsLocal.value = false
   storeFormError.value = ''
 }
 
@@ -38,6 +42,8 @@ function startStoreEdition(store: GroceryStore): void {
   editingStoreId.value = store.id
   storeName.value = store.name
   storeAddress.value = store.address
+  storeIsOrganic.value = store.isOrganic
+  storeIsLocal.value = store.isLocal
   storeFormError.value = ''
 }
 
@@ -45,6 +51,8 @@ function submitStoreForm(): void {
   const payload = {
     name: storeName.value,
     address: storeAddress.value,
+    isOrganic: storeIsOrganic.value,
+    isLocal: storeIsLocal.value,
   }
   const success = editingStoreId.value
     ? groceryStoresStore.updateStore(editingStoreId.value, payload)
@@ -94,6 +102,18 @@ function removeStore(id: string): void {
           <InputText v-model="storeAddress" placeholder="Ex. 12 rue de la Paix, Paris" />
         </label>
 
+        <fieldset class="stores-options">
+          <legend>Engagements du magasin</legend>
+          <label>
+            <input v-model="storeIsOrganic" type="checkbox" />
+            <span>Magasin Bio</span>
+          </label>
+          <label>
+            <input v-model="storeIsLocal" type="checkbox" />
+            <span>Magasin Local</span>
+          </label>
+        </fieldset>
+
         <p v-if="storeFormError" class="stores-form-error" role="alert">{{ storeFormError }}</p>
 
         <div class="stores-form-actions">
@@ -128,6 +148,10 @@ function removeStore(id: string): void {
             <div class="store-row-content">
               <h3>{{ store.name }}</h3>
               <p>{{ store.address || 'Adresse non renseignée' }}</p>
+              <div v-if="store.isOrganic || store.isLocal" class="store-badges">
+                <span v-if="store.isOrganic">Bio</span>
+                <span v-if="store.isLocal">Local</span>
+              </div>
             </div>
             <div class="store-row-actions">
               <Button

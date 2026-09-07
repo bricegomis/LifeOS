@@ -1225,6 +1225,43 @@ a {
   width: 100%;
 }
 
+.stores-options {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.stores-options legend {
+  margin-bottom: 2px;
+  color: var(--lifeos-text-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.stores-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.store-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.store-badges span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--lifeos-accent-soft);
+  color: var(--lifeos-accent-strong);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .stores-form-error {
   margin: -4px 0 0;
   color: #b42318;
