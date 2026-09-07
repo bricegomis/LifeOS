@@ -9,6 +9,7 @@ const navigationItems = [
   { to: '/planner', label: 'Planning', mobileLabel: 'Planning', icon: 'pi pi-calendar' },
   { to: '/library', label: 'Bibliothèque', mobileLabel: 'Biblio', icon: 'pi pi-book' },
   { to: '/stores', label: 'Magasins', mobileLabel: 'Magasins', icon: 'pi pi-shop' },
+  { to: '/articles', label: 'Articles', mobileLabel: 'Articles', icon: 'pi pi-box' },
   { to: '/settings', label: 'Réglages', mobileLabel: 'Réglages', icon: 'pi pi-cog' },
 ]
 

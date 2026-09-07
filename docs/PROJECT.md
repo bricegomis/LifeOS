@@ -41,6 +41,12 @@ The `LibraryView` exposes the local meal catalog:
 - physical activities
 - search by name
 
+### Grocery stores
+The `StoresView` provides a CRUD interface for grocery stores (`GroceryStore`): name, optional address, search, create, edit, and delete. Data is persisted locally via the `groceryStores` Pinia store.
+
+### Articles and price history
+The `ArticlesView` provides a CRUD interface for grocery articles (`GroceryItem`): name, reference unit (per kilogram, per liter, or per unit), search, create, edit, and delete. Each article also keeps a price history (`GroceryPriceEntry`) of purchases: price, grocery store, and purchase date, so the same article can be compared across stores and over time. Data is persisted locally via the `groceryItems` Pinia store.
+
 ### Settings and generation rules
 The `SettingsView` lets the user configure:
 - the reference week and alternation mode
@@ -79,6 +85,9 @@ Key types in `src/types.ts`:
 - `WeekContext`: alternating week config, overrides, and per-day context
 - `PlanningRule`: fixed meal assignment by weekday + meal type
 - `FrequencyRule`: target count per week for a component, dish, or category
+- `GroceryStore`: a grocery store with a name and optional address
+- `GroceryItem`: a purchasable grocery article with a reference unit (kilogram, liter, or unit) and a price history
+- `GroceryPriceEntry`: a single observed price for a `GroceryItem` at a given `GroceryStore` and date
 
 ## Data flow and planning logic
 The planning engine follows a simple pattern:
@@ -100,6 +109,8 @@ The stores persist their state in `window.localStorage`:
 - `lifeos.weekPlan.v1`
 - `lifeos.planningRules.v1`
 - `lifeos.context.v1`
+- `lifeos.groceryStores.v1`
+- `lifeos.groceryItems.v1`
 
 This keeps the app usable offline and prevents the project from depending on a backend for the core workflow.
 

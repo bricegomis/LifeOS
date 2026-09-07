@@ -100,6 +100,25 @@ export interface GroceryStore {
   updatedAt: string
 }
 
+export type GroceryItemUnit = 'kilogram' | 'liter' | 'unit'
+
+export interface GroceryPriceEntry {
+  id: string
+  storeId: string
+  price: number
+  observedAt: string
+  createdAt: string
+}
+
+export interface GroceryItem {
+  id: string
+  name: string
+  unit: GroceryItemUnit
+  priceHistory: GroceryPriceEntry[]
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DayPlan {
   id: string
   dateLabel: string
