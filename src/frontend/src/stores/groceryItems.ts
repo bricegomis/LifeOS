@@ -38,20 +38,12 @@ function nowIso(): string {
   return new Date().toISOString()
 }
 
-function createItemId(): string {
+function createId(prefix: string): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return `item-${crypto.randomUUID()}`
+    return `${prefix}-${crypto.randomUUID()}`
   }
 
-  return `item-${Date.now()}-${Math.random().toString(36).slice(2)}`
-}
-
-function createPriceEntryId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return `price-${crypto.randomUUID()}`
-  }
-
-  return `price-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
 function sanitizePriceEntry(value: unknown): GroceryPriceEntry | null {
@@ -165,7 +157,7 @@ export const useGroceryItemsStore = defineStore('groceryItems', () => {
     items.value = [
       ...items.value,
       {
-        id: createItemId(),
+        id: createId('item'),
         name,
         unit: payload.unit,
         priceHistory: [],
@@ -241,7 +233,7 @@ export const useGroceryItemsStore = defineStore('groceryItems', () => {
         priceHistory: [
           ...item.priceHistory,
           {
-            id: createPriceEntryId(),
+            id: createId('price'),
             storeId,
             price: payload.price,
             observedAt: payload.observedAt,

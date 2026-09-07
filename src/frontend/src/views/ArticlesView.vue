@@ -139,12 +139,8 @@ function ensurePriceForm(itemId: string) {
   return priceForms[itemId]
 }
 
-function priceForm(itemId: string) {
-  return priceForms[itemId] ?? defaultPriceForm()
-}
-
 const activePriceForm = computed(() =>
-  expandedItemId.value ? priceForm(expandedItemId.value) : defaultPriceForm(),
+  expandedItemId.value ? ensurePriceForm(expandedItemId.value) : defaultPriceForm(),
 )
 
 const activePriceHistory = computed(() => {
