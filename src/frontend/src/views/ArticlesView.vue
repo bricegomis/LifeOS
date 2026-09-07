@@ -179,10 +179,7 @@ function submitPriceForm(itemId: string): void {
     return
   }
 
-  form.storeId = ''
-  form.price = null
-  form.observedAt = new Date().toISOString().slice(0, 10)
-  form.error = ''
+  Object.assign(form, defaultPriceForm())
 }
 
 function removePriceEntry(itemId: string, priceEntryId: string): void {

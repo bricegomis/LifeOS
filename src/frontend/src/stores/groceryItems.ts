@@ -43,7 +43,7 @@ function createItemId(): string {
     return `item-${crypto.randomUUID()}`
   }
 
-  return `item-${Date.now()}`
+  return `item-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
 function createPriceEntryId(): string {
@@ -51,7 +51,7 @@ function createPriceEntryId(): string {
     return `price-${crypto.randomUUID()}`
   }
 
-  return `price-${Date.now()}`
+  return `price-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
 function sanitizePriceEntry(value: unknown): GroceryPriceEntry | null {
