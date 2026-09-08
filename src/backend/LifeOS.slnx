@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/LifeOS.Api/LifeOS.Api.csproj" />
+    <Project Path="src/LifeOS.Application/LifeOS.Application.csproj" />
+    <Project Path="src/LifeOS.Domain/LifeOS.Domain.csproj" />
+    <Project Path="src/LifeOS.Infrastructure/LifeOS.Infrastructure.csproj" />
+  </Folder>
+</Solution>

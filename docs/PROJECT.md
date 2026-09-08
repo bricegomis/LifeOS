@@ -65,7 +65,9 @@ The generator in `src/frontend/src/data/weekGenerator.ts` builds a full `WeekPla
 The default rule set already encodes a practical weekly rhythm for the current user, including recurring lunch / dinner preferences and enjoyment-focused dishes.
 
 ## Architecture
-The frontend is centered on a Vue 3 / TypeScript app in `src/frontend`.
+The frontend is centered on a Vue 3 / TypeScript app in `src/frontend`. A backend API is
+being introduced incrementally in `src/backend` (see "Backend API" below); it does not
+replace the local-first frontend architecture described in this document.
 
 ### Main folders
 - `src/frontend/src/views` contains the UI pages.
@@ -128,6 +130,19 @@ The repository layer (`lifeosRepository.ts`) syncs:
 
 Authentication is implemented through magic-link email sign-in and an auth session stored in browser storage.
 
+## Backend API
+`src/backend` hosts a first, minimal ASP.NET Core Web API (`LifeOS.Api`) for LifeOS,
+organized into Domain / Application / Infrastructure / Api layers pointing inward
+(Clean Architecture), as a foundation to grow towards a DDD-oriented backend.
+
+The first implemented slice is a single read-only endpoint, `GET /api/stores`, returning
+the authenticated user's grocery stores. It reuses the frontend's existing Supabase Auth
+session: the API validates the same Supabase-issued JWT access tokens rather than
+implementing its own login flow. Persistence for stores is currently an in-memory,
+per-user seeded repository (`InMemoryStoreRepository`); it is expected to be replaced by
+a real database once the backend covers more than a read-only list. See
+`src/backend/README.md` for the layer breakdown and configuration details.
+
 ## Current state of the project
 At the code level, the project is already working as a pragmatic V0 product:
 - the app is structured around the weekly meal planning domain
@@ -141,9 +156,9 @@ The current state is intentionally narrow and product-focused on nutrition and p
 
 ## Known limitations
 - The app is still centered on a single user / personal workflow.
-- There is no broad backend domain model beyond the current Supabase tables.
+- There is no broad backend domain model beyond the current Supabase tables and the new, still minimal `LifeOS.Api` stores endpoint.
 - The meal library is a curated local catalog, not a general recipe database.
-- The project currently has no dedicated automated test suite; the main quality gate is the build and lint flow.
+- The project currently has no dedicated automated test suite; the main quality gate is the build and lint flow (frontend) and `dotnet build` (backend).
 - The app is still at the V0 planning stage; advanced nutrition tracking, shopping lists, and broader life-management features are out of scope.
 
 ## Current State
