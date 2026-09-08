@@ -138,3 +138,20 @@ Consequences:
 - these entities are not yet synced to Supabase; they remain local-only until a clear need for cross-device sync emerges
 - shopping lists, budgeting, and automatic price analytics remain out of scope for now
 - deleting a store does not cascade into existing price history entries; the UI tolerates orphaned `storeId` references and falls back to a "Magasin supprimé" label
+
+## 2026 — Introduce a .NET backend API alongside the local-first frontend
+Context:
+The frontend has so far relied on localStorage plus optional Supabase sync, with no dedicated backend domain model. Some features (starting with grocery stores) call for server-side logic and a structured backend as the project grows.
+
+Decision:
+A new ASP.NET Core Web API (`src/backend`, `LifeOS.Api`) is introduced, organized into Domain, Application, Infrastructure, and Api layers pointing inward, as a foundation to grow towards Clean Architecture / DDD. The first implemented slice is a read-only `GET /api/stores` endpoint. The API authenticates requests using the same Supabase-issued JWTs already used by the frontend, instead of implementing a separate login flow.
+
+Reasons:
+- reusing Supabase Auth avoids duplicating identity management and keeps a single sign-in experience for the user
+- a layered backend structure keeps business rules (Domain/Application) independent from framework and persistence details (Infrastructure/Api), making it easier to evolve incrementally
+- starting with the smallest possible vertical slice (list stores) validates the wiring (auth, layering, DI) before adding write operations or a real database
+
+Consequences:
+- the backend does not replace the local-first frontend architecture; localStorage remains the default persistence for the core planning workflow
+- stores are currently served from an in-memory, per-user seeded repository (`InMemoryStoreRepository`) rather than a real database; this is expected to change once the backend needs to persist writes
+- future backend features should follow the same layering (Domain entities, Application use cases/ports, Infrastructure implementations, Api endpoint mapping) and reuse the existing Supabase JWT authentication
