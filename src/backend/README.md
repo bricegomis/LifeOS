@@ -119,8 +119,7 @@ image's built-in non-root `app` user.
 
 ### Continuous delivery
 
-The `.github/workflows/publish-backend-image.yml` workflow builds this image and pushes
-it to the GitHub Container Registry (`ghcr.io/<owner>/<repo>-api`) on every push to
-`main` that touches `src/backend/**`, tagging it `latest` and with the full commit SHA.
-It can also be triggered manually via `workflow_dispatch`. No extra secrets are needed:
-it authenticates with the automatically provided `GITHUB_TOKEN`.
+The `.github/workflows/build-push-docker-images.yml` workflow builds this image (and
+the frontend web image) and pushes it to the GitHub Container Registry
+(`ghcr.io/bricegomis/lifeos-api`, tagged `latest`) on every push to `main`. No extra
+secrets are needed: it authenticates with the automatically provided `GITHUB_TOKEN`.
