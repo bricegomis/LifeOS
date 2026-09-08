@@ -155,3 +155,20 @@ Consequences:
 - the backend does not replace the local-first frontend architecture; localStorage remains the default persistence for the core planning workflow
 - stores are currently served from an in-memory, per-user seeded repository (`InMemoryStoreRepository`) rather than a real database; this is expected to change once the backend needs to persist writes
 - future backend features should follow the same layering (Domain entities, Application use cases/ports, Infrastructure implementations, Api endpoint mapping) and reuse the existing Supabase JWT authentication
+
+## 2026 — Expand the backend API to articles, meal library, planning rules, and week context; add Scalar for OpenAPI testing
+Context:
+The backend API started with a single read-only `GET /api/stores` slice. The frontend's domain model covers more entities (grocery articles, the shared meal library, planning/frequency rules, week context) that needed the same server-side treatment, and there was no interactive way to exercise the API without a separate tool.
+
+Decision:
+The backend now exposes, for each remaining bounded context, the same layering already used for stores (Domain aggregate mirroring the frontend model, Application query/command backed by a repository port, in-memory Infrastructure repository, Api endpoint mapping): full CRUD for grocery articles (`/api/articles`, including price history), read-only endpoints for the shared meal library (`/api/meal-components`, `/api/composite-dishes`, `/api/activities`), full CRUD for planning rules and frequency rules, and get/replace for the per-user week context (`/api/week-context`). `Scalar.AspNetCore` is added on top of the existing `Microsoft.AspNetCore.OpenApi` document to provide an interactive API reference/tester at `/scalar/v1` in development.
+
+Reasons:
+- following the same layering per bounded context keeps the backend consistent and easy to extend as more of the frontend domain is ported
+- the meal library (components, dishes, activities) is shared, read-only seed data in the frontend, so it is exposed the same way rather than as per-owner CRUD
+- Scalar gives a lightweight, native-OpenAPI-compatible UI to manually test authenticated endpoints without adding a heavier tool like Swashbuckle
+
+Consequences:
+- articles, planning rules, frequency rules, and week context are currently served from in-memory, per-owner repositories, not a real database; this is expected to change as the backend matures
+- `WeekPlan` generation itself (the weekly planner, `src/frontend/src/data/weekGenerator.ts`) is not yet ported to the backend and still runs entirely in the frontend
+- future backend work can keep using `/scalar/v1` to manually verify new endpoints against a real Supabase-issued JWT
