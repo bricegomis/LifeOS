@@ -99,3 +99,28 @@ In the `Development` environment the API exposes its OpenAPI document (via
 `http://localhost:5292/scalar/v1` when running locally). Use it to browse every endpoint
 and send authenticated requests (paste a Supabase access token as a `Bearer` token) without
 needing a separate tool such as Postman.
+
+## Docker image
+
+`src/backend/Dockerfile` builds a multi-stage, self-contained image for `LifeOS.Api`
+(SDK image to restore/publish, then the smaller ASP.NET runtime image). To build and run
+it locally from `src/backend`:
+
+```bash
+docker build -t lifeos-api -f Dockerfile .
+docker run --rm -p 8080:8080 \
+  -e Supabase__Url="https://<project-ref>.supabase.co" \
+  -e Cors__AllowedOrigins__0="http://localhost:5173" \
+  lifeos-api
+```
+
+The container listens on port `8080` (`ASPNETCORE_HTTP_PORTS=8080`) and runs as the
+image's built-in non-root `app` user.
+
+### Continuous delivery
+
+The `.github/workflows/publish-backend-image.yml` workflow builds this image and pushes
+it to the GitHub Container Registry (`ghcr.io/<owner>/<repo>-api`) on every push to
+`main` that touches `src/backend/**`, tagging it `latest` and with the full commit SHA.
+It can also be triggered manually via `workflow_dispatch`. No extra secrets are needed:
+it authenticates with the automatically provided `GITHUB_TOKEN`.
