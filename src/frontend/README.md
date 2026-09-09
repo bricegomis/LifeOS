@@ -46,3 +46,26 @@ npm run build
 ```sh
 npm run lint
 ```
+
+## Docker image
+
+`src/frontend/Dockerfile` builds the app with Vite (baking the `VITE_SUPABASE_URL` /
+`VITE_SUPABASE_ANON_KEY` build args into the bundle) and serves the static output with
+nginx. To build and run it locally from `src/frontend`:
+
+```bash
+docker build -t lifeos-web \
+  --build-arg VITE_SUPABASE_URL="https://<project-ref>.supabase.co" \
+  --build-arg VITE_SUPABASE_ANON_KEY="<anon-key>" \
+  .
+docker run --rm -p 8080:80 lifeos-web
+```
+
+### Continuous delivery
+
+The `.github/workflows/build-push-docker-images.yml` workflow builds both this image
+and the backend API image, then pushes them to the GitHub Container Registry
+(`ghcr.io/bricegomis/lifeos-web` and `ghcr.io/bricegomis/lifeos-api`) on every push to
+`main`. The `VITE_*` build args are read from repository **Variables** (Settings →
+Secrets and variables → Actions → Variables tab), not Secrets, since they are baked into
+the client bundle and are not sensitive.

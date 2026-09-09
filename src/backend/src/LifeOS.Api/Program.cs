@@ -4,6 +4,7 @@ using LifeOS.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +62,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference(options => options.WithTitle("LifeOS API"));
 }
 
 app.UseHttpsRedirection();
@@ -69,6 +71,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStoresEndpoints();
+app.MapArticlesEndpoints();
+app.MapLibraryEndpoints();
+app.MapPlanningEndpoints();
+app.MapWeekContextEndpoints();
 
 app.Run();
 
