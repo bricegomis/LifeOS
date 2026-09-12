@@ -1,355 +1,65 @@
-# LifeOS — Core Model
+# LifeOS — Concepts fonctionnels
 
-## Principe
+Ce document décrit le vocabulaire produit validé. Il ne prescrit ni architecture
+technique, ni stockage, ni modèle de base de données ; ces sujets seront évalués
+pendant l'audit technique.
 
-Le cœur de la V0 est volontairement réduit.
+## Foyer et profils
 
-```text
-WeekPlan
-│
-└── DayPlan × 7
-    │
-    ├── Breakfast
-    ├── Lunch
-    ├── Dinner
-    └── Activity
-```
+Un **foyer** est le périmètre isolé qui possède toutes les données métier. Il
+dispose d'un propriétaire dans le MVP et contient des profils de consommation.
+Un profil porte notamment un coefficient de portion habituel, ajustable selon le
+repas et les membres présents.
 
-La V0 doit permettre de générer et modifier ce planning.
+## Articles, recettes et composants
 
----
+Un **article** est un produit achetable ou consommable, avec une unité et, si
+connues, ses données nutritionnelles corrigibles. Il peut provenir d'Open Food
+Facts ou être créé manuellement.
 
-# WeekPlan
+Une **recette** définit ingrédients, étapes, portions de référence, durée,
+macros, métadonnées structurées et tags. Les recettes simples sont représentées
+comme les autres recettes.
 
-Représente une semaine planifiée.
+Un **composant** est une recette ou préparation réutilisable dans plusieurs
+repas, par exemple une protéine préparée, des légumes rôtis ou un féculent. Un
+composant de batch cooking rend disponibles plusieurs portions distribuables
+dans les repas planifiés.
 
-## Propriétés principales
+Un **repas composé** associe une ou plusieurs recettes et composants. Il permet
+de représenter un repas planifié sans contraindre tous les repas à une structure
+fixe.
 
-* Id
-* StartDate
-* Status
-* Days
+## Semaine et repas planifiés
 
-## Status
+Une **semaine** contient les journées et reste consultable après son passage.
+Elle peut être dupliquée. Une journée contient les créneaux petit-déjeuner,
+déjeuner, dîner et zéro ou plusieurs collations.
 
-* Draft
-* Generated
-* Validated
-* Archived
+Un **repas planifié** référence les recettes et composants qui le composent,
+leurs portions calculées et son statut : prévu, consommé, remplacé ou ignoré.
+Une consommation non planifiée est également un repas consigné, recherché dans
+la bibliothèque ou les articles.
 
-## Responsabilités
+Le **contexte hebdomadaire** rassemble les présences des enfants, le statut
+télétravail/bureau quotidien et le sport déclaré. Il sert de donnée explicite
+aux calculs et suggestions.
 
-Un WeekPlan peut :
+## Sport et nutrition
 
-* être créé ;
-* être généré ;
-* être modifié ;
-* être validé ;
-* être consulté.
+Une **séance** ou un **trajet vélo** a un type, une intensité, une durée et une
+estimation de dépense paramétrable. Les calculs de nutrition utilisent les
+macros et la cible alimentaire définie par l'utilisateur ; ils exposent leurs
+hypothèses plutôt que de se présenter comme un avis médical.
 
----
+## Stock, courses et scénarios
 
-# DayPlan
+Un **stock** est une quantité manuelle d'article dans une unité compatible. Les
+conversions ne sont admises que lorsqu'elles sont sûres.
 
-Représente une journée.
+Une **liste de courses** consolide les besoins du menu et soustrait le stock
+déclaré. Elle est consultable et cochable sur mobile.
 
-## Propriétés
-
-* Id
-* Date
-* Breakfast
-* Lunch
-* Dinner
-* Activity
-
-Le DayPlan est principalement un agrégat de lecture pour la vue hebdomadaire.
-
----
-
-# MealSlot
-
-Un MealSlot représente un repas planifié.
-
-## Propriétés
-
-* Id
-* MealType
-* MealDefinition
-* EstimatedCalories
-* EstimatedProteinGrams
-* PreparationTimeMinutes
-
-## MealType
-
-* Breakfast
-* Lunch
-* Dinner
-
-Un MealSlot pointe vers un repas de type :
-
-* AssembledMeal ;
-* CompositeDish.
-
----
-
-# AssembledMeal
-
-Un repas assemblé est constitué de composants indépendants.
-
-## Exemple
-
-```text
-🥩 Steak haché
-🥔 Pommes de terre
-🥦 Brocolis
-```
-
-## Composants possibles
-
-* ProteinComponent
-* StarchComponent
-* VegetableComponents[]
-* OptionalComponent
-
-Tous les composants ne sont pas obligatoires.
-
-Le modèle ne doit pas imposer artificiellement :
-
-```text
-protéine + féculent + légumes
-```
-
-à tous les repas.
-
-Il doit seulement permettre cette composition lorsque le repas s'y prête.
-
-## Modification
-
-Chaque composant peut être remplacé individuellement par un composant compatible.
-
-Exemple :
-
-```text
-Steak + pommes de terre + brocolis
-
-devient :
-
-Steak + riz + brocolis
-```
-
-sans remplacer le reste du repas.
-
----
-
-# CompositeDish
-
-Un CompositeDish représente un plat complet.
-
-## Exemples
-
-* Lasagnes
-* Dhal lentilles-riz
-* Chili
-* Curry de tempeh
-* Pancakes protéinés
-* Pizza maison
-
-## Modification
-
-Un CompositeDish est remplacé entièrement.
-
-La V0 ne permet pas de modifier ses composants depuis le planning.
-
----
-
-# MealComponent
-
-Représente un élément utilisable dans un repas assemblé.
-
-## Propriétés principales
-
-* Id
-* Name
-* ComponentType
-* EstimatedCalories
-* EstimatedProteinGrams
-* EstimatedCarbohydrateGrams
-* EstimatedFatGrams
-* DefaultPortionQuantity
-* Unit
-* Active
-
-## ComponentType
-
-Valeurs initiales :
-
-* Protein
-* Starch
-* Vegetable
-* Optional
-
-L'interface peut représenter les catégories par des icônes.
-
-Exemple :
-
-* 🥩 protéine ;
-* 🥔 féculent ;
-* 🥦 légumes ;
-* 🥣 complément ou sauce.
-
-Les libellés de catégorie n'ont pas besoin d'être affichés systématiquement dans l'éditeur.
-
----
-
-# CompositeDishDefinition
-
-Décrit un plat composé réutilisable.
-
-## Propriétés principales
-
-* Id
-* Name
-* EstimatedCalories
-* EstimatedProteinGrams
-* EstimatedCarbohydrateGrams
-* EstimatedFatGrams
-* PreparationTimeMinutes
-* SuitableForBreakfast
-* SuitableForLunch
-* SuitableForDinner
-* Active
-
----
-
-# Activity
-
-Dans la V0, Activity reste volontairement très simple.
-
-## Propriétés
-
-* Id
-* Name
-
-## Valeurs initiales possibles
-
-* Repos
-* Marche
-* Running
-* Running long
-* Renforcement
-* Mobilité
-* Vélo
-* Activité familiale
-
-Ces valeurs peuvent initialement être seedées en base ou définies en dur.
-
-La V0 ne nécessite pas de moteur sportif avancé.
-
----
-
-# Génération de semaine
-
-Le générateur reçoit :
-
-```text
-Meal library
-+
-Activity list
-+
-Simple generation rules
-```
-
-et retourne :
-
-```text
-WeekPlan
-```
-
-La première version du moteur peut être volontairement naïve.
-
-Objectif :
-
-* générer tous les repas ;
-* éviter quelques répétitions évidentes ;
-* produire une semaine suffisamment variée ;
-* associer une activité à chaque jour.
-
-Les règles avancées liées au contexte appartiennent aux versions suivantes.
-
----
-
-# Nutrition
-
-Les repas contiennent des estimations nutritionnelles simples.
-
-La grille principale affiche au minimum :
-
-* calories ;
-* protéines.
-
-Les données suivantes peuvent être conservées dans le modèle :
-
-* glucides ;
-* lipides.
-
-L'objectif initial n'est pas un tracking nutritionnel exhaustif.
-
----
-
-# Principes alimentaires initiaux
-
-La bibliothèque de départ peut favoriser les féculents suivants :
-
-* pommes de terre ;
-* riz ;
-* millet ;
-* quinoa ;
-* pâtes 100 % sarrasin ;
-* couscous de sarrasin.
-
-Les pâtes à base de blé ne sont pas un choix par défaut.
-
-L'avoine peut exister dans la bibliothèque, mais ne doit pas être utilisée comme base automatique avant validation de sa bonne tolérance.
-
-Les repas principaux peuvent privilégier la présence de légumes, tout en conservant une règle souple.
-
----
-
-# Évolutions prévues du modèle
-
-## V1
-
-Ajout possible :
-
-* WeekContext
-* DayContext
-* KidsWeek / SoloWeek
-* WorkLocation
-* BikeCommute
-* AvailableSportDuration
-
-## V2
-
-Ajout possible :
-
-* IsLocked sur MealSlot ;
-* verrouillage d'un MealComponent ;
-* génération partielle ;
-* gestion des portions ;
-* quantités par personne ;
-* restes et préparation multiple.
-
-## Plus tard
-
-Entités candidates :
-
-* Ingredient
-* Store
-* PriceHistory
-* InventoryItem
-* ShoppingList
-* SymptomLog
-* HealthMetric
-* CalendarEvent
-
-Ces concepts ne doivent pas être ajoutés avant qu'une fonctionnalité réelle les rende nécessaires.
+Un **scénario** est une proposition de semaine classée selon un objectif
+explicite. Il explique ses compromis et demeure un brouillon jusqu'à ce que
+l'utilisateur le modifie ou l'applique.
