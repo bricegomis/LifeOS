@@ -1,14 +1,19 @@
 using LifeOS.Application.Articles;
 using LifeOS.Application.Common.Interfaces;
+using LifeOS.Application.Households;
 using LifeOS.Application.Library;
 using LifeOS.Application.Planning;
 using LifeOS.Application.Stores;
 using LifeOS.Application.WeekContexts;
 using LifeOS.Infrastructure.Articles;
+using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Library;
+using LifeOS.Infrastructure.Persistence;
 using LifeOS.Infrastructure.Planning;
 using LifeOS.Infrastructure.Stores;
 using LifeOS.Infrastructure.WeekContexts;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LifeOS.Infrastructure;
@@ -18,12 +23,28 @@ namespace LifeOS.Infrastructure;
 /// </summary>
 public static class DependencyInjection
 {
+    /// <summary>
+    /// Registers the EF Core / PostgreSQL-backed domains (households, stores, articles) and the
+    /// remaining in-memory bounded contexts still awaiting migration. The connection string is
+    /// resolved lazily from <see cref="IConfiguration"/> when the <c>DbContext</c> is first
+    /// created (not eagerly at startup), so hosts such as integration tests can inject their own
+    /// configuration after <c>WebApplicationBuilder</c> construction but before first use.
+    /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        services.AddSingleton<IStoreRepository, InMemoryStoreRepository>();
+        services.AddDbContext<LifeOSDbContext>((serviceProvider, options) =>
+        {
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+            options.UseNpgsql(PostgresConnectionStringResolver.Resolve(configuration));
+        });
+
+        services.AddScoped<IHouseholdRepository, EfHouseholdRepository>();
+        services.AddScoped<ResolveHouseholdForUserQuery>();
+
+        services.AddScoped<IStoreRepository, EfStoreRepository>();
         services.AddScoped<GetStoresQuery>();
 
-        services.AddSingleton<IArticleRepository, InMemoryArticleRepository>();
+        services.AddScoped<IArticleRepository, EfArticleRepository>();
         services.AddScoped<GetArticlesQuery>();
         services.AddScoped<CreateArticleCommand>();
         services.AddScoped<UpdateArticleCommand>();

@@ -9,9 +9,9 @@ public sealed class GetArticlesQuery(IArticleRepository articleRepository)
 {
     private readonly IArticleRepository _articleRepository = articleRepository;
 
-    public async Task<IReadOnlyList<GroceryItemDto>> ExecuteAsync(Guid ownerId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GroceryItemDto>> ExecuteAsync(Guid householdId, CancellationToken cancellationToken = default)
     {
-        var articles = await _articleRepository.GetAllForOwnerAsync(ownerId, cancellationToken);
+        var articles = await _articleRepository.GetAllForHouseholdAsync(householdId, cancellationToken);
 
         return articles
             .Select(ArticleMapper.ToDto)

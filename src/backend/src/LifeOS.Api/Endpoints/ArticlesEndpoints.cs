@@ -2,6 +2,7 @@ using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Contracts;
 using LifeOS.Application.Articles;
+using LifeOS.Application.Households;
 
 namespace LifeOS.Api.Endpoints;
 
@@ -39,15 +40,17 @@ public static class ArticlesEndpoints
 
     private static async Task<IResult> GetArticlesAsync(
         ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         GetArticlesQuery getArticlesQuery,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        var articles = await getArticlesQuery.ExecuteAsync(ownerId, cancellationToken);
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var articles = await getArticlesQuery.ExecuteAsync(householdId, cancellationToken);
 
         return Results.Ok(articles);
     }
@@ -55,18 +58,21 @@ public static class ArticlesEndpoints
     private static async Task<IResult> CreateArticleAsync(
         ClaimsPrincipal user,
         ArticleRequest request,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         CreateArticleCommand createArticleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
         try
         {
             var article = await createArticleCommand.ExecuteAsync(
-                ownerId,
+                householdId,
                 request.Name,
                 request.Description,
                 request.Unit,
@@ -84,18 +90,21 @@ public static class ArticlesEndpoints
         ClaimsPrincipal user,
         Guid articleId,
         ArticleRequest request,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         UpdateArticleCommand updateArticleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
         try
         {
             var article = await updateArticleCommand.ExecuteAsync(
-                ownerId,
+                householdId,
                 articleId,
                 request.Name,
                 request.Description,
@@ -113,15 +122,17 @@ public static class ArticlesEndpoints
     private static async Task<IResult> DeleteArticleAsync(
         ClaimsPrincipal user,
         Guid articleId,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         DeleteArticleCommand deleteArticleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        var deleted = await deleteArticleCommand.ExecuteAsync(ownerId, articleId, cancellationToken);
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var deleted = await deleteArticleCommand.ExecuteAsync(householdId, articleId, cancellationToken);
 
         return deleted ? Results.NoContent() : Results.NotFound();
     }
@@ -130,18 +141,21 @@ public static class ArticlesEndpoints
         ClaimsPrincipal user,
         Guid articleId,
         PriceEntryRequest request,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         AddPriceEntryCommand addPriceEntryCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
         try
         {
             var article = await addPriceEntryCommand.ExecuteAsync(
-                ownerId,
+                householdId,
                 articleId,
                 request.StoreId,
                 request.Price,
@@ -164,15 +178,17 @@ public static class ArticlesEndpoints
         ClaimsPrincipal user,
         Guid articleId,
         Guid priceEntryId,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         DeletePriceEntryCommand deletePriceEntryCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        var deleted = await deletePriceEntryCommand.ExecuteAsync(ownerId, articleId, priceEntryId, cancellationToken);
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var deleted = await deletePriceEntryCommand.ExecuteAsync(householdId, articleId, priceEntryId, cancellationToken);
 
         return deleted ? Results.NoContent() : Results.NotFound();
     }

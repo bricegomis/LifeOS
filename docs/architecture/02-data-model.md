@@ -191,6 +191,42 @@ jusqu'à application.
   contenu explicatif intrinsèquement flexible)
 - `status` (`draft`, `applied`, `discarded`)
 
+## État d'implémentation — Jalon 1 (fondations foyer + persistance)
+
+Le Jalon 1 a introduit `households`, `household_members` et `member_profiles`
+tels que décrits ci-dessus (table par table, colonnes identiques), avec une
+précision : `household_members.supabase_user_id` porte un **index unique**
+en base (et pas seulement un invariant applicatif), pour garantir qu'un
+utilisateur Supabase ne peut jamais se retrouver rattaché à deux foyers
+même en cas de requêtes concurrentes lors du provisionnement à la demande
+(voir `docs/architecture/decisions/0003-household-isolation.md`).
+
+Ce même jalon a migré les domaines **Stores** et **Articles** (déjà
+existants côté in-memory) vers PostgreSQL, en conservant leur forme
+historique plutôt qu'en les remodélisant immédiatement selon `food_items` /
+`price_observations` ci-dessus :
+
+- `stores` : conforme au modèle documenté (`id`, `household_id`, `name`,
+  `address`).
+- `articles` (et non `food_items`) : reprend la forme actuelle du domaine
+  `GroceryItem` du frontend/backend existant — `id`, `household_id`, `name`,
+  `unit`, sans `off_barcode` / `off_payload` / `nutrition_per_reference_unit`
+  pour l'instant. L'intégration Open Food Facts et la fusion éventuelle avec
+  `food_items` restent prévues pour le jalon « bibliothèque alimentaire »
+  (Jalon 3) — `articles` est un point de départ concret, pas le schéma
+  final.
+- `article_price_entries` (et non `price_observations`) : historique de prix
+  porté comme entité *owned* d'`articles` (une ligne par observation, avec
+  `store_id`, `price`, `observed_on`), équivalent fonctionnel de
+  `price_observations` mais rattaché directement à l'article plutôt qu'à un
+  `food_item` séparé.
+
+Cette divergence est volontaire (cf. consigne du jalon : « conserver les
+contrats existants autant que possible ») et reste cohérente avec les ADR :
+l'isolation par `household_id` est appliquée dès ce jalon sur ces tables, et
+la fusion vers le modèle `food_items` cible se fera au jalon dédié plutôt que
+de bloquer ce jalon sur un remodelage complet.
+
 ## Invariants transverses à retenir
 
 - Toute table listée avec `household_id` doit être filtrée par ce foyer à

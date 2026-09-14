@@ -8,7 +8,7 @@ namespace LifeOS.Domain.Stores;
 /// </summary>
 public sealed class Store : Entity
 {
-    public Guid OwnerId { get; private set; }
+    public Guid HouseholdId { get; private set; }
     public string Name { get; private set; }
     public string Address { get; private set; }
     public bool IsOrganic { get; private set; }
@@ -18,7 +18,7 @@ public sealed class Store : Entity
 
     private Store(
         Guid id,
-        Guid ownerId,
+        Guid householdId,
         string name,
         string address,
         bool isOrganic,
@@ -27,7 +27,7 @@ public sealed class Store : Entity
         DateTimeOffset updatedAt)
         : base(id)
     {
-        OwnerId = ownerId;
+        HouseholdId = householdId;
         Name = name;
         Address = address;
         IsOrganic = isOrganic;
@@ -37,16 +37,16 @@ public sealed class Store : Entity
     }
 
     public static Store Create(
-        Guid ownerId,
+        Guid householdId,
         string name,
         string address,
         bool isOrganic,
         bool isLocal,
         DateTimeOffset? now = null)
     {
-        if (ownerId == Guid.Empty)
+        if (householdId == Guid.Empty)
         {
-            throw new ArgumentException("A store must belong to an owner.", nameof(ownerId));
+            throw new ArgumentException("A store must belong to a household.", nameof(householdId));
         }
 
         if (string.IsNullOrWhiteSpace(name))
@@ -58,7 +58,7 @@ public sealed class Store : Entity
 
         return new Store(
             Guid.NewGuid(),
-            ownerId,
+            householdId,
             name.Trim(),
             address.Trim(),
             isOrganic,
@@ -72,7 +72,7 @@ public sealed class Store : Entity
     /// </summary>
     public static Store Rehydrate(
         Guid id,
-        Guid ownerId,
+        Guid householdId,
         string name,
         string address,
         bool isOrganic,
@@ -80,6 +80,6 @@ public sealed class Store : Entity
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt)
     {
-        return new Store(id, ownerId, name, address, isOrganic, isLocal, createdAt, updatedAt);
+        return new Store(id, householdId, name, address, isOrganic, isLocal, createdAt, updatedAt);
     }
 }

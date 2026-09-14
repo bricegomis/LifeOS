@@ -10,7 +10,7 @@ public sealed class GroceryItem : Entity
 {
     private readonly List<GroceryPriceEntry> _priceHistory = [];
 
-    public Guid OwnerId { get; private set; }
+    public Guid HouseholdId { get; private set; }
     public string Name { get; private set; }
     public string Description { get; private set; }
     public GroceryItemUnit Unit { get; private set; }
@@ -20,34 +20,32 @@ public sealed class GroceryItem : Entity
 
     private GroceryItem(
         Guid id,
-        Guid ownerId,
+        Guid householdId,
         string name,
         string description,
         GroceryItemUnit unit,
-        IEnumerable<GroceryPriceEntry> priceHistory,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt)
         : base(id)
     {
-        OwnerId = ownerId;
+        HouseholdId = householdId;
         Name = name;
         Description = description;
         Unit = unit;
-        _priceHistory.AddRange(priceHistory);
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
     }
 
     public static GroceryItem Create(
-        Guid ownerId,
+        Guid householdId,
         string name,
         string description,
         GroceryItemUnit unit,
         DateTimeOffset? now = null)
     {
-        if (ownerId == Guid.Empty)
+        if (householdId == Guid.Empty)
         {
-            throw new ArgumentException("An article must belong to an owner.", nameof(ownerId));
+            throw new ArgumentException("An article must belong to a household.", nameof(householdId));
         }
 
         if (string.IsNullOrWhiteSpace(name))
@@ -59,11 +57,10 @@ public sealed class GroceryItem : Entity
 
         return new GroceryItem(
             Guid.NewGuid(),
-            ownerId,
+            householdId,
             name.Trim(),
             description.Trim(),
             unit,
-            [],
             timestamp,
             timestamp);
     }
@@ -73,7 +70,7 @@ public sealed class GroceryItem : Entity
     /// </summary>
     public static GroceryItem Rehydrate(
         Guid id,
-        Guid ownerId,
+        Guid householdId,
         string name,
         string description,
         GroceryItemUnit unit,
@@ -81,7 +78,10 @@ public sealed class GroceryItem : Entity
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt)
     {
-        return new GroceryItem(id, ownerId, name, description, unit, priceHistory, createdAt, updatedAt);
+        var article = new GroceryItem(id, householdId, name, description, unit, createdAt, updatedAt);
+        article._priceHistory.AddRange(priceHistory);
+
+        return article;
     }
 
     public void UpdateDetails(string name, string description, GroceryItemUnit unit, DateTimeOffset? now = null)

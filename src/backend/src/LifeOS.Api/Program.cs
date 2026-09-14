@@ -1,7 +1,9 @@
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Endpoints;
 using LifeOS.Infrastructure;
+using LifeOS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -16,30 +18,42 @@ builder.Services
     .Bind(builder.Configuration.GetSection(SupabaseAuthOptions.SectionName))
     .ValidateDataAnnotations();
 
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer();
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    // Integration tests authenticate via LifeOS.Api.Authentication.TestAuthHandler instead of
+    // real Supabase JWTs, so multiple simulated users/households can be exercised deterministically.
+    builder.Services
+        .AddAuthentication(TestAuthHandler.SchemeName)
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthHandler>(
+            TestAuthHandler.SchemeName, _ => { });
+}
+else
+{
+    builder.Services
+        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer();
 
-builder.Services
-    .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-    .Configure<IOptions<SupabaseAuthOptions>>((jwtOptions, supabaseOptions) =>
-    {
-        var supabase = supabaseOptions.Value;
-
-        // Supabase Auth issues RS256-signed JWTs and exposes an OIDC discovery document,
-        // so the signing keys are resolved automatically from its metadata endpoint.
-        jwtOptions.Authority = supabase.Issuer;
-        jwtOptions.Audience = supabase.Audience;
-        jwtOptions.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-        jwtOptions.TokenValidationParameters = new TokenValidationParameters
+    builder.Services
+        .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+        .Configure<IOptions<SupabaseAuthOptions>>((jwtOptions, supabaseOptions) =>
         {
-            ValidateIssuer = true,
-            ValidIssuer = supabase.Issuer,
-            ValidateAudience = true,
-            ValidAudience = supabase.Audience,
-            ValidateLifetime = true,
-        };
-    });
+            var supabase = supabaseOptions.Value;
+
+            // Supabase Auth issues RS256-signed JWTs and exposes an OIDC discovery document,
+            // so the signing keys are resolved automatically from its metadata endpoint.
+            jwtOptions.Authority = supabase.Issuer;
+            jwtOptions.Audience = supabase.Audience;
+            jwtOptions.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+            jwtOptions.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = supabase.Issuer,
+                ValidateAudience = true,
+                ValidAudience = supabase.Audience,
+                ValidateLifetime = true,
+            };
+        });
+}
 
 builder.Services.AddAuthorization();
 
@@ -58,6 +72,16 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Applies pending EF Core migrations at startup so the schema is always up to date with the
+// deployed code (ADR 0001). Skipped when explicitly disabled, e.g. by integration tests that
+// manage migrations themselves against an ephemeral test database.
+if (!builder.Configuration.GetValue<bool>("SkipDatabaseMigration"))
+{
+    using var migrationScope = app.Services.CreateScope();
+    var dbContext = migrationScope.ServiceProvider.GetRequiredService<LifeOSDbContext>();
+    dbContext.Database.Migrate();
+}
 
 if (app.Environment.IsDevelopment())
 {

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
+using LifeOS.Application.Households;
 using LifeOS.Application.Stores;
 
 namespace LifeOS.Api.Endpoints;
@@ -23,15 +24,17 @@ public static class StoresEndpoints
 
     private static async Task<IResult> GetStoresAsync(
         ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         GetStoresQuery getStoresQuery,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        var stores = await getStoresQuery.ExecuteAsync(ownerId, cancellationToken);
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var stores = await getStoresQuery.ExecuteAsync(householdId, cancellationToken);
 
         return Results.Ok(stores);
     }

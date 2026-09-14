@@ -10,13 +10,20 @@ public sealed class DeletePriceEntryCommand(IArticleRepository articleRepository
     private readonly IArticleRepository _articleRepository = articleRepository;
 
     public async Task<bool> ExecuteAsync(
-        Guid ownerId,
+        Guid householdId,
         Guid articleId,
         Guid priceEntryId,
         CancellationToken cancellationToken = default)
     {
-        var article = await _articleRepository.GetByIdAsync(ownerId, articleId, cancellationToken);
+        var article = await _articleRepository.GetByIdAsync(householdId, articleId, cancellationToken);
 
-        return article is not null && article.RemovePriceEntry(priceEntryId);
+        if (article is null || !article.RemovePriceEntry(priceEntryId))
+        {
+            return false;
+        }
+
+        await _articleRepository.UpdateAsync(article, cancellationToken);
+
+        return true;
     }
 }

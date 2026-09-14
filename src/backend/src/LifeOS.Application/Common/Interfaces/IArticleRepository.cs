@@ -7,11 +7,16 @@ namespace LifeOS.Application.Common.Interfaces;
 /// </summary>
 public interface IArticleRepository
 {
-    Task<IReadOnlyList<GroceryItem>> GetAllForOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GroceryItem>> GetAllForHouseholdAsync(Guid householdId, CancellationToken cancellationToken = default);
 
-    Task<GroceryItem?> GetByIdAsync(Guid ownerId, Guid articleId, CancellationToken cancellationToken = default);
+    Task<GroceryItem?> GetByIdAsync(Guid householdId, Guid articleId, CancellationToken cancellationToken = default);
 
     Task AddAsync(GroceryItem article, CancellationToken cancellationToken = default);
 
-    Task<bool> DeleteAsync(Guid ownerId, Guid articleId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Persists changes made to an article previously loaded via <see cref="GetByIdAsync"/>.
+    /// </summary>
+    Task UpdateAsync(GroceryItem article, CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteAsync(Guid householdId, Guid articleId, CancellationToken cancellationToken = default);
 }

@@ -11,13 +11,13 @@ public sealed class CreateArticleCommand(IArticleRepository articleRepository)
     private readonly IArticleRepository _articleRepository = articleRepository;
 
     public async Task<GroceryItemDto> ExecuteAsync(
-        Guid ownerId,
+        Guid householdId,
         string name,
         string description,
         string unit,
         CancellationToken cancellationToken = default)
     {
-        var article = GroceryItem.Create(ownerId, name, description, ArticleMapper.ParseUnit(unit));
+        var article = GroceryItem.Create(householdId, name, description, ArticleMapper.ParseUnit(unit));
 
         await _articleRepository.AddAsync(article, cancellationToken);
 
