@@ -172,3 +172,20 @@ Consequences:
 - articles, planning rules, frequency rules, and week context are currently served from in-memory, per-owner repositories, not a real database; this is expected to change as the backend matures
 - `WeekPlan` generation itself (the weekly planner, `src/frontend/src/data/weekGenerator.ts`) is not yet ported to the backend and still runs entirely in the frontend
 - future backend work can keep using `/scalar/v1` to manually verify new endpoints against a real Supabase-issued JWT
+
+## 2026 — Jalon 1 : fondations foyer et persistance PostgreSQL réelle (Stores, Articles)
+Context:
+La roadmap technique (`docs/03-roadmap.md`) et les ADR 0001-0003 avaient validé la cible (PostgreSQL auto-hébergé via EF Core, Supabase en auth uniquement, isolation applicative par foyer) sans encore d'implémentation concrète : le backend était entièrement en mémoire et scopé par utilisateur Supabase (`ownerId`), sans notion de foyer.
+
+Decision:
+Introduction du modèle `Household` / `HouseholdMember` (rôle `owner` au MVP, modèle prêt pour `member`) / `MemberProfile` dans `LifeOS.Domain`, et migration complète des domaines `Stores` et `Articles` (les plus proches d'être prêts selon l'audit) de l'in-memory vers PostgreSQL via EF Core (`LifeOSDbContext`, migrations versionnées). Chaque requête authentifiée résout le foyer de l'utilisateur via `ResolveHouseholdForUserQuery` : si l'utilisateur Supabase n'a pas encore de foyer (utilisateur pré-existant), un foyer propriétaire est provisionné à la demande plutôt que via une migration de données complexe. Toutes les tables migrées portent un `household_id` et sont filtrées systématiquement côté application (pas de RLS Postgres, la base applicative étant séparée de Supabase).
+
+Reasons:
+- Stores et Articles étaient les domaines les plus simples et les plus proches d'un modèle stable, permettant de prouver le socle (foyer + EF Core + Postgres + isolation) sans réattaquer en même temps le modèle repas/recettes plus complexe visé par le Jalon 2.
+- Le provisionnement à la demande évite un script de migration de données pour un volume d'utilisateurs actuel faible et non critique (cf. audit technique), tout en restant compatible avec une évolution future vers des foyers multi-membres.
+- L'isolation applicative (et non RLS) est cohérente avec l'ADR 0003 : la base PostgreSQL cible est un service distinct de Supabase, qui ne sert que l'authentification (ADR 0002).
+
+Consequences:
+- Les tables `stores`, `articles`, `article_price_entries` conservent leur forme héritée du modèle in-memory plutôt que d'adopter immédiatement le modèle conceptuel `food_items` / `price_observations` documenté dans `docs/architecture/02-data-model.md` ; cette divergence est documentée explicitement dans ce fichier et sera reconciliée au jalon « bibliothèque alimentaire ».
+- Les contextes `Library`, `Planning` (règles) et `WeekContexts` restent en mémoire, scopés par utilisateur, jusqu'à leurs propres jalons de migration.
+- Des tests automatisés (unitaires domaine + intégration API/EF Core via Testcontainers PostgreSQL) prouvent la persistance après redémarrage logique de l'API et l'isolation stricte entre deux foyers ; ils font désormais partie du socle de validation du backend (`dotnet test` depuis `src/backend`).

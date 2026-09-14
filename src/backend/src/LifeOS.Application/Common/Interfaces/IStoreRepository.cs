@@ -7,5 +7,5 @@ namespace LifeOS.Application.Common.Interfaces;
 /// </summary>
 public interface IStoreRepository
 {
-    Task<IReadOnlyList<Store>> GetAllForOwnerAsync(Guid ownerId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Store>> GetAllForHouseholdAsync(Guid householdId, CancellationToken cancellationToken = default);
 }

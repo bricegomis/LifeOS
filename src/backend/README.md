@@ -12,12 +12,12 @@ scoped to the authenticated user (resolved from the JWT `sub` claim).
 
 | Area | Endpoints | Notes |
 | --- | --- | --- |
-| Stores | `GET /api/stores` | Read-only, per-owner. |
-| Articles | `GET/POST /api/articles`, `PUT/DELETE /api/articles/{id}`, `POST /api/articles/{id}/price-entries`, `DELETE /api/articles/{id}/price-entries/{priceEntryId}` | Full CRUD, per-owner, mirrors the frontend's `GroceryItem` (name, description, unit, price history). |
+| Stores | `GET /api/stores` | Read-only, scoped to the caller's household. PostgreSQL-backed (EF Core). |
+| Articles | `GET/POST /api/articles`, `PUT/DELETE /api/articles/{id}`, `POST /api/articles/{id}/price-entries`, `DELETE /api/articles/{id}/price-entries/{priceEntryId}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); mirrors the frontend's `GroceryItem` (name, description, unit, price history). |
 | Library | `GET /api/meal-components`, `GET /api/composite-dishes`, `GET /api/activities` | Read-only, shared across users; mirrors `src/frontend/src/data/localLibrary.ts`. |
-| Planning rules | `GET/POST /api/planning-rules`, `PUT/DELETE /api/planning-rules/{id}` | Full CRUD, per-owner; pins a meal component or dish to a weekday/meal slot. |
-| Frequency rules | `GET/POST /api/frequency-rules`, `PUT/DELETE /api/frequency-rules/{id}` | Full CRUD, per-owner; constrains how many times per week a component/dish/category should appear. |
-| Week context | `GET/PUT /api/week-context` | Per-owner singleton (alternating week config, overrides, per-day settings). |
+| Planning rules | `GET/POST /api/planning-rules`, `PUT/DELETE /api/planning-rules/{id}` | Full CRUD, per-owner (in-memory, not yet migrated); pins a meal component or dish to a weekday/meal slot. |
+| Frequency rules | `GET/POST /api/frequency-rules`, `PUT/DELETE /api/frequency-rules/{id}` | Full CRUD, per-owner (in-memory, not yet migrated); constrains how many times per week a component/dish/category should appear. |
+| Week context | `GET/PUT /api/week-context` | Per-owner singleton (in-memory, not yet migrated). |
 
 `WeekPlan` generation (the weekly planner itself, `src/frontend/src/data/weekGenerator.ts`)
 is not yet ported to the backend; it still runs entirely in the frontend.
@@ -36,16 +36,96 @@ src/
                           Infrastructure.
 ```
 
-Each bounded context (`Stores`, `Articles`, `Library`, `Planning`, `WeekContexts`) follows
-the same shape in every layer: a `Domain` aggregate/entity mirroring the equivalent
-frontend model in `src/frontend/src/types.ts`, an `Application` query/command backed by a
-repository port (`Application/Common/Interfaces`), and a temporary in-memory
-`Infrastructure` repository — the first, simplest persistence port, expected to be
-replaced by a real database (e.g. PostgreSQL via EF Core) as each feature grows. The
-`Library` context is the only one that is not per-owner: it is shared, read-only seed
-data equivalent to `src/frontend/src/data/localLibrary.ts`.
-`LifeOS.Api/Endpoints/*.cs` maps each context's HTTP routes, requiring authorization and
-resolving the current user from the JWT `sub` claim.
+Each bounded context (`Stores`, `Articles`, `Library`, `Planning`, `WeekContexts`,
+`Households`) follows the same shape in every layer: a `Domain` aggregate/entity
+mirroring the equivalent frontend model in `src/frontend/src/types.ts` (where
+applicable), an `Application` query/command backed by a repository port
+(`Application/Common/Interfaces`), and an `Infrastructure` implementation. `Households`,
+`Stores`, and `Articles` are persisted in PostgreSQL via EF Core; `Library`, `Planning`,
+and `WeekContexts` are still served by temporary in-memory repositories, expected to be
+migrated in later milestones. The `Library` context is the only one that is not scoped
+per household: it is shared, read-only seed data equivalent to
+`src/frontend/src/data/localLibrary.ts`.
+`LifeOS.Api/Endpoints/*.cs` maps each context's HTTP routes, requiring authorization and,
+for household-scoped contexts, resolving the caller's household id (see "Households and
+isolation" below).
+
+## Households and isolation
+
+Every household-scoped table (`stores`, `articles`, `article_price_entries`,
+`household_members`, `member_profiles`) carries a `household_id` foreign key to
+`households`, and every query/command on these tables is filtered by that id — see
+`docs/architecture/decisions/0003-household-isolation.md`. This isolation is enforced
+**at the application layer**, not via PostgreSQL Row-Level Security: the backend's
+database is a separate PostgreSQL instance from Supabase (which is used purely for
+authentication, see `docs/architecture/decisions/0002-supabase-auth-only.md`), so there
+is no Supabase-managed RLS to rely on here.
+
+A Supabase user is resolved to a household on every authenticated request via
+`ResolveHouseholdForUserQuery` (`LifeOS.Application/Households`):
+1. Look up an existing `household_members` row for the caller's `sub` claim.
+2. If none exists (e.g. a pre-migration Supabase user's first request against the new
+   backend), auto-provision a new household with that user as `owner` — on-demand
+   provisioning rather than a bulk data migration, since the current user/data volume is
+   low (see `docs/architecture/00-technical-audit.md`).
+3. A unique index on `household_members.supabase_user_id` makes step 2 safe under
+   concurrent requests: a race is caught as a unique-constraint violation and resolved by
+   re-reading the now-existing row instead of failing.
+
+`MemberProfile` (a per-household profile with a portion coefficient) is created
+automatically for the owner when a household is provisioned; the model already supports
+adding further `member` role members and profiles for later milestones (shared
+households), even though the MVP only exercises the `owner` role.
+
+## Persistence (PostgreSQL via EF Core)
+
+`Households`, `Stores`, and `Articles` are persisted through `LifeOSDbContext`
+(`LifeOS.Infrastructure/Persistence`), targeting PostgreSQL via `Npgsql.EntityFrameworkCore.PostgreSQL`.
+
+Connection string resolution (`PostgresConnectionStringResolver`) supports either:
+- `ConnectionStrings:Postgres` (standard .NET convention, e.g. env var
+  `ConnectionStrings__Postgres`), or
+- `DATABASE_URL` as a `postgres://user:pass@host:port/db` URL (Coolify/Heroku-style),
+
+and throws at startup if neither is configured — there is no default/committed
+connection string (see `docs/architecture/decisions/0001-postgresql-on-coolify.md`).
+Copy `src/backend/.env.example` to a local, non-committed `.env` (or equivalent secret
+store) and adjust it.
+
+Migrations live in `LifeOS.Infrastructure/Persistence/Migrations` and are applied
+automatically at startup (`dbContext.Database.Migrate()`), unless the
+`SkipDatabaseMigration` configuration value is `true` (e.g. if migrations are applied
+out-of-band in a deployment pipeline). To generate a new migration after a model
+change, from `src/backend`:
+
+```bash
+dotnet ef migrations add <Name> \
+  --project src/LifeOS.Infrastructure \
+  --startup-project src/LifeOS.Api
+```
+
+## Testing
+
+From `src/backend`:
+
+```bash
+dotnet test
+```
+
+- `tests/LifeOS.Domain.Tests` — unit tests for the `Households`, `Stores`, and
+  `Articles` domain entities (invariants, no I/O).
+- `tests/LifeOS.Api.IntegrationTests` — API-level integration tests using
+  `Microsoft.AspNetCore.Mvc.Testing` against a real PostgreSQL instance spun up with
+  [Testcontainers](https://dotnet.testcontainers.org/) (`Testcontainers.PostgreSql`);
+  requires a working Docker daemon. They exercise the app's real startup path,
+  including automatic migrations, and a `TestAuthHandler` (active only when
+  `ASPNETCORE_ENVIRONMENT=Testing`) that simulates distinct Supabase users via an
+  `X-Test-Sub` header instead of real JWTs. These tests prove:
+  - persistence survives a logical API restart (data written by one
+    `WebApplicationFactory` instance is read back by an independent instance against the
+    same database), and
+  - strict cross-household isolation (a household can never read or mutate another
+    household's stores or articles, even by guessing another household's resource ids).
 
 ## Authentication
 

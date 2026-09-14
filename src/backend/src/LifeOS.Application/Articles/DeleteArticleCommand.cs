@@ -9,6 +9,6 @@ public sealed class DeleteArticleCommand(IArticleRepository articleRepository)
 {
     private readonly IArticleRepository _articleRepository = articleRepository;
 
-    public Task<bool> ExecuteAsync(Guid ownerId, Guid articleId, CancellationToken cancellationToken = default)
-        => _articleRepository.DeleteAsync(ownerId, articleId, cancellationToken);
+    public Task<bool> ExecuteAsync(Guid householdId, Guid articleId, CancellationToken cancellationToken = default)
+        => _articleRepository.DeleteAsync(householdId, articleId, cancellationToken);
 }

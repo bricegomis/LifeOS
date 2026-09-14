@@ -9,9 +9,9 @@ public sealed class GetStoresQuery(IStoreRepository storeRepository)
 {
     private readonly IStoreRepository _storeRepository = storeRepository;
 
-    public async Task<IReadOnlyList<StoreDto>> ExecuteAsync(Guid ownerId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<StoreDto>> ExecuteAsync(Guid householdId, CancellationToken cancellationToken = default)
     {
-        var stores = await _storeRepository.GetAllForOwnerAsync(ownerId, cancellationToken);
+        var stores = await _storeRepository.GetAllForHouseholdAsync(householdId, cancellationToken);
 
         return stores
             .Select(store => new StoreDto(
