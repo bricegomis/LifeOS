@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Contracts;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Households;
 using LifeOS.Application.Stock;
 using Microsoft.AspNetCore.Mvc;
@@ -13,19 +14,26 @@ public static class ShoppingListEndpoints
     {
         var group = app.MapGroup("/api/shopping-list")
             .WithTags("ShoppingList")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapPost("/weeks/{weekId:guid}/generate", GenerateShoppingListAsync)
             .WithName("GenerateShoppingList")
-            .WithOpenApi();
+            .Produces<GeneratedShoppingListResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/items", GetShoppingListItemsAsync)
             .WithName("GetShoppingListItems")
-            .WithOpenApi();
+            .Produces<List<ShoppingListItemDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPatch("/items/{itemId:guid}", UpdateShoppingListItemCheckedAsync)
             .WithName("UpdateShoppingListItemChecked")
-            .WithOpenApi();
+            .Produces<ShoppingListItemDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -47,12 +55,13 @@ public static class ShoppingListEndpoints
         try
         {
             var items = await generateShoppingListCommand.ExecuteAsync(householdId, weekId, cancellationToken);
-            return Results.Ok(new { shoppingList = items });
+            return Results.Ok(new GeneratedShoppingListResponse(items));
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
+
     }
 
     private static async Task<IResult> GetShoppingListItemsAsync(
@@ -102,3 +111,5 @@ public static class ShoppingListEndpoints
         return Results.Ok(item);
     }
 }
+
+public sealed record GeneratedShoppingListResponse(List<ShoppingListItemDto> ShoppingList);

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Contracts;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Households;
 using LifeOS.Application.Stores;
 
@@ -15,22 +16,40 @@ public static class StoresEndpoints
     {
         var group = app.MapGroup("/api/stores")
             .WithTags("Stores")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapGet("/", GetStoresAsync)
-            .WithName("GetStores");
+            .WithName("GetStores")
+            .Produces<List<StoreDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/{storeId:guid}", GetStoreAsync)
-            .WithName("GetStore");
+            .WithName("GetStore")
+            .Produces<StoreDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/", CreateStoreAsync)
-            .WithName("CreateStore");
+            .WithName("CreateStore")
+            .Produces<StoreDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/{storeId:guid}", UpdateStoreAsync)
-            .WithName("UpdateStore");
+            .WithName("UpdateStore")
+            .Produces<StoreDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{storeId:guid}", DeleteStoreAsync)
-            .WithName("DeleteStore");
+            .WithName("DeleteStore")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -98,7 +117,7 @@ public static class StoresEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -132,7 +151,7 @@ public static class StoresEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Dtos;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Households;
 using LifeOS.Application.Recipes;
 using LifeOS.Domain.Recipes;
@@ -13,31 +14,48 @@ public static class RecipesEndpoints
     {
         var group = app.MapGroup("/api/recipes")
             .WithTags("Recipes")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapGet("/", GetRecipesAsync)
             .WithName("GetRecipes")
-            .WithOpenApi();
+            .Produces<List<RecipeDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/{recipeId}", GetRecipeByIdAsync)
             .WithName("GetRecipeById")
-            .WithOpenApi();
+            .Produces<RecipeDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/", CreateRecipeAsync)
             .WithName("CreateRecipe")
-            .WithOpenApi();
+            .Produces<RecipeDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/{recipeId}", UpdateRecipeAsync)
             .WithName("UpdateRecipe")
-            .WithOpenApi();
+            .Produces<RecipeDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{recipeId}", DeleteRecipeAsync)
             .WithName("DeleteRecipe")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/{recipeId}/ingredients", AddRecipeIngredientAsync)
             .WithName("AddRecipeIngredient")
-            .WithOpenApi();
+            .Produces<RecipeDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -112,7 +130,7 @@ public static class RecipesEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -146,7 +164,7 @@ public static class RecipesEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -198,7 +216,7 @@ public static class RecipesEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 

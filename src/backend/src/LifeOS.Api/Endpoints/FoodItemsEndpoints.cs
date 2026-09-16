@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Contracts;
+using LifeOS.Api.Validation;
 using LifeOS.Application.FoodItems;
 using LifeOS.Application.Households;
 using LifeOS.Domain.FoodItems;
@@ -18,31 +19,61 @@ public static class FoodItemsEndpoints
     {
         var group = app.MapGroup("/api/food-items")
             .WithTags("Food Items")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapGet("/", GetFoodItemsAsync)
-            .WithName("GetFoodItems");
+            .WithName("GetFoodItems")
+            .Produces<List<FoodItemDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/", CreateFoodItemAsync)
-            .WithName("CreateFoodItem");
+            .WithName("CreateFoodItem")
+            .Produces<FoodItemDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/search-off", SearchOpenFoodFactsByNameAsync)
-            .WithName("SearchOpenFoodFactsByName");
+            .WithName("SearchOpenFoodFactsByName")
+            .Produces<List<FoodItemDto>>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/search-off-barcode", SearchOpenFoodFactsByBarcodeAsync)
-            .WithName("SearchOpenFoodFactsByBarcode");
+            .WithName("SearchOpenFoodFactsByBarcode")
+            .Produces<FoodItemDto>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapGet("/{foodItemId:guid}", GetFoodItemByIdAsync)
-            .WithName("GetFoodItemById");
+            .WithName("GetFoodItemById")
+            .Produces<FoodItemDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPut("/{foodItemId:guid}", UpdateFoodItemAsync)
-            .WithName("UpdateFoodItem");
+            .WithName("UpdateFoodItem")
+            .Produces<FoodItemDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{foodItemId:guid}", DeleteFoodItemAsync)
-            .WithName("DeleteFoodItem");
+            .WithName("DeleteFoodItem")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/{foodItemId:guid}/correction", CreateCorrectionAsync)
-            .WithName("CreateFoodItemCorrection");
+            .WithName("CreateFoodItemCorrection")
+            .Produces<FoodItemDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -111,7 +142,7 @@ public static class FoodItemsEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -144,7 +175,7 @@ public static class FoodItemsEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -185,7 +216,7 @@ public static class FoodItemsEndpoints
 
         if (string.IsNullOrWhiteSpace(name))
         {
-            return Results.BadRequest("Name parameter is required");
+            return Results.Problem("Name parameter is required", statusCode: StatusCodes.Status400BadRequest);
         }
 
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
@@ -240,7 +271,7 @@ public static class FoodItemsEndpoints
 
         if (string.IsNullOrWhiteSpace(barcode))
         {
-            return Results.BadRequest("Barcode parameter is required");
+            return Results.Problem("Barcode parameter is required", statusCode: StatusCodes.Status400BadRequest);
         }
 
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
@@ -301,7 +332,7 @@ public static class FoodItemsEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 }

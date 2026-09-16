@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Contracts;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Articles;
 using LifeOS.Application.Households;
 
@@ -15,25 +16,48 @@ public static class ArticlesEndpoints
     {
         var group = app.MapGroup("/api/articles")
             .WithTags("Articles")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapGet("/", GetArticlesAsync)
-            .WithName("GetArticles");
+            .WithName("GetArticles")
+            .Produces<List<GroceryItemDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/", CreateArticleAsync)
-            .WithName("CreateArticle");
+            .WithName("CreateArticle")
+            .Produces<GroceryItemDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/{articleId:guid}", UpdateArticleAsync)
-            .WithName("UpdateArticle");
+            .WithName("UpdateArticle")
+            .Produces<GroceryItemDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{articleId:guid}", DeleteArticleAsync)
-            .WithName("DeleteArticle");
+            .WithName("DeleteArticle")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/{articleId:guid}/price-entries", AddPriceEntryAsync)
-            .WithName("AddArticlePriceEntry");
+            .WithName("AddArticlePriceEntry")
+            .Produces<GroceryItemDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{articleId:guid}/price-entries/{priceEntryId:guid}", DeletePriceEntryAsync)
-            .WithName("DeleteArticlePriceEntry");
+            .WithName("DeleteArticlePriceEntry")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -82,7 +106,7 @@ public static class ArticlesEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -115,7 +139,7 @@ public static class ArticlesEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -166,11 +190,11 @@ public static class ArticlesEndpoints
         }
         catch (ArgumentOutOfRangeException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 

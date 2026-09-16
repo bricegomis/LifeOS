@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Contracts;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Households;
 using LifeOS.Application.Stock;
 
@@ -12,23 +13,33 @@ public static class StockEndpoints
     {
         var group = app.MapGroup("/api/stock-items")
             .WithTags("Stock")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapGet("/", GetStockItemsAsync)
             .WithName("GetStockItems")
-            .WithOpenApi();
+            .Produces<List<StockItemDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/", CreateStockItemAsync)
             .WithName("CreateStockItem")
-            .WithOpenApi();
+            .Produces<StockItemDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/{stockItemId:guid}", UpdateStockItemAsync)
             .WithName("UpdateStockItem")
-            .WithOpenApi();
+            .Produces<StockItemDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{stockItemId:guid}", DeleteStockItemAsync)
             .WithName("DeleteStockItem")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -77,7 +88,7 @@ public static class StockEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 

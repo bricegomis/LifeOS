@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using LifeOS.Api.Authentication;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Households;
 using LifeOS.Application.WeekPlanning;
 
@@ -12,19 +14,29 @@ public static class WeekScenariosEndpoints
     {
         var group = app.MapGroup("/api/weeks/{weekId}/scenarios")
             .WithTags("WeekScenarios")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapGet("/", GetScenariosAsync)
             .WithName("GetScenarios")
-            .WithOpenApi();
+            .Produces<List<StoredWeekScenarioDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/generate", GenerateScenariosAsync)
             .WithName("GenerateScenarios")
-            .WithOpenApi();
+            .Produces<List<GeneratedWeekScenarioDto>>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPatch("/{scenarioId}/apply", ApplyScenarioAsync)
             .WithName("ApplyScenario")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -57,16 +69,14 @@ public static class WeekScenariosEndpoints
 
         var scenarios = await scenarioRepository.GetAllForWeekAsync(weekId, cancellationToken);
 
-        var dtos = scenarios.Select(s => new
-        {
+        var dtos = scenarios.Select(s => new StoredWeekScenarioDto(
             s.Id,
             s.WeekId,
             s.RankingObjective,
-            Explanation = s.Explanation.RootElement.GetRawText(),
+            s.Explanation.RootElement.GetRawText(),
             s.Applied,
             s.CreatedAt,
-            s.UpdatedAt
-        }).ToList();
+            s.UpdatedAt)).ToList();
 
         return Results.Ok(dtos);
     }
@@ -100,7 +110,9 @@ public static class WeekScenariosEndpoints
 
         if (request.Objectives == null || request.Objectives.Count == 0)
         {
-            return Results.BadRequest(new { error = "At least one objective must be specified." });
+            return Results.Problem(
+                "At least one objective must be specified.",
+                statusCode: StatusCodes.Status400BadRequest);
         }
 
         try
@@ -111,29 +123,20 @@ public static class WeekScenariosEndpoints
                 request.Objectives.AsReadOnly(),
                 cancellationToken);
 
-            var dtos = scenarios.Select(s => new
-            {
+            var dtos = scenarios.Select(s => new GeneratedWeekScenarioDto(
                 s.Scenario.Id,
                 s.Scenario.WeekId,
                 s.Scenario.RankingObjective,
-                Explanation = new
-                {
-                    s.Explanation.RankingObjective,
-                    s.Explanation.NutritionDeltaKcal,
-                    s.Explanation.BudgetDeltaEur,
-                    s.Explanation.Details,
-                    s.Explanation.TextExplanation
-                },
+                s.Explanation,
                 s.Scenario.Applied,
                 s.Scenario.CreatedAt,
-                s.Scenario.UpdatedAt
-            }).ToList();
+                s.Scenario.UpdatedAt)).ToList();
 
             return Results.Created($"/api/weeks/{weekId}/scenarios", dtos);
         }
         catch (InvalidOperationException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -171,9 +174,28 @@ public static class WeekScenariosEndpoints
         }
         catch (InvalidOperationException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 }
 
-public record GenerateScenariosRequest(List<string> Objectives);
+public record GenerateScenariosRequest(
+    [property: Required, MinLength(1)] List<string> Objectives);
+
+public sealed record StoredWeekScenarioDto(
+    Guid Id,
+    Guid WeekId,
+    string RankingObjective,
+    string Explanation,
+    bool Applied,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record GeneratedWeekScenarioDto(
+    Guid Id,
+    Guid WeekId,
+    string RankingObjective,
+    ScenarioExplanation Explanation,
+    bool Applied,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);

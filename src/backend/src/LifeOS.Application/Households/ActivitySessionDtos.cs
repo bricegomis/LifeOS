@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace LifeOS.Application.Households;
 
 /// <summary>
@@ -17,16 +19,16 @@ public sealed record ActivitySessionDto(
 /// Request model for creating or updating an activity session.
 /// </summary>
 public sealed record CreateActivitySessionRequest(
-    string Type,
-    string Intensity,
-    int DurationMinutes,
-    decimal EstimatedEnergyKcal);
+    [property: Required, StringLength(50)] string Type,
+    [property: Required, StringLength(50)] string Intensity,
+    [property: Range(1, int.MaxValue)] int DurationMinutes,
+    [property: Range(0, double.MaxValue)] decimal EstimatedEnergyKcal);
 
 /// <summary>
 /// Request model for updating an activity session.
 /// </summary>
 public sealed record UpdateActivitySessionRequest(
-    string? Type,
-    string? Intensity,
-    int? DurationMinutes,
-    decimal? EstimatedEnergyKcal);
+    [property: StringLength(50, MinimumLength = 1)] string? Type,
+    [property: StringLength(50, MinimumLength = 1)] string? Intensity,
+    [property: Range(1, int.MaxValue)] int? DurationMinutes,
+    [property: Range(0, double.MaxValue)] decimal? EstimatedEnergyKcal);

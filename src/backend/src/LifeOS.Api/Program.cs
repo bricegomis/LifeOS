@@ -1,5 +1,6 @@
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Endpoints;
+using LifeOS.Api.ErrorHandling;
 using LifeOS.Infrastructure;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -11,6 +12,8 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure();
 
 builder.Services
@@ -83,12 +86,16 @@ if (!builder.Configuration.GetValue<bool>("SkipDatabaseMigration"))
     dbContext.Database.Migrate();
 }
 
-if (app.Environment.IsDevelopment())
+var enableOpenApiUi = builder.Configuration.GetValue<bool?>("Api:EnableOpenApiUi")
+    ?? app.Environment.IsDevelopment();
+
+if (enableOpenApiUi)
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options => options.WithTitle("LifeOS API"));
 }
 
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseCors();
 app.UseAuthentication();

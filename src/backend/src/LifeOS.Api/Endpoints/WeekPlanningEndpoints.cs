@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Dtos;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Application.ComposedMeals;
 using LifeOS.Application.Households;
@@ -17,85 +18,137 @@ public static class WeekPlanningEndpoints
         // Weeks
         var weekGroup = app.MapGroup("/api/weeks")
             .WithTags("WeekPlanning")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         weekGroup.MapGet("/", GetWeeksAsync)
             .WithName("GetWeeks")
-            .WithOpenApi();
+            .Produces<List<WeekDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         weekGroup.MapGet("/{weekId}", GetWeekByIdAsync)
             .WithName("GetWeekById")
-            .WithOpenApi();
+            .Produces<WeekDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         weekGroup.MapPost("/", CreateWeekAsync)
             .WithName("CreateWeek")
-            .WithOpenApi();
+            .Produces<WeekDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         weekGroup.MapPut("/{weekId}/status", UpdateWeekStatusAsync)
             .WithName("UpdateWeekStatus")
-            .WithOpenApi();
+            .Produces<WeekDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         weekGroup.MapDelete("/{weekId}", DeleteWeekAsync)
             .WithName("DeleteWeek")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         // Day Plans
         var dayGroup = app.MapGroup("/api/day-plans")
             .WithTags("WeekPlanning")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         dayGroup.MapGet("/{dayPlanId}", GetDayPlanByIdAsync)
             .WithName("GetDayPlanById")
-            .WithOpenApi();
+            .Produces<DayPlanDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         dayGroup.MapPost("/{weekId}/days", CreateDayPlanAsync)
             .WithName("CreateDayPlan")
-            .WithOpenApi();
+            .Produces<DayPlanDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         dayGroup.MapPut("/{dayPlanId}", UpdateDayPlanAsync)
             .WithName("UpdateDayPlan")
-            .WithOpenApi();
+            .Produces<DayPlanDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         dayGroup.MapDelete("/{dayPlanId}", DeleteDayPlanAsync)
             .WithName("DeleteDayPlan")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         // Planned Meals
         var mealGroup = app.MapGroup("/api/planned-meals")
             .WithTags("WeekPlanning")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         mealGroup.MapGet("/{mealId}", GetPlannedMealByIdAsync)
             .WithName("GetPlannedMealById")
-            .WithOpenApi();
+            .Produces<PlannedMealDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         mealGroup.MapPost("/{dayPlanId}/meals", CreatePlannedMealAsync)
             .WithName("CreatePlannedMeal")
-            .WithOpenApi();
+            .Produces<PlannedMealDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         mealGroup.MapPut("/{mealId}/status", UpdatePlannedMealStatusAsync)
             .WithName("UpdatePlannedMealStatus")
-            .WithOpenApi();
+            .Produces<PlannedMealDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         mealGroup.MapPut("/{mealId}/replace", ReplacePlannedMealAsync)
             .WithName("ReplacePlannedMeal")
-            .WithOpenApi();
+            .Produces<PlannedMealDto>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         mealGroup.MapPost("/{mealId}/parts", AddPlannedMealPartAsync)
             .WithName("AddPlannedMealPart")
-            .WithOpenApi();
+            .Produces<PlannedMealDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         mealGroup.MapPut("/{mealId}/parts/{partId}", UpdatePlannedMealPartAsync)
             .WithName("UpdatePlannedMealPart")
-            .WithOpenApi();
+            .Produces<PlannedMealDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         mealGroup.MapDelete("/{mealId}/parts/{partId}", DeletePlannedMealPartAsync)
             .WithName("DeletePlannedMealPart")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         mealGroup.MapDelete("/{mealId}", DeletePlannedMealAsync)
             .WithName("DeletePlannedMeal")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -170,7 +223,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -204,7 +257,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -280,7 +333,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -314,7 +367,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -404,7 +457,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -438,7 +491,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -485,7 +538,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -521,7 +574,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -560,7 +613,7 @@ public static class WeekPlanningEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 

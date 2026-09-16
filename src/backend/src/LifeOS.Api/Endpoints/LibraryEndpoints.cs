@@ -14,17 +14,23 @@ public static class LibraryEndpoints
         app.MapGet("/api/meal-components", GetMealComponentsAsync)
             .WithName("GetMealComponents")
             .WithTags("Library")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .Produces<List<MealComponentDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         app.MapGet("/api/composite-dishes", GetCompositeDishesAsync)
             .WithName("GetCompositeDishes")
             .WithTags("Library")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .Produces<List<CompositeDishDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         app.MapGet("/api/activities", GetActivitiesAsync)
             .WithName("GetActivities")
             .WithTags("Library")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .Produces<List<ActivityDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return app;
     }
