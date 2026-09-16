@@ -15,9 +15,7 @@ public sealed class Week : Entity
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044", Justification = "Backing field for EF Core")]
-    private List<DayPlan> _dayPlans = [];
-    public IReadOnlyList<DayPlan> DayPlans => _dayPlans.AsReadOnly();
+    public List<DayPlan> DayPlans { get; private set; } = [];
 
     private Week(
         Guid id,
@@ -88,14 +86,5 @@ public sealed class Week : Entity
         DateTimeOffset updatedAt)
     {
         return new Week(id, householdId, startsOn, status, createdAt, updatedAt);
-    }
-
-    /// <summary>
-    /// Called by EF Core to load day plans.
-    /// </summary>
-    internal void SetDayPlans(List<DayPlan> dayPlans)
-    {
-        _dayPlans.Clear();
-        _dayPlans.AddRange(dayPlans);
     }
 }

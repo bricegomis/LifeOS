@@ -18,9 +18,7 @@ public sealed class Recipe : Entity
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044", Justification = "Backing field for EF Core")]
-    private List<RecipeIngredient> _ingredients = [];
-    public IReadOnlyList<RecipeIngredient> Ingredients => _ingredients.AsReadOnly();
+    public List<RecipeIngredient> Ingredients { get; private set; } = [];
 
     private Recipe(
         Guid id,
@@ -108,7 +106,7 @@ public sealed class Recipe : Entity
         }
 
         var ingredient = RecipeIngredient.Create(Id, foodItemId, quantity, unit);
-        _ingredients.Add(ingredient);
+        Ingredients.Add(ingredient);
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
@@ -167,12 +165,4 @@ public sealed class Recipe : Entity
         return new Recipe(id, householdId, name, servings, durationMinutes, tags, metadata, createdAt, updatedAt);
     }
 
-    /// <summary>
-    /// Called by EF Core to load ingredients.
-    /// </summary>
-    internal void SetIngredients(List<RecipeIngredient> ingredients)
-    {
-        _ingredients.Clear();
-        _ingredients.AddRange(ingredients);
-    }
 }

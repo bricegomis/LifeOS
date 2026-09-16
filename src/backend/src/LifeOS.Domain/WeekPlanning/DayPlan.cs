@@ -13,9 +13,7 @@ public sealed class DayPlan : Entity
     public bool BikeCommute { get; private set; }
 
     // Navigation property for EF Core
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044", Justification = "Backing field for EF Core")]
-    private List<PlannedMeal> _plannedMeals = [];
-    public IReadOnlyList<PlannedMeal> PlannedMeals => _plannedMeals.AsReadOnly();
+    public List<PlannedMeal> PlannedMeals { get; private set; } = [];
 
     private DayPlan(
         Guid id,
@@ -84,12 +82,4 @@ public sealed class DayPlan : Entity
         return new DayPlan(id, weekId, date, workContext, bikeCommute);
     }
 
-    /// <summary>
-    /// Called by EF Core to load planned meals.
-    /// </summary>
-    internal void SetPlannedMeals(List<PlannedMeal> plannedMeals)
-    {
-        _plannedMeals.Clear();
-        _plannedMeals.AddRange(plannedMeals);
-    }
 }

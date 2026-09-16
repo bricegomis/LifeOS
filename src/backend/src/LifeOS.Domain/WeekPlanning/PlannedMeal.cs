@@ -18,9 +18,7 @@ public sealed class PlannedMeal : Entity
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044", Justification = "Backing field for EF Core")]
-    private List<PlannedMealPart> _parts = [];
-    public IReadOnlyList<PlannedMealPart> Parts => _parts.AsReadOnly();
+    public List<PlannedMealPart> Parts { get; private set; } = [];
 
     private PlannedMeal(
         Guid id,
@@ -137,12 +135,4 @@ public sealed class PlannedMeal : Entity
         return new PlannedMeal(id, dayPlanId, mealType, status, composedMealId, recipeId, createdAt, updatedAt);
     }
 
-    /// <summary>
-    /// Called by EF Core to load parts.
-    /// </summary>
-    internal void SetParts(List<PlannedMealPart> parts)
-    {
-        _parts.Clear();
-        _parts.AddRange(parts);
-    }
 }

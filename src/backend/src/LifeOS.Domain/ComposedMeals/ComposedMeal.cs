@@ -14,9 +14,7 @@ public sealed class ComposedMeal : Entity
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044", Justification = "Backing field for EF Core")]
-    private List<ComposedMealPart> _parts = [];
-    public IReadOnlyList<ComposedMealPart> Parts => _parts.AsReadOnly();
+    public List<ComposedMealPart> Parts { get; private set; } = [];
 
     private ComposedMeal(
         Guid id,
@@ -73,7 +71,7 @@ public sealed class ComposedMeal : Entity
         }
 
         var part = ComposedMealPart.Create(Id, recipeId, quantityFactor);
-        _parts.Add(part);
+        Parts.Add(part);
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
@@ -82,10 +80,10 @@ public sealed class ComposedMeal : Entity
     /// </summary>
     public void RemovePart(Guid partId)
     {
-        var part = _parts.FirstOrDefault(p => p.Id == partId);
+        var part = Parts.FirstOrDefault(p => p.Id == partId);
         if (part != null)
         {
-            _parts.Remove(part);
+            Parts.Remove(part);
             UpdatedAt = DateTimeOffset.UtcNow;
         }
     }
@@ -114,14 +112,5 @@ public sealed class ComposedMeal : Entity
         DateTimeOffset updatedAt)
     {
         return new ComposedMeal(id, householdId, name, createdAt, updatedAt);
-    }
-
-    /// <summary>
-    /// Called by EF Core to load parts.
-    /// </summary>
-    internal void SetParts(List<ComposedMealPart> parts)
-    {
-        _parts.Clear();
-        _parts.AddRange(parts);
     }
 }
