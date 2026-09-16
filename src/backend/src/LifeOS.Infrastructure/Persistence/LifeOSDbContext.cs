@@ -1,22 +1,37 @@
 using LifeOS.Domain.Articles;
+using LifeOS.Domain.ComposedMeals;
 using LifeOS.Domain.Households;
+using LifeOS.Domain.Recipes;
 using LifeOS.Domain.Stores;
+using LifeOS.Domain.WeekPlanning;
 using Microsoft.EntityFrameworkCore;
 
 namespace LifeOS.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core / Npgsql database context backing the PostgreSQL business database (ADR 0001).
-/// Only the domains migrated so far (households, stores, articles) are mapped here; other
-/// bounded contexts remain in-memory until they are ported in later technical milestones.
+/// Includes Jalon 1 (households, stores, articles) and Jalon 2 (recipes, composed meals, week planning).
 /// </summary>
 public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) : DbContext(options)
 {
+    // Jalon 1: Households and Articles
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
     public DbSet<Store> Stores => Set<Store>();
     public DbSet<GroceryItem> GroceryItems => Set<GroceryItem>();
+
+    // Jalon 2: Recipes and Meals
+    public DbSet<Recipe> Recipes => Set<Recipe>();
+    public DbSet<RecipeIngredient> RecipeIngredients => Set<RecipeIngredient>();
+    public DbSet<ComposedMeal> ComposedMeals => Set<ComposedMeal>();
+    public DbSet<ComposedMealPart> ComposedMealParts => Set<ComposedMealPart>();
+
+    // Jalon 2: Week Planning
+    public DbSet<Week> Weeks => Set<Week>();
+    public DbSet<DayPlan> DayPlans => Set<DayPlan>();
+    public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
+    public DbSet<PlannedMealPart> PlannedMealParts => Set<PlannedMealPart>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

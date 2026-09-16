@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LifeOS.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(LifeOSDbContext))]
-    partial class LifeOSDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916050147_Jalon2_AddRecipesMealsAndWeekPlanning")]
+    partial class Jalon2_AddRecipesMealsAndWeekPlanning
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -93,6 +96,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("ComposedMealId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ComposedMealId1")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("QuantityFactor")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
@@ -103,6 +109,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ComposedMealId");
+
+                    b.HasIndex("ComposedMealId1");
 
                     b.HasIndex("RecipeId");
 
@@ -244,6 +252,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("RecipeId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("RecipeId1")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -254,6 +265,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasIndex("FoodItemId");
 
                     b.HasIndex("RecipeId");
+
+                    b.HasIndex("RecipeId1");
 
                     b.ToTable("recipe_ingredients", (string)null);
                 });
@@ -309,6 +322,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("WeekId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("WeekId1")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("WorkContext")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -319,6 +335,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasIndex("Date");
 
                     b.HasIndex("WeekId");
+
+                    b.HasIndex("WeekId1");
 
                     b.ToTable("day_plans", (string)null);
                 });
@@ -335,6 +353,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("DayPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DayPlanId1")
                         .HasColumnType("uuid");
 
                     b.Property<string>("MealType")
@@ -359,6 +380,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("DayPlanId");
 
+                    b.HasIndex("DayPlanId1");
+
                     b.HasIndex("RecipeId");
 
                     b.ToTable("planned_meals", (string)null);
@@ -375,6 +398,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PlannedMealId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PlannedMealId1")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("PortionMultiplier")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
@@ -384,6 +410,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasIndex("MemberProfileId");
 
                     b.HasIndex("PlannedMealId");
+
+                    b.HasIndex("PlannedMealId1");
 
                     b.ToTable("planned_meal_parts", (string)null);
                 });
@@ -473,10 +501,14 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("LifeOS.Domain.ComposedMeals.ComposedMealPart", b =>
                 {
                     b.HasOne("LifeOS.Domain.ComposedMeals.ComposedMeal", null)
-                        .WithMany("Parts")
+                        .WithMany()
                         .HasForeignKey("ComposedMealId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.ComposedMeals.ComposedMeal", null)
+                        .WithMany("Parts")
+                        .HasForeignKey("ComposedMealId1");
 
                     b.HasOne("LifeOS.Domain.Recipes.Recipe", null)
                         .WithMany()
@@ -521,10 +553,14 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("LifeOS.Domain.Recipes.Recipe", null)
-                        .WithMany("Ingredients")
+                        .WithMany()
                         .HasForeignKey("RecipeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Recipes.Recipe", null)
+                        .WithMany("Ingredients")
+                        .HasForeignKey("RecipeId1");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Stores.Store", b =>
@@ -539,10 +575,14 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.DayPlan", b =>
                 {
                     b.HasOne("LifeOS.Domain.WeekPlanning.Week", null)
-                        .WithMany("DayPlans")
+                        .WithMany()
                         .HasForeignKey("WeekId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.WeekPlanning.Week", null)
+                        .WithMany("DayPlans")
+                        .HasForeignKey("WeekId1");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.PlannedMeal", b =>
@@ -553,10 +593,14 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("LifeOS.Domain.WeekPlanning.DayPlan", null)
-                        .WithMany("PlannedMeals")
+                        .WithMany()
                         .HasForeignKey("DayPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.WeekPlanning.DayPlan", null)
+                        .WithMany("PlannedMeals")
+                        .HasForeignKey("DayPlanId1");
 
                     b.HasOne("LifeOS.Domain.Recipes.Recipe", null)
                         .WithMany()
@@ -573,10 +617,14 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("LifeOS.Domain.WeekPlanning.PlannedMeal", null)
-                        .WithMany("Parts")
+                        .WithMany()
                         .HasForeignKey("PlannedMealId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.WeekPlanning.PlannedMeal", null)
+                        .WithMany("Parts")
+                        .HasForeignKey("PlannedMealId1");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.Week", b =>

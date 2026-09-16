@@ -1,17 +1,23 @@
 using LifeOS.Application.Articles;
+using LifeOS.Application.ComposedMeals;
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Application.Households;
 using LifeOS.Application.Library;
 using LifeOS.Application.Planning;
+using LifeOS.Application.Recipes;
 using LifeOS.Application.Stores;
 using LifeOS.Application.WeekContexts;
+using LifeOS.Application.WeekPlanning;
 using LifeOS.Infrastructure.Articles;
+using LifeOS.Infrastructure.ComposedMeals;
 using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Library;
 using LifeOS.Infrastructure.Persistence;
 using LifeOS.Infrastructure.Planning;
+using LifeOS.Infrastructure.Recipes;
 using LifeOS.Infrastructure.Stores;
 using LifeOS.Infrastructure.WeekContexts;
+using LifeOS.Infrastructure.WeekPlanning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -51,6 +57,13 @@ public static class DependencyInjection
         services.AddScoped<DeleteArticleCommand>();
         services.AddScoped<AddPriceEntryCommand>();
         services.AddScoped<DeletePriceEntryCommand>();
+
+        // Jalon 2: Recipes and Meals
+        services.AddScoped<IRecipeRepository, EfRecipeRepository>();
+        services.AddScoped<IComposedMealRepository, EfComposedMealRepository>();
+        services.AddScoped<IWeekRepository, EfWeekRepository>();
+        services.AddScoped<IDayPlanRepository, EfDayPlanRepository>();
+        services.AddScoped<IPlannedMealRepository, EfPlannedMealRepository>();
 
         services.AddSingleton<IMealComponentRepository, InMemoryMealComponentRepository>();
         services.AddSingleton<ICompositeDishRepository, InMemoryCompositeDishRepository>();
