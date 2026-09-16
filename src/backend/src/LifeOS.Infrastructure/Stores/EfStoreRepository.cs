@@ -20,4 +20,37 @@ public sealed class EfStoreRepository(LifeOSDbContext dbContext) : IStoreReposit
             .Where(store => store.HouseholdId == householdId)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<Store?> GetByIdAsync(Guid householdId, Guid storeId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Stores
+            .FirstOrDefaultAsync(store => store.Id == storeId && store.HouseholdId == householdId, cancellationToken);
+    }
+
+    public async Task AddAsync(Store store, CancellationToken cancellationToken = default)
+    {
+        await _dbContext.Stores.AddAsync(store, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(Store store, CancellationToken cancellationToken = default)
+    {
+        _dbContext.Stores.Update(store);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<bool> DeleteAsync(Guid householdId, Guid storeId, CancellationToken cancellationToken = default)
+    {
+        var store = await GetByIdAsync(householdId, storeId, cancellationToken);
+
+        if (store is null)
+        {
+            return false;
+        }
+
+        _dbContext.Stores.Remove(store);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
 }

@@ -45,14 +45,14 @@ public sealed class GenerateShoppingListCommand(
         await _shoppingListItemRepository.RemoveRangeAsync(existingItems, cancellationToken);
 
         // Get all day plans for the week
-        var dayPlans = await _dayPlanRepository.GetAllForWeekAsync(weekId, cancellationToken);
+        var dayPlans = await _dayPlanRepository.GetAllForWeekAsync(weekId, householdId, cancellationToken);
 
         // Aggregate ingredients by grocery item
         var ingredientsByGroceryItem = new Dictionary<Guid, decimal>();
 
         foreach (var dayPlan in dayPlans)
         {
-            var plannedMeals = await _plannedMealRepository.GetAllForDayAsync(dayPlan.Id, cancellationToken);
+            var plannedMeals = await _plannedMealRepository.GetAllForDayAsync(dayPlan.Id, householdId, cancellationToken);
 
             foreach (var meal in plannedMeals)
             {

@@ -26,3 +26,18 @@ public sealed class GetStoresQuery(IStoreRepository storeRepository)
             .ToList();
     }
 }
+
+/// <summary>
+/// Use case: get one grocery store belonging to the current household.
+/// </summary>
+public sealed class GetStoreQuery(IStoreRepository storeRepository)
+{
+    private readonly IStoreRepository _storeRepository = storeRepository;
+
+    public async Task<StoreDto?> ExecuteAsync(Guid householdId, Guid storeId, CancellationToken cancellationToken = default)
+    {
+        var store = await _storeRepository.GetByIdAsync(householdId, storeId, cancellationToken);
+
+        return store is null ? null : StoreMapper.ToDto(store);
+    }
+}

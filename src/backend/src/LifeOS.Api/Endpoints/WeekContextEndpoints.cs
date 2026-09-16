@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
+using LifeOS.Application.Households;
 using LifeOS.Application.WeekContexts;
 
 namespace LifeOS.Api.Endpoints;
@@ -26,31 +27,37 @@ public static class WeekContextEndpoints
 
     private static async Task<IResult> GetWeekContextAsync(
         ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         GetWeekContextQuery getWeekContextQuery,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        return Results.Ok(await getWeekContextQuery.ExecuteAsync(ownerId, cancellationToken));
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
+        return Results.Ok(await getWeekContextQuery.ExecuteAsync(householdId, cancellationToken));
     }
 
     private static async Task<IResult> SaveWeekContextAsync(
         ClaimsPrincipal user,
         WeekContextDto request,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         SaveWeekContextCommand saveWeekContextCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
         try
         {
-            return Results.Ok(await saveWeekContextCommand.ExecuteAsync(ownerId, request, cancellationToken));
+            return Results.Ok(await saveWeekContextCommand.ExecuteAsync(householdId, request, cancellationToken));
         }
         catch (ArgumentException exception)
         {

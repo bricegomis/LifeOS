@@ -54,9 +54,14 @@ public static class DependencyInjection
 
         services.AddScoped<IHouseholdRepository, EfHouseholdRepository>();
         services.AddScoped<ResolveHouseholdForUserQuery>();
+        services.AddScoped<GetCurrentHouseholdQuery>();
 
         services.AddScoped<IStoreRepository, EfStoreRepository>();
         services.AddScoped<GetStoresQuery>();
+        services.AddScoped<GetStoreQuery>();
+        services.AddScoped<CreateStoreCommand>();
+        services.AddScoped<UpdateStoreCommand>();
+        services.AddScoped<DeleteStoreCommand>();
 
         services.AddScoped<IArticleRepository, EfArticleRepository>();
         services.AddScoped<GetArticlesQuery>();
@@ -93,8 +98,8 @@ public static class DependencyInjection
         services.AddScoped<GetCompositeDishesQuery>();
         services.AddScoped<GetActivitiesQuery>();
 
-        services.AddSingleton<IPlanningRuleRepository, InMemoryPlanningRuleRepository>();
-        services.AddSingleton<IFrequencyRuleRepository, InMemoryFrequencyRuleRepository>();
+        services.AddScoped<IPlanningRuleRepository, EfPlanningRuleRepository>();
+        services.AddScoped<IFrequencyRuleRepository, EfFrequencyRuleRepository>();
         services.AddScoped<GetPlanningRulesQuery>();
         services.AddScoped<CreatePlanningRuleCommand>();
         services.AddScoped<UpdatePlanningRuleCommand>();
@@ -104,7 +109,7 @@ public static class DependencyInjection
         services.AddScoped<UpdateFrequencyRuleCommand>();
         services.AddScoped<DeleteFrequencyRuleCommand>();
 
-        services.AddSingleton<IWeekContextRepository, InMemoryWeekContextRepository>();
+        services.AddScoped<IWeekContextRepository, EfWeekContextRepository>();
         services.AddScoped<GetWeekContextQuery>();
         services.AddScoped<SaveWeekContextCommand>();
 

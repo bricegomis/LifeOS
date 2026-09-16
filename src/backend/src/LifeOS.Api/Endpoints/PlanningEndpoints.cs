@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Contracts;
+using LifeOS.Application.Households;
 using LifeOS.Application.Planning;
 
 namespace LifeOS.Api.Endpoints;
@@ -35,32 +36,38 @@ public static class PlanningEndpoints
 
     private static async Task<IResult> GetPlanningRulesAsync(
         ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         GetPlanningRulesQuery getPlanningRulesQuery,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        return Results.Ok(await getPlanningRulesQuery.ExecuteAsync(ownerId, cancellationToken));
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
+        return Results.Ok(await getPlanningRulesQuery.ExecuteAsync(householdId, cancellationToken));
     }
 
     private static async Task<IResult> CreatePlanningRuleAsync(
         ClaimsPrincipal user,
         PlanningRuleRequest request,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         CreatePlanningRuleCommand createPlanningRuleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
         try
         {
             var rule = await createPlanningRuleCommand.ExecuteAsync(
-                ownerId,
+                householdId,
                 request.Weekday,
                 request.MealType,
                 request.Target,
@@ -78,18 +85,21 @@ public static class PlanningEndpoints
         ClaimsPrincipal user,
         Guid ruleId,
         PlanningRuleRequest request,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         UpdatePlanningRuleCommand updatePlanningRuleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
         try
         {
             var rule = await updatePlanningRuleCommand.ExecuteAsync(
-                ownerId,
+                householdId,
                 ruleId,
                 request.Weekday,
                 request.MealType,
@@ -107,47 +117,55 @@ public static class PlanningEndpoints
     private static async Task<IResult> DeletePlanningRuleAsync(
         ClaimsPrincipal user,
         Guid ruleId,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         DeletePlanningRuleCommand deletePlanningRuleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        var deleted = await deletePlanningRuleCommand.ExecuteAsync(ownerId, ruleId, cancellationToken);
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var deleted = await deletePlanningRuleCommand.ExecuteAsync(householdId, ruleId, cancellationToken);
 
         return deleted ? Results.NoContent() : Results.NotFound();
     }
 
     private static async Task<IResult> GetFrequencyRulesAsync(
         ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         GetFrequencyRulesQuery getFrequencyRulesQuery,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        return Results.Ok(await getFrequencyRulesQuery.ExecuteAsync(ownerId, cancellationToken));
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
+        return Results.Ok(await getFrequencyRulesQuery.ExecuteAsync(householdId, cancellationToken));
     }
 
     private static async Task<IResult> CreateFrequencyRuleAsync(
         ClaimsPrincipal user,
         FrequencyRuleRequest request,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         CreateFrequencyRuleCommand createFrequencyRuleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+
         try
         {
             var rule = await createFrequencyRuleCommand.ExecuteAsync(
-                ownerId,
+                householdId,
                 request.Target,
                 request.TargetCountPerWeek,
                 cancellationToken);
@@ -164,15 +182,17 @@ public static class PlanningEndpoints
         ClaimsPrincipal user,
         Guid ruleId,
         FrequencyRuleTargetCountRequest request,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         UpdateFrequencyRuleCommand updateFrequencyRuleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        var rule = await updateFrequencyRuleCommand.ExecuteAsync(ownerId, ruleId, request.TargetCountPerWeek, cancellationToken);
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var rule = await updateFrequencyRuleCommand.ExecuteAsync(householdId, ruleId, request.TargetCountPerWeek, cancellationToken);
 
         return rule is null ? Results.NotFound() : Results.Ok(rule);
     }
@@ -180,15 +200,17 @@ public static class PlanningEndpoints
     private static async Task<IResult> DeleteFrequencyRuleAsync(
         ClaimsPrincipal user,
         Guid ruleId,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         DeleteFrequencyRuleCommand deleteFrequencyRuleCommand,
         CancellationToken cancellationToken)
     {
-        if (!user.TryGetUserId(out var ownerId))
+        if (!user.TryGetUserId(out var supabaseUserId))
         {
             return Results.Unauthorized();
         }
 
-        var deleted = await deleteFrequencyRuleCommand.ExecuteAsync(ownerId, ruleId, cancellationToken);
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var deleted = await deleteFrequencyRuleCommand.ExecuteAsync(householdId, ruleId, cancellationToken);
 
         return deleted ? Results.NoContent() : Results.NotFound();
     }

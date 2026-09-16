@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using LifeOS.Api.Dtos;
+using LifeOS.Application.Households;
 
 namespace LifeOS.Api.IntegrationTests;
 
@@ -42,22 +44,22 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var createResult = await client.PostAsJsonAsync("/api/nutrition/configuration", createRequest);
         createResult.EnsureSuccessStatusCode();
 
-        var config = await createResult.Content.ReadFromJsonAsync<dynamic>();
+        var config = await createResult.Content.ReadFromJsonAsync<UserConfigurationDto>();
 
         // Assert: Verify created configuration
         Assert.NotNull(config);
-        Assert.Equal(2000m, (decimal)config!.dailyBaseEnergyKcal);
-        Assert.Equal(500m, (decimal)config.targetNetDeficitKcal);
+        Assert.Equal(2000m, config!.DailyBaseEnergyKcal);
+        Assert.Equal(500m, config.TargetNetDeficitKcal);
 
         // Act: Retrieve configuration
         var getResult = await client.GetAsync("/api/nutrition/configuration");
         getResult.EnsureSuccessStatusCode();
 
-        var retrievedConfig = await getResult.Content.ReadFromJsonAsync<dynamic>();
+        var retrievedConfig = await getResult.Content.ReadFromJsonAsync<UserConfigurationDto>();
 
         // Assert: Verify retrieved configuration
         Assert.NotNull(retrievedConfig);
-        Assert.Equal(2000m, (decimal)retrievedConfig!.dailyBaseEnergyKcal);
+        Assert.Equal(2000m, retrievedConfig!.DailyBaseEnergyKcal);
     }
 
     /// <summary>
@@ -83,12 +85,11 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var weeksResult = await client.GetAsync("/api/weeks");
         weeksResult.EnsureSuccessStatusCode();
 
-        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<dynamic>>();
+        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<WeekDto>>();
         Assert.NotNull(weeks);
         Assert.NotEmpty(weeks);
 
-        var dayPlans = (List<dynamic>)weeks[0].dayPlans;
-        var dayPlanId = (Guid)dayPlans[0].id;
+        var dayPlanId = weeks[0].DayPlans[0].Id;
 
         // Act: Create first activity session
         var run = await client.PostAsJsonAsync($"/api/activity-sessions/day/{dayPlanId}", new
@@ -114,13 +115,13 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var getResult = await client.GetAsync($"/api/activity-sessions/day/{dayPlanId}");
         getResult.EnsureSuccessStatusCode();
 
-        var sessions = await getResult.Content.ReadFromJsonAsync<List<dynamic>>();
+        var sessions = await getResult.Content.ReadFromJsonAsync<List<ActivitySessionDto>>();
 
         // Assert: Verify both sessions exist
         Assert.NotNull(sessions);
         Assert.Equal(2, sessions.Count);
-        Assert.Equal("run", (string)sessions[0].type);
-        Assert.Equal("strength", (string)sessions[1].type);
+        Assert.Equal("run", sessions[0].Type);
+        Assert.Equal("strength", sessions[1].Type);
     }
 
     /// <summary>
@@ -157,11 +158,10 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var weeksResult = await client.GetAsync("/api/weeks");
         weeksResult.EnsureSuccessStatusCode();
 
-        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<dynamic>>();
+        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<WeekDto>>();
         Assert.NotNull(weeks);
 
-        var dayPlans = (List<dynamic>)weeks[0].dayPlans;
-        var dayPlanId = (Guid)dayPlans[0].id;
+        var dayPlanId = weeks[0].DayPlans[0].Id;
 
         // Create activity session
         await client.PostAsJsonAsync($"/api/activity-sessions/day/{dayPlanId}", new
@@ -176,15 +176,15 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var result = await client.GetAsync($"/api/nutrition/calculations/day/{dayPlanId}");
         result.EnsureSuccessStatusCode();
 
-        var target = await result.Content.ReadFromJsonAsync<dynamic>();
+        var target = await result.Content.ReadFromJsonAsync<DailyNutritionTargetDto>();
 
         // Assert: Verify deterministic calculation
         // daily_food_target = 2000 + 400 - 500 = 1900
         Assert.NotNull(target);
-        Assert.Equal(2000m, (decimal)target!.dailyBaseEnergyKcal);
-        Assert.Equal(400m, (decimal)target.activityEnergyKcal);
-        Assert.Equal(500m, (decimal)target.targetNetDeficitKcal);
-        Assert.Equal(1900m, (decimal)target.dailyFoodTargetKcal);
+        Assert.Equal(2000m, target!.DailyBaseEnergyKcal);
+        Assert.Equal(400m, target.ActivityEnergyKcal);
+        Assert.Equal(500m, target.TargetNetDeficitKcal);
+        Assert.Equal(1900m, target.DailyFoodTargetKcal);
     }
 
     /// <summary>
@@ -212,11 +212,10 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var weeksResult = await client1.GetAsync("/api/weeks");
         weeksResult.EnsureSuccessStatusCode();
 
-        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<dynamic>>();
+        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<WeekDto>>();
         Assert.NotNull(weeks);
 
-        var dayPlans = (List<dynamic>)weeks[0].dayPlans;
-        var dayPlanId = (Guid)dayPlans[0].id;
+        var dayPlanId = weeks[0].DayPlans[0].Id;
 
         // Act: User2 tries to access User1's day plan - should be forbidden
         var result = await client2.GetAsync($"/api/activity-sessions/day/{dayPlanId}");
@@ -247,9 +246,8 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var weeksResult = await client.GetAsync("/api/weeks");
         weeksResult.EnsureSuccessStatusCode();
 
-        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<dynamic>>();
-        var dayPlans = (List<dynamic>)weeks![0].dayPlans;
-        var dayPlanId = (Guid)dayPlans[0].id;
+        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<WeekDto>>();
+        var dayPlanId = weeks![0].DayPlans[0].Id;
 
         // Create activity session
         var createResult = await client.PostAsJsonAsync($"/api/activity-sessions/day/{dayPlanId}", new
@@ -261,8 +259,8 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         });
         createResult.EnsureSuccessStatusCode();
 
-        var sessionContent = await createResult.Content.ReadFromJsonAsync<dynamic>();
-        var sessionId = (Guid)sessionContent!.id;
+        var sessionContent = await createResult.Content.ReadFromJsonAsync<ActivitySessionDto>();
+        var sessionId = sessionContent!.Id;
 
         // Act: Update session
         var updateResult = await client.PutAsJsonAsync($"/api/activity-sessions/{sessionId}", new
@@ -272,11 +270,11 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         });
         updateResult.EnsureSuccessStatusCode();
 
-        var updatedSession = await updateResult.Content.ReadFromJsonAsync<dynamic>();
+        var updatedSession = await updateResult.Content.ReadFromJsonAsync<ActivitySessionDto>();
 
         // Assert: Verify update
-        Assert.Equal(45, (int)updatedSession!.durationMinutes);
-        Assert.Equal(450m, (decimal)updatedSession.estimatedEnergyKcal);
+        Assert.Equal(45, updatedSession!.DurationMinutes);
+        Assert.Equal(450m, updatedSession.EstimatedEnergyKcal);
     }
 
     /// <summary>
@@ -301,9 +299,8 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var weeksResult = await client.GetAsync("/api/weeks");
         weeksResult.EnsureSuccessStatusCode();
 
-        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<dynamic>>();
-        var dayPlans = (List<dynamic>)weeks![0].dayPlans;
-        var dayPlanId = (Guid)dayPlans[0].id;
+        var weeks = await weeksResult.Content.ReadFromJsonAsync<List<WeekDto>>();
+        var dayPlanId = weeks![0].DayPlans[0].Id;
 
         // Create activity session
         var createResult = await client.PostAsJsonAsync($"/api/activity-sessions/day/{dayPlanId}", new
@@ -315,8 +312,8 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         });
         createResult.EnsureSuccessStatusCode();
 
-        var sessionContent = await createResult.Content.ReadFromJsonAsync<dynamic>();
-        var sessionId = (Guid)sessionContent!.id;
+        var sessionContent = await createResult.Content.ReadFromJsonAsync<ActivitySessionDto>();
+        var sessionId = sessionContent!.Id;
 
         // Act: Delete session
         var deleteResult = await client.DeleteAsync($"/api/activity-sessions/{sessionId}");
@@ -328,7 +325,8 @@ public sealed class Jalon4NutritionContextTests(PostgresContainerFixture postgre
         var getResult = await client.GetAsync($"/api/activity-sessions/day/{dayPlanId}");
         getResult.EnsureSuccessStatusCode();
 
-        var sessions = await getResult.Content.ReadFromJsonAsync<List<dynamic>>();
+        var sessions = await getResult.Content.ReadFromJsonAsync<List<ActivitySessionDto>>();
+        Assert.NotNull(sessions);
         Assert.Empty(sessions);
     }
 }
