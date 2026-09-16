@@ -99,6 +99,7 @@ app.MapArticlesEndpoints();
 app.MapRecipesEndpoints();
 app.MapComposedMealsEndpoints();
 app.MapWeekPlanningEndpoints();
+app.MapWeekScenariosEndpoints();
 app.MapLibraryEndpoints();
 app.MapPlanningEndpoints();
 app.MapWeekContextEndpoints();

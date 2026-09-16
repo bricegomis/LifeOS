@@ -48,6 +48,8 @@ public static class DependencyInjection
             options.UseNpgsql(PostgresConnectionStringResolver.Resolve(configuration));
         });
 
+        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
+
         services.AddScoped<IHouseholdRepository, EfHouseholdRepository>();
         services.AddScoped<ResolveHouseholdForUserQuery>();
 
@@ -68,6 +70,8 @@ public static class DependencyInjection
         services.AddScoped<IWeekRepository, EfWeekRepository>();
         services.AddScoped<IDayPlanRepository, EfDayPlanRepository>();
         services.AddScoped<IPlannedMealRepository, EfPlannedMealRepository>();
+        services.AddScoped<IWeekScenarioRepository, EfWeekScenarioRepository>();
+        services.AddScoped<IScenarioEngine, DeterministicScenarioEngine>();
 
         services.AddSingleton<IMealComponentRepository, InMemoryMealComponentRepository>();
         services.AddSingleton<ICompositeDishRepository, InMemoryCompositeDishRepository>();
