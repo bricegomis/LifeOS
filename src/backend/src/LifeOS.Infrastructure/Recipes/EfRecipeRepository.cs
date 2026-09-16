@@ -35,7 +35,39 @@ public sealed class EfRecipeRepository(LifeOSDbContext dbContext) : IRecipeRepos
 
     public async Task<Recipe> UpdateAsync(Recipe recipe, CancellationToken cancellationToken = default)
     {
-        _dbContext.Recipes.Update(recipe);
+        var existingRecipe = await _dbContext.Recipes
+            .Include(r => r.Ingredients)
+            .FirstOrDefaultAsync(r => r.Id == recipe.Id, cancellationToken);
+
+        if (existingRecipe != null)
+        {
+            _dbContext.Entry(existingRecipe).CurrentValues.SetValues(recipe);
+
+            var currentIngredientIds = recipe.Ingredients.Select(i => i.Id).ToHashSet();
+            var toRemove = existingRecipe.Ingredients.Where(i => !currentIngredientIds.Contains(i.Id)).ToList();
+            foreach (var rem in toRemove)
+            {
+                _dbContext.Set<RecipeIngredient>().Remove(rem);
+            }
+
+            var existingIngredientDict = existingRecipe.Ingredients.ToDictionary(i => i.Id);
+            foreach (var ing in recipe.Ingredients)
+            {
+                if (existingIngredientDict.TryGetValue(ing.Id, out var existingIng))
+                {
+                    _dbContext.Entry(existingIng).CurrentValues.SetValues(ing);
+                }
+                else
+                {
+                    existingRecipe.Ingredients.Add(ing);
+                }
+            }
+        }
+        else
+        {
+            _dbContext.Recipes.Update(recipe);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
         return recipe;
     }
