@@ -26,17 +26,20 @@ public static class FoodItemsEndpoints
         group.MapPost("/", CreateFoodItemAsync)
             .WithName("CreateFoodItem");
 
-        group.MapPut("/{foodItemId:guid}", UpdateFoodItemAsync)
-            .WithName("UpdateFoodItem");
-
-        group.MapDelete("/{foodItemId:guid}", DeleteFoodItemAsync)
-            .WithName("DeleteFoodItem");
-
         group.MapGet("/search-off", SearchOpenFoodFactsByNameAsync)
             .WithName("SearchOpenFoodFactsByName");
 
         group.MapGet("/search-off-barcode", SearchOpenFoodFactsByBarcodeAsync)
             .WithName("SearchOpenFoodFactsByBarcode");
+
+        group.MapGet("/{foodItemId:guid}", GetFoodItemByIdAsync)
+            .WithName("GetFoodItemById");
+
+        group.MapPut("/{foodItemId:guid}", UpdateFoodItemAsync)
+            .WithName("UpdateFoodItem");
+
+        group.MapDelete("/{foodItemId:guid}", DeleteFoodItemAsync)
+            .WithName("DeleteFoodItem");
 
         group.MapPost("/{foodItemId:guid}/correction", CreateCorrectionAsync)
             .WithName("CreateFoodItemCorrection");
@@ -59,6 +62,29 @@ public static class FoodItemsEndpoints
         var items = await foodItemRepository.GetByHouseholdAsync(householdId, cancellationToken);
 
         return Results.Ok(items.Select(FoodItemMapper.ToDto).ToList());
+    }
+
+    private static async Task<IResult> GetFoodItemByIdAsync(
+        Guid foodItemId,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
+        IFoodItemRepository foodItemRepository,
+        CancellationToken cancellationToken)
+    {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var foodItem = await foodItemRepository.GetByIdAsync(foodItemId, cancellationToken);
+
+        if (foodItem == null || foodItem.HouseholdId != householdId)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(FoodItemMapper.ToDto(foodItem));
     }
 
     private static async Task<IResult> CreateFoodItemAsync(
