@@ -1,7 +1,9 @@
-using LifeOS.Application.ComposedMeals;
+using LifeOS.Application.Articles;
 using LifeOS.Application.Common.Interfaces;
+using LifeOS.Application.ComposedMeals;
 using LifeOS.Application.Recipes;
 using LifeOS.Application.WeekPlanning;
+using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Stock;
 
 namespace LifeOS.Application.Stock;
@@ -16,6 +18,8 @@ public sealed class GenerateShoppingListCommand(
     IPlannedMealRepository plannedMealRepository,
     IRecipeRepository recipeRepository,
     IComposedMealRepository composedMealRepository,
+    IArticleRepository articleRepository,
+    IFoodItemRepository foodItemRepository,
     IStockItemRepository stockItemRepository,
     IShoppingListItemRepository shoppingListItemRepository)
 {
@@ -24,6 +28,8 @@ public sealed class GenerateShoppingListCommand(
     private readonly IPlannedMealRepository _plannedMealRepository = plannedMealRepository;
     private readonly IRecipeRepository _recipeRepository = recipeRepository;
     private readonly IComposedMealRepository _composedMealRepository = composedMealRepository;
+    private readonly IArticleRepository _articleRepository = articleRepository;
+    private readonly IFoodItemRepository _foodItemRepository = foodItemRepository;
     private readonly IStockItemRepository _stockItemRepository = stockItemRepository;
     private readonly IShoppingListItemRepository _shoppingListItemRepository = shoppingListItemRepository;
 
@@ -44,6 +50,13 @@ public sealed class GenerateShoppingListCommand(
         var existingItems = await _shoppingListItemRepository.GetAllForWeekAsync(householdId, weekId, cancellationToken);
         await _shoppingListItemRepository.RemoveRangeAsync(existingItems, cancellationToken);
 
+        // Get all articles (GroceryItems) for this household
+        var householdArticles = await _articleRepository.GetAllForHouseholdAsync(householdId, cancellationToken);
+        var articlesById = householdArticles.ToDictionary(a => a.Id);
+        var articlesByName = householdArticles
+            .GroupBy(a => a.Name.Trim().ToLowerInvariant())
+            .ToDictionary(g => g.Key, g => g.First().Id);
+
         // Get all day plans for the week
         var dayPlans = await _dayPlanRepository.GetAllForWeekAsync(weekId, cancellationToken);
 
@@ -57,7 +70,7 @@ public sealed class GenerateShoppingListCommand(
             foreach (var meal in plannedMeals)
             {
                 // Collect ingredients based on the meal type
-                var mealIngredients = await GetMealIngredientsAsync(meal, householdId, cancellationToken);
+                var mealIngredients = await GetMealIngredientsAsync(meal, householdId, articlesById, articlesByName, cancellationToken);
 
                 foreach (var (groceryItemId, quantity) in mealIngredients)
                 {
@@ -113,6 +126,8 @@ public sealed class GenerateShoppingListCommand(
     private async Task<List<(Guid groceryItemId, decimal quantity)>> GetMealIngredientsAsync(
         LifeOS.Domain.WeekPlanning.PlannedMeal meal,
         Guid householdId,
+        IReadOnlyDictionary<Guid, LifeOS.Domain.Articles.GroceryItem> articlesById,
+        IReadOnlyDictionary<string, Guid> articlesByName,
         CancellationToken cancellationToken)
     {
         var ingredients = new List<(Guid groceryItemId, decimal quantity)>();
@@ -124,15 +139,17 @@ public sealed class GenerateShoppingListCommand(
 
             if (recipe != null)
             {
+                var quantityFromParts = meal.Parts.Any()
+                    ? meal.Parts.Sum(p => p.PortionMultiplier)
+                    : 1m;
+
                 foreach (var ingredient in recipe.Ingredients)
                 {
-                    // For now, use FoodItemId as GroceryItemId
-                    // In a real scenario, we would map FoodItem to GroceryItem
-                    var quantityFromParts = meal.Parts.Any()
-                        ? meal.Parts.Sum(p => p.PortionMultiplier)
-                        : 1m;
-
-                    ingredients.Add((ingredient.FoodItemId, ingredient.Quantity * quantityFromParts));
+                    var groceryItemId = await ResolveGroceryItemIdAsync(ingredient.FoodItemId, householdId, articlesById, articlesByName, cancellationToken);
+                    if (groceryItemId.HasValue)
+                    {
+                        ingredients.Add((groceryItemId.Value, ingredient.Quantity * quantityFromParts));
+                    }
                 }
             }
         }
@@ -143,6 +160,10 @@ public sealed class GenerateShoppingListCommand(
 
             if (composedMeal != null)
             {
+                var quantityFromParts = meal.Parts.Any()
+                    ? meal.Parts.Sum(p => p.PortionMultiplier)
+                    : 1m;
+
                 foreach (var part in composedMeal.Parts)
                 {
                     var recipe = await _recipeRepository.GetByIdAsync(part.RecipeId, householdId, cancellationToken);
@@ -151,13 +172,13 @@ public sealed class GenerateShoppingListCommand(
                     {
                         foreach (var ingredient in recipe.Ingredients)
                         {
-                            var quantityFromParts = meal.Parts.Any()
-                                ? meal.Parts.Sum(p => p.PortionMultiplier)
-                                : 1m;
-
-                            ingredients.Add((
-                                ingredient.FoodItemId,
-                                ingredient.Quantity * part.QuantityFactor * quantityFromParts));
+                            var groceryItemId = await ResolveGroceryItemIdAsync(ingredient.FoodItemId, householdId, articlesById, articlesByName, cancellationToken);
+                            if (groceryItemId.HasValue)
+                            {
+                                ingredients.Add((
+                                    groceryItemId.Value,
+                                    ingredient.Quantity * part.QuantityFactor * quantityFromParts));
+                            }
                         }
                     }
                 }
@@ -165,5 +186,33 @@ public sealed class GenerateShoppingListCommand(
         }
 
         return ingredients;
+    }
+
+    private async Task<Guid?> ResolveGroceryItemIdAsync(
+        Guid foodItemId,
+        Guid householdId,
+        IReadOnlyDictionary<Guid, LifeOS.Domain.Articles.GroceryItem> articlesById,
+        IReadOnlyDictionary<string, Guid> articlesByName,
+        CancellationToken cancellationToken)
+    {
+        // 1. Direct match: the ingredient already references a GroceryItem ID belonging to this household
+        if (articlesById.ContainsKey(foodItemId))
+        {
+            return foodItemId;
+        }
+
+        // 2. Lookup via FoodItem aggregate: find corresponding FoodItem and match by name to a GroceryItem in the household
+        var foodItem = await _foodItemRepository.GetByIdAsync(foodItemId, cancellationToken);
+        if (foodItem != null && foodItem.HouseholdId == householdId)
+        {
+            var normalizedName = foodItem.Name.Trim().ToLowerInvariant();
+            if (articlesByName.TryGetValue(normalizedName, out var matchingGroceryItemId))
+            {
+                return matchingGroceryItemId;
+            }
+        }
+
+        // 3. Ingredient cannot be mapped to any GroceryItem for this household; ignore to protect foreign key integrity
+        return null;
     }
 }
