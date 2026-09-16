@@ -5,6 +5,7 @@ using LifeOS.Application.Households;
 using LifeOS.Application.Library;
 using LifeOS.Application.Planning;
 using LifeOS.Application.Recipes;
+using LifeOS.Application.Stock;
 using LifeOS.Application.Stores;
 using LifeOS.Application.WeekContexts;
 using LifeOS.Application.WeekPlanning;
@@ -18,6 +19,7 @@ using LifeOS.Infrastructure.Library;
 using LifeOS.Infrastructure.Persistence;
 using LifeOS.Infrastructure.Planning;
 using LifeOS.Infrastructure.Recipes;
+using LifeOS.Infrastructure.Stock;
 using LifeOS.Infrastructure.Stores;
 using LifeOS.Infrastructure.WeekContexts;
 using LifeOS.Infrastructure.WeekPlanning;
@@ -63,6 +65,17 @@ public static class DependencyInjection
         services.AddScoped<DeleteArticleCommand>();
         services.AddScoped<AddPriceEntryCommand>();
         services.AddScoped<DeletePriceEntryCommand>();
+
+        // Jalon 6: Stock and Shopping List
+        services.AddScoped<IStockItemRepository, EfStockItemRepository>();
+        services.AddScoped<IShoppingListItemRepository, EfShoppingListItemRepository>();
+        services.AddScoped<GetStockItemsQuery>();
+        services.AddScoped<CreateStockItemCommand>();
+        services.AddScoped<UpdateStockItemCommand>();
+        services.AddScoped<DeleteStockItemCommand>();
+        services.AddScoped<GenerateShoppingListCommand>();
+        services.AddScoped<GetShoppingListItemsQuery>();
+        services.AddScoped<UpdateShoppingListItemCheckedCommand>();
 
         // Jalon 2: Recipes and Meals
         services.AddScoped<IRecipeRepository, EfRecipeRepository>();
