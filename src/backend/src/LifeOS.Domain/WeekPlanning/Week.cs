@@ -16,6 +16,7 @@ public sealed class Week : Entity
 
     // Navigation property for EF Core
     public ICollection<DayPlan> DayPlans { get; set; } = [];
+    public ICollection<WeekScenario> Scenarios { get; set; } = [];
 
     private Week(
         Guid id,
