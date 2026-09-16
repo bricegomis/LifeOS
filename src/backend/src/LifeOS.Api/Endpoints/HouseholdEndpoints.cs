@@ -14,21 +14,18 @@ public static class HouseholdEndpoints
 
         group.MapGet("/current", GetCurrentHouseholdAsync)
             .WithName("GetCurrentHousehold")
-            .WithOpenApi();
+            .Produces<HouseholdDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/members", GetHouseholdMembersAsync)
             .WithName("GetHouseholdMembers")
-            .WithOpenApi();
-
-        app.MapGet("/api/household/members", GetHouseholdMembersAsync)
-            .WithTags("Households")
-            .RequireAuthorization()
-            .WithName("GetHouseholdMembersLegacy")
-            .WithOpenApi();
+            .Produces<HouseholdMembersResponse>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/", GetCurrentHouseholdAsync)
             .WithName("CreateOrGetCurrentHousehold")
-            .WithOpenApi();
+            .Produces<HouseholdDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return app;
     }
@@ -64,11 +61,14 @@ public static class HouseholdEndpoints
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
         var household = await getCurrentHouseholdQuery.ExecuteAsync(householdId, cancellationToken);
 
-        return Results.Ok(new
-        {
+        return Results.Ok(new HouseholdMembersResponse(
             household.Id,
             household.Members,
-            household.MemberProfiles
-        });
+            household.MemberProfiles));
     }
 }
+
+public sealed record HouseholdMembersResponse(
+    Guid Id,
+    IReadOnlyList<HouseholdMemberDto> Members,
+    IReadOnlyList<MemberProfileDto> MemberProfiles);

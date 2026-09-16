@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace LifeOS.Application.Households;
 
 /// <summary>
@@ -18,11 +20,11 @@ public sealed record UserConfigurationDto(
 /// Request model for creating or updating user configuration.
 /// </summary>
 public sealed record UpsertUserConfigurationRequest(
-    decimal DailyBaseEnergyKcal,
-    decimal TargetNetDeficitKcal,
-    decimal TargetProteinG,
-    decimal TargetCarbsG,
-    decimal TargetFatsG);
+    [property: Range(0, double.MaxValue)] decimal DailyBaseEnergyKcal,
+    [property: Range(0, double.MaxValue)] decimal TargetNetDeficitKcal,
+    [property: Range(0, double.MaxValue)] decimal TargetProteinG,
+    [property: Range(0, double.MaxValue)] decimal TargetCarbsG,
+    [property: Range(0, double.MaxValue)] decimal TargetFatsG);
 
 /// <summary>
 /// Daily nutrition target calculation result.

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Contracts;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Households;
 using LifeOS.Application.Planning;
 
@@ -15,21 +16,58 @@ public static class PlanningEndpoints
     {
         var planningRules = app.MapGroup("/api/planning-rules")
             .WithTags("Planning")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
-        planningRules.MapGet("/", GetPlanningRulesAsync).WithName("GetPlanningRules");
-        planningRules.MapPost("/", CreatePlanningRuleAsync).WithName("CreatePlanningRule");
-        planningRules.MapPut("/{ruleId:guid}", UpdatePlanningRuleAsync).WithName("UpdatePlanningRule");
-        planningRules.MapDelete("/{ruleId:guid}", DeletePlanningRuleAsync).WithName("DeletePlanningRule");
+        planningRules.MapGet("/", GetPlanningRulesAsync)
+            .WithName("GetPlanningRules")
+            .Produces<List<PlanningRuleDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+        planningRules.MapPost("/", CreatePlanningRuleAsync)
+            .WithName("CreatePlanningRule")
+            .Produces<PlanningRuleDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+        planningRules.MapPut("/{ruleId:guid}", UpdatePlanningRuleAsync)
+            .WithName("UpdatePlanningRule")
+            .Produces<PlanningRuleDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        planningRules.MapDelete("/{ruleId:guid}", DeletePlanningRuleAsync)
+            .WithName("DeletePlanningRule")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         var frequencyRules = app.MapGroup("/api/frequency-rules")
             .WithTags("Planning")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
-        frequencyRules.MapGet("/", GetFrequencyRulesAsync).WithName("GetFrequencyRules");
-        frequencyRules.MapPost("/", CreateFrequencyRuleAsync).WithName("CreateFrequencyRule");
-        frequencyRules.MapPut("/{ruleId:guid}", UpdateFrequencyRuleAsync).WithName("UpdateFrequencyRule");
-        frequencyRules.MapDelete("/{ruleId:guid}", DeleteFrequencyRuleAsync).WithName("DeleteFrequencyRule");
+        frequencyRules.MapGet("/", GetFrequencyRulesAsync)
+            .WithName("GetFrequencyRules")
+            .Produces<List<FrequencyRuleDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+        frequencyRules.MapPost("/", CreateFrequencyRuleAsync)
+            .WithName("CreateFrequencyRule")
+            .Produces<FrequencyRuleDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+        frequencyRules.MapPut("/{ruleId:guid}", UpdateFrequencyRuleAsync)
+            .WithName("UpdateFrequencyRule")
+            .Produces<FrequencyRuleDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        frequencyRules.MapDelete("/{ruleId:guid}", DeleteFrequencyRuleAsync)
+            .WithName("DeleteFrequencyRule")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -77,7 +115,7 @@ public static class PlanningEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -110,7 +148,7 @@ public static class PlanningEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -174,7 +212,7 @@ public static class PlanningEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 

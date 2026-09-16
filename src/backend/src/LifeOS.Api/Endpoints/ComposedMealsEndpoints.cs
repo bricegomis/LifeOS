@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Dtos;
+using LifeOS.Api.Validation;
 using LifeOS.Application.ComposedMeals;
 using LifeOS.Application.Households;
 using LifeOS.Domain.ComposedMeals;
@@ -13,31 +14,48 @@ public static class ComposedMealsEndpoints
     {
         var group = app.MapGroup("/api/composed-meals")
             .WithTags("ComposedMeals")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapGet("/", GetComposedMealsAsync)
             .WithName("GetComposedMeals")
-            .WithOpenApi();
+            .Produces<List<ComposedMealDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/{mealId}", GetComposedMealByIdAsync)
             .WithName("GetComposedMealById")
-            .WithOpenApi();
+            .Produces<ComposedMealDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/", CreateComposedMealAsync)
             .WithName("CreateComposedMeal")
-            .WithOpenApi();
+            .Produces<ComposedMealDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/{mealId}", UpdateComposedMealAsync)
             .WithName("UpdateComposedMeal")
-            .WithOpenApi();
+            .Produces<ComposedMealDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/{mealId}", DeleteComposedMealAsync)
             .WithName("DeleteComposedMeal")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/{mealId}/parts", AddComposedMealPartAsync)
             .WithName("AddComposedMealPart")
-            .WithOpenApi();
+            .Produces<ComposedMealDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -105,7 +123,7 @@ public static class ComposedMealsEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -139,7 +157,7 @@ public static class ComposedMealsEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -191,7 +209,7 @@ public static class ComposedMealsEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 

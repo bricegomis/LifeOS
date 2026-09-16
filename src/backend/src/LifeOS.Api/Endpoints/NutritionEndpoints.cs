@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Households;
 using LifeOS.Domain.Households;
 using LifeOS.Domain.WeekPlanning;
@@ -15,36 +16,60 @@ public static class NutritionEndpoints
         // User Configuration
         var configGroup = app.MapGroup("/api/nutrition/configuration")
             .WithTags("Nutrition")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         configGroup.MapGet("/", GetUserConfigurationAsync)
             .WithName("GetUserConfiguration")
-            .WithOpenApi();
+            .Produces<UserConfigurationDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         configGroup.MapPost("/", UpsertUserConfigurationAsync)
             .WithName("UpsertUserConfiguration")
-            .WithOpenApi();
+            .Produces<UserConfigurationDto>()
+            .Produces<UserConfigurationDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Activity Sessions
         var activityGroup = app.MapGroup("/api/activity-sessions")
             .WithTags("Nutrition")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         activityGroup.MapGet("/day/{dayPlanId}", GetActivitySessionsForDayAsync)
             .WithName("GetActivitySessionsForDay")
-            .WithOpenApi();
+            .Produces<List<ActivitySessionDto>>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         activityGroup.MapPost("/day/{dayPlanId}", CreateActivitySessionAsync)
             .WithName("CreateActivitySession")
-            .WithOpenApi();
+            .Produces<ActivitySessionDto>(StatusCodes.Status201Created)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         activityGroup.MapPut("/{sessionId}", UpdateActivitySessionAsync)
             .WithName("UpdateActivitySession")
-            .WithOpenApi();
+            .Produces<ActivitySessionDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         activityGroup.MapDelete("/{sessionId}", DeleteActivitySessionAsync)
             .WithName("DeleteActivitySession")
-            .WithOpenApi();
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         // Nutrition calculations
         var calcGroup = app.MapGroup("/api/nutrition/calculations")
@@ -53,7 +78,11 @@ public static class NutritionEndpoints
 
         calcGroup.MapGet("/day/{dayPlanId}", GetDailyNutritionTargetAsync)
             .WithName("GetDailyNutritionTarget")
-            .WithOpenApi();
+            .Produces<DailyNutritionTargetDto>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -164,7 +193,7 @@ public static class NutritionEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -268,7 +297,7 @@ public static class NutritionEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -330,7 +359,7 @@ public static class NutritionEndpoints
         }
         catch (ArgumentException ex)
         {
-            return Results.BadRequest(new { error = ex.Message });
+            return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 
@@ -407,7 +436,7 @@ public static class NutritionEndpoints
 
         if (config == null)
         {
-            return Results.BadRequest(new { error = "User configuration not set up" });
+            return Results.Problem("User configuration not set up", statusCode: StatusCodes.Status400BadRequest);
         }
 
         // Sum activity energy for the day

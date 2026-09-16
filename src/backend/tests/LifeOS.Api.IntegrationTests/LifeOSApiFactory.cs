@@ -25,6 +25,7 @@ public sealed class LifeOSApiFactory(string connectionString) : WebApplicationFa
             {
                 ["ConnectionStrings:Postgres"] = connectionString,
                 ["Supabase:Url"] = "https://test.supabase.co",
+                ["Api:EnableOpenApiUi"] = "true",
             });
         });
     }

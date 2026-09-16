@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
+using LifeOS.Api.Validation;
 using LifeOS.Application.Households;
 using LifeOS.Application.WeekContexts;
 
@@ -14,13 +15,20 @@ public static class WeekContextEndpoints
     {
         var group = app.MapGroup("/api/week-context")
             .WithTags("WeekContext")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .AddRequestValidation();
 
         group.MapGet("/", GetWeekContextAsync)
-            .WithName("GetWeekContext");
+            .WithName("GetWeekContext")
+            .Produces<WeekContextDto>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/", SaveWeekContextAsync)
-            .WithName("SaveWeekContext");
+            .WithName("SaveWeekContext")
+            .Produces<WeekContextDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return app;
     }
@@ -61,11 +69,11 @@ public static class WeekContextEndpoints
         }
         catch (ArgumentException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
         catch (FormatException exception)
         {
-            return Results.BadRequest(new { error = exception.Message });
+            return Results.Problem(exception.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
 }

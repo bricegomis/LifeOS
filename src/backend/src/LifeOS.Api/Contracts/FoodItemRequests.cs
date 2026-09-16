@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using LifeOS.Application.FoodItems;
 
 namespace LifeOS.Api.Contracts;
@@ -14,8 +15,14 @@ public sealed class CreateFoodItemRequest
         Nutrition = nutrition;
     }
 
+    [Required]
+    [StringLength(500)]
     public string Name { get; set; }
+
+    [Required]
+    [StringLength(50)]
     public string ReferenceUnit { get; set; }
+
     public NutritionDto? Nutrition { get; set; }
 }
 
@@ -31,8 +38,14 @@ public sealed class UpdateFoodItemRequest
         Nutrition = nutrition;
     }
 
+    [Required]
+    [StringLength(500)]
     public string Name { get; set; }
+
+    [Required]
+    [StringLength(50)]
     public string ReferenceUnit { get; set; }
+
     public NutritionDto? Nutrition { get; set; }
 }
 
@@ -48,7 +61,13 @@ public sealed class CreateCorrectionRequest
         Nutrition = nutrition;
     }
 
+    [Required]
+    [StringLength(500)]
     public string Name { get; set; }
+
+    [Required]
+    [StringLength(50)]
     public string ReferenceUnit { get; set; }
+
     public NutritionDto? Nutrition { get; set; }
 }
