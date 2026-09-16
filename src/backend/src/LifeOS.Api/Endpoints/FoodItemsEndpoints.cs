@@ -175,7 +175,7 @@ public static class FoodItemsEndpoints
         ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IOpenFoodFactsService offService,
         IFoodItemRepository foodItemRepository,
-        [FromQuery] string query,
+        [FromQuery] string name,
         CancellationToken cancellationToken)
     {
         if (!user.TryGetUserId(out var supabaseUserId))
@@ -183,13 +183,13 @@ public static class FoodItemsEndpoints
             return Results.Unauthorized();
         }
 
-        if (string.IsNullOrWhiteSpace(query))
+        if (string.IsNullOrWhiteSpace(name))
         {
-            return Results.BadRequest("Query parameter is required");
+            return Results.BadRequest("Name parameter is required");
         }
 
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
-        var results = await offService.SearchByNameAsync(query, cancellationToken);
+        var results = await offService.SearchByNameAsync(name, cancellationToken);
         var dtos = new List<FoodItemDto>();
 
         foreach (var product in results)
