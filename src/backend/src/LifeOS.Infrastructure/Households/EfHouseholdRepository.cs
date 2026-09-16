@@ -30,6 +30,24 @@ public sealed class EfHouseholdRepository(LifeOSDbContext dbContext) : IHousehol
             .FirstOrDefaultAsync(household => household.Id == member.HouseholdId, cancellationToken);
     }
 
+    public async Task<Household?> GetByIdAsync(Guid householdId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Households
+            .AsNoTracking()
+            .Include(household => household.Members)
+            .Include(household => household.MemberProfiles)
+            .FirstOrDefaultAsync(household => household.Id == householdId, cancellationToken);
+    }
+
+    public Task<bool> MemberProfileBelongsToHouseholdAsync(
+        Guid householdId,
+        Guid memberProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        return _dbContext.MemberProfiles
+            .AnyAsync(profile => profile.Id == memberProfileId && profile.HouseholdId == householdId, cancellationToken);
+    }
+
     public async Task AddAsync(Household household, CancellationToken cancellationToken = default)
     {
         _dbContext.Households.Add(household);

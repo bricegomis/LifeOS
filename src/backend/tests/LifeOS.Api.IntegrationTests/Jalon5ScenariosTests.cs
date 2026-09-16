@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using LifeOS.Api.Dtos;
 
 namespace LifeOS.Api.IntegrationTests;
 
@@ -33,8 +35,6 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         var householdRequest = new { name = "Test Household" };
         var householdResult = await client.PostAsJsonAsync("/api/households", householdRequest);
         householdResult.EnsureSuccessStatusCode();
-        var household = await householdResult.Content.ReadFromJsonAsync<dynamic>();
-        var householdId = (string)household!.id;
 
         // Create a week
         var weekRequest = new
@@ -43,8 +43,8 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         };
         var weekResult = await client.PostAsJsonAsync("/api/weeks", weekRequest);
         weekResult.EnsureSuccessStatusCode();
-        var week = await weekResult.Content.ReadFromJsonAsync<dynamic>();
-        var weekId = (string)week!.id;
+        var week = await weekResult.Content.ReadFromJsonAsync<WeekDto>();
+        var weekId = week!.Id;
 
         // Generate scenarios
         var generateRequest = new
@@ -56,14 +56,14 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
             generateRequest);
         generateResult.EnsureSuccessStatusCode();
 
-        var scenarios = await generateResult.Content.ReadFromJsonAsync<List<dynamic>>();
+        var scenarios = await generateResult.Content.ReadFromJsonAsync<List<WeekScenarioResponse>>();
 
         // Assertions
         Assert.NotNull(scenarios);
         Assert.Equal(3, scenarios.Count);
 
         // Check that scenarios have different objectives
-        var objectives = scenarios.Select(s => (string)s.rankingObjective).ToHashSet();
+        var objectives = scenarios.Select(s => s.RankingObjective).ToHashSet();
         Assert.Contains("nutritional_balance", objectives);
         Assert.Contains("economy", objectives);
         Assert.Contains("reduce_waste", objectives);
@@ -71,9 +71,8 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         // Check that explanations are present
         foreach (var scenario in scenarios)
         {
-            Assert.NotNull(scenario.explanation);
-            Assert.NotNull(scenario.explanation.textExplanation);
-            Assert.True(scenario.explanation.textExplanation.ToString().Length > 0);
+            Assert.Equal(JsonValueKind.Object, scenario.Explanation.ValueKind);
+            Assert.False(string.IsNullOrWhiteSpace(scenario.Explanation.GetProperty("textExplanation").GetString()));
         }
     }
 
@@ -90,7 +89,6 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         var householdRequest = new { name = "Test Household" };
         var householdResult = await client.PostAsJsonAsync("/api/households", householdRequest);
         householdResult.EnsureSuccessStatusCode();
-        var household = await householdResult.Content.ReadFromJsonAsync<dynamic>();
 
         // Create a week
         var weekRequest = new
@@ -99,8 +97,8 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         };
         var weekResult = await client.PostAsJsonAsync("/api/weeks", weekRequest);
         weekResult.EnsureSuccessStatusCode();
-        var week = await weekResult.Content.ReadFromJsonAsync<dynamic>();
-        var weekId = (string)week!.id;
+        var week = await weekResult.Content.ReadFromJsonAsync<WeekDto>();
+        var weekId = week!.Id;
 
         // Generate scenarios
         var generateRequest = new
@@ -113,13 +111,13 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         var getResult = await client.GetAsync($"/api/weeks/{weekId}/scenarios");
         getResult.EnsureSuccessStatusCode();
 
-        var scenarios = await getResult.Content.ReadFromJsonAsync<List<dynamic>>();
+        var scenarios = await getResult.Content.ReadFromJsonAsync<List<WeekScenarioResponse>>();
 
         // Assertions
         Assert.NotNull(scenarios);
         Assert.Single(scenarios);
-        Assert.Equal("nutritional_balance", (string)scenarios[0].rankingObjective);
-        Assert.False((bool)scenarios[0].applied);
+        Assert.Equal("nutritional_balance", scenarios[0].RankingObjective);
+        Assert.False(scenarios[0].Applied);
     }
 
     /// <summary>
@@ -145,8 +143,8 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         };
         var week1Result = await client1.PostAsJsonAsync("/api/weeks", week1Request);
         week1Result.EnsureSuccessStatusCode();
-        var week1 = await week1Result.Content.ReadFromJsonAsync<dynamic>();
-        var week1Id = (string)week1!.id;
+        var week1 = await week1Result.Content.ReadFromJsonAsync<WeekDto>();
+        var week1Id = week1!.Id;
 
         // User 1 generates scenarios
         var generateRequest = new
@@ -188,8 +186,8 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         };
         var weekResult = await client.PostAsJsonAsync("/api/weeks", weekRequest);
         weekResult.EnsureSuccessStatusCode();
-        var week = await weekResult.Content.ReadFromJsonAsync<dynamic>();
-        var weekId = (string)week!.id;
+        var week = await weekResult.Content.ReadFromJsonAsync<WeekDto>();
+        var weekId = week!.Id;
 
         // Generate scenarios
         var generateRequest = new
@@ -201,8 +199,8 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
             generateRequest);
         generateResult.EnsureSuccessStatusCode();
 
-        var scenarios = await generateResult.Content.ReadFromJsonAsync<List<dynamic>>();
-        var scenarioId = (string)scenarios![0].id;
+        var scenarios = await generateResult.Content.ReadFromJsonAsync<List<WeekScenarioResponse>>();
+        var scenarioId = scenarios![0].Id;
 
         // Apply scenario
         var applyResult = await client.PatchAsync(
@@ -214,9 +212,10 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         var getResult = await client.GetAsync($"/api/weeks/{weekId}/scenarios");
         getResult.EnsureSuccessStatusCode();
 
-        var updatedScenarios = await getResult.Content.ReadFromJsonAsync<List<dynamic>>();
+        var updatedScenarios = await getResult.Content.ReadFromJsonAsync<List<WeekScenarioResponse>>();
+        Assert.NotNull(updatedScenarios);
         Assert.Single(updatedScenarios);
-        Assert.True((bool)updatedScenarios![0].applied);
+        Assert.True(updatedScenarios[0].Applied);
     }
 
     /// <summary>
@@ -241,8 +240,8 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
             };
             var weekResult = await client.PostAsJsonAsync("/api/weeks", weekRequest);
             weekResult.EnsureSuccessStatusCode();
-            var week = await weekResult.Content.ReadFromJsonAsync<dynamic>();
-            var weekId = (string)week!.id;
+            var week = await weekResult.Content.ReadFromJsonAsync<WeekDto>();
+            var weekId = week!.Id;
 
             var generateRequest = new
             {
@@ -260,17 +259,19 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
 
             var weeksResult = await client.GetAsync("/api/weeks");
             weeksResult.EnsureSuccessStatusCode();
-            var weeks = await weeksResult.Content.ReadFromJsonAsync<List<dynamic>>();
+            var weeks = await weeksResult.Content.ReadFromJsonAsync<List<WeekDto>>();
+            Assert.NotNull(weeks);
             Assert.NotEmpty(weeks);
 
-            var weekId = (string)weeks![0].id;
+            var weekId = weeks[0].Id;
 
             var getResult = await client.GetAsync($"/api/weeks/{weekId}/scenarios");
             getResult.EnsureSuccessStatusCode();
 
-            var scenarios = await getResult.Content.ReadFromJsonAsync<List<dynamic>>();
+            var scenarios = await getResult.Content.ReadFromJsonAsync<List<WeekScenarioResponse>>();
+            Assert.NotNull(scenarios);
             Assert.Single(scenarios);
-            Assert.Equal("reduce_waste", (string)scenarios![0].rankingObjective);
+            Assert.Equal("reduce_waste", scenarios[0].RankingObjective);
         }
     }
 
@@ -315,8 +316,8 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
         };
         var weekResult = await client.PostAsJsonAsync("/api/weeks", weekRequest);
         weekResult.EnsureSuccessStatusCode();
-        var week = await weekResult.Content.ReadFromJsonAsync<dynamic>();
-        var weekId = (string)week!.id;
+        var week = await weekResult.Content.ReadFromJsonAsync<WeekDto>();
+        var weekId = week!.Id;
 
         // Try to generate with empty objectives
         var generateRequest = new { objectives = new List<string>() };
@@ -326,4 +327,13 @@ public sealed class Jalon5ScenariosTests(PostgresContainerFixture postgres) : IA
 
         Assert.Equal(HttpStatusCode.BadRequest, generateResult.StatusCode);
     }
+
+    private sealed record WeekScenarioResponse(
+        Guid Id,
+        Guid WeekId,
+        string RankingObjective,
+        JsonElement Explanation,
+        bool Applied,
+        DateTimeOffset CreatedAt,
+        DateTimeOffset UpdatedAt);
 }

@@ -4,36 +4,36 @@ using LifeOS.Domain.Planning;
 namespace LifeOS.Application.Planning;
 
 /// <summary>
-/// Use case: list every planning rule belonging to the current user.
+/// Use case: list every planning rule belonging to the current household.
 /// </summary>
 public sealed class GetPlanningRulesQuery(IPlanningRuleRepository planningRuleRepository)
 {
     private readonly IPlanningRuleRepository _planningRuleRepository = planningRuleRepository;
 
-    public async Task<IReadOnlyList<PlanningRuleDto>> ExecuteAsync(Guid ownerId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<PlanningRuleDto>> ExecuteAsync(Guid householdId, CancellationToken cancellationToken = default)
     {
-        var rules = await _planningRuleRepository.GetAllForOwnerAsync(ownerId, cancellationToken);
+        var rules = await _planningRuleRepository.GetAllForHouseholdAsync(householdId, cancellationToken);
 
         return rules.Select(PlanningMapper.ToDto).ToList();
     }
 }
 
 /// <summary>
-/// Use case: pin a meal component or dish to a weekday/meal slot for the current user.
+/// Use case: pin a meal component or dish to a weekday/meal slot for the current household.
 /// </summary>
 public sealed class CreatePlanningRuleCommand(IPlanningRuleRepository planningRuleRepository)
 {
     private readonly IPlanningRuleRepository _planningRuleRepository = planningRuleRepository;
 
     public async Task<PlanningRuleDto> ExecuteAsync(
-        Guid ownerId,
+        Guid householdId,
         string weekday,
         string mealType,
         PlanningRuleTargetDto target,
         CancellationToken cancellationToken = default)
     {
         var rule = PlanningRule.Create(
-            ownerId,
+            householdId,
             PlanningMapper.ParseWeekday(weekday),
             PlanningMapper.ParseMealType(mealType),
             PlanningMapper.ParsePlanningRuleTarget(target));
@@ -45,21 +45,21 @@ public sealed class CreatePlanningRuleCommand(IPlanningRuleRepository planningRu
 }
 
 /// <summary>
-/// Use case: update an existing planning rule belonging to the current user.
+/// Use case: update an existing planning rule belonging to the current household.
 /// </summary>
 public sealed class UpdatePlanningRuleCommand(IPlanningRuleRepository planningRuleRepository)
 {
     private readonly IPlanningRuleRepository _planningRuleRepository = planningRuleRepository;
 
     public async Task<PlanningRuleDto?> ExecuteAsync(
-        Guid ownerId,
+        Guid householdId,
         Guid ruleId,
         string weekday,
         string mealType,
         PlanningRuleTargetDto target,
         CancellationToken cancellationToken = default)
     {
-        var rule = await _planningRuleRepository.GetByIdAsync(ownerId, ruleId, cancellationToken);
+        var rule = await _planningRuleRepository.GetByIdAsync(householdId, ruleId, cancellationToken);
 
         if (rule is null)
         {
@@ -71,17 +71,19 @@ public sealed class UpdatePlanningRuleCommand(IPlanningRuleRepository planningRu
             PlanningMapper.ParseMealType(mealType),
             PlanningMapper.ParsePlanningRuleTarget(target));
 
+        await _planningRuleRepository.UpdateAsync(rule, cancellationToken);
+
         return PlanningMapper.ToDto(rule);
     }
 }
 
 /// <summary>
-/// Use case: delete a planning rule belonging to the current user.
+/// Use case: delete a planning rule belonging to the current household.
 /// </summary>
 public sealed class DeletePlanningRuleCommand(IPlanningRuleRepository planningRuleRepository)
 {
     private readonly IPlanningRuleRepository _planningRuleRepository = planningRuleRepository;
 
-    public Task<bool> ExecuteAsync(Guid ownerId, Guid ruleId, CancellationToken cancellationToken = default)
-        => _planningRuleRepository.DeleteAsync(ownerId, ruleId, cancellationToken);
+    public Task<bool> ExecuteAsync(Guid householdId, Guid ruleId, CancellationToken cancellationToken = default)
+        => _planningRuleRepository.DeleteAsync(householdId, ruleId, cancellationToken);
 }

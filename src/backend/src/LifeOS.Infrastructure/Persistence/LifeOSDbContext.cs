@@ -2,9 +2,11 @@ using LifeOS.Domain.Articles;
 using LifeOS.Domain.ComposedMeals;
 using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Households;
+using LifeOS.Domain.Planning;
 using LifeOS.Domain.Recipes;
 using LifeOS.Domain.Stock;
 using LifeOS.Domain.Stores;
+using LifeOS.Domain.WeekContexts;
 using LifeOS.Domain.WeekPlanning;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,6 +46,11 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     // Jalon 4: Nutrition and Sports Context
     public DbSet<UserConfiguration> UserConfigurations => Set<UserConfiguration>();
     public DbSet<ActivitySession> ActivitySessions => Set<ActivitySession>();
+
+    // Planning configuration
+    public DbSet<PlanningRule> PlanningRules => Set<PlanningRule>();
+    public DbSet<FrequencyRule> FrequencyRules => Set<FrequencyRule>();
+    public DbSet<WeekContext> WeekContexts => Set<WeekContext>();
 
     // Jalon 6: Stock and Shopping List
     public DbSet<StockItem> StockItems => Set<StockItem>();

@@ -119,6 +119,51 @@ public sealed class PlannedMeal : Entity
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
+    public PlannedMealPart AddPart(Guid memberProfileId, decimal portionMultiplier)
+    {
+        var existingPart = Parts.FirstOrDefault(part => part.MemberProfileId == memberProfileId);
+
+        if (existingPart is not null)
+        {
+            existingPart.Update(portionMultiplier);
+            UpdatedAt = DateTimeOffset.UtcNow;
+            return existingPart;
+        }
+
+        var part = PlannedMealPart.Create(Id, memberProfileId, portionMultiplier);
+        Parts.Add(part);
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        return part;
+    }
+
+    public bool UpdatePart(Guid partId, decimal portionMultiplier)
+    {
+        var part = Parts.FirstOrDefault(candidate => candidate.Id == partId);
+
+        if (part is null)
+        {
+            return false;
+        }
+
+        part.Update(portionMultiplier);
+        UpdatedAt = DateTimeOffset.UtcNow;
+
+        return true;
+    }
+
+    public bool RemovePart(Guid partId)
+    {
+        var removed = Parts.RemoveAll(part => part.Id == partId) > 0;
+
+        if (removed)
+        {
+            UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        return removed;
+    }
+
     /// <summary>
     /// Rehydrates a <see cref="PlannedMeal"/> from persisted state.
     /// </summary>

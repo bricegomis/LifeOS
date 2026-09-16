@@ -12,5 +12,12 @@ public interface IHouseholdRepository
     /// </summary>
     Task<Household?> FindBySupabaseUserIdAsync(Guid supabaseUserId, CancellationToken cancellationToken = default);
 
+    Task<Household?> GetByIdAsync(Guid householdId, CancellationToken cancellationToken = default);
+
+    Task<bool> MemberProfileBelongsToHouseholdAsync(
+        Guid householdId,
+        Guid memberProfileId,
+        CancellationToken cancellationToken = default);
+
     Task AddAsync(Household household, CancellationToken cancellationToken = default);
 }

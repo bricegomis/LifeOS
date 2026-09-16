@@ -123,3 +123,6 @@ public record ReplacePlannedMealRequest(
 public record AddPlannedMealPartRequest(
     Guid MemberProfileId,
     decimal PortionMultiplier);
+
+public record UpdatePlannedMealPartRequest(
+    decimal PortionMultiplier);

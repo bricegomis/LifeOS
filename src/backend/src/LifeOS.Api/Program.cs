@@ -95,6 +95,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStoresEndpoints();
+app.MapHouseholdEndpoints();
 app.MapArticlesEndpoints();
 app.MapRecipesEndpoints();
 app.MapComposedMealsEndpoints();

@@ -82,4 +82,23 @@ public sealed class Store : Entity
     {
         return new Store(id, householdId, name, address, isOrganic, isLocal, createdAt, updatedAt);
     }
+
+    public void UpdateDetails(
+        string name,
+        string address,
+        bool isOrganic,
+        bool isLocal,
+        DateTimeOffset? now = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Store name is required.", nameof(name));
+        }
+
+        Name = name.Trim();
+        Address = address.Trim();
+        IsOrganic = isOrganic;
+        IsLocal = isLocal;
+        UpdatedAt = now ?? DateTimeOffset.UtcNow;
+    }
 }
