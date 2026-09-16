@@ -102,6 +102,7 @@ app.MapWeekPlanningEndpoints();
 app.MapLibraryEndpoints();
 app.MapPlanningEndpoints();
 app.MapWeekContextEndpoints();
+app.MapFoodItemsEndpoints();
 
 app.Run();
 

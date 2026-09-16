@@ -1,5 +1,6 @@
 using LifeOS.Domain.Articles;
 using LifeOS.Domain.ComposedMeals;
+using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Households;
 using LifeOS.Domain.Recipes;
 using LifeOS.Domain.Stores;
@@ -10,7 +11,8 @@ namespace LifeOS.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core / Npgsql database context backing the PostgreSQL business database (ADR 0001).
-/// Includes Jalon 1 (households, stores, articles) and Jalon 2 (recipes, composed meals, week planning).
+/// Includes Jalon 1 (households, stores, articles), Jalon 2 (recipes, composed meals, week planning),
+/// and Jalon 3 (food items, Open Food Facts integration).
 /// </summary>
 public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) : DbContext(options)
 {
@@ -32,6 +34,9 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<DayPlan> DayPlans => Set<DayPlan>();
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
     public DbSet<PlannedMealPart> PlannedMealParts => Set<PlannedMealPart>();
+
+    // Jalon 3: Food Items
+    public DbSet<FoodItem> FoodItems => Set<FoodItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -8,8 +8,11 @@ using LifeOS.Application.Recipes;
 using LifeOS.Application.Stores;
 using LifeOS.Application.WeekContexts;
 using LifeOS.Application.WeekPlanning;
+using LifeOS.Domain.FoodItems;
 using LifeOS.Infrastructure.Articles;
 using LifeOS.Infrastructure.ComposedMeals;
+using LifeOS.Infrastructure.FoodItems;
+using LifeOS.Infrastructure.FoodItems.OpenFoodFacts;
 using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Library;
 using LifeOS.Infrastructure.Persistence;
@@ -21,6 +24,7 @@ using LifeOS.Infrastructure.WeekPlanning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
 
 namespace LifeOS.Infrastructure;
 
@@ -86,6 +90,12 @@ public static class DependencyInjection
         services.AddSingleton<IWeekContextRepository, InMemoryWeekContextRepository>();
         services.AddScoped<GetWeekContextQuery>();
         services.AddScoped<SaveWeekContextCommand>();
+
+        // Jalon 3: Food Items and Open Food Facts
+        services.AddScoped<IFoodItemRepository, EfFoodItemRepository>();
+
+        // Open Food Facts HTTP service
+        services.AddHttpClient<IOpenFoodFactsService, HttpOpenFoodFactsService>();
 
         return services;
     }
