@@ -104,6 +104,8 @@ app.MapPlanningEndpoints();
 app.MapWeekContextEndpoints();
 app.MapFoodItemsEndpoints();
 app.MapNutritionEndpoints();
+app.MapStockEndpoints();
+app.MapShoppingListEndpoints();
 
 app.Run();
 
