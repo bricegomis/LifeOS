@@ -13,7 +13,8 @@ public sealed class DayPlan : Entity
     public bool BikeCommute { get; private set; }
 
     // Navigation property for EF Core
-    private readonly List<PlannedMeal> _plannedMeals = [];
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044", Justification = "Backing field for EF Core")]
+    private List<PlannedMeal> _plannedMeals = [];
     public IReadOnlyList<PlannedMeal> PlannedMeals => _plannedMeals.AsReadOnly();
 
     private DayPlan(

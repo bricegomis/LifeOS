@@ -18,7 +18,8 @@ public sealed class Recipe : Entity
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
-    private readonly List<RecipeIngredient> _ingredients = [];
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044", Justification = "Backing field for EF Core")]
+    private List<RecipeIngredient> _ingredients = [];
     public IReadOnlyList<RecipeIngredient> Ingredients => _ingredients.AsReadOnly();
 
     private Recipe(

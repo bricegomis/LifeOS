@@ -14,7 +14,8 @@ public sealed class ComposedMeal : Entity
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
-    private readonly List<ComposedMealPart> _parts = [];
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044", Justification = "Backing field for EF Core")]
+    private List<ComposedMealPart> _parts = [];
     public IReadOnlyList<ComposedMealPart> Parts => _parts.AsReadOnly();
 
     private ComposedMeal(
