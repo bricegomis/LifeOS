@@ -15,10 +15,6 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
 
         builder.HasKey(f => f.Id);
 
-        // Configure constructor binding - use Rehydrate factory method for complex initialization
-        builder.HasData(
-            new { }); // Dummy to trigger constructor binding configuration
-
         builder.Property(f => f.Id)
             .HasColumnName("id")
             .ValueGeneratedNever();
@@ -62,7 +58,6 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
             .IsRequired();
 
         // Configure Nutrition as a complex type (value object)
-        // Using PropertyAccessMode.Field to tell EF not to use constructor binding for owned types
         builder.OwnsOne(
             f => f.Nutrition,
             nutrition =>

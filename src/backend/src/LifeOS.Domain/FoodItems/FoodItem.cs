@@ -19,11 +19,14 @@ public sealed class FoodItem : Entity
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
+#pragma warning disable CS8618
     private FoodItem()
     {
         // Parameterless constructor for EF Core materialization.
-        // EF will set properties via field access.
+        // EF will set properties via field access after construction.
+        // Properties are not initialized here but will be set by EF Core.
     }
+#pragma warning restore CS8618
 
     private FoodItem(
         Guid id,
