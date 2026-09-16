@@ -19,11 +19,6 @@ public sealed class FoodItem : Entity
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    // Parameterless constructor for EF Core
-    private FoodItem() : base(Guid.Empty)
-    {
-    }
-
     private FoodItem(
         Guid id,
         Guid householdId,
