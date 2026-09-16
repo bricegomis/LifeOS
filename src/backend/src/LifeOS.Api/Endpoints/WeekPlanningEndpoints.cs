@@ -214,13 +214,27 @@ public static class WeekPlanningEndpoints
     // Day Plan endpoints
     private static async Task<IResult> GetDayPlanByIdAsync(
         Guid dayPlanId,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IWeekRepository weekRepository,
         IDayPlanRepository dayPlanRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
         var dayPlan = await dayPlanRepository.GetByIdAsync(dayPlanId, cancellationToken);
 
         if (dayPlan == null)
+        {
+            return Results.NotFound();
+        }
+
+        var week = await weekRepository.GetByIdAsync(dayPlan.WeekId, householdId, cancellationToken);
+        if (week == null)
         {
             return Results.NotFound();
         }
@@ -231,10 +245,25 @@ public static class WeekPlanningEndpoints
     private static async Task<IResult> CreateDayPlanAsync(
         Guid weekId,
         CreateDayPlanRequest request,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IWeekRepository weekRepository,
         IDayPlanRepository dayPlanRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var week = await weekRepository.GetByIdAsync(weekId, householdId, cancellationToken);
+
+        if (week == null)
+        {
+            return Results.NotFound();
+        }
+
         try
         {
             var dayPlan = DayPlan.Create(weekId, request.Date, request.WorkContext, request.BikeCommute);
@@ -251,12 +280,27 @@ public static class WeekPlanningEndpoints
     private static async Task<IResult> UpdateDayPlanAsync(
         Guid dayPlanId,
         UpdateDayPlanRequest request,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
+        IWeekRepository weekRepository,
         IDayPlanRepository dayPlanRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
         var dayPlan = await dayPlanRepository.GetByIdAsync(dayPlanId, cancellationToken);
 
         if (dayPlan == null)
+        {
+            return Results.NotFound();
+        }
+
+        var week = await weekRepository.GetByIdAsync(dayPlan.WeekId, householdId, cancellationToken);
+        if (week == null)
         {
             return Results.NotFound();
         }
@@ -276,9 +320,31 @@ public static class WeekPlanningEndpoints
 
     private static async Task<IResult> DeleteDayPlanAsync(
         Guid dayPlanId,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
+        IWeekRepository weekRepository,
         IDayPlanRepository dayPlanRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var dayPlan = await dayPlanRepository.GetByIdAsync(dayPlanId, cancellationToken);
+
+        if (dayPlan == null)
+        {
+            return Results.NotFound();
+        }
+
+        var week = await weekRepository.GetByIdAsync(dayPlan.WeekId, householdId, cancellationToken);
+        if (week == null)
+        {
+            return Results.NotFound();
+        }
+
         var deleted = await dayPlanRepository.DeleteAsync(dayPlanId, cancellationToken);
 
         return deleted ? Results.NoContent() : Results.NotFound();
@@ -287,20 +353,70 @@ public static class WeekPlanningEndpoints
     // Planned Meal endpoints
     private static async Task<IResult> GetPlannedMealByIdAsync(
         Guid mealId,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
+        IWeekRepository weekRepository,
+        IDayPlanRepository dayPlanRepository,
         IPlannedMealRepository plannedMealRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
         var meal = await plannedMealRepository.GetByIdAsync(mealId, cancellationToken);
 
-        return meal == null ? Results.NotFound() : Results.Ok(ToPlannedMealDto(meal));
+        if (meal == null)
+        {
+            return Results.NotFound();
+        }
+
+        var dayPlan = await dayPlanRepository.GetByIdAsync(meal.DayPlanId, cancellationToken);
+        if (dayPlan == null)
+        {
+            return Results.NotFound();
+        }
+
+        var week = await weekRepository.GetByIdAsync(dayPlan.WeekId, householdId, cancellationToken);
+        if (week == null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(ToPlannedMealDto(meal));
     }
 
     private static async Task<IResult> CreatePlannedMealAsync(
         Guid dayPlanId,
         CreatePlannedMealRequest request,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
+        IWeekRepository weekRepository,
+        IDayPlanRepository dayPlanRepository,
         IPlannedMealRepository plannedMealRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var dayPlan = await dayPlanRepository.GetByIdAsync(dayPlanId, cancellationToken);
+
+        if (dayPlan == null)
+        {
+            return Results.NotFound();
+        }
+
+        var week = await weekRepository.GetByIdAsync(dayPlan.WeekId, householdId, cancellationToken);
+        if (week == null)
+        {
+            return Results.NotFound();
+        }
+
         try
         {
             var meal = PlannedMeal.Create(
@@ -323,12 +439,34 @@ public static class WeekPlanningEndpoints
     private static async Task<IResult> UpdatePlannedMealStatusAsync(
         Guid mealId,
         UpdatePlannedMealStatusRequest request,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
+        IWeekRepository weekRepository,
+        IDayPlanRepository dayPlanRepository,
         IPlannedMealRepository plannedMealRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
         var meal = await plannedMealRepository.GetByIdAsync(mealId, cancellationToken);
 
         if (meal == null)
+        {
+            return Results.NotFound();
+        }
+
+        var dayPlan = await dayPlanRepository.GetByIdAsync(meal.DayPlanId, cancellationToken);
+        if (dayPlan == null)
+        {
+            return Results.NotFound();
+        }
+
+        var week = await weekRepository.GetByIdAsync(dayPlan.WeekId, householdId, cancellationToken);
+        if (week == null)
         {
             return Results.NotFound();
         }
@@ -349,12 +487,34 @@ public static class WeekPlanningEndpoints
     private static async Task<IResult> ReplacePlannedMealAsync(
         Guid mealId,
         ReplacePlannedMealRequest request,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
+        IWeekRepository weekRepository,
+        IDayPlanRepository dayPlanRepository,
         IPlannedMealRepository plannedMealRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
         var meal = await plannedMealRepository.GetByIdAsync(mealId, cancellationToken);
 
         if (meal == null)
+        {
+            return Results.NotFound();
+        }
+
+        var dayPlan = await dayPlanRepository.GetByIdAsync(meal.DayPlanId, cancellationToken);
+        if (dayPlan == null)
+        {
+            return Results.NotFound();
+        }
+
+        var week = await weekRepository.GetByIdAsync(dayPlan.WeekId, householdId, cancellationToken);
+        if (week == null)
         {
             return Results.NotFound();
         }
@@ -374,9 +534,38 @@ public static class WeekPlanningEndpoints
 
     private static async Task<IResult> DeletePlannedMealAsync(
         Guid mealId,
+        ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
+        IWeekRepository weekRepository,
+        IDayPlanRepository dayPlanRepository,
         IPlannedMealRepository plannedMealRepository,
         CancellationToken cancellationToken)
     {
+        if (!user.TryGetUserId(out var supabaseUserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
+        var meal = await plannedMealRepository.GetByIdAsync(mealId, cancellationToken);
+
+        if (meal == null)
+        {
+            return Results.NotFound();
+        }
+
+        var dayPlan = await dayPlanRepository.GetByIdAsync(meal.DayPlanId, cancellationToken);
+        if (dayPlan == null)
+        {
+            return Results.NotFound();
+        }
+
+        var week = await weekRepository.GetByIdAsync(dayPlan.WeekId, householdId, cancellationToken);
+        if (week == null)
+        {
+            return Results.NotFound();
+        }
+
         var deleted = await plannedMealRepository.DeleteAsync(mealId, cancellationToken);
 
         return deleted ? Results.NoContent() : Results.NotFound();

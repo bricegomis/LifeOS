@@ -35,7 +35,39 @@ public sealed class EfComposedMealRepository(LifeOSDbContext dbContext) : ICompo
 
     public async Task<ComposedMeal> UpdateAsync(ComposedMeal meal, CancellationToken cancellationToken = default)
     {
-        _dbContext.ComposedMeals.Update(meal);
+        var existingMeal = await _dbContext.ComposedMeals
+            .Include(m => m.Parts)
+            .FirstOrDefaultAsync(m => m.Id == meal.Id, cancellationToken);
+
+        if (existingMeal != null)
+        {
+            _dbContext.Entry(existingMeal).CurrentValues.SetValues(meal);
+
+            var currentPartIds = meal.Parts.Select(p => p.Id).ToHashSet();
+            var toRemove = existingMeal.Parts.Where(p => !currentPartIds.Contains(p.Id)).ToList();
+            foreach (var rem in toRemove)
+            {
+                _dbContext.Set<ComposedMealPart>().Remove(rem);
+            }
+
+            var existingPartDict = existingMeal.Parts.ToDictionary(p => p.Id);
+            foreach (var part in meal.Parts)
+            {
+                if (existingPartDict.TryGetValue(part.Id, out var existingPart))
+                {
+                    _dbContext.Entry(existingPart).CurrentValues.SetValues(part);
+                }
+                else
+                {
+                    existingMeal.Parts.Add(part);
+                }
+            }
+        }
+        else
+        {
+            _dbContext.ComposedMeals.Update(meal);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
         return meal;
     }
