@@ -15,6 +15,7 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
 
         builder.HasKey(f => f.Id);
 
+        // Configure constructor binding for EF Core materialization
         builder.Property(f => f.Id)
             .HasColumnName("id")
             .ValueGeneratedNever();
