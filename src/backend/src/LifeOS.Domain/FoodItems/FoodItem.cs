@@ -19,6 +19,12 @@ public sealed class FoodItem : Entity
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    private FoodItem()
+    {
+        // Parameterless constructor for EF Core materialization.
+        // EF will set properties via field access.
+    }
+
     private FoodItem(
         Guid id,
         Guid householdId,
