@@ -189,3 +189,29 @@ Consequences:
 - Les tables `stores`, `articles`, `article_price_entries` conservent leur forme héritée du modèle in-memory plutôt que d'adopter immédiatement le modèle conceptuel `food_items` / `price_observations` documenté dans `docs/architecture/02-data-model.md` ; cette divergence est documentée explicitement dans ce fichier et sera reconciliée au jalon « bibliothèque alimentaire ».
 - Les contextes `Library`, `Planning` (règles) et `WeekContexts` restent en mémoire, scopés par utilisateur, jusqu'à leurs propres jalons de migration.
 - Des tests automatisés (unitaires domaine + intégration API/EF Core via Testcontainers PostgreSQL) prouvent la persistance après redémarrage logique de l'API et l'isolation stricte entre deux foyers ; ils font désormais partie du socle de validation du backend (`dotnet test` depuis `src/backend`).
+
+## 2026 — Jalon 6 : stock et liste de courses
+
+Context:
+La roadmap technique (Jalon 6 : « Stock et courses ») demande d'ajouter la gestion manuelle du stock et la consolidation d'une liste de courses à partir du planning hebdomadaire. Le backend disposait d'une infrastructure complète (PostgreSQL + EF Core + isolation par foyer, API REST + Supabase JWT, layering Domain/Application/Infrastructure/Api) et d'un moteur de génération des menus (Jalon 2+4). Il manquait les entités de domaine `StockItem` et `ShoppingListItem` et les endpoints associés.
+
+Decision:
+Introduction des agrégats `StockItem` (domaine « Stock ») et `ShoppingListItem` (domaine « Stock ») dans la couche domaine. `StockItem` porte le stock par article pour un foyer donné (quantité + unité). `ShoppingListItem` porte un article à acheter pour une semaine (quantité requise, quantité déductible du stock, état « coché »). La « génération » de la liste de courses est une commande `GenerateShoppingListCommand` qui :
+1. Récupère tous les repas prévus pour une semaine donnée.
+2. Agrège les ingrédients par article (en réconciliant quantités et unités).
+3. Charge le stock actuel du foyer.
+4. Crée un `ShoppingListItem` par article avec `quantityNeeded = total des ingrédients`, `quantityFromStock = min(quantityNeeded, quantité en stock)`, et `quantityToBuy = quantityNeeded - quantityFromStock`.
+5. Persiste les items via le repository.
+
+Les endpoints REST suivent le pattern établi par les jalons précédents : `GET/POST/PUT/DELETE /api/stock-items`, `POST /api/shopping-list/weeks/{weekId}/generate`, `GET /api/shopping-list/items`, `PATCH /api/shopping-list/items/{id}` (toggle checkbox). Tous les endpoints sont sécurisés par JWT et filtrés par foyer via `ResolveHouseholdForUserQuery` côté application.
+
+Reasons:
+- Conserver la même architecture (Domain/Application/Infrastructure/Api) que les jalons précédents assure une cohérence et une maintenabilité durables.
+- L'agrégation des ingrédients par article nécessite de parcourir les repas planifiés (connaissances du Jalon 2/4) et le stock existant, d'où une logique métier clairement encapsulée dans `GenerateShoppingListCommand`.
+- Le calcul `quantityToBuy` reste simple et évite les fractions et conversions d'unités complexes au MVP.
+- L'état « coché » sur `ShoppingListItem` permet de tracker l'acquisition progressive sans modifications au modèle `StockItem`.
+
+Consequences:
+- Les tables `stock_items` et `shopping_list_items` sont créées via une migration EF Core classique ; les clés étrangères sur `household_id`, `week_id` (nullable pour le stock) et `food_item_id` garantissent l'intégrité et les performances.
+- L'agrégation des ingrédients suppose que `RecipeIngredient.FoodItemId` peut être utilisé directement comme clé dans la liste de courses ; un vrai système de mapping `FoodItem → GroceryItem` sera étudié lors de l'intégration Open Food Facts (Jalon 3).
+- Les tests d'intégration prouvent l'isolation par foyer et le calcul correct de `quantityToBuy` sur des scénarios multi-repas et multi-unités.
