@@ -15,7 +15,7 @@ public sealed class Week : Entity
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
-    public List<DayPlan> DayPlans { get; private set; } = [];
+    public ICollection<DayPlan> DayPlans { get; set; } = [];
 
     private Week(
         Guid id,
