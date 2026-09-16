@@ -20,6 +20,12 @@ public static class HouseholdEndpoints
             .WithName("GetHouseholdMembers")
             .WithOpenApi();
 
+        app.MapGet("/api/household/members", GetHouseholdMembersAsync)
+            .WithTags("Households")
+            .RequireAuthorization()
+            .WithName("GetHouseholdMembersLegacy")
+            .WithOpenApi();
+
         group.MapPost("/", GetCurrentHouseholdAsync)
             .WithName("CreateOrGetCurrentHousehold")
             .WithOpenApi();
