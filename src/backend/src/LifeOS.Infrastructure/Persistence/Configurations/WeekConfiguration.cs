@@ -31,11 +31,5 @@ internal sealed class WeekConfiguration : IEntityTypeConfiguration<Week>
 
         builder.HasIndex(week => week.HouseholdId);
         builder.HasIndex(week => new { week.HouseholdId, week.StartsOn });
-
-        // Navigation for day plans
-        builder.HasMany<DayPlan>()
-            .WithOne()
-            .HasForeignKey(day => day.WeekId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 }

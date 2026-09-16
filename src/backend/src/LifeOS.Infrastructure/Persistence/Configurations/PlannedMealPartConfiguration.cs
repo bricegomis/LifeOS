@@ -19,7 +19,7 @@ internal sealed class PlannedMealPartConfiguration : IEntityTypeConfiguration<Pl
 
         // FK to PlannedMeal
         builder.HasOne<PlannedMeal>()
-            .WithMany()
+            .WithMany(m => m.Parts)
             .HasForeignKey(part => part.PlannedMealId)
             .OnDelete(DeleteBehavior.Cascade);
 

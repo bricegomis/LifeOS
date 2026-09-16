@@ -31,7 +31,7 @@ internal sealed class PlannedMealConfiguration : IEntityTypeConfiguration<Planne
 
         // FK to DayPlan
         builder.HasOne<DayPlan>()
-            .WithMany()
+            .WithMany(d => d.PlannedMeals)
             .HasForeignKey(meal => meal.DayPlanId)
             .OnDelete(DeleteBehavior.Cascade);
 

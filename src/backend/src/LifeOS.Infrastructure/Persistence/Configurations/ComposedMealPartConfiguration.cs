@@ -19,7 +19,7 @@ internal sealed class ComposedMealPartConfiguration : IEntityTypeConfiguration<C
 
         // FK to ComposedMeal
         builder.HasOne<ComposedMeal>()
-            .WithMany()
+            .WithMany(m => m.Parts)
             .HasForeignKey(part => part.ComposedMealId)
             .OnDelete(DeleteBehavior.Cascade);
 

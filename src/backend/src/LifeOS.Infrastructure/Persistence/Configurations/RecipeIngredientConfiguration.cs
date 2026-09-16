@@ -22,7 +22,7 @@ internal sealed class RecipeIngredientConfiguration : IEntityTypeConfiguration<R
 
         // FK to Recipe
         builder.HasOne<Recipe>()
-            .WithMany()
+            .WithMany(r => r.Ingredients)
             .HasForeignKey(ingredient => ingredient.RecipeId)
             .OnDelete(DeleteBehavior.Cascade);
 

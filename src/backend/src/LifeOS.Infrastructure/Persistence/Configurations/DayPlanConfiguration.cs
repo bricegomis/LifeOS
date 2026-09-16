@@ -24,7 +24,7 @@ internal sealed class DayPlanConfiguration : IEntityTypeConfiguration<DayPlan>
 
         // FK to Week
         builder.HasOne<Week>()
-            .WithMany()
+            .WithMany(w => w.DayPlans)
             .HasForeignKey(day => day.WeekId)
             .OnDelete(DeleteBehavior.Cascade);
 
