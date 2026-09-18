@@ -14,13 +14,23 @@ scoped to the authenticated user (resolved from the JWT `sub` claim).
 | --- | --- | --- |
 | Stores | `GET /api/stores` | Read-only, scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Articles | `GET/POST /api/articles`, `PUT/DELETE /api/articles/{id}`, `POST /api/articles/{id}/price-entries`, `DELETE /api/articles/{id}/price-entries/{priceEntryId}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); mirrors the frontend's `GroceryItem` (name, description, unit, price history). |
-| Library | `GET /api/meal-components`, `GET /api/composite-dishes`, `GET /api/activities` | Read-only, shared across users; mirrors `src/frontend/src/data/localLibrary.ts`. |
-| Planning rules | `GET/POST /api/planning-rules`, `PUT/DELETE /api/planning-rules/{id}` | Full CRUD, per-owner (in-memory, not yet migrated); pins a meal component or dish to a weekday/meal slot. |
-| Frequency rules | `GET/POST /api/frequency-rules`, `PUT/DELETE /api/frequency-rules/{id}` | Full CRUD, per-owner (in-memory, not yet migrated); constrains how many times per week a component/dish/category should appear. |
-| Week context | `GET/PUT /api/week-context` | Per-owner singleton (in-memory, not yet migrated). |
+| Library | `GET /api/meal-components`, `GET /api/composite-dishes`, `GET /api/activities` | Read-only, shared across users; still served from an **in-memory** seed catalog (mirrors `src/frontend/src/data/localLibrary.ts`), not yet migrated to PostgreSQL. |
+| Planning rules | `GET/POST /api/planning-rules`, `PUT/DELETE /api/planning-rules/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); pins a meal component or dish to a weekday/meal slot. |
+| Frequency rules | `GET/POST /api/frequency-rules`, `PUT/DELETE /api/frequency-rules/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); constrains how many times per week a component/dish/category should appear. |
+| Week context | `GET/PUT /api/week-context` | Per-household singleton. PostgreSQL-backed (EF Core). |
+| Recipes | `GET/POST /api/recipes`, `PUT/DELETE /api/recipes/{id}`, ingredient sub-resource | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core). |
+| Composed meals | `GET/POST /api/composed-meals`, `PUT/DELETE /api/composed-meals/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core). |
+| Food items | `GET/POST /api/food-items`, `PUT/DELETE /api/food-items/{id}`, `POST /api/food-items/{id}/correction`, Open Food Facts search | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core), with an Open Food Facts HTTP integration for lookups/caching. |
+| Nutrition | `GET/POST /api/nutrition/configuration`, `GET/POST/PUT/DELETE /api/activity-sessions/*`, `GET /api/nutrition/calculations/day/{dayPlanId}` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
+| Week planning | `GET/POST/DELETE /api/weeks/*`, `/api/day-plans/*`, `/api/planned-meals/*`, `/api/week-scenarios/*` | Full week/day-plan/planned-meal CRUD plus deterministic scenario generation, scoped to the caller's household. PostgreSQL-backed (EF Core). |
+| Stock & shopping list | `GET/POST/PUT/DELETE /api/stock-items/*`, `/api/shopping-list/*` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
 
-`WeekPlan` generation (the weekly planner itself, `src/frontend/src/data/weekGenerator.ts`)
-is not yet ported to the backend; it still runs entirely in the frontend.
+Only the shared meal library (`MealComponent`, `CompositeDish`, `Activity`) still lives in
+in-memory repositories; every household-scoped bounded context above is persisted in
+PostgreSQL via EF Core. The backend also exposes its own deterministic week-scenario
+generation (`/api/week-scenarios`, `DeterministicScenarioEngine`) on top of the persisted
+week/day-plan/planned-meal model; the frontend's own `src/frontend/src/data/weekGenerator.ts`
+is a separate, still-local implementation and the two are not yet unified.
 
 ## Layers
 
@@ -37,24 +47,25 @@ src/
 ```
 
 Each bounded context (`Stores`, `Articles`, `Library`, `Planning`, `WeekContexts`,
-`Households`) follows the same shape in every layer: a `Domain` aggregate/entity
-mirroring the equivalent frontend model in `src/frontend/src/types.ts` (where
-applicable), an `Application` query/command backed by a repository port
-(`Application/Common/Interfaces`), and an `Infrastructure` implementation. `Households`,
-`Stores`, and `Articles` are persisted in PostgreSQL via EF Core; `Library`, `Planning`,
-and `WeekContexts` are still served by temporary in-memory repositories, expected to be
-migrated in later milestones. The `Library` context is the only one that is not scoped
-per household: it is shared, read-only seed data equivalent to
-`src/frontend/src/data/localLibrary.ts`.
+`Households`, `Recipes`, `ComposedMeals`, `WeekPlanning`, `FoodItems`, `Stock`) follows the
+same shape in every layer: a `Domain` aggregate/entity mirroring the equivalent frontend
+model in `src/frontend/src/types.ts` (where applicable), an `Application` query/command
+backed by a repository port (`Application/Common/Interfaces`), and an `Infrastructure`
+implementation. `Households`, `Stores`, `Articles`, `Recipes`, `ComposedMeals`,
+`WeekPlanning`, `FoodItems`, `Planning`, `WeekContexts`, and `Stock` are persisted in
+PostgreSQL via EF Core; only `Library` still runs on temporary in-memory repositories,
+pending a future migration to a shared, queryable catalog. The `Library` context is also
+the only one that is not scoped per household: it is shared, read-only seed data
+equivalent to `src/frontend/src/data/localLibrary.ts`.
 `LifeOS.Api/Endpoints/*.cs` maps each context's HTTP routes, requiring authorization and,
 for household-scoped contexts, resolving the caller's household id (see "Households and
 isolation" below).
 
 ## Households and isolation
 
-Every household-scoped table (`stores`, `articles`, `article_price_entries`,
-`household_members`, `member_profiles`) carries a `household_id` foreign key to
-`households`, and every query/command on these tables is filtered by that id — see
+Every household-scoped table (all tables listed above except the shared `Library`
+seed data) carries a `household_id` foreign key to `households`, and every
+query/command on these tables is filtered by that id — see
 `docs/architecture/decisions/0003-household-isolation.md`. This isolation is enforced
 **at the application layer**, not via PostgreSQL Row-Level Security: the backend's
 database is a separate PostgreSQL instance from Supabase (which is used purely for
@@ -79,8 +90,10 @@ households), even though the MVP only exercises the `owner` role.
 
 ## Persistence (PostgreSQL via EF Core)
 
-`Households`, `Stores`, and `Articles` are persisted through `LifeOSDbContext`
-(`LifeOS.Infrastructure/Persistence`), targeting PostgreSQL via `Npgsql.EntityFrameworkCore.PostgreSQL`.
+Every household-scoped bounded context (see the endpoints table above) is persisted
+through `LifeOSDbContext` (`LifeOS.Infrastructure/Persistence`), targeting PostgreSQL via
+`Npgsql.EntityFrameworkCore.PostgreSQL`. Only the shared `Library` seed data (meal
+components, composite dishes, activities) remains served from in-memory repositories.
 
 Connection string resolution (`PostgresConnectionStringResolver`) supports either:
 - `ConnectionStrings:Postgres` (standard .NET convention, e.g. env var
@@ -112,8 +125,8 @@ From `src/backend`:
 dotnet test
 ```
 
-- `tests/LifeOS.Domain.Tests` — unit tests for the `Households`, `Stores`, and
-  `Articles` domain entities (invariants, no I/O).
+- `tests/LifeOS.Domain.Tests` — unit tests for domain entities (invariants, no I/O),
+  currently covering `Households`, `Stores`, `Articles`, and `Nutrition`.
 - `tests/LifeOS.Api.IntegrationTests` — API-level integration tests using
   `Microsoft.AspNetCore.Mvc.Testing` against a real PostgreSQL instance spun up with
   [Testcontainers](https://dotnet.testcontainers.org/) (`Testcontainers.PostgreSql`);
@@ -123,9 +136,14 @@ dotnet test
   `X-Test-Sub` header instead of real JWTs. These tests prove:
   - persistence survives a logical API restart (data written by one
     `WebApplicationFactory` instance is read back by an independent instance against the
-    same database), and
-  - strict cross-household isolation (a household can never read or mutate another
-    household's stores or articles, even by guessing another household's resource ids).
+    same database),
+  - strict cross-household isolation across every persisted bounded context (stores,
+    articles, recipes, composed meals, week planning, food items, stock/shopping list,
+    planning rules, week context), and
+  - schema-level integrity constraints that don't depend on application-layer checks
+    (e.g. `FoodItemSchemaConstraintsTests` proves the `food_items` → `households` foreign
+    key cascades on delete and the self-referencing `is_correction_of` foreign key is
+    enforced/`SET NULL`ed at the database level).
 
 ## Authentication
 

@@ -1,4 +1,5 @@
 using LifeOS.Domain.FoodItems;
+using LifeOS.Domain.Households;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -36,6 +37,7 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
         builder.Property(f => f.Source)
             .HasColumnName("source")
             .HasConversion<string>()
+            .HasMaxLength(20)
             .IsRequired();
 
         builder.Property(f => f.OffBarcode)
@@ -68,6 +70,20 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
                 nutrition.Property(n => n.FatsPerUnit).HasColumnName("fats_per_unit");
             });
 
+        // Isolation by household (ADR 0003): FK constraint + index for scoped lookups.
+        builder.HasOne<Household>()
+            .WithMany()
+            .HasForeignKey(f => f.HouseholdId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Self-referencing FK for manual corrections of another food item (nullable: not every
+        // item is a correction). SetNull rather than Cascade/Restrict so deleting the original
+        // item does not cascade-delete or block deletion of the correction that references it.
+        builder.HasOne<FoodItem>()
+            .WithMany()
+            .HasForeignKey(f => f.IsCorrectionOf)
+            .OnDelete(DeleteBehavior.SetNull);
+
         // Index for household isolation
         builder.HasIndex(f => f.HouseholdId)
             .HasDatabaseName("idx_food_items_household_id");
@@ -75,5 +91,8 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
         // Index for OFF barcode lookup
         builder.HasIndex(f => new { f.HouseholdId, f.OffBarcode })
             .HasDatabaseName("idx_food_items_household_off_barcode");
+
+        builder.HasIndex(f => f.IsCorrectionOf)
+            .HasDatabaseName("idx_food_items_is_correction_of");
     }
 }

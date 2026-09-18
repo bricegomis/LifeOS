@@ -227,7 +227,46 @@ l'isolation par `household_id` est appliquée dès ce jalon sur ces tables, et
 la fusion vers le modèle `food_items` cible se fera au jalon dédié plutôt que
 de bloquer ce jalon sur un remodelage complet.
 
-## Invariants transverses à retenir
+## État d'implémentation — Jalons 2 à 6
+
+Les jalons suivants ont persisté en PostgreSQL (via EF Core) l'ensemble des
+domaines household-scopés restants : `recipes`, `recipe_ingredients`,
+`composed_meals`, `composed_meal_parts`, `weeks`, `day_plans`,
+`planned_meals`, `planned_meal_parts`, `week_scenarios`, `food_items`,
+`user_configurations`, `activity_sessions`, `planning_rules`,
+`frequency_rules`, `week_contexts`, `stock_items` et `shopping_list_items`.
+Seule la bibliothèque partagée (`meal_components`, `composite_dishes`,
+`activities` au sens « catalogue », à ne pas confondre avec
+`activity_sessions`) reste en mémoire, en lecture seule.
+
+Quelques écarts assumés par rapport au modèle conceptuel ci-dessus, à garder
+en tête pour éviter des migrations correctives inutiles :
+
+- `food_items.household_id` est **non nullable** (contrairement à la
+  question laissée ouverte plus haut) : chaque `food_item`, y compris ceux
+  mis en cache depuis Open Food Facts, appartient à un foyer précis — il n'y
+  a pas de partage inter-foyers au stade actuel. Une éventuelle bascule vers
+  un cache global partagé nécessiterait une vraie migration de données, pas
+  seulement un changement de nullabilité.
+- `recipe_ingredients.food_item_id` référence en réalité `articles`
+  (`GroceryItem`), pas `food_items` : la fusion mentionnée dans la section
+  Jalon 1 n'a pas eu lieu. Le nom de la propriété domaine (`FoodItemId`)
+  reste historique/générique ; la clé étrangère réelle en base pointe vers
+  `articles`. `stock_items` et `shopping_list_items` sont, eux, cohérents
+  avec cet état de fait : leur colonne est nommée (et typée)
+  `grocery_item_id` → `articles` directement, sans passer par le nom
+  `food_item_id`. Ceci est une dette de nommage à surveiller sur
+  `recipe_ingredients`, pas un bug de schéma — reste cohérent tant que
+  l'unification `articles`/`food_items` n'est pas décidée.
+- `food_items.is_correction_of` référence une autre ligne de `food_items`
+  (auto-référence) ; supprimer l'original met `is_correction_of` à `NULL`
+  sur la correction plutôt que de la supprimer en cascade ou de bloquer la
+  suppression (`ON DELETE SET NULL`).
+
+Ces deux derniers points sont verrouillés par la suite de tests
+`FoodItemSchemaConstraintsTests` (`src/backend/tests/LifeOS.Api.IntegrationTests`).
+
+
 
 - Toute table listée avec `household_id` doit être filtrée par ce foyer à
   chaque requête API (voir ADR 0003).
