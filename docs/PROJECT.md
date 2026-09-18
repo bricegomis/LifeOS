@@ -138,29 +138,37 @@ Architecture), as a foundation to grow towards a DDD-oriented backend.
 It now covers most of the frontend's core domain, each following the same per-bounded-
 context layering: read-only `GET /api/stores` (grocery stores); full CRUD
 `/api/articles` (grocery articles + price history); read-only `/api/meal-components`,
-`/api/composite-dishes`, `/api/activities` (the shared meal library); full CRUD
-`/api/planning-rules` and `/api/frequency-rules`; and `GET`/`PUT /api/week-context`
-(per-user week planning context). `WeekPlan` generation itself is not yet ported and
-still runs entirely in the frontend. All endpoints reuse the frontend's existing
+`/api/composite-dishes`, `/api/activities` (the shared meal library, still in-memory);
+full CRUD `/api/planning-rules`, `/api/frequency-rules`, `/api/recipes`,
+`/api/composed-meals`, `/api/food-items`, `/api/stock-items`, and the shopping list;
+`GET`/`PUT /api/week-context` (per-household week planning context); and week
+planning (`/api/weeks`, `/api/day-plans`, `/api/planned-meals`, `/api/week-scenarios`)
+including deterministic scenario generation on the API side. All of these are
+persisted in PostgreSQL, scoped by household — see `src/backend/README.md` for the
+full endpoint/persistence table. The frontend's own `WeekPlan` generator
+(`src/frontend/src/data/weekGenerator.ts`) still runs client-side and has not yet been
+unified with the backend's scenario engine. All endpoints reuse the frontend's existing
 Supabase Auth session: the API validates the same Supabase-issued JWT access tokens
 rather than implementing its own login flow (Supabase remains auth-only, see ADR 0002).
 
 As of Milestone 1 ("fondations foyer"), the API has a `Household` /
 `HouseholdMember` / `MemberProfile` domain model backed by real PostgreSQL
-persistence via EF Core, and the **Stores** and **Articles** bounded contexts
-have been fully migrated from in-memory `ConcurrentDictionary` repositories to
-this database, scoped by `household_id` rather than by raw Supabase user id.
+persistence via EF Core, and every household-scoped bounded context (Stores,
+Articles, Recipes, Composed Meals, Week Planning, Food Items, Nutrition/Activity
+Sessions, Planning/Frequency Rules, Week Context, Stock, Shopping List) has since
+been migrated from in-memory `ConcurrentDictionary` repositories to this database,
+scoped by `household_id` rather than by raw Supabase user id.
 Isolation between households is enforced at the application layer (ADR 0003):
 each authenticated request resolves the caller's household on demand — a
 household is auto-provisioned the first time a Supabase user is seen post-
-migration — and every query/command for a migrated domain is filtered by that
+migration — and every query/command for a persisted domain is filtered by that
 household id; there is no Postgres RLS, since the application database is
-separate from Supabase (Supabase is auth-only). The remaining bounded
-contexts (meal library, planning/frequency rules, week context) are still
-in-memory and per-user, pending later milestones. The API also exposes an
-OpenAPI document and an interactive Scalar UI (`/scalar/v1` in development) to
-test it without a separate tool. See `src/backend/README.md` for the layer
-breakdown, endpoint list, and configuration details.
+separate from Supabase (Supabase is auth-only). Only the shared meal library
+(meal components, composite dishes, activities) is still in-memory and
+read-only, pending a future migration to a persisted, queryable catalog. The
+API also exposes an OpenAPI document and an interactive Scalar UI (`/scalar/v1`
+in development) to test it without a separate tool. See `src/backend/README.md`
+for the layer breakdown, endpoint list, and configuration details.
 
 ## Current state of the project
 At the code level, the project is already working as a pragmatic V0 product:
@@ -175,7 +183,7 @@ The current state is intentionally narrow and product-focused on nutrition and p
 
 ## Known limitations
 - The app is still centered on a single user / personal workflow.
-- The backend (`LifeOS.Api`) now covers stores, articles, the shared meal library, planning/frequency rules, and week context. Stores and Articles are persisted in PostgreSQL via EF Core, scoped by household; the meal library, planning/frequency rules, and week context are still in-memory (not yet migrated), and `WeekPlan` generation itself is not yet ported to the backend.
+- The backend (`LifeOS.Api`) now covers stores, articles, the shared meal library, planning/frequency rules, week context, recipes, composed meals, food items, week planning, and stock/shopping list. All of these except the shared meal library (meal components, composite dishes, activities, still in-memory) are persisted in PostgreSQL via EF Core, scoped by household. The frontend's `WeekPlan` generator still runs client-side and is not yet unified with the backend's own deterministic week-scenario engine.
 - The meal library is a curated local catalog, not a general recipe database.
 - The project now has an automated backend test suite (`src/backend/tests`): domain unit tests and API/EF Core integration tests (Testcontainers-backed PostgreSQL) proving persistence across process restarts and strict cross-household isolation. The frontend still has no dedicated automated test suite; its main quality gate remains the build and lint flow.
 - The app is still at the V0 planning stage; advanced nutrition tracking, shopping lists, and broader life-management features are out of scope.
