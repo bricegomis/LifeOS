@@ -1,0 +1,424 @@
+<section class="page-stack planning-page" aria-labelledby="planning-title">
+  <header class="page-hero planner-hero">
+    <div>
+      <p class="eyebrow">Planification</p>
+      <h1 id="planning-title">Semaine à relire</h1>
+      <p>Préparez la semaine avec le contexte de travail, les repas et les activités, puis comparez des scénarios avant de les appliquer.</p>
+    </div>
+    <form class="planning-inline-form" (ngSubmit)="createWeek()" aria-label="Créer une semaine">
+      <label class="planning-field">
+        <span>Début de semaine</span>
+        <input class="text-input" type="date" name="newWeekStartsOn" [(ngModel)]="newWeekStartsOn" required />
+      </label>
+      <button class="planning-button" type="submit" [disabled]="busy() !== null">
+        {{ busy() === 'create-week' ? 'Création…' : 'Créer une semaine' }}
+      </button>
+    </form>
+  </header>
+
+  @if (error()) {
+    <p class="planning-feedback is-error" role="alert">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="planning-feedback is-info" role="status">{{ message() }}</p>
+  }
+  @if (catalogueError()) {
+    <p class="planning-feedback is-error" role="alert">{{ catalogueError() }}</p>
+  }
+
+  @if (loadingWeeks()) {
+    <p class="muted" role="status">Chargement des semaines…</p>
+  } @else if (!weeks().length) {
+    <p class="muted">Aucune semaine planifiée pour le moment. Créez-en une pour commencer.</p>
+  }
+
+  @if (selectedWeek(); as week) {
+    <section class="planning-section" aria-labelledby="week-heading">
+      <div class="week-title-row">
+        <label class="planning-field">
+          <span>Semaine</span>
+          <select class="text-input" name="selectedWeek" [ngModel]="selectedWeekId()" (ngModelChange)="selectWeek($event)">
+            @for (entry of sortedWeeks(); track entry.id) {
+              <option [value]="entry.id">{{ weekLabel(entry) }}</option>
+            }
+          </select>
+        </label>
+        <h2 id="week-heading" class="sr-only">{{ weekLabel(week) }}</h2>
+        <div class="week-controls">
+          <label class="planning-field">
+            <span>Statut</span>
+            <select
+              class="text-input"
+              name="weekStatus"
+              [ngModel]="week.status"
+              (ngModelChange)="updateWeekStatus(week, $event)"
+              [disabled]="busy() !== null"
+            >
+              @for (status of weekStatuses; track status.value) {
+                <option [value]="status.value">{{ status.label }}</option>
+              }
+            </select>
+          </label>
+          <button class="planning-button is-danger" type="button" (click)="deleteWeek(week)" [disabled]="busy() !== null">
+            Supprimer la semaine
+          </button>
+        </div>
+      </div>
+
+      <div class="week-summary-strip" aria-label="Résumé de la semaine">
+        <div><span>Jours planifiés</span><strong>{{ summary().days }} / 7</strong></div>
+        <div><span>Repas</span><strong>{{ summary().meals }}</strong></div>
+        <div><span>Consommés</span><strong>{{ summary().consumed }}</strong></div>
+        <div><span>Jours au bureau</span><strong>{{ summary().officeDays }}</strong></div>
+        <div><span>Trajets vélo</span><strong>{{ summary().bikeDays }}</strong></div>
+        <div>
+          <span>Scénario appliqué</span>
+          <strong>{{ summary().appliedScenario ? label(scenarioObjectives, summary().appliedScenario!.objective) : 'Aucun' }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="planning-section week-planner-surface" aria-labelledby="scenarios-heading">
+      <div class="planning-section-heading">
+        <h2 id="scenarios-heading">Scénarios</h2>
+        <p class="planner-note">Les scénarios sont des propositions : rien n’est appliqué sans votre validation.</p>
+      </div>
+      <form class="planning-inline-form" (ngSubmit)="generateScenarios(week)">
+        <fieldset class="planning-objectives">
+          <legend>Objectifs</legend>
+          @for (objective of scenarioObjectives; track objective.value) {
+            <label class="planning-check">
+              <input
+                type="checkbox"
+                [name]="'objective-' + objective.value"
+                [checked]="isObjectiveSelected(objective.value)"
+                (change)="toggleObjective(objective.value, $any($event.target).checked)"
+              />
+              {{ objective.label }}
+            </label>
+          }
+        </fieldset>
+        <button class="planning-button" type="submit" [disabled]="busy() !== null || !selectedObjectives().length">
+          {{ busy() === 'generate' ? 'Génération…' : 'Générer des scénarios' }}
+        </button>
+      </form>
+      @if (scenarioError()) {
+        <p class="planning-feedback is-error" role="alert">{{ scenarioError() }}</p>
+      }
+      @if (scenariosLoading()) {
+        <p class="muted" role="status">Chargement des scénarios…</p>
+      } @else if (!scenarios().length) {
+        <p class="muted">Aucun scénario pour cette semaine.</p>
+      } @else {
+        <ul class="scenario-list">
+          @for (scenario of scenarios(); track scenario.id) {
+            <li class="scenario-card" [class.is-applied]="scenario.applied">
+              <h3>{{ label(scenarioObjectives, scenario.objective) }}</h3>
+              <p class="muted">Généré le {{ formatDate(scenario.createdAt, { day: 'numeric', month: 'short' }) }}</p>
+              @if (scenario.text) {
+                <p>{{ scenario.text }}</p>
+              }
+              @if (scenario.parseError) {
+                <p class="muted">Explication non structurée renvoyée par l’API.</p>
+              }
+              <div class="scenario-metrics">
+                @if (scenario.nutritionDeltaKcal !== null) {
+                  <span>Δ énergie : {{ scenario.nutritionDeltaKcal }} kcal</span>
+                }
+                @if (scenario.budgetDeltaEur !== null) {
+                  <span>Δ budget : {{ scenario.budgetDeltaEur }} €</span>
+                }
+              </div>
+              @if (scenario.applied) {
+                <strong>Appliqué</strong>
+              } @else {
+                <button
+                  class="planning-button is-secondary"
+                  type="button"
+                  (click)="applyScenario(week, scenario)"
+                  [disabled]="busy() !== null"
+                >
+                  {{ busy() === 'apply-' + scenario.id ? 'Application…' : 'Appliquer ce scénario' }}
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="planning-section" aria-labelledby="days-heading">
+      <div class="planning-section-heading">
+        <h2 id="days-heading">Jours</h2>
+        <p class="planner-note">Le contexte de travail et les trajets vélo sont enregistrés dès leur modification.</p>
+      </div>
+
+      @if (missingDates().length) {
+        <div class="missing-days" role="group" aria-label="Jours manquants">
+          @for (date of missingDates(); track date) {
+            <button class="planning-button is-secondary is-small" type="button" (click)="addDay(week, date)" [disabled]="busy() !== null">
+              Ajouter {{ formatDate(date) }}
+            </button>
+          }
+        </div>
+      }
+
+      <ul class="day-list">
+        @for (day of sortedDays(); track day.id) {
+          <li class="day-card">
+            <div class="day-card-header">
+              <div>
+                <h3 class="day-name">{{ formatDate(day.date, { weekday: 'long' }) }}</h3>
+                <span class="day-date">{{ formatDate(day.date, { day: 'numeric', month: 'long' }) }}</span>
+              </div>
+              <button
+                class="planning-button is-danger is-small"
+                type="button"
+                (click)="deleteDay(week, day)"
+                [disabled]="busy() !== null"
+                [attr.aria-label]="'Supprimer ' + formatDate(day.date)"
+              >
+                Supprimer
+              </button>
+            </div>
+
+            <div class="day-context-controls">
+              <label class="planning-field">
+                <span>Contexte</span>
+                <select
+                  class="text-input"
+                  [name]="'workContext-' + day.id"
+                  [ngModel]="day.workContext"
+                  (ngModelChange)="updateDay(week, day, { workContext: $event })"
+                  [disabled]="busy() !== null"
+                >
+                  @for (context of workContexts; track context.value) {
+                    <option [value]="context.value">{{ context.label }}</option>
+                  }
+                  @if (!isKnown(workContexts, day.workContext)) {
+                    <option [value]="day.workContext">{{ day.workContext }}</option>
+                  }
+                </select>
+              </label>
+              <label class="planning-check">
+                <input
+                  type="checkbox"
+                  [name]="'bike-' + day.id"
+                  [ngModel]="day.bikeCommute"
+                  (ngModelChange)="updateDay(week, day, { bikeCommute: $event })"
+                  [disabled]="busy() !== null"
+                />
+                Trajet à vélo
+              </label>
+            </div>
+
+            @if (day.plannedMeals.length) {
+              <ul class="meal-list" [attr.aria-label]="'Repas du ' + formatDate(day.date)">
+                @for (meal of sortedMeals(day); track meal.id) {
+                  <li class="meal-item">
+                    <div class="meal-item-title">
+                      <span class="meal-kind">{{ label(mealTypes, meal.mealType) }}</span>
+                      <strong>{{ mealName(meal) }}</strong>
+                    </div>
+                    <div class="meal-item-actions">
+                      <label class="planning-field">
+                        <span>Statut</span>
+                        <select
+                          class="text-input"
+                          [name]="'mealStatus-' + meal.id"
+                          [ngModel]="meal.status"
+                          (ngModelChange)="updateMealStatus(week, meal, $event)"
+                          [disabled]="busy() !== null"
+                        >
+                          @for (status of mealStatuses; track status.value) {
+                            <option [value]="status.value">{{ status.label }}</option>
+                          }
+                        </select>
+                      </label>
+                      <label class="planning-field">
+                        <span>Remplacer par</span>
+                        <select class="text-input" [name]="'replace-' + meal.id" [(ngModel)]="replaceDrafts[meal.id]">
+                          <option value="">Choisir…</option>
+                          @for (option of mealSourceOptions(); track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </select>
+                      </label>
+                      <button
+                        class="planning-button is-secondary is-small"
+                        type="button"
+                        (click)="replaceMeal(week, meal)"
+                        [disabled]="busy() !== null || !replaceDrafts[meal.id]"
+                      >
+                        Remplacer
+                      </button>
+                      <button
+                        class="planning-button is-danger is-small"
+                        type="button"
+                        (click)="deleteMeal(week, meal)"
+                        [disabled]="busy() !== null"
+                        [attr.aria-label]="'Supprimer ' + mealName(meal)"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                    @if (meal.parts.length) {
+                      <ul class="meal-parts" aria-label="Portions par membre">
+                        @for (part of meal.parts; track part.id) {
+                          <li>
+                            <label class="planning-field">
+                              <span>Portion membre {{ part.memberProfileId.slice(0, 8) }}</span>
+                              <input
+                                class="text-input"
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                [name]="'part-' + part.id"
+                                [ngModel]="partDraft(part)"
+                                (ngModelChange)="partDrafts[part.id] = $event"
+                              />
+                            </label>
+                            <button class="planning-button is-secondary is-small" type="button" (click)="updatePart(week, meal, part)" [disabled]="busy() !== null">
+                              Enregistrer
+                            </button>
+                            <button class="planning-button is-danger is-small" type="button" (click)="deletePart(week, meal, part)" [disabled]="busy() !== null">
+                              Retirer
+                            </button>
+                          </li>
+                        }
+                      </ul>
+                    }
+                  </li>
+                }
+              </ul>
+            } @else {
+              <p class="muted">Aucun repas planifié.</p>
+            }
+
+            <form class="planning-inline-form" (ngSubmit)="addMeal(week, day)" [attr.aria-label]="'Ajouter un repas le ' + formatDate(day.date)">
+              <label class="planning-field">
+                <span>Moment</span>
+                <select class="text-input" [name]="'newMealType-' + day.id" [(ngModel)]="mealDraft(day.id).mealType">
+                  @for (type of mealTypes; track type.value) {
+                    <option [value]="type.value">{{ type.label }}</option>
+                  }
+                </select>
+              </label>
+              <label class="planning-field">
+                <span>Plat</span>
+                <select class="text-input" [name]="'newMealSource-' + day.id" [(ngModel)]="mealDraft(day.id).source" required>
+                  <option value="">Choisir…</option>
+                  @for (option of mealSourceOptions(); track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+              <button class="planning-button is-small" type="submit" [disabled]="busy() !== null || !mealDraft(day.id).source">
+                Ajouter le repas
+              </button>
+            </form>
+
+            <button
+              class="planning-button is-secondary is-small"
+              type="button"
+              (click)="toggleDayDetails(day.id)"
+              [attr.aria-expanded]="isExpanded(day.id)"
+              [attr.aria-controls]="'details-' + day.id"
+            >
+              {{ isExpanded(day.id) ? 'Masquer activités et objectifs' : 'Activités et objectifs' }}
+            </button>
+
+            @if (isExpanded(day.id)) {
+              <div class="day-details" [id]="'details-' + day.id">
+                @let details = dayDetails()[day.id];
+                @if (details?.error) {
+                  <p class="planning-feedback is-error" role="alert">{{ details!.error }}</p>
+                }
+                @if (details?.loading) {
+                  <p class="muted" role="status">Chargement…</p>
+                } @else {
+                  @if (details?.sessions?.length) {
+                    <ul class="session-list" aria-label="Activités du jour">
+                      @for (session of details!.sessions; track session.id) {
+                        <li>
+                          <span>
+                            {{ label(activityTypes, session.type) }} · {{ label(activityIntensities, session.intensity) }} ·
+                            {{ session.durationMinutes }} min · {{ session.estimatedEnergyKcal }} kcal
+                          </span>
+                          <span>
+                            <button class="planning-button is-secondary is-small" type="button" (click)="editSession(day.id, session)">Modifier</button>
+                            <button class="planning-button is-danger is-small" type="button" (click)="deleteSession(day.id, session)" [disabled]="busy() !== null">
+                              Supprimer
+                            </button>
+                          </span>
+                        </li>
+                      }
+                    </ul>
+                  } @else {
+                    <p class="muted">Aucune activité déclarée.</p>
+                  }
+                }
+
+                <form class="planning-inline-form" (ngSubmit)="saveSession(day.id)" aria-label="Activité">
+                  <label class="planning-field">
+                    <span>Type</span>
+                    <input
+                      class="text-input"
+                      [name]="'activityType-' + day.id"
+                      [attr.list]="'activity-types-' + day.id"
+                      [(ngModel)]="activityDraft(day.id).type"
+                      required
+                    />
+                    <datalist [id]="'activity-types-' + day.id">
+                      @for (type of activityTypes; track type.value) {
+                        <option [value]="type.value">{{ type.label }}</option>
+                      }
+                    </datalist>
+                  </label>
+                  <label class="planning-field">
+                    <span>Intensité</span>
+                    <select class="text-input" [name]="'activityIntensity-' + day.id" [(ngModel)]="activityDraft(day.id).intensity">
+                      @for (intensity of activityIntensities; track intensity.value) {
+                        <option [value]="intensity.value">{{ intensity.label }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label class="planning-field">
+                    <span>Durée (min)</span>
+                    <input class="text-input" type="number" min="1" step="1" [name]="'activityDuration-' + day.id" [(ngModel)]="activityDraft(day.id).durationMinutes" required />
+                  </label>
+                  <label class="planning-field">
+                    <span>Dépense estimée (kcal, facultatif)</span>
+                    <input class="text-input" type="number" min="0" step="1" [name]="'activityKcal-' + day.id" [(ngModel)]="activityDraft(day.id).estimatedEnergyKcal" />
+                  </label>
+                  <button class="planning-button is-small" type="submit" [disabled]="busy() !== null">
+                    {{ activityDraft(day.id).editingId ? 'Mettre à jour' : 'Ajouter l’activité' }}
+                  </button>
+                  @if (activityDraft(day.id).editingId) {
+                    <button class="planning-button is-secondary is-small" type="button" (click)="cancelSessionEdit(day.id)">Annuler</button>
+                  }
+                </form>
+                <p class="muted">L’API ne calcule pas la dépense : sans valeur, elle vaut 0 kcal à la création et reste inchangée en modification.</p>
+
+                @if (details?.nutritionError) {
+                  <p class="planning-feedback is-error" role="alert">{{ details!.nutritionError }}</p>
+                }
+                @if (details?.nutrition; as nutrition) {
+                  <dl class="nutrition-grid" aria-label="Objectif nutritionnel du jour">
+                    <dt>Base énergétique</dt><dd>{{ nutrition.dailyBaseEnergyKcal }} kcal</dd>
+                    <dt>Activité</dt><dd>{{ nutrition.activityEnergyKcal }} kcal</dd>
+                    <dt>Déficit visé</dt><dd>{{ nutrition.targetNetDeficitKcal }} kcal</dd>
+                    <dt>Cible alimentaire</dt><dd>{{ nutrition.dailyFoodTargetKcal }} kcal</dd>
+                    <dt>Protéines</dt><dd>{{ nutrition.targetProteinG }} g</dd>
+                    <dt>Glucides</dt><dd>{{ nutrition.targetCarbsG }} g</dd>
+                    <dt>Lipides</dt><dd>{{ nutrition.targetFatsG }} g</dd>
+                  </dl>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</section>

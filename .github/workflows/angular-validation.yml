@@ -1,0 +1,31 @@
+name: Angular frontend validation
+
+on:
+  pull_request:
+    paths:
+      - 'src/frontend-angular/**'
+      - '.github/workflows/angular-validation.yml'
+  push:
+    paths:
+      - 'src/frontend-angular/**'
+      - '.github/workflows/angular-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend-angular
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/frontend-angular/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
