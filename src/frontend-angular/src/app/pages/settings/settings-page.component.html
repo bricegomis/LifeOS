@@ -1,0 +1,603 @@
+<div class="page-stack settings-page">
+  <header class="page-hero">
+    <div>
+      <h1>Paramètres</h1>
+      <p>
+        Réglez vos objectifs nutritionnels, le contexte de vos semaines et les règles de
+        planification.
+      </p>
+    </div>
+    <nav class="settings-nav" aria-label="Rubriques des paramètres">
+      <a href="#nutrition">Nutrition</a>
+      <a href="#week-context">Contexte</a>
+      <a href="#planning-rules">Planification</a>
+      <a href="#frequency-rules">Fréquences</a>
+    </nav>
+  </header>
+
+  <section id="nutrition" class="settings-section" aria-labelledby="nutrition-heading">
+    <h2 id="nutrition-heading">Objectifs nutritionnels</h2>
+    <p>
+      Ces valeurs servent au calcul des objectifs journaliers. Elles sont enregistrées pour votre
+      foyer.
+    </p>
+    @if (nutritionLoading()) {
+      <p class="settings-muted" role="status">Chargement des objectifs nutritionnels…</p>
+    } @else if (!nutritionReady()) {
+      <p class="settings-message is-error" role="alert">{{ nutritionError() }}</p>
+      <button class="settings-button" type="button" (click)="loadNutrition()">Réessayer</button>
+    } @else {
+      <form class="settings-panel" (ngSubmit)="saveNutrition()">
+        @if (!nutritionExists()) {
+          <p class="settings-muted">
+            Aucun objectif enregistré. Renseignez toutes les valeurs pour les créer.
+          </p>
+        }
+        <div class="settings-fields">
+          <label class="settings-field"
+            >Énergie de base quotidienne (kcal)
+            <input
+              type="number"
+              name="dailyBaseEnergyKcal"
+              min="0"
+              step="any"
+              required
+              [(ngModel)]="nutrition.dailyBaseEnergyKcal"
+              [disabled]="nutritionBusy()"
+            />
+          </label>
+          <label class="settings-field"
+            >Déficit énergétique cible (kcal)
+            <input
+              type="number"
+              name="targetNetDeficitKcal"
+              min="0"
+              step="any"
+              required
+              [(ngModel)]="nutrition.targetNetDeficitKcal"
+              [disabled]="nutritionBusy()"
+            />
+          </label>
+          <label class="settings-field"
+            >Protéines cibles (g)
+            <input
+              type="number"
+              name="targetProteinG"
+              min="0"
+              step="any"
+              required
+              [(ngModel)]="nutrition.targetProteinG"
+              [disabled]="nutritionBusy()"
+            />
+          </label>
+          <label class="settings-field"
+            >Glucides cibles (g)
+            <input
+              type="number"
+              name="targetCarbsG"
+              min="0"
+              step="any"
+              required
+              [(ngModel)]="nutrition.targetCarbsG"
+              [disabled]="nutritionBusy()"
+            />
+          </label>
+          <label class="settings-field"
+            >Lipides cibles (g)
+            <input
+              type="number"
+              name="targetFatsG"
+              min="0"
+              step="any"
+              required
+              [(ngModel)]="nutrition.targetFatsG"
+              [disabled]="nutritionBusy()"
+            />
+          </label>
+        </div>
+        <div class="settings-actions">
+          <button class="settings-button is-primary" type="submit" [disabled]="nutritionBusy()">
+            {{ nutritionBusy() ? 'Enregistrement…' : 'Enregistrer les objectifs' }}
+          </button>
+        </div>
+        @if (nutritionError()) {
+          <p class="settings-message is-error" role="alert">{{ nutritionError() }}</p>
+        }
+        @if (nutritionNotice()) {
+          <p class="settings-message is-success" role="status">{{ nutritionNotice() }}</p>
+        }
+      </form>
+    }
+  </section>
+
+  <section id="week-context" class="settings-section" aria-labelledby="context-heading">
+    <h2 id="context-heading">Contexte de semaine</h2>
+    <p>
+      La semaine de référence définit l’alternance solo/avec enfants. Les exceptions et les jours
+      habituels sont enregistrés ensemble.
+    </p>
+    @if (contextLoading()) {
+      <p class="settings-muted" role="status">Chargement du contexte…</p>
+    } @else if (context; as draft) {
+      <form class="settings-panel" (ngSubmit)="saveContext()">
+        <div class="settings-fields">
+          <label class="settings-field"
+            >Lundi de la semaine de référence
+            <input
+              type="date"
+              name="referenceWeekStartDate"
+              required
+              [(ngModel)]="draft.alternatingWeekConfig.referenceWeekStartDate"
+              [disabled]="contextBusy()"
+            />
+          </label>
+          <label class="settings-field"
+            >Mode de cette semaine
+            <select
+              name="referenceWeekMode"
+              [(ngModel)]="draft.alternatingWeekConfig.referenceWeekMode"
+              [disabled]="contextBusy()"
+            >
+              @for (mode of weekModes; track mode.value) {
+                <option [value]="mode.value">{{ mode.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <h3 class="settings-subheading">Jours habituels</h3>
+        @for (day of weekdays; track day.value) {
+          @if (draft.days[day.value]; as entry) {
+            <div class="settings-day">
+              <strong>{{ day.label }}</strong>
+              <label class="settings-field"
+                >Lieu de travail
+                <select
+                  [name]="'location-' + day.value"
+                  [(ngModel)]="entry.workLocation"
+                  [disabled]="contextBusy()"
+                >
+                  @for (location of workLocations; track location.value) {
+                    <option [value]="location.value">{{ location.label }}</option>
+                  }
+                </select>
+              </label>
+              <label class="settings-check">
+                <input
+                  type="checkbox"
+                  [name]="'bike-' + day.value"
+                  [(ngModel)]="entry.bikeCommute"
+                  [disabled]="contextBusy()"
+                />
+                Trajet à vélo
+              </label>
+            </div>
+          }
+        }
+        <h3 class="settings-subheading">Exceptions à l’alternance</h3>
+        @if (draft.weekModeOverrides.length) {
+          <ul class="settings-list">
+            @for (override of draft.weekModeOverrides; track override.weekStartDate) {
+              <li>
+                <span
+                  >Semaine du {{ override.weekStartDate }} ·
+                  {{ override.mode === 'kids' ? 'Avec enfants' : 'Solo' }}</span
+                >
+                <button
+                  class="settings-button is-danger"
+                  type="button"
+                  (click)="removeOverride(override.weekStartDate)"
+                  [disabled]="contextBusy()"
+                  [attr.aria-label]="'Retirer l’exception du ' + override.weekStartDate"
+                >
+                  Retirer
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="settings-muted">Aucune exception pour le moment.</p>
+        }
+        <div class="settings-fields">
+          <label class="settings-field"
+            >Lundi de la semaine à remplacer
+            <input
+              type="date"
+              name="overrideDate"
+              [(ngModel)]="overrideDate"
+              [disabled]="contextBusy()"
+            />
+          </label>
+          <label class="settings-field"
+            >Mode pour cette semaine
+            <select name="overrideMode" [(ngModel)]="overrideMode" [disabled]="contextBusy()">
+              @for (mode of weekModes; track mode.value) {
+                <option [value]="mode.value">{{ mode.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <div class="settings-actions">
+          <button
+            class="settings-button"
+            type="button"
+            (click)="addOverride()"
+            [disabled]="contextBusy()"
+          >
+            Ajouter une exception
+          </button>
+          <button class="settings-button is-primary" type="submit" [disabled]="contextBusy()">
+            {{ contextBusy() ? 'Enregistrement…' : 'Enregistrer le contexte' }}
+          </button>
+        </div>
+        @if (contextError()) {
+          <p class="settings-message is-error" role="alert">{{ contextError() }}</p>
+        }
+        @if (contextNotice()) {
+          <p class="settings-message is-success" role="status">{{ contextNotice() }}</p>
+        }
+      </form>
+    } @else {
+      <p class="settings-message is-error" role="alert">{{ contextError() }}</p>
+      <button class="settings-button" type="button" (click)="loadContext()">Réessayer</button>
+    }
+  </section>
+
+  @if (catalogError()) {
+    <p class="settings-message is-error" role="alert">{{ catalogError() }}</p>
+    <button
+      class="settings-button"
+      type="button"
+      (click)="loadCatalog()"
+      [disabled]="catalogLoading()"
+    >
+      Réessayer de charger le catalogue
+    </button>
+  }
+
+  <section id="planning-rules" class="settings-section" aria-labelledby="planning-heading">
+    <h2 id="planning-heading">Règles de planification</h2>
+    <p>Fixez un composant ou un plat à un repas et à un jour de la semaine.</p>
+    <div class="settings-workspace">
+      <form class="settings-panel" (ngSubmit)="savePlanning()">
+        <h3 class="settings-subheading">
+          {{ editingPlanningId() ? 'Modifier la règle' : 'Ajouter une règle' }}
+        </h3>
+        <label class="settings-field"
+          >Jour
+          <select
+            name="planningWeekday"
+            [(ngModel)]="planning.weekday"
+            required
+            [disabled]="planningBusy()"
+          >
+            <option value="" disabled>Choisir un jour</option>
+            @for (day of weekdays; track day.value) {
+              <option [value]="day.value">{{ day.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="settings-field"
+          >Repas
+          <select
+            name="planningMealType"
+            [(ngModel)]="planning.mealType"
+            required
+            [disabled]="planningBusy()"
+          >
+            <option value="" disabled>Choisir un repas</option>
+            @for (meal of meals; track meal.value) {
+              <option [value]="meal.value">{{ meal.label }}</option>
+            }
+          </select>
+        </label>
+        <label class="settings-field"
+          >Type de cible
+          <select
+            name="planningKind"
+            [ngModel]="planning.kind"
+            (ngModelChange)="planning.kind = $event; planning.targetId = ''"
+            [disabled]="planningBusy()"
+          >
+            <option value="component">Composant de repas</option>
+            <option value="dish">Plat composé</option>
+          </select>
+        </label>
+        <label class="settings-field"
+          >{{ planning.kind === 'component' ? 'Composant' : 'Plat' }}
+          <select
+            name="planningTargetId"
+            [(ngModel)]="planning.targetId"
+            required
+            [disabled]="planningBusy() || catalogLoading()"
+          >
+            <option value="" disabled>Choisir une cible</option>
+            @if (planning.targetId && !hasTarget(planning.kind, planning.targetId)) {
+              <option [value]="planning.targetId">{{ planning.targetId }}</option>
+            }
+            @for (target of targetOptions(planning.kind); track target.id) {
+              <option [value]="target.id">{{ target.name }}</option>
+            }
+          </select>
+        </label>
+        <div class="settings-actions">
+          <button
+            class="settings-button is-primary"
+            type="submit"
+            [disabled]="
+              planningBusy() || !planningLoaded() || catalogLoading() || !planning.targetId
+            "
+          >
+            {{
+              planningBusy()
+                ? 'Enregistrement…'
+                : editingPlanningId()
+                  ? 'Enregistrer la règle'
+                  : 'Ajouter la règle'
+            }}
+          </button>
+          @if (editingPlanningId()) {
+            <button
+              class="settings-button"
+              type="button"
+              (click)="resetPlanning()"
+              [disabled]="planningBusy()"
+            >
+              Annuler
+            </button>
+          }
+        </div>
+        @if (planningError()) {
+          <p class="settings-message is-error" role="alert">{{ planningError() }}</p>
+        }
+        @if (planningNotice()) {
+          <p class="settings-message is-success" role="status">{{ planningNotice() }}</p>
+        }
+      </form>
+      <div class="settings-panel">
+        <h3 class="settings-subheading">Règles enregistrées</h3>
+        @if (planningLoading()) {
+          <p class="settings-muted" role="status">Chargement des règles…</p>
+        } @else if (!planningLoaded()) {
+          <p class="settings-muted">
+            Les règles ne sont pas disponibles tant que leur chargement a échoué.
+          </p>
+          <button class="settings-button" type="button" (click)="loadPlanningRules()">
+            Réessayer de charger les règles
+          </button>
+        } @else if (!planningRules().length) {
+          <p class="settings-muted">Aucune règle de planification enregistrée.</p>
+        } @else {
+          <ul class="settings-list">
+            @for (rule of planningRules(); track rule.id) {
+              <li>
+                <span>{{ planningLabel(rule) }}</span>
+                <div class="settings-actions">
+                  <button
+                    class="settings-button"
+                    type="button"
+                    (click)="editPlanning(rule)"
+                    [disabled]="planningBusy()"
+                  >
+                    Modifier
+                  </button>
+                  @if (deletingPlanningId() === rule.id) {
+                    <button
+                      class="settings-button is-danger"
+                      type="button"
+                      (click)="deletePlanning(rule)"
+                      [disabled]="planningBusy()"
+                    >
+                      Confirmer la suppression
+                    </button>
+                    <button
+                      class="settings-button"
+                      type="button"
+                      (click)="deletingPlanningId.set('')"
+                      [disabled]="planningBusy()"
+                    >
+                      Conserver
+                    </button>
+                  } @else {
+                    <button
+                      class="settings-button is-danger"
+                      type="button"
+                      (click)="deletingPlanningId.set(rule.id)"
+                      [disabled]="planningBusy()"
+                    >
+                      Supprimer
+                    </button>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="frequency-rules" class="settings-section" aria-labelledby="frequency-heading">
+    <h2 id="frequency-heading">Règles de fréquence</h2>
+    <p>
+      Indiquez combien de fois un composant, un plat ou une catégorie doit apparaître chaque
+      semaine. Pour une règle existante, seule la fréquence est modifiable.
+    </p>
+    <div class="settings-workspace">
+      <form class="settings-panel" (ngSubmit)="saveFrequency()">
+        <h3 class="settings-subheading">
+          {{ editingFrequencyId() ? 'Modifier la fréquence' : 'Ajouter une fréquence' }}
+        </h3>
+        @if (editingFrequencyId()) {
+          <p class="settings-muted">
+            Cible : {{ frequencyLabelForEdit() }}. Supprimez puis recréez la règle pour changer sa
+            cible.
+          </p>
+        } @else {
+          <label class="settings-field"
+            >Type de cible
+            <select
+              name="frequencyKind"
+              [ngModel]="frequency.kind"
+              (ngModelChange)="
+                frequency.kind = $event; frequency.targetId = ''; frequency.label = ''
+              "
+              [disabled]="frequencyBusy()"
+            >
+              <option value="component">Composant de repas</option>
+              <option value="dish">Plat composé</option>
+              <option value="category">Catégorie</option>
+            </select>
+          </label>
+          @if (frequency.kind === 'category') {
+            <label class="settings-field"
+              >Identifiant de la catégorie
+              <input
+                type="text"
+                name="categoryId"
+                maxlength="120"
+                required
+                [(ngModel)]="frequency.targetId"
+                [disabled]="frequencyBusy()"
+              />
+            </label>
+            <label class="settings-field"
+              >Nom de la catégorie
+              <input
+                type="text"
+                name="categoryLabel"
+                maxlength="120"
+                required
+                [(ngModel)]="frequency.label"
+                [disabled]="frequencyBusy()"
+              />
+            </label>
+          } @else {
+            <label class="settings-field"
+              >{{ frequency.kind === 'component' ? 'Composant' : 'Plat' }}
+              <select
+                name="frequencyTargetId"
+                [(ngModel)]="frequency.targetId"
+                required
+                [disabled]="frequencyBusy() || catalogLoading()"
+              >
+                <option value="" disabled>Choisir une cible</option>
+                @for (target of targetOptions(frequency.kind); track target.id) {
+                  <option [value]="target.id">{{ target.name }}</option>
+                }
+              </select>
+            </label>
+          }
+        }
+        <label class="settings-field"
+          >Nombre de fois par semaine
+          <input
+            type="number"
+            name="frequencyCount"
+            min="0"
+            step="1"
+            required
+            [(ngModel)]="frequency.count"
+            [disabled]="frequencyBusy()"
+          />
+        </label>
+        <div class="settings-actions">
+          <button
+            class="settings-button is-primary"
+            type="submit"
+            [disabled]="
+              frequencyBusy() ||
+              !frequencyLoaded() ||
+              (!editingFrequencyId() && frequency.kind !== 'category' && catalogLoading())
+            "
+          >
+            {{
+              frequencyBusy()
+                ? 'Enregistrement…'
+                : editingFrequencyId()
+                  ? 'Enregistrer la fréquence'
+                  : 'Ajouter la fréquence'
+            }}
+          </button>
+          @if (editingFrequencyId()) {
+            <button
+              class="settings-button"
+              type="button"
+              (click)="resetFrequency()"
+              [disabled]="frequencyBusy()"
+            >
+              Annuler
+            </button>
+          }
+        </div>
+        @if (frequencyError()) {
+          <p class="settings-message is-error" role="alert">{{ frequencyError() }}</p>
+        }
+        @if (frequencyNotice()) {
+          <p class="settings-message is-success" role="status">{{ frequencyNotice() }}</p>
+        }
+      </form>
+      <div class="settings-panel">
+        <h3 class="settings-subheading">Fréquences enregistrées</h3>
+        @if (frequencyLoading()) {
+          <p class="settings-muted" role="status">Chargement des fréquences…</p>
+        } @else if (!frequencyLoaded()) {
+          <p class="settings-muted">
+            Les fréquences ne sont pas disponibles tant que leur chargement a échoué.
+          </p>
+          <button class="settings-button" type="button" (click)="loadFrequencyRules()">
+            Réessayer de charger les fréquences
+          </button>
+        } @else if (!frequencyRules().length) {
+          <p class="settings-muted">Aucune règle de fréquence enregistrée.</p>
+        } @else {
+          <ul class="settings-list">
+            @for (rule of frequencyRules(); track rule.id) {
+              <li>
+                <span
+                  >{{ frequencyLabel(rule) }} · {{ rule.targetCountPerWeek }} fois par semaine</span
+                >
+                <div class="settings-actions">
+                  <button
+                    class="settings-button"
+                    type="button"
+                    (click)="editFrequency(rule)"
+                    [disabled]="frequencyBusy()"
+                  >
+                    Modifier
+                  </button>
+                  @if (deletingFrequencyId() === rule.id) {
+                    <button
+                      class="settings-button is-danger"
+                      type="button"
+                      (click)="deleteFrequency(rule)"
+                      [disabled]="frequencyBusy()"
+                    >
+                      Confirmer la suppression
+                    </button>
+                    <button
+                      class="settings-button"
+                      type="button"
+                      (click)="deletingFrequencyId.set('')"
+                      [disabled]="frequencyBusy()"
+                    >
+                      Conserver
+                    </button>
+                  } @else {
+                    <button
+                      class="settings-button is-danger"
+                      type="button"
+                      (click)="deletingFrequencyId.set(rule.id)"
+                      [disabled]="frequencyBusy()"
+                    >
+                      Supprimer
+                    </button>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+  </section>
+</div>
