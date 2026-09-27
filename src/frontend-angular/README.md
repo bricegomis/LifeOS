@@ -36,9 +36,9 @@ Open Food Facts search currently persists or caches matches through the backend,
 so searching is a write-capable action rather than a side-effect-free preview.
 
 The predev/prebuild scripts generate an ignored `public/config.js` from those
-environment variables. The Supabase anonymous key is public client
-configuration; it must never be replaced with a service-role key. API calls
-fail visibly when the API URL is missing.
+environment variables for local development and builds. The Supabase
+anonymous key is public client configuration; it must never be replaced with a
+service-role key. API calls fail visibly when the API URL is missing.
 
 ## Validation
 
@@ -53,23 +53,29 @@ performs strict template and TypeScript checks.
 
 ## Docker image
 
-`Dockerfile` builds the Angular application with public runtime configuration
-and serves `dist/browser` from nginx:
+`Dockerfile` builds a Supabase-independent Angular image and serves
+`dist/browser` from nginx. The nginx entrypoint writes `config.js` at container
+startup from `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and
+`VITE_LIFEOS_API_URL`, so the same image can be deployed to different
+Supabase projects:
 
 ```sh
-docker build -t lifeos-web \
- --build-arg VITE_LIFEOS_API_URL="https://<api-host>" \
- --build-arg VITE_SUPABASE_URL="https://<project-ref>.supabase.co" \
- --build-arg VITE_SUPABASE_ANON_KEY="<anon-key>" \
- .
-docker run --rm -p 8080:80 lifeos-web
+docker build -t lifeos-web .
+docker run --rm -p 8080:80 \
+  -e VITE_LIFEOS_API_URL="https://<api-host>" \
+  -e VITE_SUPABASE_URL="https://<project-ref>.supabase.co" \
+  -e VITE_SUPABASE_ANON_KEY="<public-anon-key>" \
+  lifeos-web
 ```
 
 The `.github/workflows/build-push-docker-images.yml` workflow publishes this
-image as `ghcr.io/bricegomis/lifeos-web:latest` on pushes to `main`. Configure
-`VITE_LIFEOS_API_URL`, `VITE_SUPABASE_URL`, and
-`VITE_SUPABASE_ANON_KEY` as repository Actions variables. The API host must
-allow the deployed Angular origin through its CORS configuration.
+unconfigured image as `ghcr.io/bricegomis/lifeos-web:latest` on pushes to
+`main`; no Supabase settings are required in GitHub Actions. Supply the three
+runtime variables when starting the container (for example in the root
+`docker-compose.yaml`). `VITE_SUPABASE_URL` should use the same project URL as
+the API's `SUPABASE_URL`. The anonymous key is public and must never be
+replaced with a service-role key. The API host must allow the deployed Angular
+origin through its CORS configuration.
 
 ## Routes and hosting
 

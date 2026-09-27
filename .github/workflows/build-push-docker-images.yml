@@ -44,8 +44,7 @@ jobs:
           cache-to: type=gha,scope=api,mode=max
 
       # ── Angular frontend ────────────────────────────────────────────────────
-      # Les VITE_* sont intégrés à config.js pendant la compilation — à configurer dans
-      # Settings → Variables → Actions (onglet "Variables", pas "Secrets")
+      # Public runtime configuration is supplied by the deployment environment.
       - name: Build & push Angular Web
         uses: docker/build-push-action@v6
         with:
@@ -54,7 +53,3 @@ jobs:
           tags: ${{ env.WEB_IMAGE }}:latest
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
-          build-args: |
-            VITE_LIFEOS_API_URL=${{ vars.VITE_LIFEOS_API_URL }}
-            VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
-            VITE_SUPABASE_ANON_KEY=${{ vars.VITE_SUPABASE_ANON_KEY }}
