@@ -11,6 +11,7 @@
     "pretype-check": "node scripts/generate-config.mjs",
     "type-check": "ng build --configuration development --output-path dist/type-check",
     "lint": "eslint . --max-warnings=0",
+    "test": "node --test \"src/**/*.spec.ts\"",
     "format": "prettier --write \"src/**/*.{ts,html,css}\""
   },
   "dependencies": {

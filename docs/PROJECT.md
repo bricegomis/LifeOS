@@ -130,6 +130,12 @@ The repository layer (`lifeosRepository.ts`) syncs:
 
 Authentication is implemented through magic-link email sign-in and an auth session stored in browser storage.
 
+Magic-link callback handling (Vue `services/supabase/magicLinkCallback.ts`, Angular `core/auth/magic-link-callback.ts`):
+- the default PKCE link (`?code=...#/login?...`) only works in the browser that requested it, because the code verifier lives in that browser's storage; otherwise the login page now explains why instead of silently asking for the email again
+- Supabase error redirects (e.g. `otp_expired`, often caused by an already-used or pre-fetched link) replace the hash route; the app restores `#/login` and shows the error
+- `token_hash` links are also accepted (verified client-side with `verifyOtp`), which works across browsers/devices. This requires changing the Supabase "Magic Link" email template (out of repo), e.g. `<a href="{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=email#/login">` (Site URL = deployed app URL)
+- Supabase dashboard (out of repo): the app URL must be the Site URL or be listed in Auth → URL Configuration → Redirect URLs (e.g. `https://<host>/**`), otherwise Supabase redirects to the Site URL instead
+
 ## Backend API
 `src/backend` hosts a growing ASP.NET Core Web API (`LifeOS.Api`) for LifeOS, organized
 into Domain / Application / Infrastructure / Api layers pointing inward (Clean
