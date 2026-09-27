@@ -198,6 +198,14 @@ In the `Development` environment the API exposes its OpenAPI document (via
 and send authenticated requests (paste a Supabase access token as a `Bearer` token) without
 needing a separate tool such as Postman.
 
+In production, both routes are disabled by default. To enable them on the VPS, set
+`ENABLE_OPENAPI_UI=true` in the deployment `.env` file used by `docker-compose.yaml`, then
+recreate/restart the API container so Compose passes it as
+`Api__EnableOpenApiUi=true`. The document and UI are then available at
+`/openapi/v1.json` and `/scalar/v1` on the API host. Set it back to `false` (or omit it)
+to disable them again. These routes are publicly reachable unless access is restricted
+separately at the reverse proxy; API operations still require authentication.
+
 ## Docker image
 
 `src/backend/Dockerfile` builds a multi-stage, self-contained image for `LifeOS.Api`

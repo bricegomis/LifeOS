@@ -13,7 +13,8 @@ namespace LifeOS.Api.IntegrationTests;
 /// Authentication is swapped for <see cref="Authentication.TestAuthHandler"/> via the "Testing"
 /// ASP.NET Core environment.
 /// </summary>
-public sealed class LifeOSApiFactory(string connectionString) : WebApplicationFactory<Program>
+public sealed class LifeOSApiFactory(string connectionString, bool enableOpenApiUi = true)
+    : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -25,7 +26,7 @@ public sealed class LifeOSApiFactory(string connectionString) : WebApplicationFa
             {
                 ["ConnectionStrings:Postgres"] = connectionString,
                 ["Supabase:Url"] = "https://test.supabase.co",
-                ["Api:EnableOpenApiUi"] = "true",
+                ["Api:EnableOpenApiUi"] = enableOpenApiUi.ToString(),
             });
         });
     }
