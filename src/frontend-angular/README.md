@@ -3,7 +3,8 @@
 The frontend is a standalone Angular 22 + TypeScript single-page application,
 built with the Angular CLI and styled with PrimeNG and the existing LifeOS
 design system. It is a separate, API-backed implementation alongside the
-existing Vue frontend; it does not replace that app or its deployment.
+existing Vue frontend. It is the frontend published by the Docker delivery
+workflow for VPS deployments.
 
 ## Local development
 
@@ -56,20 +57,22 @@ performs strict template and TypeScript checks.
 and serves `dist/browser` from nginx:
 
 ```sh
-docker build -t lifeos-web-angular \
+docker build -t lifeos-web \
  --build-arg VITE_LIFEOS_API_URL="https://<api-host>" \
  --build-arg VITE_SUPABASE_URL="https://<project-ref>.supabase.co" \
  --build-arg VITE_SUPABASE_ANON_KEY="<anon-key>" \
  .
-docker run --rm -p 8080:80 lifeos-web-angular
+docker run --rm -p 8080:80 lifeos-web
 ```
 
-This Docker image is separate from the existing Vue deployment. The API host
-must allow the deployed Angular origin through its CORS configuration.
+The `.github/workflows/build-push-docker-images.yml` workflow publishes this
+image as `ghcr.io/bricegomis/lifeos-web:latest` on pushes to `main`. Configure
+`VITE_LIFEOS_API_URL`, `VITE_SUPABASE_URL`, and
+`VITE_SUPABASE_ANON_KEY` as repository Actions variables. The API host must
+allow the deployed Angular origin through its CORS configuration.
 
 ## Routes and hosting
 
 The app uses hash-based routes so it can be served from nginx or a path-based
 static host without server-side route rewrites. The default base href is `/`;
-for a subpath host, build with `npm run build -- --base-href /<path>/`. Keep its
-deployment separate until the Angular app is explicitly selected to replace Vue.
+for a subpath host, build with `npm run build -- --base-href /<path>/`.

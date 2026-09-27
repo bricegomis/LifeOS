@@ -43,17 +43,18 @@ jobs:
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
 
-      # ── Frontend ────────────────────────────────────────────────────────────
-      # Les VITE_* sont baked in à la compilation — à configurer dans
+      # ── Angular frontend ────────────────────────────────────────────────────
+      # Les VITE_* sont intégrés à config.js pendant la compilation — à configurer dans
       # Settings → Variables → Actions (onglet "Variables", pas "Secrets")
-      - name: Build & push Web
+      - name: Build & push Angular Web
         uses: docker/build-push-action@v6
         with:
-          context: ./src/frontend
+          context: ./src/frontend-angular
           push: true
           tags: ${{ env.WEB_IMAGE }}:latest
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
           build-args: |
+            VITE_LIFEOS_API_URL=${{ vars.VITE_LIFEOS_API_URL }}
             VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ vars.VITE_SUPABASE_ANON_KEY }}
