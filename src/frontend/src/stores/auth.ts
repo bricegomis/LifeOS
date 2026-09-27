@@ -129,7 +129,12 @@ export const useAuthStore = defineStore('auth', () => {
 
     initializePromise = (async () => {
       try {
-        await initializeSupabaseAuth()
+        const callbackError = await initializeSupabaseAuth()
+
+        if (callbackError) {
+          errorMessage.value = callbackError
+        }
+
         ready.value = true
       } catch (error) {
         errorMessage.value = error instanceof Error ? error.message : 'Impossible d’initialiser Supabase.'
