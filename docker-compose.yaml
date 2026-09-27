@@ -1,0 +1,39 @@
+services:
+  api:
+    image: ghcr.io/bricegomis/lifeos-api:latest
+    container_name: lifeos-api
+    restart: unless-stopped
+    networks:
+      - proxy
+      - backend_db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      # Supabase authentication
+      Supabase__Url: ${SUPABASE_URL}
+      Supabase__Audience: authenticated
+      # PostgreSQL
+      ConnectionStrings__Postgres: ${POSTGRES_CONNECTION_STRING}
+      # Public frontend URL
+      Cors__AllowedOrigins__0: ${FRONTEND_URL}
+      # Keep false for the initial deployment
+      SkipDatabaseMigration: "false"
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+  web:
+    image: ghcr.io/bricegomis/lifeos-web:latest
+    container_name: lifeos-web
+    restart: unless-stopped
+    networks:
+      - proxy
+    environment:
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      VITE_LIFEOS_API_URL: ${VITE_LIFEOS_API_URL}
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+networks:
+  proxy:
+    external: true
+  backend_db:
+    external: true
