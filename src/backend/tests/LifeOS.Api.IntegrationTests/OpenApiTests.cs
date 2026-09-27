@@ -26,5 +26,21 @@ public sealed class OpenApiTests(PostgresContainerFixture postgres)
         var paths = root.GetProperty("paths");
         Assert.Equal(JsonValueKind.Object, paths.ValueKind);
         Assert.NotEmpty(paths.EnumerateObject());
+
+        var scalarResponse = await client.GetAsync("/scalar/v1");
+        Assert.Equal(HttpStatusCode.OK, scalarResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpenApi_routes_are_unavailable_when_disabled()
+    {
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString, enableOpenApiUi: false);
+        using var client = factory.CreateClient();
+
+        var documentResponse = await client.GetAsync("/openapi/v1.json");
+        var scalarResponse = await client.GetAsync("/scalar/v1");
+
+        Assert.Equal(HttpStatusCode.NotFound, documentResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, scalarResponse.StatusCode);
     }
 }
