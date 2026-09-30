@@ -67,3 +67,12 @@ The Vue Dockerfile remains available for local or parallel builds. The
 `.github/workflows/build-push-docker-images.yml` workflow now publishes the Angular
 frontend from `src/frontend-angular` as `ghcr.io/bricegomis/lifeos-web`; it no longer
 publishes this Vue image.
+
+The GitHub Pages build injects the commit SHA as the UI build ID and can read the API
+build ID from `GET /api/version`. Set the repository variable `VITE_LIFEOS_API_URL` to
+the API origin (without `/api`) to enable that lookup; configure the same site's origin
+as `GITHUB_PAGES_URL` in the API deployment environment so CORS permits the request.
+The sidebar shows abbreviated UI/API IDs immediately above the signed-in user's email.
+For local development the UI reports `dev`; a local production build reports `local`.
+When building the Vue Docker image directly, pass matching
+`VITE_LIFEOS_BUILD_ID` and `VITE_LIFEOS_API_URL` build arguments.

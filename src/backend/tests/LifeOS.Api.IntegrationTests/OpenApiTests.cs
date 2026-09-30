@@ -7,6 +7,24 @@ namespace LifeOS.Api.IntegrationTests;
 public sealed class OpenApiTests(PostgresContainerFixture postgres)
 {
     [Fact]
+    public async Task Version_endpoint_returns_the_configured_build_id_without_authentication()
+    {
+        await using var factory = new LifeOSApiFactory(
+            postgres.ConnectionString,
+            buildId: "test-build-id");
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/version");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
+        using var document = await JsonDocument.ParseAsync(
+            await response.Content.ReadAsStreamAsync());
+        Assert.Equal("api", document.RootElement.GetProperty("component").GetString());
+        Assert.Equal("test-build-id", document.RootElement.GetProperty("buildId").GetString());
+    }
+
+    [Fact]
     public async Task OpenApi_document_is_available_and_contains_paths()
     {
         await using var factory = new LifeOSApiFactory(postgres.ConnectionString);

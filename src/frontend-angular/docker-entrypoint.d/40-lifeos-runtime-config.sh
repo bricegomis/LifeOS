@@ -13,7 +13,8 @@ cat > "$config_temp" <<EOF
 window.LIFEOS_CONFIG = {
   supabaseUrl: atob('$(encode_base64 "${VITE_SUPABASE_URL:-}")'),
   supabaseAnonKey: atob('$(encode_base64 "${VITE_SUPABASE_ANON_KEY:-}")'),
-  apiBaseUrl: atob('$(encode_base64 "${VITE_LIFEOS_API_URL:-}")')
+  apiBaseUrl: atob('$(encode_base64 "${VITE_LIFEOS_API_URL:-}")'),
+  buildId: atob('$(encode_base64 "${LIFEOS_BUILD_ID:-local}")')
 };
 EOF
 

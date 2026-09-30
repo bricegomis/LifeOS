@@ -8,6 +8,11 @@ export interface StoreDto {
   updatedAt: string
 }
 
+export interface BuildInfoDto {
+  component: 'api'
+  buildId: string
+}
+
 export interface StoreRequest {
   name: string
   address: string | null

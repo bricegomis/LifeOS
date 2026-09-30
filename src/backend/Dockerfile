@@ -1,4 +1,5 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG LIFEOS_BUILD_ID=local
 WORKDIR /src
 
 COPY LifeOS.slnx ./
@@ -15,12 +16,14 @@ RUN dotnet publish src/LifeOS.Api/LifeOS.Api.csproj \
     --output /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+ARG LIFEOS_BUILD_ID=local
 WORKDIR /app
 
 COPY --from=build /app/publish .
 USER app
 
 ENV ASPNETCORE_HTTP_PORTS=8080
+ENV LifeOS__BuildId=${LIFEOS_BUILD_ID}
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "LifeOS.Api.dll"]

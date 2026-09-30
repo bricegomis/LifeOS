@@ -16,6 +16,7 @@ const config = {
   supabaseUrl: process.env.VITE_SUPABASE_URL?.trim() ?? '',
   supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY?.trim() ?? '',
   apiBaseUrl: process.env.VITE_LIFEOS_API_URL?.trim().replace(/\/+$/, '') ?? '',
+  buildId: process.env.LIFEOS_BUILD_ID?.trim() || 'local',
 }
 
 writeFileSync(

@@ -1,6 +1,10 @@
-import { Component, inject, signal } from '@angular/core'
+import { Component, inject, OnInit, signal } from '@angular/core'
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router'
+import { firstValueFrom, timeout } from 'rxjs'
 import { AuthService } from '@/app/core/auth/auth.service'
+import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import type { BuildInfoDto } from '@/app/core/api/api.models'
+import { apiBaseUrl, buildId } from '@/environments/environment'
 
 interface NavigationItem {
   path: string
@@ -15,9 +19,12 @@ interface NavigationItem {
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app-layout.component.html',
 })
-export class AppLayoutComponent {
+export class AppLayoutComponent implements OnInit {
   readonly auth = inject(AuthService)
   private readonly router = inject(Router)
+  private readonly api = inject(LifeosApiService)
+  readonly buildId = buildId
+  readonly apiBuildId = signal(apiBaseUrl ? 'chargement…' : 'non configurée')
   readonly signOutError = signal('')
 
   readonly navigation: NavigationItem[] = [
@@ -35,6 +42,26 @@ export class AppLayoutComponent {
   readonly mobileNavigation = this.navigation.filter((item) =>
     ['/', '/planning', '/recipes', '/stock', '/settings'].includes(item.path),
   )
+
+  displayBuildId(value: string): string {
+    return /^[a-f0-9]{13,}$/i.test(value) ? value.slice(0, 12) : value
+  }
+
+  async ngOnInit(): Promise<void> {
+    if (!apiBaseUrl) return
+
+    try {
+      const version = await firstValueFrom(
+        this.api.get<BuildInfoDto>('/version').pipe(timeout({ first: 5000 })),
+      )
+      if (version.component !== 'api' || !version.buildId) {
+        throw new Error('Réponse de version API invalide')
+      }
+      this.apiBuildId.set(version.buildId)
+    } catch {
+      this.apiBuildId.set('indisponible')
+    }
+  }
 
   async signOut(): Promise<void> {
     this.signOutError.set('')

@@ -4,14 +4,17 @@ A minimal ASP.NET Core Web API for LifeOS, structured to move progressively towa
 Clean Architecture / DDD layout as recommended by Microsoft's current guidance
 (minimal APIs, layered separation of concerns, dependencies pointing inwards).
 
-All endpoints are protected by Supabase-issued JWT authentication — the same identity
+API data endpoints are protected by Supabase-issued JWT authentication — the same identity
 provider already used by the frontend — and, except for the shared meal library, are
-scoped to the authenticated user (resolved from the JWT `sub` claim).
+scoped to the authenticated user (resolved from the JWT `sub` claim). The public
+`GET /api/version` endpoint exposes only the API component name and build ID for deployment
+diagnostics.
 
 ## Endpoints
 
 | Area | Endpoints | Notes |
 | --- | --- | --- |
+| Build diagnostics | `GET /api/version` | Public; returns the API component name and configured build ID. |
 | Stores | `GET /api/stores` | Read-only, scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Articles | `GET/POST /api/articles`, `PUT/DELETE /api/articles/{id}`, `POST /api/articles/{id}/price-entries`, `DELETE /api/articles/{id}/price-entries/{priceEntryId}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); mirrors the frontend's `GroceryItem` (name, description, unit, price history). |
 | Library | `GET /api/meal-components`, `GET /api/composite-dishes`, `GET /api/activities` | Read-only, shared across users; still served from an **in-memory** seed catalog (mirrors `src/frontend/src/data/localLibrary.ts`), not yet migrated to PostgreSQL. |
@@ -174,7 +177,9 @@ keys are resolved automatically from Supabase's OIDC metadata, so no secret is s
 in this repository.
 
 Allowed CORS origins for the frontend dev server / deployed app are configured under
-`Cors:AllowedOrigins`.
+`Cors:AllowedOrigins`. For the Vue GitHub Pages deployment, set `GITHUB_PAGES_URL` in the
+deployment environment and set the GitHub repository variable `VITE_LIFEOS_API_URL` to the
+API origin so its sidebar can read `/api/version`.
 
 ## Run locally
 
@@ -220,7 +225,7 @@ restricted separately at the reverse proxy; API operations still require authent
 it locally from `src/backend`:
 
 ```bash
-docker build -t lifeos-api -f Dockerfile .
+docker build -t lifeos-api --build-arg LIFEOS_BUILD_ID=local -f Dockerfile .
 docker run --rm -p 8080:8080 \
   -e Supabase__Url="https://<project-ref>.supabase.co" \
   -e Cors__AllowedOrigins__0="http://localhost:5173" \
@@ -236,3 +241,6 @@ The `.github/workflows/build-push-docker-images.yml` workflow builds this image 
 the frontend web image) and pushes it to the GitHub Container Registry
 (`ghcr.io/bricegomis/lifeos-api`, tagged `latest`) on every push to `main`. No extra
 secrets are needed: it authenticates with the automatically provided `GITHUB_TOKEN`.
+Both images receive the same full Git commit SHA as `LIFEOS_BUILD_ID`; this value is
+served by the API and embedded in the Angular web image, so their displayed IDs match
+when they were built from the same commit. Local runs default to `local`.
