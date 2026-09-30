@@ -38,7 +38,7 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<DayPlan> DayPlans => Set<DayPlan>();
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
     public DbSet<PlannedMealPart> PlannedMealParts => Set<PlannedMealPart>();
-    public DbSet<WeekScenario> WeekScenarios => Set<WeekScenario>();
+    public DbSet<BalancedWeekPlan> BalancedWeekPlans => Set<BalancedWeekPlan>();
 
     // Jalon 3: Food Items
     public DbSet<FoodItem> FoodItems => Set<FoodItem>();

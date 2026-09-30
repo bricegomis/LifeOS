@@ -189,3 +189,23 @@ Consequences:
 - Les tables `stores`, `articles`, `article_price_entries` conservent leur forme héritée du modèle in-memory plutôt que d'adopter immédiatement le modèle conceptuel `food_items` / `price_observations` documenté dans `docs/architecture/02-data-model.md` ; cette divergence est documentée explicitement dans ce fichier et sera reconciliée au jalon « bibliothèque alimentaire ».
 - Les contextes `Library`, `Planning` (règles) et `WeekContexts` restent en mémoire, scopés par utilisateur, jusqu'à leurs propres jalons de migration.
 - Des tests automatisés (unitaires domaine + intégration API/EF Core via Testcontainers PostgreSQL) prouvent la persistance après redémarrage logique de l'API et l'isolation stricte entre deux foyers ; ils font désormais partie du socle de validation du backend (`dotnet test` depuis `src/backend`).
+
+## 2026 — Menu équilibré unique : suppression du choix de scénario
+Context:
+La planification exposait trois scénarios concurrents que l'utilisateur devait choisir (`nutritional_balance`, `economy`, `reduce_waste`), via une case à cocher par objectif dans la page Planning. Le `DeterministicScenarioEngine` ne calculait rien : il renvoyait des deltas codés en dur par objectif. L'utilisateur a demandé explicitement à ne plus avoir à choisir, et à obtenir un menu cherchant l'équilibre nutritionnel, un budget minimum, de la diversité sur le mois et l'absence de gaspillage.
+
+Decision:
+Un seul calcul, `BalancedPlanEngine`, remplace les scénarios. Il évalue simultanément quatre dimensions à partir des données réelles du foyer (repas planifiés, recettes, prix observés, stock, cibles nutritionnelles, activités) : nutrition (poids 0,40), coût (0,25), anti-gaspillage (0,20) et diversité sur ~35 jours (0,15). La nutrition est traitée comme une **contrainte** : sous un score de 0,60 le score global est plafonné à celui de la nutrition et l'arbitrage est affiché. Les dimensions non calculables (données manquantes) sont exclues et les poids restants sont renormalisés, plutôt que de produire un score inventé. L'entité `WeekScenario` devient `BalancedWeekPlan`, l'API devient `/api/weeks/{weekId}/balanced-plan` (`GET`, `POST /compute` sans corps, `PATCH /{planId}/apply`), et l'UI Angular propose un unique bouton « Calculer le menu équilibré » suivi du détail des scores, des arbitrages et des limites.
+
+Reasons:
+- l'utilisateur ne doit plus arbitrer lui-même entre des objectifs qui, en pratique, doivent être tenus ensemble ;
+- la nutrition est une contrainte de santé, pas un critère échangeable contre du budget : le plafonnement du score le rend explicite ;
+- exclure une dimension non calculable et le dire est plus honnête que de la scorer par défaut ;
+- réutiliser les modèles existants (recettes, articles et historique de prix, stock, configuration nutritionnelle) évite d'inventer un nouveau modèle de données.
+
+Consequences:
+- La table `week_scenarios` et la colonne `RankingObjective` sont **conservées telles quelles** (la colonne porte désormais la valeur unique `balanced`), donc aucune migration n'est nécessaire.
+- Le score anti-gaspillage est un **proxy assumé** (couverture par le stock + réemploi des ingrédients entre repas) : le modèle ne connaît ni dates de péremption ni tailles de conditionnement, donc aucune promesse de « zéro gaspillage » n'est faite — la limite est affichée dans l'UI à chaque calcul.
+- Le coût est normalisé par rapport à l'amplitude réellement atteignable avec la bibliothèque de recettes du foyer ; en dessous de deux recettes entièrement valorisables, la dimension est déclarée non calculable.
+- Les conversions d'unités ne sont pas gérées (unité de recette vs unité d'article) et les quantités sont agrégées telles quelles ; c'est une limite connue du calcul de coût et de nutrition.
+- Une semaine vide ne reçoit pas de score global : l'API renvoie `overallScore: null` avec une limite explicite.

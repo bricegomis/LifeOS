@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Validation;
@@ -8,31 +7,38 @@ using LifeOS.Application.WeekPlanning;
 
 namespace LifeOS.Api.Endpoints;
 
-public static class WeekScenariosEndpoints
+/// <summary>
+/// Endpoints for the balanced plan of a week.
+/// <para>
+/// The caller no longer picks a ranking objective: computing a plan takes no body, and the
+/// engine always looks for the same compromise between nutritional balance, budget, diversity
+/// over the month and waste reduction.
+/// </para>
+/// </summary>
+public static class WeekBalancedPlanEndpoints
 {
-    public static IEndpointRouteBuilder MapWeekScenariosEndpoints(this IEndpointRouteBuilder app)
+    public static IEndpointRouteBuilder MapWeekBalancedPlanEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/weeks/{weekId}/scenarios")
-            .WithTags("WeekScenarios")
+        var group = app.MapGroup("/api/weeks/{weekId}/balanced-plan")
+            .WithTags("WeekBalancedPlan")
             .RequireAuthorization()
             .AddRequestValidation();
 
-        group.MapGet("/", GetScenariosAsync)
-            .WithName("GetScenarios")
-            .Produces<List<StoredWeekScenarioDto>>()
+        group.MapGet("/", GetBalancedPlansAsync)
+            .WithName("GetBalancedPlans")
+            .Produces<List<StoredBalancedPlanDto>>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapPost("/generate", GenerateScenariosAsync)
-            .WithName("GenerateScenarios")
-            .Produces<List<GeneratedWeekScenarioDto>>(StatusCodes.Status201Created)
-            .ProducesValidationProblem()
+        group.MapPost("/compute", ComputeBalancedPlanAsync)
+            .WithName("ComputeBalancedPlan")
+            .Produces<ComputedBalancedPlanDto>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
-        group.MapPatch("/{scenarioId}/apply", ApplyScenarioAsync)
-            .WithName("ApplyScenario")
+        group.MapPatch("/{planId}/apply", ApplyBalancedPlanAsync)
+            .WithName("ApplyBalancedPlan")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -42,15 +48,15 @@ public static class WeekScenariosEndpoints
     }
 
     /// <summary>
-    /// Retrieves all scenarios for a given week.
-    /// GET /api/weeks/{weekId}/scenarios
+    /// Lists the balanced plans computed for a week, most recent first.
+    /// GET /api/weeks/{weekId}/balanced-plan
     /// </summary>
-    private static async Task<IResult> GetScenariosAsync(
+    private static async Task<IResult> GetBalancedPlansAsync(
         Guid weekId,
         ClaimsPrincipal user,
         ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IWeekRepository weekRepository,
-        IWeekScenarioRepository scenarioRepository,
+        IBalancedWeekPlanRepository planRepository,
         CancellationToken cancellationToken)
     {
         if (!user.TryGetUserId(out var supabaseUserId))
@@ -60,38 +66,39 @@ public static class WeekScenariosEndpoints
 
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
 
-        // Verify week belongs to household (isolation)
         var week = await weekRepository.GetByIdAsync(weekId, householdId, cancellationToken);
         if (week == null)
         {
             return Results.NotFound();
         }
 
-        var scenarios = await scenarioRepository.GetAllForWeekAsync(weekId, cancellationToken);
+        var plans = await planRepository.GetAllForWeekAsync(weekId, cancellationToken);
 
-        var dtos = scenarios.Select(s => new StoredWeekScenarioDto(
-            s.Id,
-            s.WeekId,
-            s.RankingObjective,
-            s.Explanation.RootElement.GetRawText(),
-            s.Applied,
-            s.CreatedAt,
-            s.UpdatedAt)).ToList();
+        var dtos = plans
+            .OrderByDescending(plan => plan.CreatedAt)
+            .Select(plan => new StoredBalancedPlanDto(
+                plan.Id,
+                plan.WeekId,
+                plan.Method,
+                plan.Explanation.RootElement.GetRawText(),
+                plan.Applied,
+                plan.CreatedAt,
+                plan.UpdatedAt))
+            .ToList();
 
         return Results.Ok(dtos);
     }
 
     /// <summary>
-    /// Generates scenarios for a week with specified ranking objectives.
-    /// POST /api/weeks/{weekId}/scenarios/generate
+    /// Computes the balanced plan of a week. Takes no parameter: there is nothing to choose.
+    /// POST /api/weeks/{weekId}/balanced-plan/compute
     /// </summary>
-    private static async Task<IResult> GenerateScenariosAsync(
+    private static async Task<IResult> ComputeBalancedPlanAsync(
         Guid weekId,
         ClaimsPrincipal user,
-        GenerateScenariosRequest request,
         ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IWeekRepository weekRepository,
-        IScenarioEngine engine,
+        IBalancedPlanEngine engine,
         CancellationToken cancellationToken)
     {
         if (!user.TryGetUserId(out var supabaseUserId))
@@ -101,38 +108,26 @@ public static class WeekScenariosEndpoints
 
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
 
-        // Verify week belongs to household (isolation)
         var week = await weekRepository.GetByIdAsync(weekId, householdId, cancellationToken);
         if (week == null)
         {
             return Results.NotFound();
         }
 
-        if (request.Objectives == null || request.Objectives.Count == 0)
-        {
-            return Results.Problem(
-                "At least one objective must be specified.",
-                statusCode: StatusCodes.Status400BadRequest);
-        }
-
         try
         {
-            var scenarios = await engine.GenerateScenariosAsync(
-                weekId,
-                householdId,
-                request.Objectives.AsReadOnly(),
-                cancellationToken);
+            var (plan, explanation) = await engine.ComputeAsync(weekId, householdId, cancellationToken);
 
-            var dtos = scenarios.Select(s => new GeneratedWeekScenarioDto(
-                s.Scenario.Id,
-                s.Scenario.WeekId,
-                s.Scenario.RankingObjective,
-                s.Explanation,
-                s.Scenario.Applied,
-                s.Scenario.CreatedAt,
-                s.Scenario.UpdatedAt)).ToList();
+            var dto = new ComputedBalancedPlanDto(
+                plan.Id,
+                plan.WeekId,
+                plan.Method,
+                explanation,
+                plan.Applied,
+                plan.CreatedAt,
+                plan.UpdatedAt);
 
-            return Results.Created($"/api/weeks/{weekId}/scenarios", dtos);
+            return Results.Created($"/api/weeks/{weekId}/balanced-plan", dto);
         }
         catch (InvalidOperationException ex)
         {
@@ -141,16 +136,16 @@ public static class WeekScenariosEndpoints
     }
 
     /// <summary>
-    /// Applies a scenario to a week.
-    /// PATCH /api/weeks/{weekId}/scenarios/{scenarioId}/apply
+    /// Retains a computed plan for the week.
+    /// PATCH /api/weeks/{weekId}/balanced-plan/{planId}/apply
     /// </summary>
-    private static async Task<IResult> ApplyScenarioAsync(
+    private static async Task<IResult> ApplyBalancedPlanAsync(
         Guid weekId,
-        Guid scenarioId,
+        Guid planId,
         ClaimsPrincipal user,
         ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IWeekRepository weekRepository,
-        IScenarioEngine engine,
+        IBalancedPlanEngine engine,
         CancellationToken cancellationToken)
     {
         if (!user.TryGetUserId(out var supabaseUserId))
@@ -160,7 +155,6 @@ public static class WeekScenariosEndpoints
 
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
 
-        // Verify week belongs to household (isolation)
         var week = await weekRepository.GetByIdAsync(weekId, householdId, cancellationToken);
         if (week == null)
         {
@@ -169,7 +163,7 @@ public static class WeekScenariosEndpoints
 
         try
         {
-            await engine.ApplyScenarioAsync(weekId, scenarioId, householdId, cancellationToken);
+            await engine.ApplyAsync(weekId, planId, householdId, cancellationToken);
             return Results.NoContent();
         }
         catch (InvalidOperationException ex)
@@ -179,23 +173,22 @@ public static class WeekScenariosEndpoints
     }
 }
 
-public record GenerateScenariosRequest(
-    [property: Required, MinLength(1)] List<string> Objectives);
-
-public sealed record StoredWeekScenarioDto(
+/// <summary>A persisted plan, whose explanation is returned as raw JSON.</summary>
+public sealed record StoredBalancedPlanDto(
     Guid Id,
     Guid WeekId,
-    string RankingObjective,
+    string Method,
     string Explanation,
     bool Applied,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
-public sealed record GeneratedWeekScenarioDto(
+/// <summary>A freshly computed plan, whose explanation is returned structured.</summary>
+public sealed record ComputedBalancedPlanDto(
     Guid Id,
     Guid WeekId,
-    string RankingObjective,
-    ScenarioExplanation Explanation,
+    string Method,
+    BalancedPlanExplanation Explanation,
     bool Applied,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

@@ -163,26 +163,44 @@ export interface PlannedMealPartDto {
   portionMultiplier: number
 }
 
-export interface WeekScenarioDto {
+/**
+ * One dimension of the compromise. `score` is null when the household data does not allow
+ * computing it: the dimension is then excluded from the composite score and the reason is
+ * listed in `limitations`.
+ */
+export interface BalancedPlanDimension {
+  key: 'nutrition' | 'cost' | 'diversity' | 'waste'
+  score: number | null
+  weight: number
+  dataCoverage: number
+  summary: string
+  metrics: Record<string, number>
+}
+
+export interface BalancedPlanExplanation {
+  method: string
+  overallScore: number | null
+  nutritionConstraintMet: boolean
+  dimensions: BalancedPlanDimension[]
+  tradeoffs: string[]
+  limitations: string[]
+  textExplanation: string
+}
+
+/** A persisted plan: its explanation is returned as raw JSON. */
+export interface BalancedPlanDto {
   id: string
   weekId: string
-  rankingObjective: string
-  explanation: string | ScenarioExplanation
+  method: string
+  explanation: string
   applied: boolean
   createdAt: string
   updatedAt: string
 }
 
-export interface ScenarioExplanation {
-  [key: string]: unknown
-}
-
-export interface GeneratedScenarioDto extends Omit<WeekScenarioDto, 'explanation'> {
-  explanation: ScenarioExplanation
-}
-
-export interface ScenarioRequest {
-  objectives: string[]
+/** A freshly computed plan: its explanation is returned structured. */
+export interface ComputedBalancedPlanDto extends Omit<BalancedPlanDto, 'explanation'> {
+  explanation: BalancedPlanExplanation
 }
 
 export interface LibraryMealComponentDto {

@@ -181,14 +181,16 @@ Observation de prix d'un article dans un magasin à une date donnée
 - `observed_on` (date)
 
 ### `week_scenarios`
-Proposition de semaine générée, classée selon un objectif explicite, brouillon
-jusqu'à application.
+Menu équilibré calculé pour une semaine, brouillon jusqu'à application. La
+table conserve son nom historique : il n'existe plus qu'une seule méthode de
+calcul, sans objectif choisi par l'utilisateur.
 - `id`
 - `household_id` → `households`
-- `week_id` → `weeks` (nullable tant que le scénario n'est pas appliqué)
-- `ranking_criterion` (ex. `nutritional_balance`, `cost`, `waste_reduction`)
-- `explanation` (`jsonb`, hypothèses et compromis exposés à l'utilisateur —
-  contenu explicatif intrinsèquement flexible)
+- `week_id` → `weeks` (nullable tant que le menu n'est pas retenu)
+- `ranking_criterion` — conservée telle quelle en base, mais porte désormais la
+  méthode de calcul (valeur unique `balanced`)
+- `explanation` (`jsonb`, scores par dimension, poids, arbitrages et limites
+  exposés à l'utilisateur — contenu explicatif intrinsèquement flexible)
 - `status` (`draft`, `applied`, `discarded`)
 
 ## État d'implémentation — Jalon 1 (fondations foyer + persistance)

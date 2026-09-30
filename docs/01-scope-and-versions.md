@@ -3,13 +3,16 @@
 ## Finalité du MVP
 
 Le MVP permet de préparer manuellement une semaine de repas flexible, puis de
-demander des scénarios révisables avant leur application. Il couvre tous les
+demander un menu équilibré révisable avant son application. Il couvre tous les
 repas du foyer : petit-déjeuner, déjeuner, dîner, collations facultatives et
 plusieurs collations dans une même journée.
 
-Le planning prend aussi en compte les repas rapides et les restes. Les
-suggestions sont lancées à la demande, classées sans recommandation par défaut
-(par exemple : équilibre nutritionnel, économie, réduction du gaspillage).
+Le planning prend aussi en compte les repas rapides et les restes. La
+suggestion est lancée à la demande et produit un seul menu : l'utilisateur ne
+choisit aucun objectif. Le calcul cherche un compromis entre équilibre
+nutritionnel (traité comme contrainte prioritaire), budget bas, diversité sur
+le mois et réduction du gaspillage, et expose ses arbitrages ainsi que ses
+limites.
 
 ## Contexte du foyer et de la semaine
 

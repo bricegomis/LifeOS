@@ -722,7 +722,7 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("weeks", (string)null);
                 });
 
-            modelBuilder.Entity("LifeOS.Domain.WeekPlanning.WeekScenario", b =>
+            modelBuilder.Entity("LifeOS.Domain.WeekPlanning.BalancedWeekPlan", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -739,10 +739,11 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<string>("RankingObjective")
+                    b.Property<string>("Method")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("RankingObjective");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -754,7 +755,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("WeekId");
 
-                    b.HasIndex("WeekId", "RankingObjective");
+                    b.HasIndex("WeekId", "Method")
+                        .HasDatabaseName("IX_week_scenarios_WeekId_RankingObjective");
 
                     b.ToTable("week_scenarios", (string)null);
                 });
@@ -1053,10 +1055,10 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("LifeOS.Domain.WeekPlanning.WeekScenario", b =>
+            modelBuilder.Entity("LifeOS.Domain.WeekPlanning.BalancedWeekPlan", b =>
                 {
                     b.HasOne("LifeOS.Domain.WeekPlanning.Week", null)
-                        .WithMany("Scenarios")
+                        .WithMany("BalancedPlans")
                         .HasForeignKey("WeekId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1093,7 +1095,7 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("DayPlans");
 
-                    b.Navigation("Scenarios");
+                    b.Navigation("BalancedPlans");
                 });
 #pragma warning restore 612, 618
         }

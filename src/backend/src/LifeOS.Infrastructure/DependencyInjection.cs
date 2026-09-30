@@ -88,8 +88,9 @@ public static class DependencyInjection
         services.AddScoped<IWeekRepository, EfWeekRepository>();
         services.AddScoped<IDayPlanRepository, EfDayPlanRepository>();
         services.AddScoped<IPlannedMealRepository, EfPlannedMealRepository>();
-        services.AddScoped<IWeekScenarioRepository, EfWeekScenarioRepository>();
-        services.AddScoped<IScenarioEngine, DeterministicScenarioEngine>();
+        services.AddScoped<IBalancedWeekPlanRepository, EfBalancedWeekPlanRepository>();
+        services.AddScoped<IBalancedPlanDataSource, EfBalancedPlanDataSource>();
+        services.AddScoped<IBalancedPlanEngine, BalancedPlanEngine>();
 
         services.AddSingleton<IMealComponentRepository, InMemoryMealComponentRepository>();
         services.AddSingleton<ICompositeDishRepository, InMemoryCompositeDishRepository>();
