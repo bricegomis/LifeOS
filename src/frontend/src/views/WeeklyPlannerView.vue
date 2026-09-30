@@ -7,9 +7,9 @@ import { activities } from '@/data/localLibrary'
 import { usePlanningRulesStore } from '@/stores/planningRules'
 import {
   addWeeksToDateString,
-  contextForDayIndex,
   getWeekMode,
   useWeekContextStore,
+  weekdays,
   weekModeLabels,
   workLocationShortLabels,
 } from '@/stores/weekContext'
@@ -27,6 +27,7 @@ const selectedMeal = ref<{ dayId: string; mealType: MealType } | null>(null)
 const activeActivityDayId = ref<string | null>(null)
 const isMobile = ref(false)
 const weekOffset = ref(0)
+const generationError = ref('')
 
 const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner']
 
@@ -38,11 +39,20 @@ const mealTypeLabels: Record<MealType, string> = {
 
 const displayedWeekPlan = computed<WeekPlan>(() => shiftWeekPlan(weekPlan.value, weekOffset.value))
 const displayedWeekMode = computed(() =>
-  getWeekMode(
-    displayedWeekPlan.value.startDate,
-    weekContext.value.alternatingWeekConfig,
-    weekContext.value.weekModeOverrides,
-  ),
+  weekOffset.value === 0 && weekPlan.value.weekMode
+    ? weekPlan.value.weekMode
+    : getWeekMode(
+        displayedWeekPlan.value.startDate,
+        weekContext.value.alternatingWeekConfig,
+        weekContext.value.weekModeOverrides,
+      ),
+)
+const displayedDayContexts = computed(() =>
+  weekOffset.value === 0 && weekPlan.value.dayContexts
+    ? weekPlan.value.dayContexts
+    : weekOffset.value === 0 && !weekPlan.value.weekMode
+      ? weekContext.value.days
+      : weekContext.value.templates[displayedWeekMode.value],
 )
 
 const displayedSelectedDay = computed(() => {
@@ -141,7 +151,7 @@ function activityDuration(durationMinutes: number | undefined): string | undefin
 }
 
 function dayContextBadges(dayIndex: number): string[] {
-  const context = contextForDayIndex(weekContext.value, dayIndex)
+  const context = displayedDayContexts.value[weekdays[dayIndex] ?? 'monday']
   const badges = [context.workLocation === 'home' ? '🏠' : context.workLocation === 'office' ? '🏢' : '•']
   badges.push(workLocationShortLabels[context.workLocation])
 
@@ -163,7 +173,19 @@ function nextWeek(): void {
 }
 
 function generateWeek(): void {
-  plannerStore.generateWeek(planningRules.value, frequencyRules.value, weekContext.value)
+  generationError.value = ''
+  try {
+    plannerStore.generateWeek(
+      planningRules.value,
+      frequencyRules.value,
+      weekContext.value,
+      displayedWeekPlan.value.startDate,
+    )
+  } catch (error) {
+    console.error('Échec de la génération de la semaine', error)
+    generationError.value = 'Impossible de générer cette semaine. Le planning précédent est conservé.'
+    return
+  }
   weekOffset.value = 0
   closeEditors()
 }
@@ -276,8 +298,10 @@ onBeforeUnmount(() => {
       </div>
 
       <p class="planner-note">
-        La génération remplace le planning actuel. Les ajustements manuels sont effacés.
+        Le modèle avec ou sans enfants est choisi automatiquement selon l'alternance des réglages.
+        La génération remplace le planning actuel et efface ses ajustements manuels.
       </p>
+      <p v-if="generationError" role="alert">{{ generationError }}</p>
     </header>
 
     <section class="week-summary-strip" aria-label="Résumé de semaine">

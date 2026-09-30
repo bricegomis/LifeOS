@@ -17,12 +17,12 @@ import type {
 } from '@/types'
 
 interface StoredWeekContext {
-  schemaVersion: 2
+  schemaVersion: 3
   data: WeekContext
 }
 
 interface LegacyStoredWeekContext {
-  schemaVersion: 1
+  schemaVersion: 1 | 2
   data: {
     weekMode?: unknown
     days?: unknown
@@ -30,7 +30,7 @@ interface LegacyStoredWeekContext {
 }
 
 const STORAGE_KEY = 'lifeos.context.v1'
-const SCHEMA_VERSION = 2
+const SCHEMA_VERSION = 3
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export const weekdays: Weekday[] = [
@@ -55,7 +55,7 @@ export const weekdayLabels: Record<Weekday, string> = {
 
 export const weekModeLabels: Record<WeekMode, string> = {
   kids: 'Avec enfants',
-  solo: 'Solo',
+  solo: 'Sans enfants',
 }
 
 export const workLocationLabels: Record<WorkLocation, string> = {
@@ -183,10 +183,12 @@ function createDefaultDayContexts(): Record<Weekday, DayContext> {
 }
 
 function createDefaultWeekContext(): WeekContext {
+  const days = createDefaultDayContexts()
   return {
     alternatingWeekConfig: createDefaultAlternatingWeekConfig(),
     weekModeOverrides: [],
-    days: createDefaultDayContexts(),
+    days,
+    templates: { kids: cloneDayContexts(days), solo: cloneDayContexts(days) },
   }
 }
 
@@ -199,6 +201,12 @@ function cloneDayContext(context: DayContext): DayContext {
   }
 }
 
+export function cloneDayContexts(days: Record<Weekday, DayContext>): Record<Weekday, DayContext> {
+  return Object.fromEntries(
+    weekdays.map((weekday) => [weekday, cloneDayContext(days[weekday])]),
+  ) as Record<Weekday, DayContext>
+}
+
 function cloneWeekContext(context: WeekContext): WeekContext {
   return {
     alternatingWeekConfig: {
@@ -206,9 +214,11 @@ function cloneWeekContext(context: WeekContext): WeekContext {
       referenceWeekMode: context.alternatingWeekConfig.referenceWeekMode,
     },
     weekModeOverrides: context.weekModeOverrides.map((override) => ({ ...override })),
-    days: Object.fromEntries(
-      weekdays.map((weekday) => [weekday, cloneDayContext(context.days[weekday])]),
-    ) as Record<Weekday, DayContext>,
+    days: cloneDayContexts(context.days),
+    templates: {
+      kids: cloneDayContexts(context.templates.kids),
+      solo: cloneDayContexts(context.templates.solo),
+    },
   }
 }
 
@@ -221,6 +231,23 @@ function normalizeDayContext(value: unknown, fallback: DayContext): DayContext {
     workLocation: isWorkLocation(value.workLocation) ? value.workLocation : fallback.workLocation,
     bikeCommute: typeof value.bikeCommute === 'boolean' ? value.bikeCommute : fallback.bikeCommute,
   }
+}
+
+export function normalizeDayContexts(
+  value: unknown,
+  fallback: Record<Weekday, DayContext>,
+): Record<Weekday, DayContext> {
+  const days = isRecord(value) ? value : {}
+  return Object.fromEntries(
+    weekdays.map((weekday) => [weekday, normalizeDayContext(days[weekday], fallback[weekday])]),
+  ) as Record<Weekday, DayContext>
+}
+
+export function isDayContexts(value: unknown): value is Record<Weekday, DayContext> {
+  return isRecord(value) && weekdays.every((weekday) => {
+    const day = value[weekday]
+    return isRecord(day) && isWorkLocation(day.workLocation) && typeof day.bikeCommute === 'boolean'
+  })
 }
 
 function normalizeAlternatingWeekConfig(
@@ -275,8 +302,9 @@ function normalizeWeekContext(value: unknown): WeekContext | null {
     return null
   }
 
-  const days = isRecord(value.days) ? value.days : {}
   const fallback = createDefaultWeekContext()
+  const days = normalizeDayContexts(value.days, fallback.days)
+  const templates = isRecord(value.templates) ? value.templates : {}
 
   return {
     alternatingWeekConfig: normalizeAlternatingWeekConfig(
@@ -284,12 +312,11 @@ function normalizeWeekContext(value: unknown): WeekContext | null {
       fallback.alternatingWeekConfig,
     ),
     weekModeOverrides: normalizeWeekModeOverrides(value.weekModeOverrides),
-    days: Object.fromEntries(
-      weekdays.map((weekday) => [
-        weekday,
-        normalizeDayContext(days[weekday], fallback.days[weekday]),
-      ]),
-    ) as Record<Weekday, DayContext>,
+    days,
+    templates: {
+      kids: normalizeDayContexts(templates.kids, days),
+      solo: normalizeDayContexts(templates.solo, days),
+    },
   }
 }
 
@@ -299,7 +326,7 @@ function normalizeLegacyWeekContext(value: unknown): WeekContext | null {
   }
 
   const fallback = createDefaultWeekContext()
-  const days = isRecord(value.days) ? value.days : {}
+  const days = normalizeDayContexts(value.days, fallback.days)
 
   return {
     alternatingWeekConfig: {
@@ -307,12 +334,8 @@ function normalizeLegacyWeekContext(value: unknown): WeekContext | null {
       referenceWeekMode: value.weekMode,
     },
     weekModeOverrides: [],
-    days: Object.fromEntries(
-      weekdays.map((weekday) => [
-        weekday,
-        normalizeDayContext(days[weekday], fallback.days[weekday]),
-      ]),
-    ) as Record<Weekday, DayContext>,
+    days,
+    templates: { kids: cloneDayContexts(days), solo: cloneDayContexts(days) },
   }
 }
 
@@ -330,7 +353,7 @@ function loadWeekContext(): WeekContext {
 
     const parsedState = JSON.parse(rawState) as Partial<StoredWeekContext | LegacyStoredWeekContext>
 
-    if (parsedState.schemaVersion === SCHEMA_VERSION && parsedState.data) {
+    if ((parsedState.schemaVersion === SCHEMA_VERSION || parsedState.schemaVersion === 2) && parsedState.data) {
       return cloneWeekContext(normalizeWeekContext(parsedState.data) ?? defaultWeekContext)
     }
 
@@ -412,6 +435,7 @@ export const useWeekContextStore = defineStore('weekContext', () => {
       if (userId) {
         void saveUserSettings(userId, {
           weekContextDays: weekContext.value.days,
+          weekContextTemplates: weekContext.value.templates,
         })
         void saveWeekContextConfig(userId, weekContext.value.alternatingWeekConfig)
         void replaceWeekModeOverrides(userId, weekContext.value.weekModeOverrides)
@@ -430,6 +454,7 @@ export const useWeekContextStore = defineStore('weekContext', () => {
 
   function setReferenceWeekMode(referenceWeekMode: WeekMode): void {
     weekContext.value.alternatingWeekConfig.referenceWeekMode = referenceWeekMode
+    weekContext.value.days = cloneDayContexts(weekContext.value.templates[referenceWeekMode])
   }
 
   function updateAlternatingWeekConfig(
@@ -481,16 +506,25 @@ export const useWeekContextStore = defineStore('weekContext', () => {
     )
   }
 
-  function updateWorkLocation(weekday: Weekday, workLocation: WorkLocation): void {
-    weekContext.value.days[weekday].workLocation = workLocation
+  function updateWorkLocation(mode: WeekMode, weekday: Weekday, workLocation: WorkLocation): void {
+    weekContext.value.templates[mode][weekday].workLocation = workLocation
 
     if (workLocation !== 'office') {
-      weekContext.value.days[weekday].bikeCommute = false
+      weekContext.value.templates[mode][weekday].bikeCommute = false
     }
+    syncReferenceDays(mode)
   }
 
-  function updateBikeCommute(weekday: Weekday, bikeCommute: boolean): void {
-    weekContext.value.days[weekday].bikeCommute = bikeCommute
+  function updateBikeCommute(mode: WeekMode, weekday: Weekday, bikeCommute: boolean): void {
+    weekContext.value.templates[mode][weekday].bikeCommute =
+      weekContext.value.templates[mode][weekday].workLocation === 'office' && bikeCommute
+    syncReferenceDays(mode)
+  }
+
+  function syncReferenceDays(mode: WeekMode): void {
+    if (weekContext.value.alternatingWeekConfig.referenceWeekMode === mode) {
+      weekContext.value.days = cloneDayContexts(weekContext.value.templates[mode])
+    }
   }
 
   return {

@@ -10,7 +10,7 @@ import {
   mealComponents,
 } from '@/data/localLibrary'
 import { createDemoWeekPlan, createMealSlot, totalsForMeal } from '@/data/demoWeek'
-import { weekdays } from '@/stores/weekContext'
+import { cloneDayContexts, isDayContexts, weekdays } from '@/stores/weekContext'
 import { upsertWeekPlan } from '@/services/supabase/lifeosRepository'
 import type {
   ComponentType,
@@ -232,9 +232,13 @@ function sanitizeWeekPlan(value: unknown): WeekPlan | null {
     id: typeof value.id === 'string' ? value.id : demoWeekPlan.id,
     startDate: isValidDateString(value.startDate) ? value.startDate : demoWeekPlan.startDate,
     status: isWeekPlanStatus(value.status) ? value.status : demoWeekPlan.status,
+    weekMode: value.weekMode === 'kids' || value.weekMode === 'solo' ? value.weekMode : undefined,
+    dayContexts: isDayContexts(value.dayContexts) ? cloneDayContexts(value.dayContexts) : undefined,
     days: weekdays.map((weekday, index) => {
       const fallbackDay = demoWeekPlan.days[index] ?? demoWeekPlan.days[0]!
-      const dayValue = isRecord(value.days) ? value.days[weekday] : undefined
+      const dayValue = Array.isArray(value.days)
+        ? value.days[index]
+        : isRecord(value.days) ? value.days[weekday] : undefined
 
       return sanitizeDayPlan(dayValue, fallbackDay)
     }),
@@ -310,23 +314,21 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
     planningRules: PlanningRule[],
     frequencyRules: FrequencyRule[],
     weekContext: WeekContext,
+    startDate = weekPlan.value.startDate,
   ): void {
-    try {
-      weekPlan.value = createGeneratedWeekPlan({
-        library: {
-          mealComponents,
-          compositeDishes,
-          activities,
-        },
-        planningRules,
-        frequencyRules,
-        weekContext,
-        startDate: weekPlan.value.startDate,
-      })
-    } catch {
-      weekPlan.value = createDemoWeekPlan()
-    }
+    const generatedPlan = createGeneratedWeekPlan({
+      library: {
+        mealComponents,
+        compositeDishes,
+        activities,
+      },
+      planningRules,
+      frequencyRules,
+      weekContext,
+      startDate,
+    })
 
+    weekPlan.value = generatedPlan
     persistWeekPlan(weekPlan.value)
   }
 

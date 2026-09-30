@@ -4,6 +4,7 @@ import {
   type FrequencyRule,
   type PlanningRule,
   type WeekContext,
+  type WeekMode,
   type WeekModeOverride,
   type WeekPlan,
   type Weekday,
@@ -24,6 +25,7 @@ interface UserSettingsRow {
   user_id: string
   data: {
     weekContextDays?: Record<Weekday, DayContext>
+    weekContextTemplates?: Record<WeekMode, Record<Weekday, DayContext>>
   } | null
 }
 
@@ -59,6 +61,7 @@ export interface RemotePlanningRulesState {
 
 export interface RemoteUserSettingsState {
   weekContextDays: Record<Weekday, DayContext>
+  weekContextTemplates?: Record<WeekMode, Record<Weekday, DayContext>>
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -140,6 +143,15 @@ export async function loadUserSettings(userId: string): Promise<RemoteUserSettin
 
   return {
     weekContextDays: row.data.weekContextDays,
+    weekContextTemplates:
+      isRecord(row.data.weekContextTemplates) &&
+      isWeekContextDays(row.data.weekContextTemplates.kids) &&
+      isWeekContextDays(row.data.weekContextTemplates.solo)
+        ? {
+            kids: row.data.weekContextTemplates.kids,
+            solo: row.data.weekContextTemplates.solo,
+          }
+        : undefined,
   }
 }
 
@@ -154,6 +166,7 @@ export async function saveUserSettings(userId: string, state: RemoteUserSettings
     user_id: userId,
     data: {
       weekContextDays: state.weekContextDays,
+      weekContextTemplates: state.weekContextTemplates,
     },
     updated_at: new Date().toISOString(),
   })

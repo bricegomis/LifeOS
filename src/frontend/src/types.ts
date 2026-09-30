@@ -34,6 +34,7 @@ export interface WeekContext {
   alternatingWeekConfig: AlternatingWeekConfig
   weekModeOverrides: WeekModeOverride[]
   days: Record<Weekday, DayContext>
+  templates: Record<WeekMode, Record<Weekday, DayContext>>
 }
 
 export interface Nutrition {
@@ -137,6 +138,8 @@ export interface WeekPlan {
   startDate: string
   status: 'Draft' | 'Generated' | 'Validated' | 'Archived'
   days: DayPlan[]
+  weekMode?: WeekMode
+  dayContexts?: Record<Weekday, DayContext>
 }
 
 export type PlanningRuleTarget =

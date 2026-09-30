@@ -63,7 +63,7 @@ const mealTypeOptions: SelectOption<MealType>[] = [
 
 const weekModeOptions: SelectOption<WeekMode>[] = [
   { label: 'Avec enfants', value: 'kids' },
-  { label: 'Solo', value: 'solo' },
+  { label: 'Sans enfants', value: 'solo' },
 ]
 
 const workLocationOptions: SelectOption<WorkLocation>[] = [
@@ -163,6 +163,8 @@ const overrideForm = reactive<{
 })
 
 const alternatingWeekConfig = computed(() => weekContextStore.weekContext.alternatingWeekConfig)
+const editedTemplateMode = ref<WeekMode>(alternatingWeekConfig.value.referenceWeekMode)
+const editedTemplate = computed(() => weekContextStore.weekContext.templates[editedTemplateMode.value])
 
 const sortedWeekModeOverrides = computed(() =>
   [...weekContextStore.weekContext.weekModeOverrides].sort((left, right) =>
@@ -328,11 +330,11 @@ function updateFrequency(rule: FrequencyRule, value: number | null): void {
 }
 
 function updateWorkLocation(weekday: Weekday, value: WorkLocation): void {
-  weekContextStore.updateWorkLocation(weekday, value)
+  weekContextStore.updateWorkLocation(editedTemplateMode.value, weekday, value)
 }
 
 function updateBikeCommute(weekday: Weekday, value: boolean): void {
-  weekContextStore.updateBikeCommute(weekday, value)
+  weekContextStore.updateBikeCommute(editedTemplateMode.value, weekday, value)
 }
 </script>
 
@@ -432,9 +434,23 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
       <div class="section-heading">
         <div>
           <p class="eyebrow">Contexte semaine</p>
-          <h2 id="weekly-context-title">Organisation réelle</h2>
+          <h2 id="weekly-context-title">Semaines types</h2>
         </div>
       </div>
+
+      <p>
+        Définissez les jours de travail et les trajets de chaque modèle. La génération applique
+        automatiquement le modèle avec ou sans enfants selon l'alternance et les exceptions ci-dessus.
+      </p>
+      <label class="form-field template-choice">
+        <span>Modèle à configurer</span>
+        <Select
+          v-model="editedTemplateMode"
+          :options="weekModeOptions"
+          option-label="label"
+          option-value="value"
+        />
+      </label>
 
       <div class="context-grid" aria-label="Organisation des journées">
         <article v-for="weekday in weekdays" :key="weekday" class="context-row">
@@ -442,7 +458,7 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
 
           <div class="context-controls">
             <Select
-              :model-value="weekContextStore.weekContext.days[weekday].workLocation"
+              :model-value="editedTemplate[weekday].workLocation"
               :options="workLocationOptions"
               option-label="label"
               option-value="value"
@@ -451,19 +467,19 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
             />
 
             <Select
-              :model-value="weekContextStore.weekContext.days[weekday].bikeCommute"
+              :model-value="editedTemplate[weekday].bikeCommute"
               :options="bikeCommuteOptions"
               option-label="label"
               option-value="value"
-              :disabled="weekContextStore.weekContext.days[weekday].workLocation !== 'office'"
+              :disabled="editedTemplate[weekday].workLocation !== 'office'"
               :aria-label="`Trajet vélo ${weekdayLabels[weekday]}`"
               @update:model-value="updateBikeCommute(weekday, $event)"
             />
           </div>
 
           <small>
-            {{ workLocationLabels[weekContextStore.weekContext.days[weekday].workLocation] }}
-            <template v-if="weekContextStore.weekContext.days[weekday].bikeCommute">
+            {{ workLocationLabels[editedTemplate[weekday].workLocation] }}
+            <template v-if="editedTemplate[weekday].bikeCommute">
               · Vélo
             </template>
           </small>
@@ -758,6 +774,10 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
   display: grid;
   grid-template-columns: minmax(9rem, 1fr) minmax(8rem, 0.8fr);
   gap: 0.5rem;
+}
+
+.template-choice {
+  max-width: 20rem;
 }
 
 .rule-actions {
