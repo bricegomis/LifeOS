@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { usePlanningRulesStore } from '@/stores/planningRules'
-import { useWeekContextStore } from '@/stores/weekContext'
+import { cloneDayContexts, useWeekContextStore } from '@/stores/weekContext'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
 import {
   initializeSupabaseAuth,
@@ -44,9 +44,14 @@ async function bootstrapRemoteState(userId: string): Promise<void> {
 
   if (remoteUserSettings) {
     weekContextStore.weekContext.days = remoteUserSettings.weekContextDays
+    weekContextStore.weekContext.templates = remoteUserSettings.weekContextTemplates ?? {
+      kids: cloneDayContexts(remoteUserSettings.weekContextDays),
+      solo: cloneDayContexts(remoteUserSettings.weekContextDays),
+    }
   } else {
     await saveUserSettings(userId, {
       weekContextDays: weekContextStore.weekContext.days,
+      weekContextTemplates: weekContextStore.weekContext.templates,
     })
   }
 

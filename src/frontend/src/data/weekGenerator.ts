@@ -17,7 +17,7 @@ import type {
   WeekMode,
   WorkLocation,
 } from '@/types'
-import { getWeekMode } from '@/stores/weekContext'
+import { cloneDayContexts, getWeekMode } from '@/stores/weekContext'
 
 interface MealLibrary {
   mealComponents: MealComponent[]
@@ -72,19 +72,25 @@ export function createGeneratedWeekPlan({
     weekContext.alternatingWeekConfig,
     weekContext.weekModeOverrides,
   )
-  const state = createGeneratorState(library, weekContext, weekMode)
+  const appliedContext: WeekContext = {
+    ...weekContext,
+    days: weekContext.templates[weekMode],
+  }
+  const state = createGeneratorState(library, appliedContext, weekMode)
   const days = createEmptyWeek(startDate)
   const fixedSlots = new Set<string>()
 
   applyFixedRules(days, planningRules, state, fixedSlots)
   applyFrequencyRules(days, frequencyRules, state, fixedSlots)
   completeMeals(days, state, frequencyRules)
-  generateActivities(days, state.activities, weekContext, weekMode)
+  generateActivities(days, state.activities, appliedContext, weekMode)
 
   return {
     id: `week-${startDate}`,
     startDate,
     status: 'Generated',
+    weekMode,
+    dayContexts: cloneDayContexts(appliedContext.days),
     days: days.map((day) => ({
       ...day,
       breakfast: requireSlot(day.breakfast, day.id, 'breakfast'),

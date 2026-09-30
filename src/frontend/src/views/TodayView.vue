@@ -3,9 +3,9 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
 import {
-  contextForDayIndex,
   getWeekMode,
   useWeekContextStore,
+  weekdays,
   weekModeLabels,
   workLocationLabels,
 } from '@/stores/weekContext'
@@ -24,7 +24,7 @@ const todayDayIndex = computed(() => resolvedToday.value?.dayIndex ?? -1)
 const isMobile = ref(false)
 const selectedMealType = ref<MealType | null>(null)
 const resolvedWeekMode = computed(() =>
-  getWeekMode(
+  weekPlan.value.weekMode ?? getWeekMode(
     weekPlan.value.startDate,
     weekContext.value.alternatingWeekConfig,
     weekContext.value.weekModeOverrides,
@@ -99,7 +99,11 @@ const todayContextLabel = computed(() => {
     return ''
   }
 
-  const context = contextForDayIndex(weekContext.value, todayDayIndex.value)
+  const context = weekPlan.value.dayContexts
+    ? weekPlan.value.dayContexts[weekdays[todayDayIndex.value] ?? 'monday']
+    : (weekPlan.value.weekMode
+        ? weekContext.value.templates[resolvedWeekMode.value]
+        : weekContext.value.days)[weekdays[todayDayIndex.value] ?? 'monday']
   const labels = [workLocationLabels[context.workLocation], weekModeLabels[resolvedWeekMode.value]]
 
   if (context.bikeCommute) {
