@@ -3,7 +3,7 @@
     <div>
       <p class="eyebrow">Planification</p>
       <h1 id="planning-title">Semaine à relire</h1>
-      <p>Préparez la semaine avec le contexte de travail, les repas et les activités, puis comparez des scénarios avant de les appliquer.</p>
+      <p>Préparez la semaine avec le contexte de travail, les repas et les activités, puis calculez le menu équilibré avant de le retenir.</p>
     </div>
     <form class="planning-inline-form" (ngSubmit)="createWeek()" aria-label="Créer une semaine">
       <label class="planning-field">
@@ -72,73 +72,92 @@
         <div><span>Jours au bureau</span><strong>{{ summary().officeDays }}</strong></div>
         <div><span>Trajets vélo</span><strong>{{ summary().bikeDays }}</strong></div>
         <div>
-          <span>Scénario appliqué</span>
-          <strong>{{ summary().appliedScenario ? label(scenarioObjectives, summary().appliedScenario!.objective) : 'Aucun' }}</strong>
+          <span>Menu retenu</span>
+          <strong>{{ summary().retainedPlan ? percent(summary().retainedPlan!.overallScore) : 'Aucun' }}</strong>
         </div>
       </div>
     </section>
 
-    <section class="planning-section week-planner-surface" aria-labelledby="scenarios-heading">
+    <section class="planning-section week-planner-surface" aria-labelledby="balanced-plan-heading">
       <div class="planning-section-heading">
-        <h2 id="scenarios-heading">Scénarios</h2>
-        <p class="planner-note">Les scénarios sont des propositions : rien n’est appliqué sans votre validation.</p>
+        <h2 id="balanced-plan-heading">Menu équilibré</h2>
+        <p class="planner-note">
+          Un seul calcul, aucun scénario à choisir : l’équilibre nutritionnel est une contrainte, le budget, la diversité
+          sur le mois et l’anti-gaspillage sont optimisés ensemble. Rien n’est retenu sans votre validation.
+        </p>
       </div>
-      <form class="planning-inline-form" (ngSubmit)="generateScenarios(week)">
-        <fieldset class="planning-objectives">
-          <legend>Objectifs</legend>
-          @for (objective of scenarioObjectives; track objective.value) {
-            <label class="planning-check">
-              <input
-                type="checkbox"
-                [name]="'objective-' + objective.value"
-                [checked]="isObjectiveSelected(objective.value)"
-                (change)="toggleObjective(objective.value, $any($event.target).checked)"
-              />
-              {{ objective.label }}
-            </label>
-          }
-        </fieldset>
-        <button class="planning-button" type="submit" [disabled]="busy() !== null || !selectedObjectives().length">
-          {{ busy() === 'generate' ? 'Génération…' : 'Générer des scénarios' }}
+      <form class="planning-inline-form" (ngSubmit)="computeBalancedPlan(week)">
+        <button class="planning-button" type="submit" [disabled]="busy() !== null">
+          {{ busy() === 'compute' ? 'Calcul…' : 'Calculer le menu équilibré' }}
         </button>
       </form>
-      @if (scenarioError()) {
-        <p class="planning-feedback is-error" role="alert">{{ scenarioError() }}</p>
+      @if (planError()) {
+        <p class="planning-feedback is-error" role="alert">{{ planError() }}</p>
       }
-      @if (scenariosLoading()) {
-        <p class="muted" role="status">Chargement des scénarios…</p>
-      } @else if (!scenarios().length) {
-        <p class="muted">Aucun scénario pour cette semaine.</p>
+      @if (plansLoading()) {
+        <p class="muted" role="status">Chargement du menu équilibré…</p>
+      } @else if (!plans().length) {
+        <p class="muted">Aucun calcul pour cette semaine.</p>
       } @else {
-        <ul class="scenario-list">
-          @for (scenario of scenarios(); track scenario.id) {
-            <li class="scenario-card" [class.is-applied]="scenario.applied">
-              <h3>{{ label(scenarioObjectives, scenario.objective) }}</h3>
-              <p class="muted">Généré le {{ formatDate(scenario.createdAt, { day: 'numeric', month: 'short' }) }}</p>
-              @if (scenario.text) {
-                <p>{{ scenario.text }}</p>
+        <ul class="plan-list">
+          @for (plan of plans(); track plan.id) {
+            <li class="plan-card" [class.is-applied]="plan.applied">
+              <div class="plan-card-header">
+                <h3>Score global : {{ percent(plan.overallScore) }}</h3>
+                <span class="plan-flag" [class.is-warning]="!plan.nutritionConstraintMet">
+                  {{ plan.nutritionConstraintMet ? 'Contrainte nutritionnelle respectée' : 'Contrainte nutritionnelle non atteinte' }}
+                </span>
+              </div>
+              <p class="muted">Calculé le {{ formatDate(plan.createdAt, { day: 'numeric', month: 'short' }) }}</p>
+              @if (plan.text) {
+                <p>{{ plan.text }}</p>
               }
-              @if (scenario.parseError) {
+              @if (plan.parseError) {
                 <p class="muted">Explication non structurée renvoyée par l’API.</p>
               }
-              <div class="scenario-metrics">
-                @if (scenario.nutritionDeltaKcal !== null) {
-                  <span>Δ énergie : {{ scenario.nutritionDeltaKcal }} kcal</span>
-                }
-                @if (scenario.budgetDeltaEur !== null) {
-                  <span>Δ budget : {{ scenario.budgetDeltaEur }} €</span>
-                }
-              </div>
-              @if (scenario.applied) {
-                <strong>Appliqué</strong>
+              @if (plan.dimensions.length) {
+                <ul class="plan-dimensions">
+                  @for (dimension of plan.dimensions; track dimension.key) {
+                    <li>
+                      <div class="plan-dimension-title">
+                        <strong>{{ dimensionLabel(dimension.key) }}</strong>
+                        <span>{{ percent(dimension.score) }} · poids {{ percent(dimension.weight) }}</span>
+                      </div>
+                      <p class="muted">{{ dimension.summary }}</p>
+                    </li>
+                  }
+                </ul>
+              }
+              @if (plan.tradeoffs.length) {
+                <div class="plan-notes">
+                  <h4>Arbitrages</h4>
+                  <ul>
+                    @for (tradeoff of plan.tradeoffs; track tradeoff) {
+                      <li>{{ tradeoff }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+              @if (plan.limitations.length) {
+                <div class="plan-notes is-limits">
+                  <h4>Limites du calcul</h4>
+                  <ul>
+                    @for (limitation of plan.limitations; track limitation) {
+                      <li>{{ limitation }}</li>
+                    }
+                  </ul>
+                </div>
+              }
+              @if (plan.applied) {
+                <strong>Menu retenu</strong>
               } @else {
                 <button
                   class="planning-button is-secondary"
                   type="button"
-                  (click)="applyScenario(week, scenario)"
+                  (click)="retainPlan(week, plan)"
                   [disabled]="busy() !== null"
                 >
-                  {{ busy() === 'apply-' + scenario.id ? 'Application…' : 'Appliquer ce scénario' }}
+                  {{ busy() === 'apply-' + plan.id ? 'Validation…' : 'Retenir ce menu' }}
                 </button>
               }
             </li>

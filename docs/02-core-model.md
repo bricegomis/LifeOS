@@ -52,7 +52,7 @@ estimation de dépense paramétrable. Les calculs de nutrition utilisent les
 macros et la cible alimentaire définie par l'utilisateur ; ils exposent leurs
 hypothèses plutôt que de se présenter comme un avis médical.
 
-## Stock, courses et scénarios
+## Stock, courses et menu équilibré
 
 Un **stock** est une quantité manuelle d'article dans une unité compatible. Les
 conversions ne sont admises que lorsqu'elles sont sûres.
@@ -60,6 +60,9 @@ conversions ne sont admises que lorsqu'elles sont sûres.
 Une **liste de courses** consolide les besoins du menu et soustrait le stock
 déclaré. Elle est consultable et cochable sur mobile.
 
-Un **scénario** est une proposition de semaine classée selon un objectif
-explicite. Il explique ses compromis et demeure un brouillon jusqu'à ce que
-l'utilisateur le modifie ou l'applique.
+Un **menu équilibré** est l'unique proposition de semaine calculée. Il n'y a
+pas d'objectif à choisir : l'équilibre nutritionnel est traité comme une
+contrainte, tandis que le budget, la diversité sur le mois et la réduction du
+gaspillage sont optimisés conjointement. Il explique ses compromis et ses
+limites, et demeure un brouillon jusqu'à ce que l'utilisateur le modifie ou le
+retienne.

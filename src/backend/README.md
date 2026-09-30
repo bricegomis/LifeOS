@@ -22,14 +22,15 @@ scoped to the authenticated user (resolved from the JWT `sub` claim).
 | Composed meals | `GET/POST /api/composed-meals`, `PUT/DELETE /api/composed-meals/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Food items | `GET/POST /api/food-items`, `PUT/DELETE /api/food-items/{id}`, `POST /api/food-items/{id}/correction`, Open Food Facts search | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core), with an Open Food Facts HTTP integration for lookups/caching. |
 | Nutrition | `GET/POST /api/nutrition/configuration`, `GET/POST/PUT/DELETE /api/activity-sessions/*`, `GET /api/nutrition/calculations/day/{dayPlanId}` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
-| Week planning | `GET/POST/DELETE /api/weeks/*`, `/api/day-plans/*`, `/api/planned-meals/*`, `/api/week-scenarios/*` | Full week/day-plan/planned-meal CRUD plus deterministic scenario generation, scoped to the caller's household. PostgreSQL-backed (EF Core). |
+| Week planning | `GET/POST/DELETE /api/weeks/*`, `/api/day-plans/*`, `/api/planned-meals/*`, `/api/weeks/{id}/balanced-plan/*` | Full week/day-plan/planned-meal CRUD plus the single balanced-plan computation, scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Stock & shopping list | `GET/POST/PUT/DELETE /api/stock-items/*`, `/api/shopping-list/*` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
 
 Only the shared meal library (`MealComponent`, `CompositeDish`, `Activity`) still lives in
 in-memory repositories; every household-scoped bounded context above is persisted in
-PostgreSQL via EF Core. The backend also exposes its own deterministic week-scenario
-generation (`/api/week-scenarios`, `DeterministicScenarioEngine`) on top of the persisted
-week/day-plan/planned-meal model; the frontend's own `src/frontend/src/data/weekGenerator.ts`
+PostgreSQL via EF Core. The backend also exposes its own balanced week-plan
+computation (`/api/weeks/{weekId}/balanced-plan`, `BalancedPlanEngine`) on top of the persisted
+week/day-plan/planned-meal model: a single deterministic computation that scores nutrition,
+cost, monthly diversity and waste at once, with no objective chosen by the user; the frontend's own `src/frontend/src/data/weekGenerator.ts`
 is a separate, still-local implementation and the two are not yet unified.
 
 ## Layers

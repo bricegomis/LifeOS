@@ -9,13 +9,14 @@ import type {
   ComposedMealDto,
   DailyNutritionTargetDto,
   DayPlanDto,
-  GeneratedScenarioDto,
+  BalancedPlanDimension,
+  BalancedPlanDto,
+  BalancedPlanExplanation,
+  ComputedBalancedPlanDto,
   PlannedMealDto,
   PlannedMealPartDto,
   RecipeDto,
-  ScenarioExplanation,
   WeekDto,
-  WeekScenarioDto,
 } from '@/app/core/api/api.models'
 
 interface Option {
@@ -44,14 +45,16 @@ interface DayDetails {
   nutritionError: string
 }
 
-interface ScenarioView {
+interface BalancedPlanView {
   id: string
-  objective: string
   applied: boolean
   createdAt: string
+  overallScore: number | null
+  nutritionConstraintMet: boolean
+  dimensions: BalancedPlanDimension[]
+  tradeoffs: string[]
+  limitations: string[]
   text: string
-  nutritionDeltaKcal: number | null
-  budgetDeltaEur: number | null
   parseError: boolean
 }
 
@@ -86,10 +89,15 @@ export const MEAL_STATUSES: Option[] = [
   { value: 'skipped', label: 'Sauté' },
 ]
 
-export const SCENARIO_OBJECTIVES: Option[] = [
-  { value: 'nutritional_balance', label: 'Équilibre nutritionnel' },
-  { value: 'economy', label: 'Économie' },
-  { value: 'reduce_waste', label: 'Réduction du gaspillage' },
+/**
+ * The four dimensions the engine always balances at once. They are shown to explain the
+ * result, never to be chosen: the user no longer picks a strategy.
+ */
+export const BALANCED_DIMENSIONS: Option[] = [
+  { value: 'nutrition', label: 'Équilibre nutritionnel' },
+  { value: 'cost', label: 'Budget' },
+  { value: 'diversity', label: 'Diversité sur le mois' },
+  { value: 'waste', label: 'Anti-gaspillage' },
 ]
 
 export const ACTIVITY_INTENSITIES: Option[] = [
@@ -158,37 +166,36 @@ function httpErrorMessage(error: unknown): string {
   return apiErrorMessage(error)
 }
 
-function numberField(source: Record<string, unknown>, ...keys: string[]): number | null {
-  for (const key of keys) {
-    const value = source[key]
-    if (typeof value === 'number' && Number.isFinite(value)) return value
-  }
-  return null
+function isExplanation(value: unknown): value is BalancedPlanExplanation {
+  return typeof value === 'object' && value !== null && 'dimensions' in value
 }
 
-function toScenarioView(scenario: WeekScenarioDto | GeneratedScenarioDto): ScenarioView {
-  let explanation: ScenarioExplanation | null = null
+function toPlanView(plan: BalancedPlanDto | ComputedBalancedPlanDto): BalancedPlanView {
+  let explanation: BalancedPlanExplanation | null = null
   let parseError = false
-  if (typeof scenario.explanation === 'string') {
+
+  if (typeof plan.explanation === 'string') {
     try {
-      const parsed: unknown = JSON.parse(scenario.explanation)
-      if (parsed && typeof parsed === 'object') explanation = parsed as ScenarioExplanation
+      const parsed: unknown = JSON.parse(plan.explanation)
+      if (isExplanation(parsed)) explanation = parsed
       else parseError = true
     } catch {
       parseError = true
     }
   } else {
-    explanation = scenario.explanation
+    explanation = plan.explanation
   }
-  const text = explanation?.['textExplanation'] ?? explanation?.['TextExplanation']
+
   return {
-    id: scenario.id,
-    objective: scenario.rankingObjective,
-    applied: scenario.applied,
-    createdAt: scenario.createdAt,
-    text: typeof text === 'string' ? text : parseError && typeof scenario.explanation === 'string' ? scenario.explanation : '',
-    nutritionDeltaKcal: explanation ? numberField(explanation, 'nutritionDeltaKcal', 'NutritionDeltaKcal') : null,
-    budgetDeltaEur: explanation ? numberField(explanation, 'budgetDeltaEur', 'BudgetDeltaEur') : null,
+    id: plan.id,
+    applied: plan.applied,
+    createdAt: plan.createdAt,
+    overallScore: explanation?.overallScore ?? null,
+    nutritionConstraintMet: explanation?.nutritionConstraintMet ?? false,
+    dimensions: explanation?.dimensions ?? [],
+    tradeoffs: explanation?.tradeoffs ?? [],
+    limitations: explanation?.limitations ?? [],
+    text: explanation?.textExplanation ?? '',
     parseError,
   }
 }
@@ -220,13 +227,21 @@ function emptyActivityDraft(): ActivityDraft {
     .planning-button.is-danger { border-color: #b4452c; background: transparent; color: #8a2f1c; }
     .planning-button:disabled { cursor: not-allowed; opacity: 0.6; }
     .planning-button.is-small { min-height: 2rem; padding: 0.3rem 0.6rem; font-size: 0.82rem; }
-    .scenario-list, .day-list, .meal-list, .session-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-    .scenario-list { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-    .scenario-card, .day-card { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--lifeos-line); border-radius: 18px; background: var(--lifeos-surface); }
-    .scenario-card.is-applied { border-color: var(--lifeos-accent); background: var(--lifeos-accent-soft); }
-    .scenario-card h3, .day-card h3 { margin: 0; font-size: 1rem; }
-    .scenario-card p { margin: 0; color: var(--lifeos-text-soft); line-height: 1.45; }
-    .scenario-metrics { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.85rem; font-weight: 700; }
+    .plan-list, .day-list, .meal-list, .session-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .plan-list { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+    .plan-card, .day-card { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--lifeos-line); border-radius: 18px; background: var(--lifeos-surface); }
+    .plan-card.is-applied { border-color: var(--lifeos-accent); background: var(--lifeos-accent-soft); }
+    .plan-card h3, .day-card h3 { margin: 0; font-size: 1rem; }
+    .plan-card p { margin: 0; color: var(--lifeos-text-soft); line-height: 1.45; }
+    .plan-card-header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+    .plan-flag { font-size: 0.8rem; font-weight: 750; color: var(--lifeos-accent-strong); }
+    .plan-flag.is-warning { color: #8a2f1c; }
+    .plan-dimensions { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+    .plan-dimension-title { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 0.88rem; }
+    .plan-notes { display: grid; gap: 4px; font-size: 0.85rem; }
+    .plan-notes h4 { margin: 0; font-size: 0.85rem; }
+    .plan-notes ul { margin: 0; padding-left: 18px; color: var(--lifeos-text-soft); line-height: 1.45; }
+    .plan-notes.is-limits ul { color: #8a2f1c; }
     .day-list { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
     .day-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
     .day-context-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
@@ -252,7 +267,7 @@ export class PlanningPageComponent implements OnInit {
   readonly workContexts = WORK_CONTEXTS
   readonly mealTypes = MEAL_TYPES
   readonly mealStatuses = MEAL_STATUSES
-  readonly scenarioObjectives = SCENARIO_OBJECTIVES
+  readonly balancedDimensions = BALANCED_DIMENSIONS
   readonly activityIntensities = ACTIVITY_INTENSITIES
   readonly activityTypes = ACTIVITY_TYPES
 
@@ -267,10 +282,9 @@ export class PlanningPageComponent implements OnInit {
   readonly composedMeals = signal<ComposedMealDto[]>([])
   readonly catalogueError = signal('')
 
-  readonly scenarios = signal<ScenarioView[]>([])
-  readonly scenariosLoading = signal(false)
-  readonly scenarioError = signal('')
-  readonly selectedObjectives = signal<string[]>(['nutritional_balance'])
+  readonly plans = signal<BalancedPlanView[]>([])
+  readonly plansLoading = signal(false)
+  readonly planError = signal('')
 
   readonly dayDetails = signal<Record<string, DayDetails>>({})
   readonly expandedDays = signal<string[]>([])
@@ -304,7 +318,7 @@ export class PlanningPageComponent implements OnInit {
       consumed: meals.filter((meal) => meal.status === 'consumed').length,
       officeDays: this.sortedDays().filter((day) => day.workContext === 'office').length,
       bikeDays: this.sortedDays().filter((day) => day.bikeCommute).length,
-      appliedScenario: this.scenarios().find((scenario) => scenario.applied) ?? null,
+      retainedPlan: this.plans().find((plan) => plan.applied) ?? null,
     }
   })
 
@@ -366,21 +380,11 @@ export class PlanningPageComponent implements OnInit {
     return this.expandedDays().includes(dayId)
   }
 
-  isObjectiveSelected(value: string): boolean {
-    return this.selectedObjectives().includes(value)
-  }
-
-  toggleObjective(value: string, checked: boolean): void {
-    this.selectedObjectives.update((current) =>
-      checked ? [...new Set([...current, value])] : current.filter((entry) => entry !== value),
-    )
-  }
-
   selectWeek(weekId: string | null): void {
     this.selectedWeekId.set(weekId)
     this.expandedDays.set([])
     this.dayDetails.set({})
-    this.loadScenarios()
+    this.loadPlans()
   }
 
   loadWeeks(preferredId?: string): void {
@@ -708,60 +712,67 @@ export class PlanningPageComponent implements OnInit {
     })
   }
 
-  loadScenarios(): void {
+  /** Percentage shown in the UI for a 0..1 score. */
+  percent(score: number | null): string {
+    return score === null ? '—' : `${Math.round(score * 100)} %`
+  }
+
+  dimensionLabel(key: string): string {
+    return labelFor(BALANCED_DIMENSIONS, key)
+  }
+
+  loadPlans(): void {
     const weekId = this.selectedWeekId()
-    this.scenarios.set([])
-    this.scenarioError.set('')
+    this.plans.set([])
+    this.planError.set('')
     if (!weekId) return
-    this.scenariosLoading.set(true)
-    this.api.get<WeekScenarioDto[]>(`/weeks/${weekId}/scenarios`).subscribe({
-      next: (scenarios) => {
+    this.plansLoading.set(true)
+    this.api.get<BalancedPlanDto[]>(`/weeks/${weekId}/balanced-plan`).subscribe({
+      next: (plans) => {
         if (this.selectedWeekId() !== weekId) return
-        this.scenarios.set(
-          scenarios.map(toScenarioView).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+        this.plans.set(plans.map(toPlanView).sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
+        this.plansLoading.set(false)
+      },
+      error: (error: unknown) => {
+        this.plansLoading.set(false)
+        this.planError.set(`Menu équilibré indisponible : ${httpErrorMessage(error)}`)
+      },
+    })
+  }
+
+  /** Runs the single balanced computation. There is no objective to pick. */
+  computeBalancedPlan(week: WeekDto): void {
+    this.busy.set('compute')
+    this.planError.set('')
+    this.api.post<ComputedBalancedPlanDto>(`/weeks/${week.id}/balanced-plan/compute`, {}).subscribe({
+      next: (computed) => {
+        this.busy.set(null)
+        this.message.set(
+          computed.explanation.overallScore === null
+            ? 'Calcul effectué, mais les données disponibles ne permettent pas encore de score global.'
+            : 'Menu équilibré calculé. Relisez les arbitrages avant de le retenir.',
         )
-        this.scenariosLoading.set(false)
+        this.loadPlans()
       },
       error: (error: unknown) => {
-        this.scenariosLoading.set(false)
-        this.scenarioError.set(`Scénarios indisponibles : ${httpErrorMessage(error)}`)
+        this.busy.set(null)
+        this.planError.set(`Calcul impossible : ${httpErrorMessage(error)}`)
       },
     })
   }
 
-  generateScenarios(week: WeekDto): void {
-    const objectives = this.selectedObjectives()
-    if (!objectives.length) {
-      this.scenarioError.set('Sélectionnez au moins un objectif pour générer des scénarios.')
-      return
-    }
-    this.busy.set('generate')
-    this.scenarioError.set('')
-    this.api.post<GeneratedScenarioDto[]>(`/weeks/${week.id}/scenarios/generate`, { objectives }).subscribe({
-      next: (generated) => {
-        this.busy.set(null)
-        this.message.set(`${generated.length} scénario(s) généré(s). Relisez-les avant d’en appliquer un.`)
-        this.loadScenarios()
-      },
-      error: (error: unknown) => {
-        this.busy.set(null)
-        this.scenarioError.set(`Génération impossible : ${httpErrorMessage(error)}`)
-      },
-    })
-  }
-
-  applyScenario(week: WeekDto, scenario: ScenarioView): void {
-    if (!confirm(`Appliquer le scénario « ${labelFor(SCENARIO_OBJECTIVES, scenario.objective)} » à cette semaine ?`)) return
-    this.busy.set(`apply-${scenario.id}`)
-    this.scenarioError.set('')
-    this.api.patch<void>(`/weeks/${week.id}/scenarios/${scenario.id}/apply`).subscribe({
+  retainPlan(week: WeekDto, plan: BalancedPlanView): void {
+    if (!confirm('Retenir ce menu équilibré pour la semaine ?')) return
+    this.busy.set(`apply-${plan.id}`)
+    this.planError.set('')
+    this.api.patch<void>(`/weeks/${week.id}/balanced-plan/${plan.id}/apply`).subscribe({
       next: () => {
-        this.loadScenarios()
-        this.refreshWeek(week.id, 'Scénario appliqué.')
+        this.loadPlans()
+        this.refreshWeek(week.id, 'Menu équilibré retenu.')
       },
       error: (error: unknown) => {
         this.busy.set(null)
-        this.scenarioError.set(`Application du scénario impossible : ${httpErrorMessage(error)}`)
+        this.planError.set(`Impossible de retenir ce menu : ${httpErrorMessage(error)}`)
       },
     })
   }
