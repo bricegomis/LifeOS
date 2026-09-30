@@ -39,6 +39,8 @@ jobs:
           context: ./src/backend
           push: true
           tags: ${{ env.API_IMAGE }}:latest
+          build-args: |
+            LIFEOS_BUILD_ID=${{ github.sha }}
           # Layer cache partagé entre les runs GitHub Actions
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
@@ -51,5 +53,7 @@ jobs:
           context: ./src/frontend-angular
           push: true
           tags: ${{ env.WEB_IMAGE }}:latest
+          build-args: |
+            LIFEOS_BUILD_ID=${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max

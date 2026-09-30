@@ -40,6 +40,12 @@ environment variables for local development and builds. The Supabase
 anonymous key is public client configuration; it must never be replaced with a
 service-role key. API calls fail visibly when the API URL is missing.
 
+The sidebar shows the UI and API build IDs above the signed-in user's email.
+GitHub Actions builds both Docker images from the same commit SHA; the UI reads
+the API's public `GET /api/version` diagnostic endpoint at startup. Local builds
+use `local`, and a missing API URL or failed request is shown as
+`non configurée` or `indisponible`.
+
 ## Validation
 
 ```sh
@@ -56,8 +62,8 @@ performs strict template and TypeScript checks.
 `Dockerfile` builds a Supabase-independent Angular image and serves
 `dist/browser` from nginx. The nginx entrypoint writes `config.js` at container
 startup from `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and
-`VITE_LIFEOS_API_URL`, so the same image can be deployed to different
-Supabase projects:
+`VITE_LIFEOS_API_URL`, plus the build ID baked into the image, so the same image
+can be deployed to different Supabase projects:
 
 ```sh
 docker build -t lifeos-web .

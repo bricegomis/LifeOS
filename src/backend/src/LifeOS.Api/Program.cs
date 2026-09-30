@@ -66,7 +66,9 @@ builder.Services.AddCors(options =>
     {
         var allowedOrigins = builder.Configuration
             .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>() ?? [];
+            .Get<string[]>()?
+            .Where(origin => !string.IsNullOrWhiteSpace(origin))
+            .ToArray() ?? [];
 
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
@@ -94,6 +96,16 @@ if (enableOpenApiUi)
     app.MapOpenApi();
     app.MapScalarApiReference(options => options.WithTitle("LifeOS API"));
 }
+
+app.MapGet("/api/version", (HttpContext context, IConfiguration configuration) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return Results.Ok(new
+    {
+        component = "api",
+        buildId = configuration["LifeOS:BuildId"] ?? "local",
+    });
+}).AllowAnonymous();
 
 app.UseExceptionHandler();
 app.UseHttpsRedirection();

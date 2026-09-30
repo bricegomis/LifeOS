@@ -18,6 +18,10 @@
       }
     </nav>
     <div class="app-sidebar-footer">
+      <div class="sidebar-build" role="group" aria-label="Versions déployées">
+        <small>UI <code [title]="buildId">{{ displayBuildId(buildId) }}</code></small>
+        <small>API <code [title]="apiBuildId()">{{ displayBuildId(apiBuildId()) }}</code></small>
+      </div>
       <small class="sidebar-user">{{ auth.user()?.email ?? 'Compte du foyer' }}</small>
       @if (signOutError()) { <small class="api-error" role="alert">{{ signOutError() }}</small> }
       <button class="p-button p-component p-button-secondary p-button-text p-button-sm" type="button" (click)="signOut()">

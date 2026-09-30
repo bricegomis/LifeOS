@@ -16,6 +16,7 @@ services:
       ConnectionStrings__Postgres: ${POSTGRES_CONNECTION_STRING}
       # Public frontend URL
       Cors__AllowedOrigins__0: ${FRONTEND_URL}
+      Cors__AllowedOrigins__1: ${GITHUB_PAGES_URL:-}
       # Enable OpenAPI/Scalar only when explicitly requested on the VPS.
       Api__EnableOpenApiUi: ${ENABLE_OPENAPI_UI:-false}
       # Keep false for the initial deployment
