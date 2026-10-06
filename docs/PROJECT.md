@@ -128,13 +128,24 @@ The repository layer (`lifeosRepository.ts`) syncs:
 - week mode overrides
 - week plans
 
-Authentication is implemented through magic-link email sign-in and an auth session stored in browser storage.
+The deployed Angular frontend uses Google OAuth through Supabase Auth as its
+primary sign-in method, with magic-link email sign-in as a fallback. The legacy
+Vue frontend retains email sign-in. Angular keeps the existing browser session
+storage key, automatic token renewal, Supabase JWTs and household isolation.
+Provider activation and real Google/private-Firefox verification are manual;
+see [Google OAuth setup and validation](google-oauth.md).
 
 Magic-link callback handling (Vue `services/supabase/magicLinkCallback.ts`, Angular `core/auth/magic-link-callback.ts`):
 - the default PKCE link (`?code=...#/login?...`) only works in the browser that requested it, because the code verifier lives in that browser's storage; otherwise the login page now explains why instead of silently asking for the email again
 - Supabase error redirects (e.g. `otp_expired`, often caused by an already-used or pre-fetched link) replace the hash route; the app restores `#/login` and shows the error
 - `token_hash` links are also accepted (verified client-side with `verifyOtp`), which works across browsers/devices. This requires changing the Supabase "Magic Link" email template (out of repo), e.g. `<a href="{{ .SiteURL }}/?token_hash={{ .TokenHash }}&type=email#/login">` (Site URL = deployed app URL)
 - Supabase dashboard (out of repo): the app URL must be the Site URL or be listed in Auth → URL Configuration → Redirect URLs (e.g. `https://<host>/**`), otherwise Supabase redirects to the Site URL instead
+
+Angular also handles Google callbacks using the same PKCE client: codes are
+captured and removed before routing, then explicitly exchanged once so callback
+errors cannot be hidden by SDK initialization. Only known internal routes are
+accepted as post-login destinations. Same-address verified identity linking is
+delegated to Supabase; LifeOS does not merge users or households by email.
 
 ## Backend API
 `src/backend` hosts a growing ASP.NET Core Web API (`LifeOS.Api`) for LifeOS, organized

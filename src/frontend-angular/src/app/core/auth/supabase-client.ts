@@ -9,20 +9,20 @@ import {
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
 // Captured before supabase-js and the router read the URL. Error / token_hash params are
-// removed right away so the hash router lands on a valid route; the PKCE `code` is left for
-// supabase-js, which exchanges it (and removes it) during its own initialization.
+// removed right away so the hash router lands on a valid route. AuthService explicitly
+// exchanges PKCE codes so SDK initialization cannot hide callback failures.
 export const initialMagicLinkCallback: MagicLinkCallback =
   typeof window === 'undefined' ? { kind: 'none' } : readMagicLinkCallback(window.location.href)
 
-if (typeof window !== 'undefined' && initialMagicLinkCallback.kind !== 'none' && initialMagicLinkCallback.kind !== 'pkce-code') {
-  window.history.replaceState(window.history.state, '', removeMagicLinkParams(window.location.href, { keepCode: true }))
+if (typeof window !== 'undefined' && initialMagicLinkCallback.kind !== 'none') {
+  window.history.replaceState(window.history.state, '', removeMagicLinkParams(window.location.href, { keepCode: false }))
 }
 
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: initialMagicLinkCallback.kind !== 'pkce-code',
         flowType: 'pkce',
         persistSession: true,
         storageKey: 'lifeos.supabase.auth',

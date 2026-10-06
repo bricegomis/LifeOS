@@ -5,7 +5,18 @@
       <h1>Préparez la semaine ensemble.</h1>
       <p>Connectez-vous pour organiser les repas, suivre les recettes et préparer les courses de votre foyer.</p>
     </div>
-    <form class="login-form" (ngSubmit)="sendLink()">
+    <button
+      class="p-button p-component"
+      type="button"
+      (click)="continueWithGoogle()"
+      [disabled]="googleSubmitting() || submitting() || !auth.ready() || !auth.configured"
+      [attr.aria-busy]="googleSubmitting()"
+    >
+      {{ googleSubmitting() ? 'Redirection vers Google…' : 'Continuer avec Google' }}
+    </button>
+    <p class="login-hint">Pour retrouver votre compte, utilisez la même adresse Google vérifiée que celle de votre connexion e-mail.</p>
+    <p class="login-divider">Ou recevoir un lien par e-mail</p>
+    <form class="login-form" (ngSubmit)="sendLink()" [attr.aria-busy]="submitting()">
       <label class="login-field">
         <span>Adresse e-mail</span>
         <input
@@ -17,15 +28,16 @@
           required
         />
       </label>
-      <button class="p-button p-component" type="submit" [disabled]="submitting() || !auth.configured">
+      <button class="p-button p-component login-secondary" type="submit" [disabled]="submitting() || googleSubmitting() || !auth.ready() || !auth.configured">
         {{ submitting() ? 'Envoi en cours…' : 'Recevoir un lien sécurisé' }}
       </button>
       @if (!auth.configured) {
-        <p class="login-hint" role="status">Configurez Supabase pour activer la connexion par lien magique.</p>
+        <p class="login-hint" role="status">La connexion est indisponible : la configuration Supabase de LifeOS est manquante.</p>
       } @else {
-        <p class="login-hint">Aucun mot de passe : un lien de connexion vous est envoyé par e-mail.</p>
+        <p class="login-hint">Aucun mot de passe. Ouvrez le lien dans le navigateur utilisé pour le demander, sans fermer la fenêtre privée.</p>
       }
-      @if (message()) { <p class="login-feedback" role="status">{{ message() }}</p> }
+      @if (auth.initializing()) { <p class="login-hint" role="status">Vérification de la connexion…</p> }
+      @if (message()) { <p class="login-feedback" [attr.role]="failed() ? 'alert' : 'status'">{{ message() }}</p> }
       @if (auth.error()) { <p class="login-feedback" role="alert">{{ auth.error() }}</p> }
     </form>
   </section>

@@ -30,8 +30,10 @@ Set:
 The backend must allow the Angular app's origin in `Cors:AllowedOrigins`.
 Supabase is used for authentication only; household data is read from and
 written to the LifeOS API using the Supabase access token.
-Add each deployed host to the Supabase Auth redirect URL allow-list for magic-link
-callbacks.
+Google OAuth is the primary sign-in method; email magic links remain available.
+Follow [the Google/Supabase setup guide](../../docs/google-oauth.md) for provider
+activation, callback/redirect allow-lists, existing-account linking limitations,
+and the final private-Firefox check. No Google secret belongs in frontend config.
 Open Food Facts search currently persists or caches matches through the backend,
 so searching is a write-capable action rather than a side-effect-free preview.
 
@@ -50,12 +52,15 @@ use `local`, and a missing API URL or failed request is shown as
 
 ```sh
 npm run type-check
+npm test
 npm run lint
 npm run build
 ```
 
-There is no dedicated automated test suite yet. The Angular production build
-performs strict template and TypeScript checks.
+Auth flow and callback tests use Node's built-in test runner, including a real
+Supabase SDK PKCE exchange with a simulated transport. The Angular production
+build performs strict template and TypeScript checks. Real Google sign-in needs
+manual provider setup and is not covered by these tests.
 
 ## Docker image
 

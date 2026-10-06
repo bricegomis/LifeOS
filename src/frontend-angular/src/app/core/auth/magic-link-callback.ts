@@ -4,7 +4,7 @@ export type MagicLinkOtpType = 'magiclink' | 'email' | 'signup' | 'invite'
 
 export type MagicLinkCallback =
   | { kind: 'none' }
-  | { kind: 'pkce-code' }
+  | { kind: 'pkce-code'; code: string }
   | { kind: 'token-hash'; tokenHash: string; otpType: MagicLinkOtpType }
   | { kind: 'error'; errorCode: string | null; description: string | null }
 
@@ -48,8 +48,9 @@ export function readMagicLinkCallback(href: string): MagicLinkCallback {
     return { kind: 'token-hash', tokenHash, otpType }
   }
 
-  if (url.searchParams.get('code')) {
-    return { kind: 'pkce-code' }
+  const code = url.searchParams.get('code')
+  if (code) {
+    return { kind: 'pkce-code', code }
   }
 
   return { kind: 'none' }
@@ -94,5 +95,8 @@ export function removeMagicLinkParams(href: string, options: { keepCode: boolean
     }
   }
 
+  if (removeCode && !url.hash && new URL(href).searchParams.has('code')) {
+    url.hash = '/login'
+  }
   return url.toString()
 }

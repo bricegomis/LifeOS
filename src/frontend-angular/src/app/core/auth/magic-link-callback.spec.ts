@@ -11,7 +11,7 @@ describe('readMagicLinkCallback', () => {
   })
 
   it('detects the PKCE code Supabase appends to the query string', () => {
-    assert.deepEqual(readMagicLinkCallback(`${origin}/?code=abc#/login?redirect=%2F`), { kind: 'pkce-code' })
+    assert.deepEqual(readMagicLinkCallback(`${origin}/?code=abc#/login?redirect=%2F`), { kind: 'pkce-code', code: 'abc' })
   })
 
   it('detects Supabase error redirects that overwrote the hash route', () => {
@@ -71,5 +71,9 @@ describe('removeMagicLinkParams', () => {
     const href = `${origin}/#/planner?type=week`
 
     assert.equal(removeMagicLinkParams(href, { keepCode: false }), href)
+  })
+
+  it('routes bare PKCE callbacks to login and removes codes on failure as well as success', () => {
+    assert.equal(removeMagicLinkParams(`${origin}/LifeOS/?code=abc`, { keepCode: false }), `${origin}/LifeOS/#/login`)
   })
 })
