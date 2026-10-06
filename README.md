@@ -14,3 +14,4 @@ Ne plus avoir à réfléchir tous les jours à quoi manger / quoi faire / quoi a
 - [Architecture cible](docs/architecture/01-target-architecture.md)
 - [Modèle de données](docs/architecture/02-data-model.md)
 - [Décisions d'architecture (ADR)](docs/architecture/decisions/)
+- [Configuration Google OAuth / Supabase Auth](docs/google-oauth.md)

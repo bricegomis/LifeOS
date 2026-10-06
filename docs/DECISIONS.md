@@ -121,6 +121,23 @@ Consequences:
 - remote persistence is configured only when env vars are present
 - future cross-device sync can evolve without rewriting the base app architecture
 
+## 2026 — Google OAuth as primary Angular sign-in
+
+The deployed Angular frontend uses the official Supabase SDK to redirect to
+Google in the same tab, retaining email magic links as a fallback. This avoids
+opening an email callback in another browser, particularly in Firefox private
+windows, without replacing Supabase or changing the backend JWT provider.
+
+The existing PKCE client, storage key, automatic renewal and auth-state
+subscription remain. Angular explicitly exchanges callback codes and reports
+refusal/exchange errors; post-login destinations are limited to internal routes.
+Supabase owns verified same-email identity linking. No custom email-based user
+merge, household migration, Microsoft provider or business-data migration is
+introduced. Closing a private window still loses the PKCE verifier/session.
+
+Google Cloud and Supabase provider setup, redirect allow-lists and real-browser
+validation remain manual, documented in [the setup guide](google-oauth.md).
+
 ## 2026 — Grocery stores and articles as local, price-tracking building blocks
 Context:
 Meal planning benefits from knowing where groceries are bought and how their prices evolve, without turning the app into a full shopping or budgeting tool.
