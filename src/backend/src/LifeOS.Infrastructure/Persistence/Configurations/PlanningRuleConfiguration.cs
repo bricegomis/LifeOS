@@ -19,6 +19,7 @@ internal sealed class PlanningRuleConfiguration : IEntityTypeConfiguration<Plann
         builder.Property(rule => rule.HouseholdId).IsRequired();
         builder.Property(rule => rule.Weekday).HasConversion<string>().HasMaxLength(20).IsRequired();
         builder.Property(rule => rule.MealType).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(rule => rule.WeekMode).HasConversion<string>().HasMaxLength(20);
 
         builder.Property(rule => rule.Target)
             .HasConversion(

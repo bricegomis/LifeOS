@@ -29,9 +29,14 @@ public sealed class CreateFrequencyRuleCommand(IFrequencyRuleRepository frequenc
         Guid householdId,
         FrequencyRuleTargetDto target,
         int targetCountPerWeek,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? weekMode = null)
     {
-        var rule = FrequencyRule.Create(householdId, PlanningMapper.ParseFrequencyRuleTarget(target), targetCountPerWeek);
+        var rule = FrequencyRule.Create(
+            householdId,
+            PlanningMapper.ParseFrequencyRuleTarget(target),
+            targetCountPerWeek,
+            PlanningMapper.ParseWeekMode(weekMode));
 
         await _frequencyRuleRepository.AddAsync(rule, cancellationToken);
 
@@ -50,7 +55,8 @@ public sealed class UpdateFrequencyRuleCommand(IFrequencyRuleRepository frequenc
         Guid householdId,
         Guid ruleId,
         int targetCountPerWeek,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? weekMode = null)
     {
         var rule = await _frequencyRuleRepository.GetByIdAsync(householdId, ruleId, cancellationToken);
 
@@ -59,7 +65,9 @@ public sealed class UpdateFrequencyRuleCommand(IFrequencyRuleRepository frequenc
             return null;
         }
 
-        rule.UpdateTargetCount(targetCountPerWeek);
+        rule.UpdateTargetCount(
+            targetCountPerWeek,
+            weekMode is null ? rule.WeekMode : PlanningMapper.ParseWeekMode(weekMode));
 
         await _frequencyRuleRepository.UpdateAsync(rule, cancellationToken);
 

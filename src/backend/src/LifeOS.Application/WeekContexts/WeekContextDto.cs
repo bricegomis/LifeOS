@@ -25,4 +25,5 @@ public sealed record WeekModeOverrideDto(string WeekStartDate, string Mode);
 public sealed record WeekContextDto(
     AlternatingWeekConfigDto AlternatingWeekConfig,
     IReadOnlyList<WeekModeOverrideDto> WeekModeOverrides,
-    IReadOnlyDictionary<string, DayContextDto> Days);
+    IReadOnlyDictionary<string, DayContextDto> Days,
+    IReadOnlyDictionary<string, IReadOnlyDictionary<string, DayContextDto>>? Templates = null);

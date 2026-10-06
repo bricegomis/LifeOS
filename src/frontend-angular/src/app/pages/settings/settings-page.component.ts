@@ -15,6 +15,7 @@ import type {
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 
 type WeekMode = 'solo' | 'kids'
+type WeekModeScope = WeekMode | 'all'
 type WorkLocation = 'home' | 'office' | 'off'
 type TargetKind = 'component' | 'dish'
 type FrequencyKind = TargetKind | 'category'
@@ -23,6 +24,7 @@ type WeekContextPayload = {
   alternatingWeekConfig: { referenceWeekStartDate: string; referenceWeekMode: WeekMode }
   weekModeOverrides: { weekStartDate: string; mode: WeekMode }[]
   days: Record<string, DayContext>
+  templates: Record<WeekMode, Record<string, DayContext>>
 }
 type NutritionDraft = { [K in keyof UserConfigurationRequest]: number | null }
 type PlanningDraft = {
@@ -30,12 +32,14 @@ type PlanningDraft = {
   mealType: string
   kind: TargetKind
   targetId: string
+  weekMode: WeekModeScope
 }
 type FrequencyDraft = {
   kind: FrequencyKind
   targetId: string
   label: string
   count: number | null
+  weekMode: WeekModeScope
 }
 
 const weekdays = [
@@ -65,12 +69,14 @@ const emptyPlanning = (): PlanningDraft => ({
   mealType: '',
   kind: 'component',
   targetId: '',
+  weekMode: 'all',
 })
 const emptyFrequency = (): FrequencyDraft => ({
   kind: 'component',
   targetId: '',
   label: '',
   count: null,
+  weekMode: 'all',
 })
 
 function hasNutritionValues(draft: NutritionDraft): draft is UserConfigurationRequest {
@@ -306,8 +312,12 @@ export class SettingsPageComponent {
     { value: 'off', label: 'Repos' },
   ]
   readonly weekModes: { value: WeekMode; label: string }[] = [
-    { value: 'solo', label: 'Solo' },
-    { value: 'kids', label: 'Avec enfants' },
+    { value: 'kids', label: 'Avec enfant' },
+    { value: 'solo', label: 'Sans enfant' },
+  ]
+  readonly weekModeScopes: { value: WeekModeScope; label: string }[] = [
+    { value: 'all', label: 'Toutes les semaines' },
+    ...this.weekModes,
   ]
 
   readonly nutritionLoading = signal(true)
@@ -325,6 +335,7 @@ export class SettingsPageComponent {
   context: WeekContextPayload | null = null
   overrideDate = ''
   overrideMode: WeekMode = 'solo'
+  editedTemplateMode: WeekMode = 'solo'
 
   readonly catalogLoading = signal(true)
   readonly catalogError = signal('')
@@ -424,7 +435,12 @@ export class SettingsPageComponent {
     this.contextError.set('')
     try {
       const saved = await firstValueFrom(this.api.get<WeekContextPayload>('/week-context'))
-      this.context = structuredClone(saved)
+      const context = structuredClone(saved)
+      context.templates ??= {
+        kids: structuredClone(context.days),
+        solo: structuredClone(context.days),
+      }
+      this.context = context
     } catch (error) {
       this.contextError.set(
         `Impossible de charger le contexte de semaine : ${apiErrorMessage(error)}`,
@@ -482,7 +498,12 @@ export class SettingsPageComponent {
     this.contextNotice.set('')
     try {
       this.context = structuredClone(
-        await firstValueFrom(this.api.put<WeekContextPayload>('/week-context', draft)),
+        await firstValueFrom(
+          this.api.put<WeekContextPayload>('/week-context', {
+            ...draft,
+            days: draft.templates[draft.alternatingWeekConfig.referenceWeekMode],
+          }),
+        ),
       )
       this.contextNotice.set('Contexte de semaine enregistré.')
     } catch (error) {
@@ -530,7 +551,7 @@ export class SettingsPageComponent {
     const day = weekdays.find((item) => item.value === rule.weekday)?.label ?? rule.weekday
     const meal = meals.find((item) => item.value === rule.mealType)?.label ?? rule.mealType
     const id = rule.target.kind === 'dish' ? rule.target['dishId'] : rule.target['componentId']
-    return `${day} · ${meal} · ${this.targetName(rule.target.kind, id)}`
+    return `${day} · ${meal} · ${this.targetName(rule.target.kind, id)} · ${this.weekModeLabel(rule.weekMode)}`
   }
 
   frequencyLabel(rule: FrequencyRuleDto): string {
@@ -538,6 +559,12 @@ export class SettingsPageComponent {
     if (kind === 'category') return rule.target['label'] || rule.target['categoryId'] || 'Catégorie'
     const id = kind === 'dish' ? rule.target['dishId'] : rule.target['componentId']
     return this.targetName(kind, id)
+  }
+
+  weekModeLabel(mode: string | null | undefined): string {
+    if (mode === 'kids') return 'Avec enfant'
+    if (mode === 'solo') return 'Sans enfant'
+    return 'Toutes les semaines'
   }
 
   frequencyLabelForEdit(): string {
@@ -575,6 +602,7 @@ export class SettingsPageComponent {
       kind,
       targetId:
         kind === 'component' ? (rule.target['componentId'] ?? '') : (rule.target['dishId'] ?? ''),
+      weekMode: rule.weekMode ?? 'all',
     }
     this.editingPlanningId.set(rule.id)
     this.deletingPlanningId.set('')
@@ -625,6 +653,7 @@ export class SettingsPageComponent {
       weekday: draft.weekday,
       mealType: draft.mealType,
       target,
+      weekMode: draft.weekMode,
     }
     this.planningBusy.set(true)
     this.planningError.set('')
@@ -692,6 +721,7 @@ export class SettingsPageComponent {
         rule.target['componentId'] ?? rule.target['dishId'] ?? rule.target['categoryId'] ?? '',
       label: rule.target['label'] ?? '',
       count: rule.targetCountPerWeek,
+      weekMode: rule.weekMode ?? 'all',
     }
     this.deletingFrequencyId.set('')
     this.frequencyError.set('')
@@ -735,6 +765,7 @@ export class SettingsPageComponent {
         ? await firstValueFrom(
             this.api.put<FrequencyRuleDto>(`/frequency-rules/${id}`, {
               targetCountPerWeek: draft.count,
+              weekMode: draft.weekMode,
             }),
           )
         : await firstValueFrom(
@@ -750,6 +781,7 @@ export class SettingsPageComponent {
                         label: draft.label.trim(),
                       },
               targetCountPerWeek: draft.count,
+              weekMode: draft.weekMode,
             } satisfies FrequencyRuleRequest),
           )
       this.frequencyRules.update((items) =>

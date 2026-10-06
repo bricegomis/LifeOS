@@ -1,4 +1,5 @@
 using LifeOS.Domain.Common;
+using LifeOS.Domain.WeekContexts;
 
 namespace LifeOS.Domain.WeekPlanning;
 
@@ -11,6 +12,7 @@ public sealed class Week : Entity
     public Guid HouseholdId { get; private set; }
     public DateOnly StartsOn { get; private set; }
     public string Status { get; private set; } // draft, active, past
+    public WeekMode WeekMode { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -24,12 +26,14 @@ public sealed class Week : Entity
         DateOnly startsOn,
         string status,
         DateTimeOffset createdAt,
-        DateTimeOffset updatedAt)
+        DateTimeOffset updatedAt,
+        WeekMode weekMode)
         : base(id)
     {
         HouseholdId = householdId;
         StartsOn = startsOn;
         Status = status;
+        WeekMode = weekMode;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
     }
@@ -38,7 +42,8 @@ public sealed class Week : Entity
         Guid householdId,
         DateOnly startsOn,
         string status = "draft",
-        DateTimeOffset? now = null)
+        DateTimeOffset? now = null,
+        WeekMode weekMode = WeekMode.Solo)
     {
         if (householdId == Guid.Empty)
         {
@@ -58,7 +63,8 @@ public sealed class Week : Entity
             startsOn,
             status.ToLowerInvariant(),
             timestamp,
-            timestamp);
+            timestamp,
+            weekMode);
     }
 
     /// <summary>
@@ -84,8 +90,9 @@ public sealed class Week : Entity
         DateOnly startsOn,
         string status,
         DateTimeOffset createdAt,
-        DateTimeOffset updatedAt)
+        DateTimeOffset updatedAt,
+        WeekMode weekMode = WeekMode.Solo)
     {
-        return new Week(id, householdId, startsOn, status, createdAt, updatedAt);
+        return new Week(id, householdId, startsOn, status, createdAt, updatedAt, weekMode);
     }
 }

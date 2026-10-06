@@ -25,6 +25,7 @@ internal sealed class FrequencyRuleConfiguration : IEntityTypeConfiguration<Freq
             .IsRequired();
 
         builder.Property(rule => rule.TargetCountPerWeek).IsRequired();
+        builder.Property(rule => rule.WeekMode).HasConversion<string>().HasMaxLength(20);
 
         builder.HasOne<Household>()
             .WithMany()

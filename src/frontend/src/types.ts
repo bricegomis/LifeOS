@@ -12,6 +12,7 @@ export type Weekday =
   | 'sunday'
 
 export type WeekMode = 'kids' | 'solo'
+export type WeekModeScope = WeekMode | 'all'
 
 export type WorkLocation = 'home' | 'office' | 'off'
 
@@ -158,6 +159,7 @@ export interface PlanningRule {
   weekday: Weekday
   mealType: MealType
   target: PlanningRuleTarget
+  weekMode?: WeekMode
 }
 
 export type FrequencyRuleTarget =
@@ -179,4 +181,5 @@ export interface FrequencyRule {
   id: string
   target: FrequencyRuleTarget
   targetCountPerWeek: number
+  weekMode?: WeekMode
 }

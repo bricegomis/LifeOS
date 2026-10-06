@@ -109,7 +109,8 @@ public static class PlanningEndpoints
                 request.Weekday,
                 request.MealType,
                 request.Target,
-                cancellationToken);
+                cancellationToken,
+                request.WeekMode);
 
             return Results.Created($"/api/planning-rules/{rule.Id}", rule);
         }
@@ -142,7 +143,8 @@ public static class PlanningEndpoints
                 request.Weekday,
                 request.MealType,
                 request.Target,
-                cancellationToken);
+                cancellationToken,
+                request.WeekMode);
 
             return rule is null ? Results.NotFound() : Results.Ok(rule);
         }
@@ -206,7 +208,8 @@ public static class PlanningEndpoints
                 householdId,
                 request.Target,
                 request.TargetCountPerWeek,
-                cancellationToken);
+                cancellationToken,
+                request.WeekMode);
 
             return Results.Created($"/api/frequency-rules/{rule.Id}", rule);
         }
@@ -230,7 +233,12 @@ public static class PlanningEndpoints
         }
 
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
-        var rule = await updateFrequencyRuleCommand.ExecuteAsync(householdId, ruleId, request.TargetCountPerWeek, cancellationToken);
+        var rule = await updateFrequencyRuleCommand.ExecuteAsync(
+            householdId,
+            ruleId,
+            request.TargetCountPerWeek,
+            cancellationToken,
+            request.WeekMode);
 
         return rule is null ? Results.NotFound() : Results.Ok(rule);
     }

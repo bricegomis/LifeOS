@@ -11,6 +11,7 @@ import type {
   MealType,
   PlanningRule,
   PlanningRuleTarget,
+  WeekMode,
   Weekday,
 } from '@/types'
 
@@ -94,6 +95,10 @@ function isMealType(value: unknown): value is MealType {
   return value === 'breakfast' || value === 'lunch' || value === 'dinner'
 }
 
+function isWeekMode(value: unknown): value is WeekMode {
+  return value === 'kids' || value === 'solo'
+}
+
 function isPlanningRuleTarget(value: unknown): value is PlanningRuleTarget {
   if (!isRecord(value) || typeof value.kind !== 'string') {
     return false
@@ -150,6 +155,7 @@ function normalizePlanningRule(value: unknown): PlanningRule | null {
             componentId: value.target.componentId,
             componentType: value.target.componentType as ComponentType,
           },
+          ...(isWeekMode(value.weekMode) ? { weekMode: value.weekMode } : {}),
         }
       : null
   }
@@ -163,6 +169,7 @@ function normalizePlanningRule(value: unknown): PlanningRule | null {
           kind: 'dish',
           dishId: value.target.dishId,
         },
+        ...(isWeekMode(value.weekMode) ? { weekMode: value.weekMode } : {}),
       }
     : null
 }
@@ -193,6 +200,7 @@ function normalizeFrequencyRule(value: unknown): FrequencyRule | null {
       typeof value.targetCountPerWeek === 'number'
         ? normalizedFrequency(value.targetCountPerWeek)
         : 0,
+    ...(isWeekMode(value.weekMode) ? { weekMode: value.weekMode } : {}),
   }
 }
 
@@ -298,15 +306,35 @@ export const usePlanningRulesStore = defineStore('planningRules', () => {
     planningRules.value = planningRules.value.filter((rule) => rule.id !== id)
   }
 
-  function updateFrequencyRule(id: string, targetCountPerWeek: number): void {
+  function addFrequencyRule(rule: Omit<FrequencyRule, 'id'>): void {
+    frequencyRules.value = [
+      ...frequencyRules.value,
+      {
+        ...rule,
+        id: createRuleId('frequency-rule'),
+        target: { ...rule.target },
+      },
+    ]
+  }
+
+  function updateFrequencyRule(
+    id: string,
+    targetCountPerWeek: number,
+    weekMode?: WeekMode,
+  ): void {
     frequencyRules.value = frequencyRules.value.map((rule) =>
       rule.id === id
         ? {
             ...rule,
             targetCountPerWeek: normalizedFrequency(targetCountPerWeek),
+            weekMode,
           }
         : rule,
     )
+  }
+
+  function deleteFrequencyRule(id: string): void {
+    frequencyRules.value = frequencyRules.value.filter((rule) => rule.id !== id)
   }
 
   return {
@@ -315,6 +343,8 @@ export const usePlanningRulesStore = defineStore('planningRules', () => {
     addPlanningRule,
     updatePlanningRule,
     deletePlanningRule,
+    addFrequencyRule,
     updateFrequencyRule,
+    deleteFrequencyRule,
   }
 })

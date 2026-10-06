@@ -9,17 +9,20 @@ namespace LifeOS.Api.Contracts;
 public sealed record PlanningRuleRequest(
     [property: Required, StringLength(20)] string Weekday,
     [property: Required, StringLength(20)] string MealType,
-    [property: Required] PlanningRuleTargetDto Target);
+    [property: Required] PlanningRuleTargetDto Target,
+    [property: StringLength(20)] string? WeekMode = null);
 
 /// <summary>
 /// Request body for creating a frequency rule.
 /// </summary>
 public sealed record FrequencyRuleRequest(
     [property: Required] FrequencyRuleTargetDto Target,
-    [property: Range(0, int.MaxValue)] int TargetCountPerWeek);
+    [property: Range(0, int.MaxValue)] int TargetCountPerWeek,
+    [property: StringLength(20)] string? WeekMode = null);
 
 /// <summary>
 /// Request body for updating a frequency rule's weekly target count.
 /// </summary>
 public sealed record FrequencyRuleTargetCountRequest(
-    [property: Range(0, int.MaxValue)] int TargetCountPerWeek);
+    [property: Range(0, int.MaxValue)] int TargetCountPerWeek,
+    [property: StringLength(20)] string? WeekMode = null);

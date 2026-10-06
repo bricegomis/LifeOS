@@ -25,6 +25,7 @@ import type {
   PlanningRule,
   WeekContext,
   WeekPlan,
+  WeekMode,
 } from '@/types'
 
 interface StoredWeekPlan {
@@ -315,6 +316,7 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
     frequencyRules: FrequencyRule[],
     weekContext: WeekContext,
     startDate = weekPlan.value.startDate,
+    weekMode?: WeekMode,
   ): void {
     const generatedPlan = createGeneratedWeekPlan({
       library: {
@@ -326,6 +328,7 @@ export const useWeekPlannerStore = defineStore('weekPlanner', () => {
       frequencyRules,
       weekContext,
       startDate,
+      weekMode,
     })
 
     weekPlan.value = generatedPlan

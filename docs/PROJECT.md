@@ -51,9 +51,8 @@ The `ArticlesView` provides a CRUD interface for grocery articles (`GroceryItem`
 The `SettingsView` lets the user configure:
 - the reference week and alternation mode
 - per-week override exceptions
-- day-by-day work context and bike commute data
-- fixed meal rules (`PlanningRule`)
-- weekly frequency rules (`FrequencyRule`)
+- separate day-by-day work context and bike commute templates for weeks with and without a child
+- fixed meal rules (`PlanningRule`) and weekly frequency rules (`FrequencyRule`) that apply to all weeks or one type
 
 ### Rule-driven generation
 The generator in `src/frontend/src/data/weekGenerator.ts` builds a full `WeekPlan` from:
@@ -93,15 +92,17 @@ Key types in `src/types.ts`:
 
 ## Data flow and planning logic
 The planning engine follows a simple pattern:
-1. resolve the current week mode (`kids` vs `solo`) from the reference configuration and overrides
+1. resolve the current week mode (`kids` vs `solo`) from the reference configuration and overrides, unless the user chooses a one-week override in the planner
 2. create a 7-day empty week
-3. apply fixed rules
-4. apply frequency rules to fill remaining slots
+3. apply shared and matching type-specific fixed rules
+4. apply shared and matching type-specific frequency rules to fill remaining slots
 5. complete remaining meals from available library entries
 6. generate the activity plan for each day
 7. persist the resulting `WeekPlan`
 
-The `weekContext` store carries the user’s real-world context such as work location and alternating week mode. It influences how the week is interpreted and what the planner should prefer from the available meal and activity library.
+The `weekContext` store carries the alternating week mode, per-week overrides, and separate weekday context templates for both week types. Choosing a type for a generated week snapshots that type’s day contexts and scopes its meal rules without changing the household’s default alternation.
+
+Existing planning and frequency rules with no week type remain shared across both types. This preserves current plans and settings when upgrading; users can add new rules scoped to “Avec enfant” or “Sans enfant” for different meal patterns. For a fixed meal slot, a type-specific rule takes precedence over its shared rule. For a frequency target, a type-specific objective replaces the shared objective for that same target, while unrelated shared objectives continue to apply.
 
 ## Persistence model
 The app currently uses a dual persistence strategy:
@@ -158,8 +159,10 @@ context layering: read-only `GET /api/stores` (grocery stores); full CRUD
 `/api/composite-dishes`, `/api/activities` (the shared meal library, still in-memory);
 full CRUD `/api/planning-rules`, `/api/frequency-rules`, `/api/recipes`,
 `/api/composed-meals`, `/api/food-items`, `/api/stock-items`, and the shopping list;
-`GET`/`PUT /api/week-context` (per-household week planning context); and week
-planning (`/api/weeks`, `/api/day-plans`, `/api/planned-meals`,
+`GET`/`PUT /api/week-context` (per-household week planning context, including both day-context
+templates); and week
+planning (`/api/weeks` stores the selected or alternation-derived type and initializes its days
+from that type's template, `/api/day-plans`, `/api/planned-meals`,
 `/api/weeks/{weekId}/balanced-plan`) including the single balanced-plan computation on the
 API side. All of these are
 persisted in PostgreSQL, scoped by household — see `src/backend/README.md` for the

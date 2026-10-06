@@ -26,6 +26,7 @@ internal sealed class WeekContextConfiguration : IEntityTypeConfiguration<WeekCo
 
         builder.Ignore(context => context.WeekModeOverrides);
         builder.Ignore(context => context.Days);
+        builder.Ignore(context => context.Templates);
 
         var weekModeOverridesProperty = builder.Property<List<WeekModeOverride>>("_weekModeOverrides")
             .HasColumnName("week_mode_overrides")
@@ -42,6 +43,15 @@ internal sealed class WeekContextConfiguration : IEntityTypeConfiguration<WeekCo
                 value => WeekContextJson.DeserializeDays(value))
             .HasColumnType("jsonb");
         daysProperty.Metadata.SetValueComparer(WeekContextJson.DaysComparer);
+
+        var templatesProperty = builder.Property<Dictionary<WeekMode, Dictionary<Weekday, DayContext>>>("_templates")
+            .HasColumnName("templates")
+            .HasConversion(
+                value => WeekContextJson.SerializeTemplates(value),
+                value => WeekContextJson.DeserializeTemplates(value))
+            .HasColumnType("jsonb")
+            .IsRequired();
+        templatesProperty.Metadata.SetValueComparer(WeekContextJson.TemplatesComparer);
 
         builder.HasOne<Household>()
             .WithOne()
@@ -63,6 +73,10 @@ internal static class WeekContextJson
         (left, right) => DaysEqual(left, right),
         value => GetDaysHash(value),
         value => CloneDays(value));
+    public static readonly ValueComparer<Dictionary<WeekMode, Dictionary<Weekday, DayContext>>> TemplatesComparer = new(
+        (left, right) => TemplatesEqual(left, right),
+        value => GetTemplatesHash(value),
+        value => CloneTemplates(value));
 
     public static string SerializeAlternatingWeekConfig(AlternatingWeekConfig value)
     {
@@ -123,6 +137,27 @@ internal static class WeekContextJson
             pair => new DayContext(ParseWorkLocation(pair.Value.WorkLocation), pair.Value.BikeCommute));
     }
 
+    public static string SerializeTemplates(Dictionary<WeekMode, Dictionary<Weekday, DayContext>> templates)
+    {
+        var payload = templates.ToDictionary(
+            pair => pair.Key.ToString(),
+            pair => pair.Value.ToDictionary(
+                day => day.Key.ToString(),
+                day => new DayContextPayload(day.Value.WorkLocation.ToString(), day.Value.BikeCommute)));
+        return JsonSerializer.Serialize(payload, JsonOptions);
+    }
+
+    public static Dictionary<WeekMode, Dictionary<Weekday, DayContext>> DeserializeTemplates(string value)
+    {
+        var payload = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, DayContextPayload>>>(value, JsonOptions)
+            ?? throw new InvalidOperationException("Week context templates payload is invalid.");
+        return payload.ToDictionary(
+            pair => ParseWeekMode(pair.Key),
+            pair => pair.Value.ToDictionary(
+                day => ParseWeekday(day.Key),
+                day => new DayContext(ParseWorkLocation(day.Value.WorkLocation), day.Value.BikeCommute)));
+    }
+
     private static bool WeekModeOverridesEqual(List<WeekModeOverride>? left, List<WeekModeOverride>? right) =>
         SerializeWeekModeOverrides(left ?? Enumerable.Empty<WeekModeOverride>()) ==
         SerializeWeekModeOverrides(right ?? Enumerable.Empty<WeekModeOverride>());
@@ -142,6 +177,18 @@ internal static class WeekContextJson
 
     private static Dictionary<Weekday, DayContext> CloneDays(Dictionary<Weekday, DayContext>? value) =>
         DeserializeDays(SerializeDays(value ?? new Dictionary<Weekday, DayContext>()));
+
+    private static bool TemplatesEqual(
+        Dictionary<WeekMode, Dictionary<Weekday, DayContext>>? left,
+        Dictionary<WeekMode, Dictionary<Weekday, DayContext>>? right) =>
+        SerializeTemplates(left ?? []) == SerializeTemplates(right ?? []);
+
+    private static int GetTemplatesHash(Dictionary<WeekMode, Dictionary<Weekday, DayContext>>? value) =>
+        SerializeTemplates(value ?? []).GetHashCode();
+
+    private static Dictionary<WeekMode, Dictionary<Weekday, DayContext>> CloneTemplates(
+        Dictionary<WeekMode, Dictionary<Weekday, DayContext>>? value) =>
+        DeserializeTemplates(SerializeTemplates(value ?? []));
 
     private static Weekday ParseWeekday(string weekday) =>
         Enum.TryParse<Weekday>(weekday, ignoreCase: true, out var parsed)

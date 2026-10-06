@@ -30,13 +30,15 @@ public sealed class CreatePlanningRuleCommand(IPlanningRuleRepository planningRu
         string weekday,
         string mealType,
         PlanningRuleTargetDto target,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? weekMode = null)
     {
         var rule = PlanningRule.Create(
             householdId,
             PlanningMapper.ParseWeekday(weekday),
             PlanningMapper.ParseMealType(mealType),
-            PlanningMapper.ParsePlanningRuleTarget(target));
+            PlanningMapper.ParsePlanningRuleTarget(target),
+            PlanningMapper.ParseWeekMode(weekMode));
 
         await _planningRuleRepository.AddAsync(rule, cancellationToken);
 
@@ -57,7 +59,8 @@ public sealed class UpdatePlanningRuleCommand(IPlanningRuleRepository planningRu
         string weekday,
         string mealType,
         PlanningRuleTargetDto target,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? weekMode = null)
     {
         var rule = await _planningRuleRepository.GetByIdAsync(householdId, ruleId, cancellationToken);
 
@@ -69,7 +72,8 @@ public sealed class UpdatePlanningRuleCommand(IPlanningRuleRepository planningRu
         rule.Update(
             PlanningMapper.ParseWeekday(weekday),
             PlanningMapper.ParseMealType(mealType),
-            PlanningMapper.ParsePlanningRuleTarget(target));
+            PlanningMapper.ParsePlanningRuleTarget(target),
+            weekMode is null ? rule.WeekMode : PlanningMapper.ParseWeekMode(weekMode));
 
         await _planningRuleRepository.UpdateAsync(rule, cancellationToken);
 

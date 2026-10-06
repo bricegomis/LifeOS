@@ -5,6 +5,8 @@ using LifeOS.Api.Validation;
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Application.ComposedMeals;
 using LifeOS.Application.Households;
+using LifeOS.Domain.Common;
+using LifeOS.Domain.WeekContexts;
 using LifeOS.Application.Recipes;
 using LifeOS.Application.WeekPlanning;
 using LifeOS.Domain.WeekPlanning;
@@ -195,6 +197,7 @@ public static class WeekPlanningEndpoints
         ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IWeekRepository weekRepository,
         IDayPlanRepository dayPlanRepository,
+        IWeekContextRepository weekContextRepository,
         CancellationToken cancellationToken)
     {
         if (!user.TryGetUserId(out var supabaseUserId))
@@ -206,14 +209,24 @@ public static class WeekPlanningEndpoints
 
         try
         {
-            var week = Week.Create(householdId, request.StartsOn, request.Status);
+            var context = await weekContextRepository.GetForHouseholdAsync(householdId, cancellationToken);
+            var weekMode = request.WeekMode is null
+                ? ResolveWeekMode(request.StartsOn, context)
+                : ParseWeekMode(request.WeekMode);
+            var week = Week.Create(householdId, request.StartsOn, request.Status, weekMode: weekMode);
             await weekRepository.AddAsync(week, cancellationToken);
 
             // Create day plans for the week (7 days)
             for (int i = 0; i < 7; i++)
             {
                 var date = request.StartsOn.AddDays(i);
-                var dayPlan = DayPlan.Create(week.Id, date);
+                var weekday = WeekdayFromDate(date);
+                var dayContext = context.Templates[weekMode][weekday];
+                var dayPlan = DayPlan.Create(
+                    week.Id,
+                    date,
+                    dayContext.WorkLocation.ToString(),
+                    dayContext.BikeCommute);
                 await dayPlanRepository.AddAsync(dayPlan, cancellationToken);
             }
 
@@ -226,6 +239,33 @@ public static class WeekPlanningEndpoints
             return Results.Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest);
         }
     }
+
+    private static WeekMode ResolveWeekMode(DateOnly startsOn, LifeOS.Domain.WeekContexts.WeekContext context)
+    {
+        var overrideMode = context.WeekModeOverrides.FirstOrDefault(item => item.WeekStartDate == startsOn);
+        if (overrideMode is not null) return overrideMode.Mode;
+
+        var weekOffset = (startsOn.DayNumber - context.AlternatingWeekConfig.ReferenceWeekStartDate.DayNumber) / 7;
+        return Math.Abs(weekOffset % 2) == 0
+            ? context.AlternatingWeekConfig.ReferenceWeekMode
+            : context.AlternatingWeekConfig.ReferenceWeekMode == WeekMode.Kids ? WeekMode.Solo : WeekMode.Kids;
+    }
+
+    private static WeekMode ParseWeekMode(string value) =>
+        Enum.TryParse<WeekMode>(value, ignoreCase: true, out var mode)
+            ? mode
+            : throw new ArgumentException($"Unknown week mode '{value}'.", nameof(value));
+
+    private static Weekday WeekdayFromDate(DateOnly date) => date.DayOfWeek switch
+    {
+        DayOfWeek.Monday => Weekday.Monday,
+        DayOfWeek.Tuesday => Weekday.Tuesday,
+        DayOfWeek.Wednesday => Weekday.Wednesday,
+        DayOfWeek.Thursday => Weekday.Thursday,
+        DayOfWeek.Friday => Weekday.Friday,
+        DayOfWeek.Saturday => Weekday.Saturday,
+        _ => Weekday.Sunday,
+    };
 
     private static async Task<IResult> UpdateWeekStatusAsync(
         Guid weekId,
@@ -691,7 +731,8 @@ public static class WeekPlanningEndpoints
             week.Status,
             week.DayPlans.Select(ToDayPlanDto).ToList(),
             week.CreatedAt,
-            week.UpdatedAt);
+            week.UpdatedAt,
+            week.WeekMode.ToString().ToLowerInvariant());
     }
 
     private static DayPlanDto ToDayPlanDto(DayPlan dayPlan)

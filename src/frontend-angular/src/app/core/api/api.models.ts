@@ -138,6 +138,7 @@ export interface WeekDto {
   id: string
   startsOn: string
   status: string
+  weekMode: 'kids' | 'solo'
   dayPlans: DayPlanDto[]
   createdAt: string
   updatedAt: string
@@ -324,23 +325,27 @@ export interface PlanningRuleDto {
   weekday: string
   mealType: string
   target: PlanningRuleTarget
+  weekMode?: 'kids' | 'solo' | null
 }
 
 export interface PlanningRuleRequest {
   weekday: string
   mealType: string
   target: PlanningRuleTarget
+  weekMode?: 'kids' | 'solo' | 'all'
 }
 
 export interface FrequencyRuleDto {
   id: string
   target: Record<string, string>
   targetCountPerWeek: number
+  weekMode?: 'kids' | 'solo' | null
 }
 
 export interface FrequencyRuleRequest {
   target: Record<string, string>
   targetCountPerWeek: number
+  weekMode?: 'kids' | 'solo' | 'all'
 }
 
 export interface WeekContextDto {
@@ -350,5 +355,9 @@ export interface WeekContextDto {
   referenceWeekMode?: string
   weekModeOverrides?: Array<{ weekStartDate: string; mode: string }>
   days?: Record<string, { workLocation?: string; bikeCommute?: boolean }>
+  templates?: Record<
+    'kids' | 'solo',
+    Record<string, { workLocation?: string; bikeCommute?: boolean }>
+  >
   [key: string]: unknown
 }

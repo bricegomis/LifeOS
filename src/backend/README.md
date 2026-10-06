@@ -18,14 +18,14 @@ diagnostics.
 | Stores | `GET /api/stores` | Read-only, scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Articles | `GET/POST /api/articles`, `PUT/DELETE /api/articles/{id}`, `POST /api/articles/{id}/price-entries`, `DELETE /api/articles/{id}/price-entries/{priceEntryId}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); mirrors the frontend's `GroceryItem` (name, description, unit, price history). |
 | Library | `GET /api/meal-components`, `GET /api/composite-dishes`, `GET /api/activities` | Read-only, shared across users; still served from an **in-memory** seed catalog (mirrors `src/frontend/src/data/localLibrary.ts`), not yet migrated to PostgreSQL. |
-| Planning rules | `GET/POST /api/planning-rules`, `PUT/DELETE /api/planning-rules/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); pins a meal component or dish to a weekday/meal slot. |
-| Frequency rules | `GET/POST /api/frequency-rules`, `PUT/DELETE /api/frequency-rules/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); constrains how many times per week a component/dish/category should appear. |
-| Week context | `GET/PUT /api/week-context` | Per-household singleton. PostgreSQL-backed (EF Core). |
+| Planning rules | `GET/POST /api/planning-rules`, `PUT/DELETE /api/planning-rules/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); pins a meal component or dish to a weekday/meal slot for all weeks or one week type. |
+| Frequency rules | `GET/POST /api/frequency-rules`, `PUT/DELETE /api/frequency-rules/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); constrains how many times per week a component/dish/category should appear for all weeks or one week type. |
+| Week context | `GET/PUT /api/week-context` | Per-household singleton with alternating weeks, overrides, and separate day-context templates for both week types. PostgreSQL-backed (EF Core). |
 | Recipes | `GET/POST /api/recipes`, `PUT/DELETE /api/recipes/{id}`, ingredient sub-resource | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Composed meals | `GET/POST /api/composed-meals`, `PUT/DELETE /api/composed-meals/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Food items | `GET/POST /api/food-items`, `PUT/DELETE /api/food-items/{id}`, `POST /api/food-items/{id}/correction`, Open Food Facts search | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core), with an Open Food Facts HTTP integration for lookups/caching. |
 | Nutrition | `GET/POST /api/nutrition/configuration`, `GET/POST/PUT/DELETE /api/activity-sessions/*`, `GET /api/nutrition/calculations/day/{dayPlanId}` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
-| Week planning | `GET/POST/DELETE /api/weeks/*`, `/api/day-plans/*`, `/api/planned-meals/*`, `/api/weeks/{id}/balanced-plan/*` | Full week/day-plan/planned-meal CRUD plus the single balanced-plan computation, scoped to the caller's household. PostgreSQL-backed (EF Core). |
+| Week planning | `GET/POST/DELETE /api/weeks/*`, `/api/day-plans/*`, `/api/planned-meals/*`, `/api/weeks/{id}/balanced-plan/*` | Full week/day-plan/planned-meal CRUD plus the single balanced-plan computation, scoped to the caller's household. Week creation accepts an optional `weekMode`; when omitted, the API uses the configured alternation/override and initializes each day from that mode's template. PostgreSQL-backed (EF Core). |
 | Stock & shopping list | `GET/POST/PUT/DELETE /api/stock-items/*`, `/api/shopping-list/*` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
 
 Only the shared meal library (`MealComponent`, `CompositeDish`, `Activity`) still lives in
@@ -35,6 +35,9 @@ computation (`/api/weeks/{weekId}/balanced-plan`, `BalancedPlanEngine`) on top o
 week/day-plan/planned-meal model: a single deterministic computation that scores nutrition,
 cost, monthly diversity and waste at once, with no objective chosen by the user; the frontend's own `src/frontend/src/data/weekGenerator.ts`
 is a separate, still-local implementation and the two are not yet unified.
+Existing planning and frequency rules without a `weekMode` remain shared by both week types;
+new rules can be scoped to `kids` or `solo`. The week-type migration backfills both templates
+from existing day settings and preserves each stored week's alternating mode where available.
 
 ## Layers
 

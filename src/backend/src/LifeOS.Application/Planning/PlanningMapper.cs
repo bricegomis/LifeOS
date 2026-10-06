@@ -1,6 +1,7 @@
 using LifeOS.Domain.Common;
 using LifeOS.Domain.Library;
 using LifeOS.Domain.Planning;
+using LifeOS.Domain.WeekContexts;
 
 namespace LifeOS.Application.Planning;
 
@@ -27,7 +28,8 @@ internal static class PlanningMapper
             rule.Id,
             rule.Weekday.ToString().ToLowerInvariant(),
             rule.MealType.ToString().ToLowerInvariant(),
-            target);
+            target,
+            rule.WeekMode?.ToString().ToLowerInvariant());
     }
 
     public static FrequencyRuleDto ToDto(FrequencyRule rule)
@@ -40,7 +42,7 @@ internal static class PlanningMapper
             _ => throw new ArgumentOutOfRangeException(nameof(rule), rule.Target, "Unknown frequency rule target."),
         };
 
-        return new FrequencyRuleDto(rule.Id, target, rule.TargetCountPerWeek);
+        return new FrequencyRuleDto(rule.Id, target, rule.TargetCountPerWeek, rule.WeekMode?.ToString().ToLowerInvariant());
     }
 
     public static PlanningRuleTarget ParsePlanningRuleTarget(PlanningRuleTargetDto target) => target.Kind switch
@@ -69,6 +71,13 @@ internal static class PlanningMapper
         Enum.TryParse<MealType>(mealType, ignoreCase: true, out var parsed)
             ? parsed
             : throw new ArgumentException($"Unknown meal type '{mealType}'.", nameof(mealType));
+
+    public static WeekMode? ParseWeekMode(string? weekMode) =>
+        string.IsNullOrWhiteSpace(weekMode) || weekMode.Equals("all", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : Enum.TryParse<WeekMode>(weekMode, ignoreCase: true, out var parsed)
+                ? parsed
+                : throw new ArgumentException($"Unknown week mode '{weekMode}'.", nameof(weekMode));
 
     private static ComponentType ParseComponentType(string componentType) =>
         Enum.TryParse<ComponentType>(componentType, ignoreCase: true, out var parsed)

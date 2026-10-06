@@ -94,7 +94,8 @@ public sealed class BackendTaskIsolationTests(PostgresContainerFixture postgres)
                 new PlanningRuleRequest(
                     "monday",
                     "lunch",
-                    new PlanningRuleTargetDto("dish", null, null, "leftovers")));
+                    new PlanningRuleTargetDto("dish", null, null, "leftovers"),
+                    WeekMode: "kids"));
             Assert.Equal(HttpStatusCode.Created, planningResponse.StatusCode);
 
             var planningRule = await planningResponse.Content.ReadFromJsonAsync<PlanningRuleDto>();
@@ -105,29 +106,63 @@ public sealed class BackendTaskIsolationTests(PostgresContainerFixture postgres)
                 "/api/frequency-rules",
                 new FrequencyRuleRequest(
                     new FrequencyRuleTargetDto("category", null, null, "batch-cooking", "Batch cooking"),
-                    TargetCountPerWeek: 2));
+                    TargetCountPerWeek: 2,
+                    WeekMode: "solo"));
             Assert.Equal(HttpStatusCode.Created, frequencyResponse.StatusCode);
 
             var frequencyRule = await frequencyResponse.Content.ReadFromJsonAsync<FrequencyRuleDto>();
             Assert.NotNull(frequencyRule);
             createdFrequencyRuleId = frequencyRule.Id;
 
+            var days = new Dictionary<string, DayContextDto>
+            {
+                ["monday"] = new("office", BikeCommute: true),
+                ["tuesday"] = new("home", BikeCommute: false),
+                ["wednesday"] = new("home", BikeCommute: false),
+                ["thursday"] = new("office", BikeCommute: true),
+                ["friday"] = new("off", BikeCommute: false),
+                ["saturday"] = new("home", BikeCommute: false),
+                ["sunday"] = new("home", BikeCommute: false),
+            };
+            var soloDays = new Dictionary<string, DayContextDto>(days)
+            {
+                ["monday"] = new("off", BikeCommute: false),
+            };
             var weekContext = new WeekContextDto(
                 new AlternatingWeekConfigDto("2026-09-14", "kids"),
                 [new WeekModeOverrideDto("2026-09-21", "solo")],
-                new Dictionary<string, DayContextDto>
+                days,
+                new Dictionary<string, IReadOnlyDictionary<string, DayContextDto>>
                 {
-                    ["monday"] = new("office", BikeCommute: true),
-                    ["tuesday"] = new("home", BikeCommute: false),
-                    ["wednesday"] = new("home", BikeCommute: false),
-                    ["thursday"] = new("office", BikeCommute: true),
-                    ["friday"] = new("off", BikeCommute: false),
-                    ["saturday"] = new("home", BikeCommute: false),
-                    ["sunday"] = new("home", BikeCommute: false),
+                    ["kids"] = days,
+                    ["solo"] = soloDays,
                 });
 
             var saveContextResponse = await clientA.PutAsJsonAsync("/api/week-context", weekContext);
             Assert.Equal(HttpStatusCode.OK, saveContextResponse.StatusCode);
+
+            var createWeekResponse = await clientA.PostAsJsonAsync(
+                "/api/weeks",
+                new CreateWeekRequest(new DateOnly(2026, 9, 14), WeekMode: "kids"));
+            Assert.Equal(HttpStatusCode.Created, createWeekResponse.StatusCode);
+            var createdWeek = await createWeekResponse.Content.ReadFromJsonAsync<WeekDto>();
+            Assert.NotNull(createdWeek);
+            Assert.Equal("kids", createdWeek.WeekMode);
+            var mondayPlan = Assert.Single(createdWeek.DayPlans, day => day.Date == new DateOnly(2026, 9, 14));
+            Assert.Equal("office", mondayPlan.WorkContext);
+            Assert.True(mondayPlan.BikeCommute);
+
+            var automaticWeekResponse = await clientA.PostAsJsonAsync(
+                "/api/weeks",
+                new CreateWeekRequest(new DateOnly(2026, 9, 21)));
+            Assert.Equal(HttpStatusCode.Created, automaticWeekResponse.StatusCode);
+            var automaticWeek = await automaticWeekResponse.Content.ReadFromJsonAsync<WeekDto>();
+            Assert.NotNull(automaticWeek);
+            Assert.Equal("solo", automaticWeek.WeekMode);
+            var soloMondayPlan = Assert.Single(
+                automaticWeek.DayPlans,
+                day => day.Date == new DateOnly(2026, 9, 21));
+            Assert.Equal("off", soloMondayPlan.WorkContext);
 
             var planningRulesForB = await clientB.GetFromJsonAsync<List<PlanningRuleDto>>("/api/planning-rules");
             Assert.DoesNotContain(planningRulesForB!, rule => rule.Id == createdPlanningRuleId);
@@ -141,15 +176,18 @@ public sealed class BackendTaskIsolationTests(PostgresContainerFixture postgres)
 
         var planningRules = await reconnectedClient.GetFromJsonAsync<List<PlanningRuleDto>>("/api/planning-rules");
         Assert.Contains(planningRules!, rule => rule.Id == createdPlanningRuleId && rule.Target.DishId == "leftovers");
+        Assert.Contains(planningRules!, rule => rule.Id == createdPlanningRuleId && rule.WeekMode == "kids");
 
         var frequencyRules = await reconnectedClient.GetFromJsonAsync<List<FrequencyRuleDto>>("/api/frequency-rules");
         Assert.Contains(frequencyRules!, rule => rule.Id == createdFrequencyRuleId && rule.TargetCountPerWeek == 2);
+        Assert.Contains(frequencyRules!, rule => rule.Id == createdFrequencyRuleId && rule.WeekMode == "solo");
 
         var persistedContext = await reconnectedClient.GetFromJsonAsync<WeekContextDto>("/api/week-context");
         Assert.NotNull(persistedContext);
         Assert.Equal("kids", persistedContext.AlternatingWeekConfig.ReferenceWeekMode);
         Assert.True(persistedContext.Days["monday"].BikeCommute);
         Assert.Equal("office", persistedContext.Days["monday"].WorkLocation);
+        Assert.Equal("off", persistedContext.Templates!["solo"]["monday"].WorkLocation);
     }
 
     [Fact]

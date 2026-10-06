@@ -69,6 +69,8 @@ export const WEEK_STATUSES: Option[] = [
   { value: 'past', label: 'Passée' },
 ]
 
+type WeekModeChoice = 'auto' | 'kids' | 'solo'
+
 export const WORK_CONTEXTS: Option[] = [
   { value: 'home', label: 'Télétravail' },
   { value: 'office', label: 'Bureau' },
@@ -264,6 +266,11 @@ export class PlanningPageComponent implements OnInit {
   private readonly api = inject(LifeosApiService)
 
   readonly weekStatuses = WEEK_STATUSES
+  readonly weekModeChoices: { value: WeekModeChoice; label: string }[] = [
+    { value: 'auto', label: 'Selon l’alternance' },
+    { value: 'kids', label: 'Avec enfant' },
+    { value: 'solo', label: 'Sans enfant' },
+  ]
   readonly workContexts = WORK_CONTEXTS
   readonly mealTypes = MEAL_TYPES
   readonly mealStatuses = MEAL_STATUSES
@@ -290,6 +297,7 @@ export class PlanningPageComponent implements OnInit {
   readonly expandedDays = signal<string[]>([])
 
   newWeekStartsOn = nextMonday()
+  newWeekMode: WeekModeChoice = 'auto'
   readonly mealDrafts: Record<string, MealDraft> = {}
   readonly activityDrafts: Record<string, ActivityDraft> = {}
   readonly replaceDrafts: Record<string, string> = {}
@@ -345,7 +353,8 @@ export class PlanningPageComponent implements OnInit {
   }
 
   weekLabel(week: WeekDto): string {
-    return `Semaine du ${this.formatDate(week.startsOn, { day: 'numeric', month: 'long', year: 'numeric' })} · ${labelFor(WEEK_STATUSES, week.status)}`
+    const weekModeLabel = week.weekMode === 'kids' ? 'Avec enfant' : 'Sans enfant'
+    return `Semaine du ${this.formatDate(week.startsOn, { day: 'numeric', month: 'long', year: 'numeric' })} · ${weekModeLabel} · ${labelFor(WEEK_STATUSES, week.status)}`
   }
 
   mealName(meal: PlannedMealDto): string {
@@ -460,7 +469,11 @@ export class PlanningPageComponent implements OnInit {
     }
     this.run(
       'create-week',
-      this.api.post<WeekDto>('/weeks', { startsOn: this.newWeekStartsOn, status: 'draft' }),
+      this.api.post<WeekDto>('/weeks', {
+        startsOn: this.newWeekStartsOn,
+        status: 'draft',
+        ...(this.newWeekMode === 'auto' ? {} : { weekMode: this.newWeekMode }),
+      }),
       (week) => {
         this.busy.set(null)
         this.message.set('Semaine créée en brouillon.')

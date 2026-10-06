@@ -10,7 +10,12 @@ public sealed record PlanningRuleTargetDto(string Kind, string? ComponentId, str
 /// Read model returned by the API for a planning rule, mirroring the frontend's
 /// <c>PlanningRule</c> shape.
 /// </summary>
-public sealed record PlanningRuleDto(Guid Id, string Weekday, string MealType, PlanningRuleTargetDto Target);
+public sealed record PlanningRuleDto(
+    Guid Id,
+    string Weekday,
+    string MealType,
+    PlanningRuleTargetDto Target,
+    string? WeekMode = null);
 
 /// <summary>
 /// Read model for a <c>FrequencyRuleTarget</c>, mirroring the frontend's discriminated union as a
@@ -22,4 +27,8 @@ public sealed record FrequencyRuleTargetDto(string Kind, string? ComponentId, st
 /// Read model returned by the API for a frequency rule, mirroring the frontend's
 /// <c>FrequencyRule</c> shape.
 /// </summary>
-public sealed record FrequencyRuleDto(Guid Id, FrequencyRuleTargetDto Target, int TargetCountPerWeek);
+public sealed record FrequencyRuleDto(
+    Guid Id,
+    FrequencyRuleTargetDto Target,
+    int TargetCountPerWeek,
+    string? WeekMode = null);

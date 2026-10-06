@@ -69,7 +69,8 @@ public record WeekDto(
     string Status,
     List<DayPlanDto> DayPlans,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    string WeekMode = "solo");
 
 public record DayPlanDto(
     Guid Id,
@@ -95,7 +96,8 @@ public record PlannedMealPartDto(
 
 public record CreateWeekRequest(
     DateOnly StartsOn,
-    [property: Required, StringLength(50)] string Status = "draft");
+    [property: Required, StringLength(50)] string Status = "draft",
+    [property: StringLength(20)] string? WeekMode = null);
 
 public record UpdateWeekStatusRequest(
     [property: Required, StringLength(50)] string Status);

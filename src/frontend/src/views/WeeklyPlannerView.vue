@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import Button from 'primevue/button'
+import Select from 'primevue/select'
 import MealEditorDrawer from '@/components/MealEditorDrawer.vue'
 import { activities } from '@/data/localLibrary'
 import { usePlanningRulesStore } from '@/stores/planningRules'
@@ -10,11 +11,10 @@ import {
   getWeekMode,
   useWeekContextStore,
   weekdays,
-  weekModeLabels,
   workLocationShortLabels,
 } from '@/stores/weekContext'
 import { useWeekPlannerStore } from '@/stores/weekPlanner'
-import type { MealType, WeekPlan } from '@/types'
+import type { MealType, WeekMode, WeekPlan } from '@/types'
 
 const plannerStore = useWeekPlannerStore()
 const planningRulesStore = usePlanningRulesStore()
@@ -28,6 +28,7 @@ const activeActivityDayId = ref<string | null>(null)
 const isMobile = ref(false)
 const weekOffset = ref(0)
 const generationError = ref('')
+const selectedWeekMode = ref<WeekMode | null>(null)
 
 const mealTypes: MealType[] = ['breakfast', 'lunch', 'dinner']
 
@@ -39,21 +40,30 @@ const mealTypeLabels: Record<MealType, string> = {
 
 const displayedWeekPlan = computed<WeekPlan>(() => shiftWeekPlan(weekPlan.value, weekOffset.value))
 const displayedWeekMode = computed(() =>
-  weekOffset.value === 0 && weekPlan.value.weekMode
+  selectedWeekMode.value
+    ?? (weekOffset.value === 0 && weekPlan.value.weekMode
     ? weekPlan.value.weekMode
     : getWeekMode(
         displayedWeekPlan.value.startDate,
         weekContext.value.alternatingWeekConfig,
         weekContext.value.weekModeOverrides,
-      ),
+      )),
 )
-const displayedDayContexts = computed(() =>
-  weekOffset.value === 0 && weekPlan.value.dayContexts
-    ? weekPlan.value.dayContexts
-    : weekOffset.value === 0 && !weekPlan.value.weekMode
-      ? weekContext.value.days
-      : weekContext.value.templates[displayedWeekMode.value],
-)
+const displayedDayContexts = computed(() => {
+  if (selectedWeekMode.value) {
+    return weekContext.value.templates[selectedWeekMode.value]
+  }
+
+  if (weekOffset.value === 0 && weekPlan.value.dayContexts) {
+    return weekPlan.value.dayContexts
+  }
+
+  if (weekOffset.value === 0 && !weekPlan.value.weekMode) {
+    return weekContext.value.days
+  }
+
+  return weekContext.value.templates[displayedWeekMode.value]
+})
 
 const displayedSelectedDay = computed(() => {
   if (!selectedMeal.value) {
@@ -95,7 +105,6 @@ const mealEditorSubtitle = computed(() => {
 })
 
 const weekLabel = computed(() => formatWeekLabel(weekPlan.value.startDate, weekOffset.value))
-const weekModeLabel = computed(() => weekModeLabels[displayedWeekMode.value])
 const regenerateButtonLabel = computed(() =>
   weekPlan.value.status === 'Draft' ? 'Générer la semaine' : 'Régénérer la semaine',
 )
@@ -164,11 +173,13 @@ function dayContextBadges(dayIndex: number): string[] {
 
 function previousWeek(): void {
   weekOffset.value -= 1
+  selectedWeekMode.value = null
   closeEditors()
 }
 
 function nextWeek(): void {
   weekOffset.value += 1
+  selectedWeekMode.value = null
   closeEditors()
 }
 
@@ -180,6 +191,7 @@ function generateWeek(): void {
       frequencyRules.value,
       weekContext.value,
       displayedWeekPlan.value.startDate,
+      displayedWeekMode.value,
     )
   } catch (error) {
     console.error('Échec de la génération de la semaine', error)
@@ -274,7 +286,20 @@ onBeforeUnmount(() => {
           <p class="eyebrow">Planning semaine</p>
           <h1>{{ weekLabel }}</h1>
           <p>Une vue claire pour préparer la semaine sans la transformer en tableur.</p>
-          <small class="planner-context">{{ weekModeLabel }}</small>
+          <label class="planner-context">
+            <span>Type de semaine</span>
+            <Select
+              :model-value="displayedWeekMode"
+              :options="[
+                { label: 'Avec enfant', value: 'kids' },
+                { label: 'Sans enfant', value: 'solo' },
+              ]"
+              option-label="label"
+              option-value="value"
+              aria-label="Type de semaine à planifier"
+              @update:model-value="selectedWeekMode = $event"
+            />
+          </label>
         </div>
         <Button
           icon="pi pi-chevron-right"
@@ -298,8 +323,8 @@ onBeforeUnmount(() => {
       </div>
 
       <p class="planner-note">
-        Le modèle avec ou sans enfants est choisi automatiquement selon l'alternance des réglages.
-        La génération remplace le planning actuel et efface ses ajustements manuels.
+        Le type est proposé selon l’alternance des réglages, mais peut être remplacé avant de générer.
+        La génération efface les ajustements manuels de cette semaine.
       </p>
       <p v-if="generationError" role="alert">{{ generationError }}</p>
     </header>

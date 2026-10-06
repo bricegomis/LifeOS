@@ -54,8 +54,8 @@ export const weekdayLabels: Record<Weekday, string> = {
 }
 
 export const weekModeLabels: Record<WeekMode, string> = {
-  kids: 'Avec enfants',
-  solo: 'Sans enfants',
+  kids: 'Avec enfant',
+  solo: 'Sans enfant',
 }
 
 export const workLocationLabels: Record<WorkLocation, string> = {
