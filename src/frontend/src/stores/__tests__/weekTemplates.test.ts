@@ -3,7 +3,7 @@ import { after, before, describe, it } from 'node:test'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { createServer, type ViteDevServer } from 'vite'
-import type { DayContext, Weekday } from '../../types.ts'
+import type { CompositeDish, DayContext, Weekday } from '../../types.ts'
 
 let server: ViteDevServer
 let contextModule: typeof import('../weekContext.ts')
@@ -121,5 +121,151 @@ describe('week templates', () => {
     assert.deepEqual(restored.dayContexts?.tuesday, { workLocation: 'office', bikeCommute: true })
     assert.deepEqual(restored.days.map((day) => day.activity.id), plannerStore.weekPlan.days.map((day) => day.activity.id))
     assert.deepEqual(restored.days.map((day) => day.lunch.mealDefinition.id), plannerStore.weekPlan.days.map((day) => day.lunch.mealDefinition.id))
+  })
+
+  it('uses the chosen week type for its meal rules and day-context snapshot', () => {
+    saved.clear()
+    setActivePinia(createPinia())
+    const contextStore = contextModule.useWeekContextStore()
+    const plannerStore = plannerModule.useWeekPlannerStore()
+    contextStore.setReferenceWeekStartDate('2026-09-28')
+    contextStore.setReferenceWeekMode('kids')
+    contextStore.updateWorkLocation('kids', 'monday', 'office')
+    contextStore.updateWorkLocation('solo', 'monday', 'home')
+
+    const testDish = (id: string): CompositeDish => ({
+      id,
+      kind: 'composite',
+      name: id,
+      icon: '🍽️',
+      preparationTimeMinutes: 10,
+      estimatedCalories: 500,
+      estimatedProteinGrams: 25,
+      estimatedCarbohydrateGrams: 50,
+      estimatedFatGrams: 15,
+      suitableForBreakfast: false,
+      suitableForLunch: true,
+      suitableForDinner: true,
+      active: true,
+    })
+    const library = {
+      ...libraryModule,
+      compositeDishes: [
+        ...libraryModule.compositeDishes,
+        testDish('kids-only-dish'),
+        testDish('solo-only-dish'),
+        testDish('shared-dish'),
+      ],
+    }
+    const scopedRules = [
+      {
+        id: 'kids-rule',
+        weekday: 'monday' as const,
+        mealType: 'lunch' as const,
+        target: { kind: 'dish' as const, dishId: 'kids-only-dish' },
+        weekMode: 'kids' as const,
+      },
+      {
+        id: 'solo-rule',
+        weekday: 'monday' as const,
+        mealType: 'lunch' as const,
+        target: { kind: 'dish' as const, dishId: 'solo-only-dish' },
+        weekMode: 'solo' as const,
+      },
+      {
+        id: 'shared-rule',
+        weekday: 'tuesday' as const,
+        mealType: 'lunch' as const,
+        target: { kind: 'dish' as const, dishId: 'shared-dish' },
+      },
+      {
+        id: 'global-monday-rule',
+        weekday: 'monday' as const,
+        mealType: 'lunch' as const,
+        target: { kind: 'dish' as const, dishId: 'shared-dish' },
+      },
+    ]
+
+    const kidsPlan = generatorModule.createGeneratedWeekPlan({
+      library,
+      planningRules: scopedRules,
+      frequencyRules: [],
+      weekContext: contextStore.weekContext,
+      startDate: '2026-10-05',
+      weekMode: 'kids',
+    })
+    const soloPlan = generatorModule.createGeneratedWeekPlan({
+      library,
+      planningRules: scopedRules,
+      frequencyRules: [],
+      weekContext: contextStore.weekContext,
+      startDate: '2026-10-05',
+      weekMode: 'solo',
+    })
+
+    assert.equal(kidsPlan.weekMode, 'kids')
+    assert.equal(kidsPlan.days[0]?.lunch.mealDefinition.id, 'kids-only-dish')
+    assert.equal(kidsPlan.days[1]?.lunch.mealDefinition.id, 'shared-dish')
+    assert.equal(kidsPlan.dayContexts?.monday.workLocation, 'office')
+    assert.equal(soloPlan.weekMode, 'solo')
+    assert.equal(soloPlan.days[0]?.lunch.mealDefinition.id, 'solo-only-dish')
+    assert.equal(soloPlan.days[1]?.lunch.mealDefinition.id, 'shared-dish')
+    assert.equal(soloPlan.dayContexts?.monday.workLocation, 'home')
+
+    plannerStore.generateWeek([], [], contextStore.weekContext, '2026-10-05', 'kids')
+    assert.equal(plannerStore.weekPlan.weekMode, 'kids')
+  })
+
+  it('lets a type-specific frequency objective replace the shared objective for the same target', () => {
+    saved.clear()
+    setActivePinia(createPinia())
+    const contextStore = contextModule.useWeekContextStore()
+    const targetDish = {
+      id: 'frequency-target-dish',
+      kind: 'composite' as const,
+      name: 'Plat cible',
+      icon: '🍽️',
+      preparationTimeMinutes: 10,
+      estimatedCalories: 500,
+      estimatedProteinGrams: 25,
+      estimatedCarbohydrateGrams: 50,
+      estimatedFatGrams: 15,
+      suitableForBreakfast: false,
+      suitableForLunch: false,
+      suitableForDinner: false,
+      active: true,
+    }
+    const library = {
+      ...libraryModule,
+      compositeDishes: [...libraryModule.compositeDishes, targetDish],
+    }
+    const frequencyRules = [
+      {
+        id: 'shared-frequency',
+        target: { kind: 'dish' as const, dishId: targetDish.id },
+        targetCountPerWeek: 2,
+      },
+      {
+        id: 'kids-frequency',
+        target: { kind: 'dish' as const, dishId: targetDish.id },
+        targetCountPerWeek: 5,
+        weekMode: 'kids' as const,
+      },
+    ]
+    const countTargetDishes = (plan: ReturnType<typeof generatorModule.createGeneratedWeekPlan>) =>
+      plan.days.flatMap((day) => [day.breakfast, day.lunch, day.dinner])
+        .filter((meal) => meal.mealDefinition.id === targetDish.id).length
+    const generate = (weekMode: 'kids' | 'solo') =>
+      generatorModule.createGeneratedWeekPlan({
+        library,
+        planningRules: [],
+        frequencyRules,
+        weekContext: contextStore.weekContext,
+        startDate: '2026-10-05',
+        weekMode,
+      })
+
+    assert.equal(countTargetDishes(generate('kids')), 5)
+    assert.equal(countTargetDishes(generate('solo')), 2)
   })
 })

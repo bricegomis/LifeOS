@@ -13,6 +13,11 @@ internal static class WeekContextMapper
         var days = weekContext.Days.ToDictionary(
             pair => pair.Key.ToString().ToLowerInvariant(),
             pair => new DayContextDto(pair.Value.WorkLocation.ToString().ToLowerInvariant(), pair.Value.BikeCommute));
+        var templates = weekContext.Templates.ToDictionary(
+            pair => pair.Key.ToString().ToLowerInvariant(),
+            pair => (IReadOnlyDictionary<string, DayContextDto>)pair.Value.ToDictionary(
+                day => day.Key.ToString().ToLowerInvariant(),
+                day => new DayContextDto(day.Value.WorkLocation.ToString().ToLowerInvariant(), day.Value.BikeCommute)));
 
         var overrides = weekContext.WeekModeOverrides
             .Select(o => new WeekModeOverrideDto(o.WeekStartDate.ToString("yyyy-MM-dd"), o.Mode.ToString().ToLowerInvariant()))
@@ -22,7 +27,7 @@ internal static class WeekContextMapper
             weekContext.AlternatingWeekConfig.ReferenceWeekStartDate.ToString("yyyy-MM-dd"),
             weekContext.AlternatingWeekConfig.ReferenceWeekMode.ToString().ToLowerInvariant());
 
-        return new WeekContextDto(alternatingWeekConfig, overrides, days);
+        return new WeekContextDto(alternatingWeekConfig, overrides, days, templates);
     }
 
     public static AlternatingWeekConfig ParseAlternatingWeekConfig(AlternatingWeekConfigDto dto) =>
@@ -35,6 +40,12 @@ internal static class WeekContextMapper
         days.ToDictionary(
             pair => ParseWeekday(pair.Key),
             pair => new DayContext(ParseWorkLocation(pair.Value.WorkLocation), pair.Value.BikeCommute));
+
+    public static Dictionary<WeekMode, Dictionary<Weekday, DayContext>>? ParseTemplates(
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, DayContextDto>>? templates) =>
+        templates?.ToDictionary(
+            pair => ParseWeekMode(pair.Key),
+            pair => ParseDays(pair.Value));
 
     private static WeekMode ParseWeekMode(string mode) =>
         Enum.TryParse<WeekMode>(mode, ignoreCase: true, out var parsed)

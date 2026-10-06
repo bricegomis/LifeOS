@@ -31,7 +31,8 @@ public sealed class SaveWeekContextCommand(IWeekContextRepository weekContextRep
         weekContext.Replace(
             WeekContextMapper.ParseAlternatingWeekConfig(payload.AlternatingWeekConfig),
             WeekContextMapper.ParseWeekModeOverrides(payload.WeekModeOverrides),
-            WeekContextMapper.ParseDays(payload.Days));
+            WeekContextMapper.ParseDays(payload.Days),
+            WeekContextMapper.ParseTemplates(payload.Templates));
 
         await _weekContextRepository.SaveAsync(weekContext, cancellationToken);
 

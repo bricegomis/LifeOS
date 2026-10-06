@@ -113,8 +113,8 @@
   <section id="week-context" class="settings-section" aria-labelledby="context-heading">
     <h2 id="context-heading">Contexte de semaine</h2>
     <p>
-      La semaine de référence définit l’alternance solo/avec enfants. Les exceptions et les jours
-      habituels sont enregistrés ensemble.
+      Configurez séparément les journées de chaque type de semaine. L’alternance et ses exceptions
+      indiquent quel modèle appliquer par défaut.
     </p>
     @if (contextLoading()) {
       <p class="settings-muted" role="status">Chargement du contexte…</p>
@@ -144,9 +144,23 @@
             </select>
           </label>
         </div>
-        <h3 class="settings-subheading">Jours habituels</h3>
+        <label class="settings-field"
+          >Type de semaine à configurer
+          <select
+            name="editedTemplateMode"
+            [(ngModel)]="editedTemplateMode"
+            [disabled]="contextBusy()"
+          >
+            @for (mode of weekModes; track mode.value) {
+              <option [value]="mode.value">{{ mode.label }}</option>
+            }
+          </select>
+        </label>
+        <h3 class="settings-subheading">
+          Journées habituelles · {{ weekModeLabel(editedTemplateMode) }}
+        </h3>
         @for (day of weekdays; track day.value) {
-          @if (draft.days[day.value]; as entry) {
+          @if (draft.templates[editedTemplateMode][day.value]; as entry) {
             <div class="settings-day">
               <strong>{{ day.label }}</strong>
               <label class="settings-field"
@@ -316,6 +330,18 @@
             }
             @for (target of targetOptions(planning.kind); track target.id) {
               <option [value]="target.id">{{ target.name }}</option>
+            }
+          </select>
+        </label>
+        <label class="settings-field"
+          >Type de semaine
+          <select
+            name="planningWeekMode"
+            [(ngModel)]="planning.weekMode"
+            [disabled]="planningBusy()"
+          >
+            @for (scope of weekModeScopes; track scope.value) {
+              <option [value]="scope.value">{{ scope.label }}</option>
             }
           </select>
         </label>
@@ -500,6 +526,18 @@
             [disabled]="frequencyBusy()"
           />
         </label>
+        <label class="settings-field"
+          >Type de semaine
+          <select
+            name="frequencyWeekMode"
+            [(ngModel)]="frequency.weekMode"
+            [disabled]="frequencyBusy()"
+          >
+            @for (scope of weekModeScopes; track scope.value) {
+              <option [value]="scope.value">{{ scope.label }}</option>
+            }
+          </select>
+        </label>
         <div class="settings-actions">
           <button
             class="settings-button is-primary"
@@ -554,7 +592,8 @@
             @for (rule of frequencyRules(); track rule.id) {
               <li>
                 <span
-                  >{{ frequencyLabel(rule) }} · {{ rule.targetCountPerWeek }} fois par semaine</span
+                  >{{ frequencyLabel(rule) }} · {{ rule.targetCountPerWeek }} fois par semaine ·
+                  {{ weekModeLabel(rule.weekMode) }}</span
                 >
                 <div class="settings-actions">
                   <button

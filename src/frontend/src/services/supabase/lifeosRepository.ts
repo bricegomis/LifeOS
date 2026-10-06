@@ -97,7 +97,8 @@ function isPlanningRule(value: unknown): value is PlanningRule {
     typeof value.id === 'string' &&
     isWeekday(value.weekday) &&
     (value.mealType === 'breakfast' || value.mealType === 'lunch' || value.mealType === 'dinner') &&
-    isRecord(value.target)
+    isRecord(value.target) &&
+    (value.weekMode === undefined || isWeekMode(value.weekMode))
   )
 }
 
@@ -106,7 +107,8 @@ function isFrequencyRule(value: unknown): value is FrequencyRule {
     isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.targetCountPerWeek === 'number' &&
-    isRecord(value.target)
+    isRecord(value.target) &&
+    (value.weekMode === undefined || isWeekMode(value.weekMode))
   )
 }
 

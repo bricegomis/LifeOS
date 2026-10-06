@@ -31,6 +31,7 @@ interface GenerateWeekPlanOptions {
   frequencyRules: FrequencyRule[]
   weekContext: WeekContext
   startDate: string
+  weekMode?: WeekMode
 }
 
 type MealSequenceItem = {
@@ -66,8 +67,9 @@ export function createGeneratedWeekPlan({
   frequencyRules,
   weekContext,
   startDate,
+  weekMode: requestedWeekMode,
 }: GenerateWeekPlanOptions): WeekPlan {
-  const weekMode = getWeekMode(
+  const weekMode = requestedWeekMode ?? getWeekMode(
     startDate,
     weekContext.alternatingWeekConfig,
     weekContext.weekModeOverrides,
@@ -80,9 +82,24 @@ export function createGeneratedWeekPlan({
   const days = createEmptyWeek(startDate)
   const fixedSlots = new Set<string>()
 
-  applyFixedRules(days, planningRules, state, fixedSlots)
-  applyFrequencyRules(days, frequencyRules, state, fixedSlots)
-  completeMeals(days, state, frequencyRules)
+  const applicablePlanningRules = [
+    ...planningRules.filter((rule) => rule.weekMode === undefined),
+    ...planningRules.filter((rule) => rule.weekMode === weekMode),
+  ]
+  const scopedFrequencyTargets = new Set(
+    frequencyRules
+      .filter((rule) => rule.weekMode === weekMode)
+      .map((rule) => frequencyTargetKey(rule.target)),
+  )
+  const applicableFrequencyRules = frequencyRules.filter(
+    (rule) =>
+      rule.weekMode === weekMode ||
+      (rule.weekMode === undefined && !scopedFrequencyTargets.has(frequencyTargetKey(rule.target))),
+  )
+
+  applyFixedRules(days, applicablePlanningRules, state, fixedSlots)
+  applyFrequencyRules(days, applicableFrequencyRules, state, fixedSlots)
+  completeMeals(days, state, applicableFrequencyRules)
   generateActivities(days, state.activities, appliedContext, weekMode)
 
   return {
@@ -98,6 +115,17 @@ export function createGeneratedWeekPlan({
       dinner: requireSlot(day.dinner, day.id, 'dinner'),
       activity: day.activity ?? requireArrayValue(state.activities, 0, 'activity'),
     })),
+  }
+}
+
+function frequencyTargetKey(target: FrequencyRuleTarget): string {
+  switch (target.kind) {
+    case 'component':
+      return `component:${target.componentId}`
+    case 'dish':
+      return `dish:${target.dishId}`
+    case 'category':
+      return `category:${target.categoryId}`
   }
 }
 

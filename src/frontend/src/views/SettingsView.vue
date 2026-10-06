@@ -25,6 +25,7 @@ import type {
   PlanningRule,
   PlanningRuleTarget,
   WeekMode,
+  WeekModeScope,
   WeekModeOverride,
   Weekday,
   WorkLocation,
@@ -62,8 +63,13 @@ const mealTypeOptions: SelectOption<MealType>[] = [
 ]
 
 const weekModeOptions: SelectOption<WeekMode>[] = [
-  { label: 'Avec enfants', value: 'kids' },
-  { label: 'Sans enfants', value: 'solo' },
+  { label: 'Avec enfant', value: 'kids' },
+  { label: 'Sans enfant', value: 'solo' },
+]
+
+const weekModeScopeOptions: SelectOption<WeekModeScope>[] = [
+  { label: 'Toutes les semaines', value: 'all' },
+  ...weekModeOptions,
 ]
 
 const workLocationOptions: SelectOption<WorkLocation>[] = [
@@ -99,10 +105,12 @@ const ruleForm = reactive<{
   weekday: Weekday
   mealType: MealType
   targetKey: string
+  weekMode: WeekModeScope
 }>({
   weekday: 'monday',
   mealType: 'lunch',
   targetKey: '',
+  weekMode: 'all',
 })
 
 const componentTargetOptions = computed<TargetOption[]>(() =>
@@ -165,6 +173,16 @@ const overrideForm = reactive<{
 const alternatingWeekConfig = computed(() => weekContextStore.weekContext.alternatingWeekConfig)
 const editedTemplateMode = ref<WeekMode>(alternatingWeekConfig.value.referenceWeekMode)
 const editedTemplate = computed(() => weekContextStore.weekContext.templates[editedTemplateMode.value])
+const frequencyDialogVisible = ref(false)
+const frequencyForm = reactive<{
+  targetKey: string
+  targetCountPerWeek: number
+  weekMode: WeekModeScope
+}>({
+  targetKey: '',
+  targetCountPerWeek: 1,
+  weekMode: 'kids',
+})
 
 const sortedWeekModeOverrides = computed(() =>
   [...weekContextStore.weekContext.weekModeOverrides].sort((left, right) =>
@@ -290,6 +308,7 @@ function openNewRuleDialog(): void {
   ruleForm.weekday = 'monday'
   ruleForm.mealType = 'lunch'
   ruleForm.targetKey = planningTargetOptions.value[0]?.value ?? ''
+  ruleForm.weekMode = 'all'
   ruleDialogVisible.value = true
 }
 
@@ -298,6 +317,7 @@ function openEditRuleDialog(rule: PlanningRule): void {
   ruleForm.weekday = rule.weekday
   ruleForm.mealType = rule.mealType
   ruleForm.targetKey = targetKey(rule.target)
+  ruleForm.weekMode = rule.weekMode ?? 'all'
   ruleDialogVisible.value = true
 }
 
@@ -314,6 +334,7 @@ function savePlanningRule(): void {
     weekday: ruleForm.weekday,
     mealType: ruleForm.mealType,
     target: clonePlanningTarget(selectedTarget.target),
+    ...(ruleForm.weekMode === 'all' ? {} : { weekMode: ruleForm.weekMode }),
   }
 
   if (editingRuleId.value) {
@@ -325,8 +346,47 @@ function savePlanningRule(): void {
   ruleDialogVisible.value = false
 }
 
+function weekModeScopeLabel(mode: WeekMode | undefined): string {
+  return mode ? weekModeLabels[mode] : 'Toutes les semaines'
+}
+
+function openNewFrequencyDialog(): void {
+  frequencyForm.targetKey = frequencyTargetOptions.value[0]?.value ?? ''
+  frequencyForm.targetCountPerWeek = 1
+  frequencyForm.weekMode = 'kids'
+  frequencyDialogVisible.value = true
+}
+
+function frequencyTargetFromKey(key: string): FrequencyRuleTarget | null {
+  const option = frequencyTargetOptions.value.find((item) => item.value === key)
+  if (!option) return null
+  const target = option.target
+
+  if (target.kind === 'category') {
+    return { ...target }
+  }
+
+  if (target.kind === 'component') {
+    return { kind: 'component', componentId: target.componentId }
+  }
+
+  return { kind: 'dish', dishId: target.dishId }
+}
+
+function saveFrequencyRule(): void {
+  const target = frequencyTargetFromKey(frequencyForm.targetKey)
+  if (!target) return
+
+  planningRulesStore.addFrequencyRule({
+    target,
+    targetCountPerWeek: frequencyForm.targetCountPerWeek,
+    ...(frequencyForm.weekMode === 'all' ? {} : { weekMode: frequencyForm.weekMode }),
+  })
+  frequencyDialogVisible.value = false
+}
+
 function updateFrequency(rule: FrequencyRule, value: number | null): void {
-  planningRulesStore.updateFrequencyRule(rule.id, value ?? 0)
+  planningRulesStore.updateFrequencyRule(rule.id, value ?? 0, rule.weekMode)
 }
 
 function updateWorkLocation(weekday: Weekday, value: WorkLocation): void {
@@ -343,7 +403,7 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
     <header class="page-hero settings-hero">
       <p class="eyebrow">Réglages</p>
       <h1>Règles de planification alimentaire</h1>
-      <p>Configuration locale simple pour préparer le futur générateur de semaine.</p>
+      <p>Préparez deux rythmes de semaine distincts, avec leurs propres journées et règles de repas.</p>
     </header>
 
     <section class="settings-section" aria-labelledby="alternating-week-title">
@@ -438,10 +498,7 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
         </div>
       </div>
 
-      <p>
-        Définissez les jours de travail et les trajets de chaque modèle. La génération applique
-        automatiquement le modèle avec ou sans enfants selon l'alternance et les exceptions ci-dessus.
-      </p>
+      <p>Configurez séparément les journées et les trajets habituels pour chaque type de semaine.</p>
       <label class="form-field template-choice">
         <span>Modèle à configurer</span>
         <Select
@@ -504,7 +561,7 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
               {{ weekdayLabel(rule.weekday) }} · {{ mealTypeLabel(rule.mealType) }} ·
               {{ targetLabel(rule.target) }}
             </strong>
-            <span>{{ targetDescription(rule.target) }}</span>
+            <span>{{ targetDescription(rule.target) }} · {{ weekModeScopeLabel(rule.weekMode) }}</span>
           </div>
 
           <div class="rule-actions">
@@ -536,7 +593,9 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
           <p class="eyebrow">Fréquences hebdomadaires</p>
           <h2 id="frequency-title">Objectifs simples</h2>
         </div>
+        <Button label="Ajouter un objectif" icon="pi pi-plus" size="small" @click="openNewFrequencyDialog" />
       </div>
+      <p>Un objectif propre à un type de semaine remplace l'objectif commun pour la même cible.</p>
 
       <div class="frequency-list">
         <article
@@ -546,13 +605,13 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
         >
           <div class="frequency-main">
             <strong>{{ targetLabel(rule.target) }}</strong>
-            <span>{{ targetDescription(rule.target) }}</span>
+            <span>{{ targetDescription(rule.target) }} · {{ weekModeScopeLabel(rule.weekMode) }}</span>
           </div>
 
           <div class="frequency-control">
             <InputNumber
               :model-value="rule.targetCountPerWeek"
-              input-id="frequency-count"
+              :input-id="`frequency-count-${rule.id}`"
               :min="0"
               :max="14"
               show-buttons
@@ -564,6 +623,14 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
               @update:model-value="updateFrequency(rule, $event)"
             />
             <span>/ semaine</span>
+            <Button
+              icon="pi pi-trash"
+              :aria-label="`Supprimer l'objectif ${targetLabel(rule.target)}`"
+              severity="danger"
+              text
+              rounded
+              @click="planningRulesStore.deleteFrequencyRule(rule.id)"
+            />
           </div>
         </article>
       </div>
@@ -644,9 +711,56 @@ function updateBikeCommute(weekday: Weekday, value: boolean): void {
           </Select>
         </label>
 
+        <label class="form-field">
+          <span>Type de semaine concerné</span>
+          <Select
+            v-model="ruleForm.weekMode"
+            :options="weekModeScopeOptions"
+            option-label="label"
+            option-value="value"
+          />
+        </label>
+
         <div class="dialog-actions">
           <Button label="Annuler" severity="secondary" text @click="ruleDialogVisible = false" />
           <Button label="Enregistrer" type="submit" />
+        </div>
+      </form>
+    </Dialog>
+
+    <Dialog
+      v-model:visible="frequencyDialogVisible"
+      header="Ajouter un objectif de fréquence"
+      modal
+      class="rule-dialog"
+      :style="{ width: 'min(92vw, 34rem)' }"
+    >
+      <form class="rule-form" @submit.prevent="saveFrequencyRule">
+        <label class="form-field">
+          <span>Repas, composant ou catégorie</span>
+          <Select
+            v-model="frequencyForm.targetKey"
+            :options="frequencyTargetOptions"
+            option-label="label"
+            option-value="value"
+          />
+        </label>
+        <label class="form-field">
+          <span>Type de semaine concerné</span>
+          <Select
+            v-model="frequencyForm.weekMode"
+            :options="weekModeScopeOptions"
+            option-label="label"
+            option-value="value"
+          />
+        </label>
+        <label class="form-field">
+          <span>Nombre de fois dans la semaine</span>
+          <InputNumber v-model="frequencyForm.targetCountPerWeek" :min="0" :max="14" show-buttons />
+        </label>
+        <div class="dialog-actions">
+          <Button label="Annuler" severity="secondary" text @click="frequencyDialogVisible = false" />
+          <Button label="Ajouter l'objectif" type="submit" />
         </div>
       </form>
     </Dialog>

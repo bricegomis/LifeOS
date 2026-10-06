@@ -10,6 +10,14 @@
         <span>Début de semaine</span>
         <input class="text-input" type="date" name="newWeekStartsOn" [(ngModel)]="newWeekStartsOn" required />
       </label>
+      <label class="planning-field">
+        <span>Type de semaine</span>
+        <select class="text-input" name="newWeekMode" [(ngModel)]="newWeekMode">
+          @for (mode of weekModeChoices; track mode.value) {
+            <option [value]="mode.value">{{ mode.label }}</option>
+          }
+        </select>
+      </label>
       <button class="planning-button" type="submit" [disabled]="busy() !== null">
         {{ busy() === 'create-week' ? 'Création…' : 'Créer une semaine' }}
       </button>
@@ -45,6 +53,9 @@
         </label>
         <h2 id="week-heading" class="sr-only">{{ weekLabel(week) }}</h2>
         <div class="week-controls">
+          <p class="planner-note">
+            Modèle appliqué : {{ week.weekMode === 'kids' ? 'Avec enfant' : 'Sans enfant' }}
+          </p>
           <label class="planning-field">
             <span>Statut</span>
             <select
