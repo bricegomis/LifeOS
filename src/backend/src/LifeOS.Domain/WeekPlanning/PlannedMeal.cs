@@ -37,8 +37,8 @@ public sealed class PlannedMeal : Entity
     {
         if (dayId == Guid.Empty) throw new ArgumentException("Journée obligatoire.");
         EventTime.Validate(start, end);
-        if (personalPortion <= 0 || personalPortion > 1000 || children < 0 || children > 100)
-            throw new ArgumentException("Portion positive (maximum 1000), enfants entre 0 et 100.");
+        if (personalPortion < 0.0001m || personalPortion > 1000 || decimal.Round(personalPortion, 4) != personalPortion || children < 0 || children > 100)
+            throw new ArgumentException("Portion entre 0,0001 et 1000 (quatre décimales), enfants entre 0 et 100.");
         DayPlanId = dayId;
         StartMinute = start;
         EndMinute = end;

@@ -46,7 +46,7 @@ import {
     .recipe-feedback { margin: 0; color: var(--lifeos-accent-strong); font-weight: 700; }
     .recipe-error { margin: 0; padding: 12px 14px; border-radius: 12px; background: #fff0ed; color: #8f2017; font-weight: 700; }
     .recipe-empty { margin: 0; color: var(--lifeos-text-soft); line-height: 1.5; }
-    .recipe-form-actions .p-button { min-height: 2.65rem; }
+    .recipe-form-actions .lifeos-button { min-height: 2.65rem; }
     @media (max-width: 850px) { .recipes-workspace { grid-template-columns: minmax(0, 1fr); } }
     @media (max-width: 560px) { .recipe-editor-form { grid-template-columns: minmax(0, 1fr); } .recipe-field-wide, .recipe-form-actions, .recipe-feedback, .recipe-ingredients { grid-column: auto; } .recipes-directory, .recipe-editor { padding: 17px; } }
   `],

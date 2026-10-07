@@ -42,7 +42,7 @@ public sealed class RecipeIngredient : Entity
             throw new ArgumentException("Food item ID is required.", nameof(foodItemId));
         }
 
-        if (quantity <= 0)
+        if (quantity < 0.000001m || quantity > 1000000 || decimal.Round(quantity, 6) != quantity)
         {
             throw new ArgumentException("Quantity must be greater than 0.", nameof(quantity));
         }
@@ -73,7 +73,7 @@ public sealed class RecipeIngredient : Entity
     /// </summary>
     public void Update(decimal quantity, string unit)
     {
-        if (quantity <= 0)
+        if (quantity < 0.000001m || quantity > 1000000 || decimal.Round(quantity, 6) != quantity)
         {
             throw new ArgumentException("Quantity must be greater than 0.", nameof(quantity));
         }

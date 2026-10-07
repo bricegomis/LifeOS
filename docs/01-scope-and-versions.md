@@ -3,9 +3,9 @@
 ## Décision validée et état de livraison
 
 Le cadrage du 7 octobre 2026 remplace le MVP centré sur la génération et le
-menu équilibré. Ce document décrit la **cible approuvée**, pas des fonctionnalités
-déjà livrées. Voir [roadmap](03-roadmap.md) pour les lots et leur état.
-La réalisation concerne Angular / PrimeNG et l'API ASP.NET Core / PostgreSQL ;
+menu équilibré. Ce périmètre est maintenant **implémenté et validé localement**.
+Voir [roadmap](03-roadmap.md) pour les lots et les limites de validation.
+La réalisation concerne Angular / contrôles natifs LifeOS et l'API ASP.NET Core / PostgreSQL ;
 le frontend Vue historique n'est pas refondu.
 
 ## Périmètre
@@ -75,3 +75,13 @@ ni refonte Vue. Une automatisation future sera guidée par l'usage réel.
   et chevauchements lisibles ; nutrition manquante et erreurs API explicites.
 - Aucun recalcul automatique des repas après ajout de sport ; aucun succès
   affiché avant sauvegarde effective.
+
+  ## Limites livrées
+
+  Les événements restent dans une seule date civile (pas de traversée de minuit).
+  Les historiques non figés utilisent leurs valeurs catalogue actuelles lors du
+  premier placement, annoncé explicitement ; leur nutrition passée n'est pas
+  reconstruite. Pas de drag-and-drop nécessaire : déplacement par formulaire,
+  y compris entre deux semaines existantes. Aucun import sportif automatique.
+  Le stockage accepte une fin à 24 h ; le champ horaire natif saisit jusqu'à
+  23 h 59. Les horaires comme 22 h restent disponibles hors plage.

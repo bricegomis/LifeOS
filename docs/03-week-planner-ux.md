@@ -1,4 +1,4 @@
-# LifeOS — UX du semainier manuel (cible approuvée)
+# LifeOS — UX du semainier manuel (implémentée)
 
 ## Navigation et affichage
 

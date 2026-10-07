@@ -1,6 +1,6 @@
 # ADR 0004 — Transition vers le semainier manuel
 
-Statut : accepté pour implémentation, 2026-10-07.
+Statut : accepté et implémenté, 2026-10-07.
 
 ## Contrats et temps
 
@@ -39,6 +39,10 @@ nom, quantité/unité de référence personnelle, unité nutritionnelle et quatr
 valeurs nutritionnelles nullables copiées. Les recettes sont décomposées en
 lignes pour une portion de référence (`quantité recette / servings`).
 Une occurrence multiplie ces lignes par sa portion personnelle positive.
+Les ingrédients sont persistés à six décimales ; les quantités de snapshot à
+douze décimales, arrondies avant calcul/sauvegarde pour accepter les portions
+fractionnaires (ex. une recette de trois portions). Portion personnelle à quatre
+décimales. Les bornes sont validées avant écriture, sans débordement SQL.
 Les repas directs peuvent porter plusieurs lignes. Nutrition personnelle seule ;
 préparation multiplie par `1 + 0,5 × enfants`, entier non négatif.
 Modifier heure, portion ou enfants conserve le snapshot. Changer le contenu
@@ -65,3 +69,8 @@ redémarrage, deux foyers, références croisées rejetées, snapshots, unités 
 chevauchements, hors plage, multiples séances, portions/enfants et erreurs API.
 Auth Supabase/JWT et résolution de foyer inchangées. Les protections de merge
 et CI restent applicables à l'autorisation de fusion automatique.
+
+Migrations livrées : `ManualFoodCatalog`, `SportLibrary`, `ManualTimedEvents`,
+`PlannerQuantityPrecision`. Cette dernière augmente seulement la précision des
+quantités existantes. Les tests exercent une base vierge et une base historique
+arrêtée à `SeparateWeekTypes`, prix/repas composés/séances compris.

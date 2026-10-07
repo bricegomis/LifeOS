@@ -25,6 +25,53 @@ public sealed class ManualPlannerTests(PostgresContainerFixture postgres)
         });
 
     [Fact]
+    public async Task Explicit_replacement_quantity_edits_and_sport_catalog_isolation()
+    {
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        using var a = factory.CreateClient().AsUser(Guid.NewGuid());
+        using var b = factory.CreateClient().AsUser(Guid.NewGuid());
+        var food = await Food(a);
+        var replacement = await Food(a, "Autre riz");
+        var week = await Post<ManualWeekDto>(a, "/api/manual-planner/weeks", new ManualWeekRequest(new(2026, 10, 5)));
+        var foreignWeek = await Post<ManualWeekDto>(b, "/api/manual-planner/weeks", new ManualWeekRequest(new(2026, 10, 5)));
+        var day = week.Days[0].Id;
+        var meal = await Post<ManualMealDto>(a, "/api/manual-planner/meals",
+            new ManualMealRequest(day, 480, 500, 1, 0, Lines: [new(food.Id, 100, "g")]));
+        var response = await a.PutAsJsonAsync($"/api/manual-planner/meals/{meal.Id}",
+            new ManualMealRequest(day, 480, 500, 1, 2, Lines: [new(food.Id, 50, "g", meal.Lines[0].Id)]));
+        response.EnsureSuccessStatusCode();
+        var adjusted = (await response.Content.ReadFromJsonAsync<ManualMealDto>())!;
+        Assert.Equal(75d, adjusted.Nutrition.Calories);
+        Assert.Equal(100, adjusted.Lines[0].PreparationQuantity);
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.PutAsJsonAsync($"/api/manual-planner/meals/{meal.Id}",
+            new ManualMealRequest(day, 480, 500, 1, 0, Lines: [new(replacement.Id, 100, "g")]))).StatusCode);
+        (await a.PutAsJsonAsync($"/api/manual-planner/meals/{meal.Id}",
+            new ManualMealRequest(day, 480, 500, 1, 0, Lines: [new(replacement.Id, 100, "g")], ReplaceContent: true)))
+            .EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.BadRequest, (await b.PostAsJsonAsync("/api/manual-planner/meals",
+            new ManualMealRequest(foreignWeek.Days[0].Id, 480, 500, 1, 0, Lines: [new(food.Id, 100, "g")]))).StatusCode);
+        var templateRequest = new SportTemplatesEndpoints.SportTemplateRequest("Vélo", "bike", 30, 10, "moderate", 200);
+        var template = await Post<System.Text.Json.JsonElement>(a, "/api/sport-templates", templateRequest);
+        var id = template.GetProperty("id").GetGuid();
+        var sport = await Post<ManualSportDto>(a, "/api/manual-planner/sports",
+            new ManualSportRequest(day, 1020, 1050, id, "Vélo", "bike", "moderate", 30, 10, 200));
+        Assert.Equal(HttpStatusCode.NotFound, (await b.PutAsJsonAsync($"/api/sport-templates/{id}", templateRequest)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await b.DeleteAsync($"/api/sport-templates/{id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await b.PostAsJsonAsync("/api/manual-planner/sports",
+            new ManualSportRequest(foreignWeek.Days[0].Id, 1020, 1050, id, "Vélo", "bike", "moderate", 30, 10, 200))).StatusCode);
+        (await a.PutAsJsonAsync($"/api/sport-templates/{id}", templateRequest with { Calories = 999 })).EnsureSuccessStatusCode();
+        (await a.DeleteAsync($"/api/sport-templates/{id}")).EnsureSuccessStatusCode();
+        (await a.PutAsJsonAsync($"/api/manual-planner/sports/{sport.Id}",
+            new ManualSportRequest(week.Days[1].Id, 1320, 1380, id, "Vélo", "bike", "moderate", 60, 20, 200)))
+            .EnsureSuccessStatusCode();
+        var read = (await a.GetFromJsonAsync<ManualWeekDto>($"/api/manual-planner/weeks/{week.Id}"))!;
+        Assert.Equal("Autre riz", Assert.Single(read.Days[0].Meals).Lines[0].Name);
+        Assert.Equal(200, Assert.Single(read.Days[1].Sports).Calories);
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.PostAsJsonAsync("/api/sport-templates",
+            templateRequest with { DistanceKm = 100000000 })).StatusCode);
+    }
+
+    [Fact]
     public async Task Two_weeks_multiple_events_portions_snapshots_and_restart()
     {
         var user = Guid.NewGuid();

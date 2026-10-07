@@ -1,33 +1,38 @@
-# LifeOS — Modèle de données initial (conceptuel)
+# LifeOS — Modèle de données
 
-## Cible approuvée du semainier manuel — non encore implémentée
+## Implémentation actuelle du semainier manuel
 
-Le modèle conceptuel historique ci-dessous est conservé pour expliciter l'écart
-avec le code ; les profils par membre, contexte travail et menu équilibré ne
-sont plus des exigences du parcours MVP. L'état réel est détaillé dans les
-sections « État d'implémentation ».
+PostgreSQL/API est la source de vérité, avec isolation par foyer et relations
+fortes. Le schéma réel est défini par les configurations EF et migrations ;
+voir [ADR 0004](decisions/0004-manual-planner.md).
 
-La cible conserve `weeks` et `day_plans` datés/isolés par foyer et introduit
-des horaires début/fin pour deux types seulement : alimentation et sport.
-Les événements historiques sans heures restent à positionner, sans backfill
-arbitraire. Relations typées et fortes, pas de JSON métier générique.
-L'ADR du lot 1 précisera date/fuseau/invariants et migrations exactes.
+| Table existante/nouvelle | Données livrées |
+| --- | --- |
+| `weeks` | `IsManual`, `TimeZoneId` IANA ; nouvelle semaine manuelle avec sept journées vides, sans alternance/règles. |
+| `day_plans` | Date civile et FK semaine conservées ; plusieurs événements par jour. |
+| `planned_meals` | Début/fin locaux nullables, `PersonalPortion`, `ChildrenCount`, nom figé, recette ou lignes ; référence repas composé historique conservée. |
+| `meal_food_lines` | FK repas, FK produit facultative, nom, quantité/unité, unité nutritionnelle et énergie/protéines/glucides/lipides nullables figés ; quantité numeric(28,12). |
+| `activity_sessions` | Horaires nullables, nom/distance et FK catalogue facultative ; type/intensité/durée/calories copiés et modifiables par occurrence. |
+| `sport_templates` | Foyer, nom, sport, durée positive, distance optionnelle, intensité, calories manuelles totales, archivage ; aucun seed silencieux. |
+| `food_items` | Archivage et `ArticleId` nullable unique vers `articles`, raccord explicite dans le même foyer. |
+| `recipes` / `recipe_ingredients` | Archivage, portions, ingrédients numeric(16,6) ; la FK historique `FoodItemId` pointe toujours vers `articles`. |
 
-Un événement alimentaire référence une recette ou porte des lignes de produits
-(quantités/unités explicites), avec portion personnelle et nombre d'enfants.
-Préparation = personnel × (1 + 0,5 × enfants), nutrition personnelle inchangée.
-Les repas composés existants restent accessibles/migrables sans perte.
-Les valeurs utilisées sont préservées dans des snapshots explicites.
+Préparation = quantité personnelle × (1 + 0,5 × enfants). Les enfants n'augmentent
+jamais la nutrition personnelle. Le sport reste séparé des apports. Aucune
+conversion masse/volume/pièces sans information sûre ; totaux incomplets explicites.
+Modifier/archiver un catalogue ne modifie pas les snapshots des événements.
 
-Un catalogue sportif par foyer stockera nom, sport, durée, distance optionnelle,
-intensité et calories manuelles. L'occurrence copie les valeurs et les ajuste
-indépendamment ; calories non proportionnelles aux changements de durée/distance.
-Archiver les contenus référencés, sans réécrire les occurrences.
+Les migrations ne fusionnent aucun nom, ne suppriment aucun historique d'achat
+et n'inventent aucune heure. Les anciens repas sans snapshot restent consultables
+à partir des valeurs actuelles ; leur premier placement manuel les fige avec
+avertissement. Les contextes/règles/profils historiques restent stockés mais ne
+pilotent plus le parcours MVP.
 
-`articles` et `food_items` sont actuellement distincts ; proposer un raccord
-explicite non destructif, jamais une fusion par nom. Préserver achats et prix.
-Pas de conversions g/ml/pièces sans information fiable ; totaux incomplets
-explicites. Aucune création de semaine manuelle ne dépendra des anciennes règles.
+## Référence conceptuelle historique — non normative pour le MVP
+
+**Tout le modèle et les anciens états d'implémentation ci-dessous sont conservés
+comme référence antérieure.** Ils ne décrivent pas le schéma manuel actuel :
+profils enfants, contexte travail et menu équilibré ne sont plus ses exigences.
 
 Ce document décrit le modèle de données conceptuel visé pour la base
 PostgreSQL cible. Il est volontairement **non final** : il sert de point de

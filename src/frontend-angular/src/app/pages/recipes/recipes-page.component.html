@@ -4,7 +4,7 @@
       <h1>Recettes</h1>
       <p>Gardez vos recettes prêtes à composer les repas de la semaine.</p>
     </div>
-    <button class="p-button p-component" type="button" (click)="startNewRecipe()">Nouvelle recette</button>
+    <button class="lifeos-button" type="button" (click)="startNewRecipe()">Nouvelle recette</button>
   </header>
 
   @if (error()) { <p class="recipe-error" role="alert">{{ error() }}</p> }
@@ -46,7 +46,7 @@
           <p class="recipe-empty">Nom, portions et durée restent modifiables à tout moment.</p>
         </div>
         @if (selectedRecipe()) {
-          <button class="p-button p-component p-button-secondary" type="button" [disabled]="saving()" (click)="deleteRecipe()">
+          <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="deleteRecipe()">
             Archiver
           </button>
         }
@@ -74,11 +74,11 @@
           <textarea name="metadata" rows="3" placeholder='{"source":"maison"}' [(ngModel)]="metadataValue"></textarea>
         </label>
         <div class="recipe-form-actions">
-          <button class="p-button p-component" type="submit" [disabled]="saving()">
+          <button class="lifeos-button" type="submit" [disabled]="saving()">
             {{ saving() ? 'Enregistrement…' : editingId() ? 'Enregistrer les modifications' : 'Créer la recette' }}
           </button>
           @if (editingId()) {
-            <button class="p-button p-component p-button-secondary" type="button" [disabled]="saving()" (click)="startNewRecipe()">
+            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="startNewRecipe()">
               Annuler la modification
             </button>
           }
@@ -96,16 +96,16 @@
               <div class="recipe-ingredient-row">
                 <strong>{{ foodItemName(ingredient.foodItemId) }}</strong>
                 <span>{{ ingredient.quantity }} {{ ingredient.unit }}</span>
-                <button type="button" class="p-button p-button-secondary" [disabled]="saving()" (click)="editIngredient(ingredient)">Modifier</button>
+                <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="saving()" (click)="editIngredient(ingredient)">Modifier</button>
               </div>
             }
             @if (ingredientEdit; as edit) {
               <form class="recipe-inline-form" (ngSubmit)="saveIngredient()">
                 <label class="recipe-field"><span>Quantité</span><input name="editQty" type="number" min="0.001" step="any" required [(ngModel)]="edit.quantity" /></label>
                 <label class="recipe-field"><span>Unité</span><input name="editUnit" required [(ngModel)]="edit.unit" /></label>
-                <button type="submit" class="p-button" [disabled]="saving()">Enregistrer</button>
-                <button type="button" class="p-button p-button-secondary" [disabled]="saving()" (click)="saveIngredient(true)">Retirer l’ingrédient</button>
-                <button type="button" class="p-button p-button-secondary" (click)="ingredientEdit = null">Annuler</button>
+                <button type="submit" class="lifeos-button" [disabled]="saving()">Enregistrer</button>
+                <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="saving()" (click)="saveIngredient(true)">Retirer l’ingrédient</button>
+                <button type="button" class="lifeos-button lifeos-button-secondary" (click)="ingredientEdit = null">Annuler</button>
               </form>
             }
           } @else {
@@ -137,7 +137,7 @@
                 <span>Unité</span>
                 <input name="ingredientUnit" type="text" required [(ngModel)]="ingredientUnitValue" />
               </label>
-              <button class="p-button p-component" type="submit" [disabled]="saving()">Ajouter l’ingrédient</button>
+              <button class="lifeos-button" type="submit" [disabled]="saving()">Ajouter l’ingrédient</button>
             </form>
           }
         </section>

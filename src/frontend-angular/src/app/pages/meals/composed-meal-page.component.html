@@ -4,7 +4,7 @@
       <h1>Repas composés</h1>
       <p>Assemblez plusieurs recettes pour les retrouver ensemble dans vos repas planifiés.</p>
     </div>
-    <button class="p-button p-component" type="button" (click)="startNewMeal()">Nouveau repas composé</button>
+    <button class="lifeos-button" type="button" (click)="startNewMeal()">Nouveau repas composé</button>
   </header>
 
   @if (error()) { <p class="meal-error" role="alert">{{ error() }}</p> }
@@ -45,7 +45,7 @@
           <p class="meal-empty">Réunissez les recettes utiles à un repas en un seul endroit.</p>
         </div>
         @if (selectedMeal()) {
-          <button class="p-button p-component p-button-secondary" type="button" [disabled]="saving()" (click)="deleteMeal()">
+          <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="deleteMeal()">
             Supprimer
           </button>
         }
@@ -57,11 +57,11 @@
           <input name="mealName" type="text" required [(ngModel)]="mealNameValue" />
         </label>
         <div class="meal-form-actions">
-          <button class="p-button p-component" type="submit" [disabled]="saving()">
+          <button class="lifeos-button" type="submit" [disabled]="saving()">
             {{ saving() ? 'Enregistrement…' : editingId() ? 'Enregistrer les modifications' : 'Créer le repas composé' }}
           </button>
           @if (editingId()) {
-            <button class="p-button p-component p-button-secondary" type="button" [disabled]="saving()" (click)="startNewMeal()">
+            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="startNewMeal()">
               Annuler la modification
             </button>
           }
@@ -80,7 +80,7 @@
                 <strong>{{ recipeName(part.recipeId) }}</strong>
                 <span>× {{ part.quantityFactor }}</span>
                 <button
-                  class="p-button p-component p-button-secondary p-button-sm"
+                  class="lifeos-button lifeos-button-secondary lifeos-button-sm"
                   type="button"
                   [disabled]="saving()"
                   [attr.aria-label]="'Retirer ' + recipeName(part.recipeId) + ' de ce repas'"
@@ -109,7 +109,7 @@
                 <span>Facteur de quantité</span>
                 <input name="quantityFactor" type="number" min="0.001" step="any" required [(ngModel)]="quantityFactorValue" />
               </label>
-              <button class="p-button p-component" type="submit" [disabled]="saving()">Ajouter la recette</button>
+              <button class="lifeos-button" type="submit" [disabled]="saving()">Ajouter la recette</button>
             </form>
           }
         </section>

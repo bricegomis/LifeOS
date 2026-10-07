@@ -55,4 +55,13 @@ public sealed class ManualPlannerTests
         Assert.All(week.DayPlans, day => { Assert.Empty(day.PlannedMeals); Assert.False(day.BikeCommute); });
         Assert.Throws<ArgumentException>(() => Week.CreateManual(Guid.NewGuid(), new(2026, 10, 6), "Europe/Paris"));
     }
+
+    [Fact]
+    public void Recipe_fractions_are_snapshotted_without_rejecting_repeating_decimals()
+    {
+        var line = MealFoodLine.Snapshot(Guid.NewGuid(), null, "Riz", 100m / 3, "g", "100g", new(150, 3, 30, 1));
+        Assert.Equal(33.333333333333m, line.Quantity);
+        Assert.Equal(0.33333333333333, line.NutritionFactor()!.Value, 10);
+        Assert.Throws<ArgumentException>(() => line.UpdateQuantity(0));
+    }
 }

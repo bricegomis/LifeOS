@@ -20,7 +20,7 @@ import { apiBaseUrl, buildId } from '@/environments/environment'
         <h2>Planifier sans configuration</h2>
         <p>La présence des enfants se règle sur chaque repas. Les horaires et les portions appartiennent uniquement à l’événement.</p>
         <p>Alternance, semaines types, règles et génération sont reportées. Leurs données historiques sont conservées, mais ne pilotent pas vos nouvelles semaines.</p>
-        <a class="p-button" routerLink="/planning">Ouvrir le semainier</a>
+        <a class="lifeos-button" routerLink="/planning">Ouvrir le semainier</a>
       </section>
     </section>
   `,

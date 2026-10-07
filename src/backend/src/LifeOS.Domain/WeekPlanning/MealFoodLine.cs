@@ -34,8 +34,10 @@ public sealed class MealFoodLine : Entity
 
     public void UpdateQuantity(decimal quantity)
     {
-        if (quantity <= 0 || quantity > 1000000) throw new ArgumentException("Quantité positive, maximum 1000000.");
-        Quantity = quantity;
+        var rounded = decimal.Round(quantity, 12);
+        if (rounded <= 0 || quantity > 1000000)
+            throw new ArgumentException("Quantité positive (précision douze décimales), maximum 1000000.");
+        Quantity = rounded;
     }
 
     public double? NutritionFactor()

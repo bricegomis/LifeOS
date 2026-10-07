@@ -26,8 +26,8 @@ const empty = (): SportTemplateRequest => ({
           @for (item of visible(); track item.id) {
             <div class="sport-row"><div><strong>{{ item.name }}</strong><p>{{ item.sport }} · {{ item.durationMinutes }} min · {{ item.calories }} kcal saisies</p>
               @if (item.distanceKm !== null) { <p>{{ item.distanceKm }} km</p> }</div>
-              <button type="button" class="p-button p-button-secondary" [disabled]="busy()" (click)="edit(item)">Modifier</button>
-              <button type="button" class="p-button p-button-secondary" [disabled]="busy()" (click)="archive(item)">Archiver</button>
+              <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="edit(item)">Modifier</button>
+              <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="archive(item)">Archiver</button>
             </div>
           }
         </section>
@@ -41,8 +41,8 @@ const empty = (): SportTemplateRequest => ({
           <label>Intensité <select class="text-input" name="intensity" [(ngModel)]="draft.intensity"><option value="low">Faible</option><option value="moderate">Modérée</option><option value="high">Élevée</option></select></label>
           <label>Calories totales estimées manuellement <input class="text-input" name="calories" type="number" min="0" step="any" required [(ngModel)]="draft.calories" /></label>
           <p>Les calories sont un total saisi. Modifier durée ou distance ne les recalcule pas.</p>
-          <div class="sport-actions"><button class="p-button" type="submit" [disabled]="busy()">{{ busy() ? 'Enregistrement…' : 'Enregistrer' }}</button>
-            <button class="p-button p-button-secondary" type="button" [disabled]="busy()" (click)="reset()">Nouveau / annuler</button></div>
+          <div class="sport-actions"><button class="lifeos-button" type="submit" [disabled]="busy()">{{ busy() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="busy()" (click)="reset()">Nouveau / annuler</button></div>
         </form>
       </div>
     </section>

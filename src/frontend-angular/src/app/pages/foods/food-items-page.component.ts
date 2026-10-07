@@ -6,6 +6,7 @@ import {
   FoodItemRequest,
   NutritionPerUnitDto,
   ArticleDto,
+  GroceryItemUnit,
 } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 
@@ -116,10 +117,6 @@ const emptyEditor = (): FoodEditor => ({
                 <h2 id="off-search-title">Rechercher un produit</h2>
                 <p>Recherchez un produit par son nom ou son code-barres.</p>
               </div>
-              <label class="foods-field"><span>Filtrer vos produits</span>
-                <input type="search" [(ngModel)]="catalogSearch" placeholder="Nom du produit" />
-              </label>
-              <label><input type="checkbox" [(ngModel)]="showArchived" /> Afficher les produits archivés</label>
             </div>
             <p class="foods-search-notice" role="note">
               Une recherche dans Open Food Facts peut ajouter automatiquement un aliment au catalogue de votre foyer.
@@ -177,6 +174,10 @@ const emptyEditor = (): FoodEditor => ({
                 <h2 id="catalog-heading">Vos aliments</h2>
                 <p>Les aliments disponibles pour la planification de vos repas.</p>
               </div>
+              <label class="foods-field"><span>Filtrer vos produits</span>
+                <input type="search" [(ngModel)]="catalogSearch" placeholder="Nom du produit" />
+              </label>
+              <label><input type="checkbox" [(ngModel)]="showArchived" /> Afficher les produits archivés</label>
               <button class="foods-secondary" type="button" (click)="loadItems()" [disabled]="loading() || busy()">
                 {{ loading() ? 'Actualisation…' : 'Actualiser' }}
               </button>
@@ -217,6 +218,11 @@ const emptyEditor = (): FoodEditor => ({
                         </label>
                         <button type="button" class="foods-secondary" [disabled]="busy()" (click)="linkArticle(item)">Enregistrer le raccord</button>
                         @if (!item.articleId) {
+                          <label class="foods-field"><span>Unité d’achat du nouvel article</span>
+                            <select [ngModel]="purchaseUnit[item.id] ?? 'unit'" (ngModelChange)="purchaseUnit[item.id] = $event">
+                              <option value="unit">À l’unité</option><option value="kilogram">Au kilogramme</option><option value="liter">Au litre</option>
+                            </select>
+                          </label>
                           <button type="button" class="foods-secondary" [disabled]="busy()" (click)="createArticle(item)">Créer un article d’achat et le relier</button>
                         }
                       }
@@ -321,6 +327,7 @@ export class FoodItemsPageComponent {
   catalogSearch = ''
   showArchived = false
   articleChoice: Record<string, string> = {}
+  purchaseUnit: Record<string, GroceryItemUnit> = {}
   visibleItems(): FoodItemDto[] {
     return this.items().filter(i => (this.showArchived || !i.isArchived)
       && i.name.toLocaleLowerCase('fr').includes(this.catalogSearch.toLocaleLowerCase('fr')))
@@ -359,7 +366,7 @@ export class FoodItemsPageComponent {
     this.error.set('')
     try {
       const updated = await firstValueFrom(this.api.put<FoodItemDto>(`/food-items/${item.id}/article`,
-        { articleId: this.articleChoice[item.id] || null }))
+        { articleId: (this.articleChoice[item.id] ?? item.articleId) || null }))
       this.items.update(items => items.map(i => i.id === item.id ? updated : i))
       this.notice.set('Raccord enregistré. Les prix et achats sont conservés.')
     } catch (error) { this.error.set(apiErrorMessage(error)) }
@@ -371,7 +378,7 @@ export class FoodItemsPageComponent {
     this.error.set('')
     try {
       const article = await firstValueFrom(this.api.post<ArticleDto>('/articles',
-        { name: item.name, description: '', unit: 'unit' }))
+        { name: item.name, description: '', unit: this.purchaseUnit[item.id] ?? 'unit' }))
       this.articles.update(items => [...items, article])
       this.articleChoice[item.id] = article.id
       await this.linkArticle(item)

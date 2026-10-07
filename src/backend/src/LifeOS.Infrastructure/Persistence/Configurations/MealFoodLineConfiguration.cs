@@ -15,7 +15,7 @@ internal sealed class MealFoodLineConfiguration : IEntityTypeConfiguration<MealF
         builder.Property(l => l.Name).HasMaxLength(500).IsRequired();
         builder.Property(l => l.Unit).HasMaxLength(50).IsRequired();
         builder.Property(l => l.ReferenceUnit).HasMaxLength(50).IsRequired();
-        builder.Property(l => l.Quantity).HasPrecision(16, 6);
+        builder.Property(l => l.Quantity).HasPrecision(28, 12);
         builder.HasOne<FoodItem>().WithMany().HasForeignKey(l => l.FoodItemId).OnDelete(DeleteBehavior.Restrict);
     }
 }

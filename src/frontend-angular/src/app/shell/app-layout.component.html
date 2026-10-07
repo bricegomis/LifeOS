@@ -24,7 +24,7 @@
       </div>
       <small class="sidebar-user">{{ auth.user()?.email ?? 'Compte du foyer' }}</small>
       @if (signOutError()) { <small class="api-error" role="alert">{{ signOutError() }}</small> }
-      <button class="p-button p-component p-button-secondary p-button-text p-button-sm" type="button" (click)="signOut()">
+      <button class="lifeos-button lifeos-button-secondary lifeos-button-text lifeos-button-sm" type="button" (click)="signOut()">
         Déconnexion
       </button>
     </div>

@@ -31,7 +31,8 @@ public sealed class SportTemplate : Entity
             || string.IsNullOrWhiteSpace(sport) || sport.Length > 50)
             throw new ArgumentException("Nom et sport obligatoires (200 / 50 caractères maximum).");
         if (durationMinutes <= 0 || durationMinutes > 1440) throw new ArgumentException("Durée : 1 à 1440 minutes.");
-        if (distanceKm < 0 || calories < 0) throw new ArgumentException("Distance et calories non négatives.");
+        if (distanceKm < 0 || distanceKm > 1000000 || calories < 0 || calories > 10000000)
+            throw new ArgumentException("Distance entre 0 et 1000000 km ; calories entre 0 et 10000000 kcal.");
         if (intensity is not ("low" or "moderate" or "high")) throw new ArgumentException("Intensité : low, moderate ou high.");
     }
 

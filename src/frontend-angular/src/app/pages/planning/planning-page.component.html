@@ -2,9 +2,9 @@
   <header class="page-hero">
     <div><h1>{{ todayOnly ? 'Aujourd’hui' : 'Semainier' }}</h1><p>Alimentation et sport, à votre rythme. Aucun menu généré.</p></div>
     <div class="calendar-toolbar">
-      <button type="button" class="p-button p-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(-1)" aria-label="Semaine précédente">←</button>
-      <button type="button" class="p-button p-button-secondary" [disabled]="loading() || busy()" (click)="today()">Aujourd’hui</button>
-      <button type="button" class="p-button p-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(1)" aria-label="Semaine suivante">→</button>
+      <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(-1)" aria-label="Semaine précédente">←</button>
+      <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="today()">Aujourd’hui</button>
+      <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(1)" aria-label="Semaine suivante">→</button>
     </div>
   </header>
   <div class="calendar-toolbar">
@@ -43,7 +43,7 @@
         @if (!edit.hasSnapshot) { <p class="calendar-warning">Repas historique : aucun horaire inventé. Le premier enregistrement fige les valeurs actuelles du catalogue, pas une nutrition passée inconnue.</p> }
         @if (edit.id && !edit.replaceContent) {
           <p><strong>{{ edit.name }}</strong> · contenu enregistré conservé</p>
-          <button type="button" class="p-button p-button-secondary" [disabled]="busy()" (click)="replace()">Remplacer explicitement le contenu</button>
+          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="replace()">Remplacer explicitement le contenu</button>
         }
         @if (contentEditable()) {
           <label>Rechercher dans les bibliothèques <input class="text-input" name="catalogSearch" type="search" [(ngModel)]="catalogSearch" /></label>
@@ -76,10 +76,10 @@
                 <label>Quantité personnelle de référence <input class="text-input" [name]="'quantity'+index" type="number" min="0.001" max="1000000" step="any" required [(ngModel)]="line.quantity" /></label>
                 <label>Unité <input class="text-input" [name]="'unit'+index" maxlength="50" required [(ngModel)]="line.unit" [readonly]="!contentEditable()" placeholder="g, ml, piece" /></label>
                 <span>À préparer : {{ number(line.quantity * edit.personalPortion * (1 + 0.5 * edit.children)) }} {{ line.unit }}</span>
-                @if (contentEditable()) { <button type="button" class="p-button p-button-secondary" (click)="edit.lines.splice(index, 1)">Retirer</button> }
+                @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit.lines.splice(index, 1)">Retirer</button> }
               </div>
             }
-            @if (contentEditable()) { <button type="button" class="p-button p-button-secondary" (click)="addLine()">Ajouter un produit</button> }
+            @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addLine()">Ajouter un produit</button> }
           }
         } @else {
           @if (contentEditable()) {
@@ -98,9 +98,9 @@
           <p>Durée = fin − début. Modifier le créneau ou la distance ne recalcule pas les calories. Seule cette occurrence change.</p>
         }
         <div class="editor-actions">
-          <button class="p-button" type="submit" [disabled]="busy() || loading()">{{ busy() ? 'Enregistrement…' : 'Enregistrer l’événement' }}</button>
-          <button class="p-button p-button-secondary" type="button" [disabled]="busy()" (click)="draft = null">Annuler</button>
-          @if (edit.id) { <button class="p-button p-button-secondary danger" type="button" [disabled]="busy()" (click)="remove()">Supprimer cet événement</button> }
+          <button class="lifeos-button" type="submit" [disabled]="busy() || loading()">{{ busy() ? 'Enregistrement…' : 'Enregistrer l’événement' }}</button>
+          <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="busy()" (click)="draft = null">Annuler</button>
+          @if (edit.id) { <button class="lifeos-button lifeos-button-secondary danger" type="button" [disabled]="busy()" (click)="remove()">Supprimer cet événement</button> }
         </div>
       </form>
     </section>
@@ -116,7 +116,7 @@
     @if (selectedDay(); as day) {
       <section class="day-agenda" [class.today-agenda]="todayOnly">
         <div class="calendar-toolbar"><h2>{{ dateLabel(day.date) }}</h2>
-          <button type="button" class="p-button" [disabled]="busy()" (click)="add(day)">Ajouter un événement</button></div>
+          <button type="button" class="lifeos-button" [disabled]="busy()" (click)="add(day)">Ajouter un événement</button></div>
         <p>Mes apports : {{ number(day.nutrition.calories) }} kcal · P {{ number(day.nutrition.protein) }} g · G {{ number(day.nutrition.carbs) }} g · L {{ number(day.nutrition.fat) }} g</p>
         <p>Sport déclaré : {{ number(sportTotal(day)) }} kcal — pas une dépense quotidienne totale.</p>
         @if (!day.nutrition.isComplete) { <p class="calendar-warning">Total nutritionnel incomplet.</p> }
@@ -171,9 +171,9 @@
             @if (outOfRange(day).length) { · {{ outOfRange(day).length }} hors plage }
             · apports et préparation</summary>
             @if (unplaced(day).length) { <h3>À positionner (historique sans heure)</h3> }
-            @for (event of unplaced(day); track event.key) { <button type="button" class="p-button p-button-secondary" (click)="edit(event)">{{ event.value.name }} · Positionner</button> }
+            @for (event of unplaced(day); track event.key) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit(event)">{{ event.value.name }} · Positionner</button> }
             @if (outOfRange(day).length) { <h3>Hors plage 6–20 h</h3> }
-            @for (event of outOfRange(day); track event.key) { <button type="button" class="p-button p-button-secondary" (click)="edit(event)">{{ time(event.value.startMinute) }} · {{ event.value.name }} · Modifier</button> }
+            @for (event of outOfRange(day); track event.key) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit(event)">{{ time(event.value.startMinute) }} · {{ event.value.name }} · Modifier</button> }
             <p>Mes apports : {{ number(day.nutrition.calories) }} kcal · Protéines {{ number(day.nutrition.protein) }} g · Glucides {{ number(day.nutrition.carbs) }} g · Lipides {{ number(day.nutrition.fat) }} g</p>
             <p>Sport déclaré : {{ number(sportTotal(day)) }} kcal (séparé des apports).</p>
             @for (meal of day.meals; track meal.id) {
@@ -184,11 +184,11 @@
                 <p class="calendar-warning">Nutrition incomplète :</p>
                 <ul>@for (warning of meal.nutrition.warnings; track warning) { <li>{{ warning }}</li> }</ul>
               }
-              <button type="button" class="p-button p-button-secondary" (click)="edit({key: meal.id, kind: 'meal', value: meal, lane: 0, lanes: 1, top: 0, height: 0})">Modifier / déplacer le repas</button>
+              <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit({key: meal.id, kind: 'meal', value: meal, lane: 0, lanes: 1, top: 0, height: 0})">Modifier / déplacer le repas</button>
             }
             @for (sport of day.sports; track sport.id) {
               <h3>{{ time(sport.startMinute) }} · {{ sport.name }}</h3><p>{{ sport.durationMinutes }} min · {{ sport.distanceKm ?? '—' }} km · {{ sport.calories }} kcal manuelles</p>
-              <button type="button" class="p-button p-button-secondary" (click)="edit({key: sport.id, kind: 'sport', value: sport, lane: 0, lanes: 1, top: 0, height: 0})">Modifier / déplacer la séance</button>
+              <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit({key: sport.id, kind: 'sport', value: sport, lane: 0, lanes: 1, top: 0, height: 0})">Modifier / déplacer la séance</button>
             }
           </details>
         }
@@ -198,7 +198,7 @@
     <section class="surface-card">
       <h2>Une semaine à composer</h2><p>Créez les sept journées, puis ajoutez vos repas et séances. Les autres semaines restent inchangées.</p>
       <label>Fuseau des horaires <input class="text-input" [(ngModel)]="timeZone" aria-label="Fuseau horaire de la semaine" /></label>
-      <button class="p-button" type="button" [disabled]="busy()" (click)="createWeek()">{{ busy() ? 'Création…' : 'Créer cette semaine vide' }}</button>
+      <button class="lifeos-button" type="button" [disabled]="busy()" (click)="createWeek()">{{ busy() ? 'Création…' : 'Créer cette semaine vide' }}</button>
     </section>
   }
 </section>

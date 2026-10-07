@@ -6,7 +6,7 @@
       <p>Connectez-vous pour organiser les repas, suivre les recettes et préparer les courses de votre foyer.</p>
     </div>
     <button
-      class="p-button p-component"
+      class="lifeos-button"
       type="button"
       (click)="continueWithGoogle()"
       [disabled]="googleSubmitting() || submitting() || !auth.ready() || !auth.configured"
@@ -28,7 +28,7 @@
           required
         />
       </label>
-      <button class="p-button p-component login-secondary" type="submit" [disabled]="submitting() || googleSubmitting() || !auth.ready() || !auth.configured">
+      <button class="lifeos-button login-secondary" type="submit" [disabled]="submitting() || googleSubmitting() || !auth.ready() || !auth.configured">
         {{ submitting() ? 'Envoi en cours…' : 'Recevoir un lien sécurisé' }}
       </button>
       @if (!auth.configured) {
