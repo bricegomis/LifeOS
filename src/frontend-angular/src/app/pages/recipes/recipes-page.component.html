@@ -16,13 +16,14 @@
         <h2 id="recipes-directory-title">Votre collection</h2>
         <span class="recipe-muted">{{ recipes().length }} recette{{ recipes().length === 1 ? '' : 's' }}</span>
       </div>
+      <label class="recipe-field"><span>Rechercher une recette</span><input type="search" [(ngModel)]="search" /></label>
       @if (loading() && recipes().length === 0) {
         <p class="recipe-empty" role="status">Chargement des recettes…</p>
       } @else if (recipes().length === 0) {
         <p class="recipe-empty">Aucune recette pour le moment. Créez-en une pour commencer votre collection.</p>
       } @else {
         <div class="recipe-directory-list">
-          @for (recipe of recipes(); track recipe.id) {
+          @for (recipe of visibleRecipes(); track recipe.id) {
             <button
               class="recipe-row"
               [class.is-selected]="selectedRecipe()?.id === recipe.id"
@@ -46,7 +47,7 @@
         </div>
         @if (selectedRecipe()) {
           <button class="p-button p-component p-button-secondary" type="button" [disabled]="saving()" (click)="deleteRecipe()">
-            Supprimer
+            Archiver
           </button>
         }
       </div>
@@ -95,16 +96,26 @@
               <div class="recipe-ingredient-row">
                 <strong>{{ foodItemName(ingredient.foodItemId) }}</strong>
                 <span>{{ ingredient.quantity }} {{ ingredient.unit }}</span>
+                <button type="button" class="p-button p-button-secondary" [disabled]="saving()" (click)="editIngredient(ingredient)">Modifier</button>
               </div>
+            }
+            @if (ingredientEdit; as edit) {
+              <form class="recipe-inline-form" (ngSubmit)="saveIngredient()">
+                <label class="recipe-field"><span>Quantité</span><input name="editQty" type="number" min="0.001" step="any" required [(ngModel)]="edit.quantity" /></label>
+                <label class="recipe-field"><span>Unité</span><input name="editUnit" required [(ngModel)]="edit.unit" /></label>
+                <button type="submit" class="p-button" [disabled]="saving()">Enregistrer</button>
+                <button type="button" class="p-button p-button-secondary" [disabled]="saving()" (click)="saveIngredient(true)">Retirer l’ingrédient</button>
+                <button type="button" class="p-button p-button-secondary" (click)="ingredientEdit = null">Annuler</button>
+              </form>
             }
           } @else {
             <p class="recipe-empty">Aucun ingrédient ajouté.</p>
           }
           @if (loadingFoodItems()) {
             <p class="recipe-empty" role="status">Chargement du catalogue d’aliments…</p>
-          } @else if (foodItems().length === 0) {
+          } @else if (linkedFoods().length === 0) {
             <p class="recipe-empty">
-              Ajoutez d’abord un aliment.
+              Ajoutez un produit et reliez-le explicitement à un article d’achat pour l’utiliser dans une recette.
               <a routerLink="/foods">Ouvrir le catalogue d’aliments</a>
             </p>
           } @else {
@@ -113,8 +124,8 @@
                 <span>Aliment</span>
                 <select name="foodItemId" required [(ngModel)]="ingredientFoodItemIdValue">
                   <option value="" disabled>Choisir un aliment</option>
-                  @for (food of foodItems(); track food.id) {
-                    <option [value]="food.id">{{ food.name }}</option>
+                  @for (food of linkedFoods(); track food.id) {
+                    <option [value]="food.articleId">{{ food.name }}</option>
                   }
                 </select>
               </label>

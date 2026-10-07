@@ -12,7 +12,8 @@ public record RecipeDto(
     Dictionary<string, object>? Metadata,
     List<RecipeIngredientDto> Ingredients,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    bool IsArchived = false);
 
 public record RecipeIngredientDto(
     Guid Id,

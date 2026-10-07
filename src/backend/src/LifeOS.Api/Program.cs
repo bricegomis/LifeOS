@@ -117,6 +117,7 @@ app.MapStoresEndpoints();
 app.MapHouseholdEndpoints();
 app.MapArticlesEndpoints();
 app.MapRecipesEndpoints();
+app.MapCatalogManagementEndpoints();
 app.MapComposedMealsEndpoints();
 app.MapWeekPlanningEndpoints();
 app.MapWeekBalancedPlanEndpoints();

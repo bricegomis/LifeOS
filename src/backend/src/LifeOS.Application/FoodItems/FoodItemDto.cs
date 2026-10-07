@@ -18,6 +18,8 @@ public sealed class FoodItemDto
 {
     public Guid Id { get; set; }
     public Guid HouseholdId { get; set; }
+    public Guid? ArticleId { get; set; }
+    public bool IsArchived { get; set; }
     public string Name { get; set; } = string.Empty;
     public string ReferenceUnit { get; set; } = string.Empty;
     public NutritionDto? Nutrition { get; set; }

@@ -13,6 +13,10 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
     public void Configure(EntityTypeBuilder<FoodItem> builder)
     {
         builder.ToTable("food_items");
+        builder.Property(f => f.IsArchived).HasDefaultValue(false);
+        builder.HasOne<LifeOS.Domain.Articles.GroceryItem>().WithMany()
+            .HasForeignKey(f => f.ArticleId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(f => f.ArticleId).IsUnique();
 
         builder.HasKey(f => f.Id);
 

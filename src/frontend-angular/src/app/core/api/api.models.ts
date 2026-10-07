@@ -62,6 +62,8 @@ export interface NutritionPerUnitDto {
 export interface FoodItemDto {
   id: string
   householdId: string
+  articleId: string | null
+  isArchived: boolean
   name: string
   referenceUnit: string
   nutrition: NutritionPerUnitDto | null
@@ -87,6 +89,7 @@ export interface RecipeIngredientDto {
 
 export interface RecipeDto {
   id: string
+  isArchived: boolean
   name: string
   servings: number
   durationMinutes: number

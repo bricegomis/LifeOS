@@ -197,7 +197,8 @@ public static class FoodItemsEndpoints
         if (foodItem == null || foodItem.HouseholdId != householdId)
             return Results.NotFound();
 
-        await foodItemRepository.DeleteAsync(foodItemId, cancellationToken);
+        foodItem.Archive();
+        await foodItemRepository.UpdateAsync(foodItem, cancellationToken);
         return Results.NoContent();
     }
 

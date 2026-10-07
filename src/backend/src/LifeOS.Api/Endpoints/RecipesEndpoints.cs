@@ -181,9 +181,11 @@ public static class RecipesEndpoints
         }
 
         var householdId = await resolveHouseholdForUserQuery.ExecuteAsync(supabaseUserId, cancellationToken);
-        var deleted = await recipeRepository.DeleteAsync(recipeId, householdId, cancellationToken);
-
-        return deleted ? Results.NoContent() : Results.NotFound();
+        var recipe = await recipeRepository.GetByIdAsync(recipeId, householdId, cancellationToken);
+        if (recipe is null) return Results.NotFound();
+        recipe.Archive();
+        await recipeRepository.UpdateAsync(recipe, cancellationToken);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> AddRecipeIngredientAsync(
@@ -192,6 +194,7 @@ public static class RecipesEndpoints
         ClaimsPrincipal user,
         ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IRecipeRepository recipeRepository,
+        LifeOS.Infrastructure.Persistence.LifeOSDbContext db,
         CancellationToken cancellationToken)
     {
         if (!user.TryGetUserId(out var supabaseUserId))
@@ -209,6 +212,9 @@ public static class RecipesEndpoints
 
         try
         {
+            if (!await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(
+                db.GroceryItems.Where(a => a.Id == request.FoodItemId && a.HouseholdId == householdId), cancellationToken))
+                return Results.Problem("L'ingrédient doit référencer un article de votre foyer.", statusCode: 400);
             recipe.AddIngredient(request.FoodItemId, request.Quantity, request.Unit);
             await recipeRepository.UpdateAsync(recipe, cancellationToken);
 
@@ -231,6 +237,7 @@ public static class RecipesEndpoints
             recipe.Metadata,
             recipe.Ingredients.Select(i => new RecipeIngredientDto(i.Id, i.FoodItemId, i.Quantity, i.Unit)).ToList(),
             recipe.CreatedAt,
-            recipe.UpdatedAt);
+            recipe.UpdatedAt,
+            recipe.IsArchived);
     }
 }

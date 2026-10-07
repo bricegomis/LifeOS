@@ -9,6 +9,7 @@ namespace LifeOS.Domain.Recipes;
 public sealed class Recipe : Entity
 {
     public Guid HouseholdId { get; private set; }
+    public bool IsArchived { get; private set; }
     public string Name { get; private set; }
     public int Servings { get; private set; }
     public int DurationMinutes { get; private set; }
@@ -19,6 +20,12 @@ public sealed class Recipe : Entity
 
     // Navigation property for EF Core
     public List<RecipeIngredient> Ingredients { get; private set; } = [];
+
+    public void Archive()
+    {
+        IsArchived = true;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 
     private Recipe(
         Guid id,
