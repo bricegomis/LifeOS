@@ -8,7 +8,15 @@ internal sealed class PlannedMealConfiguration : IEntityTypeConfiguration<Planne
 {
     public void Configure(EntityTypeBuilder<PlannedMeal> builder)
     {
-        builder.ToTable("planned_meals");
+        builder.ToTable("planned_meals", t =>
+        {
+            t.HasCheckConstraint("ck_meal_time", "(\"StartMinute\" IS NULL AND \"EndMinute\" IS NULL) OR (\"StartMinute\" IS NOT NULL AND \"EndMinute\" IS NOT NULL AND \"StartMinute\" >= 0 AND \"EndMinute\" <= 1440 AND \"EndMinute\" > \"StartMinute\")");
+            t.HasCheckConstraint("ck_meal_portions", "\"PersonalPortion\" > 0 AND \"ChildrenCount\" >= 0");
+        });
+        builder.Ignore(m => m.PreparationFactor);
+        builder.Property(m => m.PersonalPortion).HasPrecision(12, 4).HasDefaultValue(1m);
+        builder.Property(m => m.ContentName).HasMaxLength(500);
+        builder.HasMany(m => m.FoodLines).WithOne().HasForeignKey(l => l.PlannedMealId).OnDelete(DeleteBehavior.Cascade);
 
         builder.HasKey(meal => meal.Id);
         builder.Property(meal => meal.Id).ValueGeneratedNever();

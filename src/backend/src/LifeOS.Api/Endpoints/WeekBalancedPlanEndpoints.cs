@@ -114,6 +114,7 @@ public static class WeekBalancedPlanEndpoints
             return Results.NotFound();
         }
 
+        if (week.IsManual) return Results.Problem("Une semaine manuelle ne peut pas être recalculée automatiquement.", statusCode: 400);
         try
         {
             var (plan, explanation) = await engine.ComputeAsync(weekId, householdId, cancellationToken);
@@ -161,6 +162,7 @@ public static class WeekBalancedPlanEndpoints
             return Results.NotFound();
         }
 
+        if (week.IsManual) return Results.Problem("Une semaine manuelle ne peut pas recevoir un menu automatique.", statusCode: 400);
         try
         {
             await engine.ApplyAsync(weekId, planId, householdId, cancellationToken);

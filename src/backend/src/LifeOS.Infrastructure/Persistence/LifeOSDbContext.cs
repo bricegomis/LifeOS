@@ -37,6 +37,7 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<Week> Weeks => Set<Week>();
     public DbSet<DayPlan> DayPlans => Set<DayPlan>();
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
+    public DbSet<MealFoodLine> MealFoodLines => Set<MealFoodLine>();
     public DbSet<PlannedMealPart> PlannedMealParts => Set<PlannedMealPart>();
     public DbSet<BalancedWeekPlan> BalancedWeekPlans => Set<BalancedWeekPlan>();
 

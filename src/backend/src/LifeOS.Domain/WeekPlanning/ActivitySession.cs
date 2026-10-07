@@ -9,12 +9,37 @@ namespace LifeOS.Domain.WeekPlanning;
 public sealed class ActivitySession : Entity
 {
     public Guid DayPlanId { get; private set; }
+    public Guid? SportTemplateId { get; private set; }
+    public string? Name { get; private set; }
+    public int? StartMinute { get; private set; }
+    public int? EndMinute { get; private set; }
+    public decimal? DistanceKm { get; private set; }
     public string Type { get; private set; } // run, bike, strength, walk, etc.
     public string Intensity { get; private set; } // low, moderate, high
     public int DurationMinutes { get; private set; }
     public decimal EstimatedEnergyKcal { get; private set; } // computed based on type, intensity, duration
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+
+    public void Schedule(Guid dayId, int? start, int? end, string name, string sport,
+        string intensity, int durationMinutes, decimal? distanceKm, decimal calories, Guid? templateId)
+    {
+        EventTime.Validate(start, end);
+        SportTemplate.Validate(name, sport, durationMinutes, distanceKm, intensity, calories);
+        if (start is not null && end - start != durationMinutes)
+            throw new ArgumentException("La durée doit correspondre au créneau.");
+        DayPlanId = dayId;
+        StartMinute = start;
+        EndMinute = end;
+        Name = name.Trim();
+        Type = sport;
+        Intensity = intensity;
+        DurationMinutes = durationMinutes;
+        DistanceKm = distanceKm;
+        EstimatedEnergyKcal = calories;
+        SportTemplateId = templateId;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 
     private ActivitySession(
         Guid id,

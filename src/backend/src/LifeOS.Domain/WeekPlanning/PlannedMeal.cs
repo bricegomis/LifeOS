@@ -14,11 +14,48 @@ public sealed class PlannedMeal : Entity
     public string Status { get; private set; } // planned, consumed, replaced, skipped
     public Guid? ComposedMealId { get; private set; }
     public Guid? RecipeId { get; private set; }
+    public int? StartMinute { get; private set; }
+    public int? EndMinute { get; private set; }
+    public string? ContentName { get; private set; }
+    public decimal PersonalPortion { get; private set; } = 1;
+    public int ChildrenCount { get; private set; }
+    public List<MealFoodLine> FoodLines { get; private set; } = [];
+    public decimal PreparationFactor => 1 + 0.5m * ChildrenCount;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
     public List<PlannedMealPart> Parts { get; private set; } = [];
+
+    public static PlannedMeal CreateManual(Guid dayId)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new PlannedMeal(Guid.NewGuid(), dayId, "snack", "planned", null, null, now, now);
+    }
+
+    public void Schedule(Guid dayId, int? start, int? end, decimal personalPortion, int children)
+    {
+        if (dayId == Guid.Empty) throw new ArgumentException("Journée obligatoire.");
+        EventTime.Validate(start, end);
+        if (personalPortion <= 0 || personalPortion > 1000 || children < 0 || children > 100)
+            throw new ArgumentException("Portion positive (maximum 1000), enfants entre 0 et 100.");
+        DayPlanId = dayId;
+        StartMinute = start;
+        EndMinute = end;
+        PersonalPortion = personalPortion;
+        ChildrenCount = children;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void SetContent(string name, Guid? recipeId, Guid? composedMealId, List<MealFoodLine> lines)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 500) throw new ArgumentException("Nom obligatoire (500 caractères maximum).");
+        ContentName = name.Trim();
+        RecipeId = recipeId;
+        ComposedMealId = composedMealId;
+        FoodLines = lines;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 
     private PlannedMeal(
         Guid id,

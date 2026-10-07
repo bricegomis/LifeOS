@@ -119,6 +119,7 @@ app.MapArticlesEndpoints();
 app.MapRecipesEndpoints();
 app.MapCatalogManagementEndpoints();
 app.MapSportTemplatesEndpoints();
+app.MapManualPlannerEndpoints();
 app.MapComposedMealsEndpoints();
 app.MapWeekPlanningEndpoints();
 app.MapWeekBalancedPlanEndpoints();
