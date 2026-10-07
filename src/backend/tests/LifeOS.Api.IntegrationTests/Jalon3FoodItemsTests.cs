@@ -155,7 +155,7 @@ public sealed class Jalon3FoodItemsTests(PostgresContainerFixture postgres) : IA
     }
 
     [Fact]
-    public async Task ManualFoodItem_CanBeDeleted()
+    public async Task ManualFoodItem_IsArchivedWithoutDeletingItsData()
     {
         var supabaseUserId = Guid.NewGuid();
         using var client = _factory.CreateClient().AsUser(supabaseUserId);
@@ -171,9 +171,13 @@ public sealed class Jalon3FoodItemsTests(PostgresContainerFixture postgres) : IA
         var deleteResponse = await client.DeleteAsync($"/api/food-items/{created!.Id}");
         deleteResponse.EnsureSuccessStatusCode();
 
-        // Verify deleted
+        // DELETE now archives catalog entries to preserve historical references.
         var getResponse = await client.GetAsync($"/api/food-items/{created.Id}");
-        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
+        getResponse.EnsureSuccessStatusCode();
+        var archived = await getResponse.Content.ReadFromJsonAsync<FoodItemDto>();
+        Assert.NotNull(archived);
+        Assert.True(archived.IsArchived);
+        Assert.Equal(created.Name, archived.Name);
     }
 
     [Fact]

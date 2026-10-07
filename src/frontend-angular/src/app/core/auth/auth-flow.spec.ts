@@ -25,7 +25,7 @@ function authClient(existingSession: Session | null = null): Parameters<typeof r
 
 describe('internal return route', () => {
   it('accepts current routes and encodes them inside the login callback', () => {
-    for (const path of ['/', '/planning', '/settings', '/planner', '/recipes?search=soupe']) {
+    for (const path of ['/', '/planning', '/sports', '/settings', '/planner', '/recipes?search=soupe']) {
       assert.equal(validatedReturnPath(path), path)
       const url = new URL(`https://lifeos.example/#${buildLoginRedirectPath(path)}`)
       assert.equal(new URLSearchParams(url.hash.split('?')[1]).get('redirect'), path)

@@ -142,6 +142,7 @@ export interface WeekDto {
   startsOn: string
   status: string
   weekMode: 'kids' | 'solo'
+  isManual: boolean
   dayPlans: DayPlanDto[]
   createdAt: string
   updatedAt: string

@@ -71,7 +71,8 @@ public record WeekDto(
     List<DayPlanDto> DayPlans,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    string WeekMode = "solo");
+    string WeekMode = "solo",
+    bool IsManual = false);
 
 public record DayPlanDto(
     Guid Id,

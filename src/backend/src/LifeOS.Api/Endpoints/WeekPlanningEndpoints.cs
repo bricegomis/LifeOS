@@ -732,7 +732,8 @@ public static class WeekPlanningEndpoints
             week.DayPlans.Select(ToDayPlanDto).ToList(),
             week.CreatedAt,
             week.UpdatedAt,
-            week.WeekMode.ToString().ToLowerInvariant());
+            week.WeekMode.ToString().ToLowerInvariant(),
+            week.IsManual || week.DayPlans.Any(d => d.PlannedMeals.Any(m => m.ContentName is not null)));
     }
 
     private static DayPlanDto ToDayPlanDto(DayPlan dayPlan)

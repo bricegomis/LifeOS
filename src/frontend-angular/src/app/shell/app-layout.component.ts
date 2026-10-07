@@ -29,18 +29,17 @@ export class AppLayoutComponent implements OnInit {
 
   readonly navigation: NavigationItem[] = [
     { path: '/', title: "Aujourd'hui", mobileTitle: 'Aujourd’hui', icon: 'pi pi-sun' },
-    { path: '/planning', title: 'Planning', mobileTitle: 'Semaine', icon: 'pi pi-calendar' },
+    { path: '/planning', title: 'Semainier', mobileTitle: 'Semaine', icon: 'pi pi-calendar' },
     { path: '/recipes', title: 'Recettes', mobileTitle: 'Recettes', icon: 'pi pi-book' },
-    { path: '/meals', title: 'Repas composés', mobileTitle: 'Repas', icon: 'pi pi-objects-column' },
     { path: '/foods', title: 'Aliments', mobileTitle: 'Aliments', icon: 'pi pi-apple' },
+    { path: '/sports', title: 'Séances sportives', mobileTitle: 'Sport', icon: 'pi pi-bolt' },
     { path: '/stores', title: 'Magasins et articles', mobileTitle: 'Achats', icon: 'pi pi-shop' },
     { path: '/stock', title: 'Stock et courses', mobileTitle: 'Courses', icon: 'pi pi-shopping-cart' },
-    { path: '/library', title: 'Catalogue partagé', mobileTitle: 'Catalogue', icon: 'pi pi-list' },
     { path: '/settings', title: 'Réglages', mobileTitle: 'Réglages', icon: 'pi pi-cog' },
   ]
 
   readonly mobileNavigation = this.navigation.filter((item) =>
-    ['/', '/planning', '/recipes', '/stock', '/settings'].includes(item.path),
+    ['/', '/planning', '/foods', '/recipes', '/sports'].includes(item.path),
   )
 
   displayBuildId(value: string): string {

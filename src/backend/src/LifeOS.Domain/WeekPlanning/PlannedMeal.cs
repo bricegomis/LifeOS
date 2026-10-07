@@ -142,6 +142,7 @@ public sealed class PlannedMeal : Entity
     /// </summary>
     public void ReplaceMeal(Guid? composedMealId = null, Guid? recipeId = null)
     {
+        if (ContentName is not null) throw new ArgumentException("Utilisez le remplacement explicite du semainier manuel pour préserver les snapshots.");
         if ((composedMealId.HasValue && composedMealId.Value != Guid.Empty && recipeId.HasValue && recipeId.Value != Guid.Empty) ||
             (!composedMealId.HasValue && !recipeId.HasValue) ||
             (composedMealId == Guid.Empty && recipeId == Guid.Empty))
@@ -158,6 +159,7 @@ public sealed class PlannedMeal : Entity
 
     public PlannedMealPart AddPart(Guid memberProfileId, decimal portionMultiplier)
     {
+        if (ContentName is not null) throw new ArgumentException("Utilisez la portion personnelle et le nombre d'enfants du semainier manuel.");
         var existingPart = Parts.FirstOrDefault(part => part.MemberProfileId == memberProfileId);
 
         if (existingPart is not null)
@@ -176,6 +178,7 @@ public sealed class PlannedMeal : Entity
 
     public bool UpdatePart(Guid partId, decimal portionMultiplier)
     {
+        if (ContentName is not null) throw new ArgumentException("Utilisez la portion personnelle et le nombre d'enfants du semainier manuel.");
         var part = Parts.FirstOrDefault(candidate => candidate.Id == partId);
 
         if (part is null)

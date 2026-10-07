@@ -3,7 +3,6 @@ import { CanActivateFn, Router, Routes } from '@angular/router'
 import { AuthService } from '@/app/core/auth/auth.service'
 import { DashboardPageComponent } from '@/app/pages/dashboard/dashboard-page.component'
 import { FoodItemsPageComponent } from '@/app/pages/foods/food-items-page.component'
-import { LibraryPageComponent } from '@/app/pages/library/library-page.component'
 import { LoginPageComponent } from '@/app/pages/login/login-page.component'
 import { ComposedMealsPageComponent } from '@/app/pages/meals/composed-meal-page.component'
 import { PlanningPageComponent } from '@/app/pages/planning/planning-page.component'
@@ -40,7 +39,7 @@ export const routes: Routes = [
       { path: 'stores', component: StoresArticlesPageComponent },
       { path: 'articles', pathMatch: 'full', redirectTo: 'stores' },
       { path: 'stock', component: StockShoppingPageComponent },
-      { path: 'library', component: LibraryPageComponent },
+      { path: 'library', pathMatch: 'full', redirectTo: 'foods' },
       { path: 'settings', component: SettingsPageComponent },
       { path: 'today', pathMatch: 'full', redirectTo: '' },
       { path: 'planner', pathMatch: 'full', redirectTo: 'planning' },

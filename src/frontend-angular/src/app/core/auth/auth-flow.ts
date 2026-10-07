@@ -3,7 +3,7 @@ import type { MagicLinkCallback } from './magic-link-callback'
 
 type AuthClient = Pick<SupabaseClient['auth'], 'getSession' | 'exchangeCodeForSession' | 'verifyOtp' | 'signInWithOAuth'>
 
-const INTERNAL_ROUTE = /^\/(?:planning|recipes|meals|foods|stores|articles|stock|library|settings|today|planner)?(?:\?[^#\\\s]*)?$/
+const INTERNAL_ROUTE = /^\/(?:planning|recipes|meals|foods|sports|stores|articles|stock|library|settings|today|planner)?(?:\?[^#\\\s]*)?$/
 
 export function validatedReturnPath(value: string | null): string {
   return value && INTERNAL_ROUTE.test(value) ? value : '/'
