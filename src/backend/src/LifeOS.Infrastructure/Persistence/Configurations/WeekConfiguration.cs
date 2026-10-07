@@ -9,6 +9,8 @@ internal sealed class WeekConfiguration : IEntityTypeConfiguration<Week>
     public void Configure(EntityTypeBuilder<Week> builder)
     {
         builder.ToTable("weeks");
+        builder.Property(w => w.TimeZoneId).HasMaxLength(100).HasDefaultValue("Europe/Paris");
+        builder.HasIndex(w => new { w.HouseholdId, w.StartsOn, w.IsManual }).IsUnique().HasFilter("\"IsManual\" = true");
 
         builder.HasKey(week => week.Id);
         builder.Property(week => week.Id).ValueGeneratedNever();

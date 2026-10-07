@@ -62,6 +62,8 @@ export interface NutritionPerUnitDto {
 export interface FoodItemDto {
   id: string
   householdId: string
+  articleId: string | null
+  isArchived: boolean
   name: string
   referenceUnit: string
   nutrition: NutritionPerUnitDto | null
@@ -87,6 +89,7 @@ export interface RecipeIngredientDto {
 
 export interface RecipeDto {
   id: string
+  isArchived: boolean
   name: string
   servings: number
   durationMinutes: number
@@ -139,6 +142,7 @@ export interface WeekDto {
   startsOn: string
   status: string
   weekMode: 'kids' | 'solo'
+  isManual: boolean
   dayPlans: DayPlanDto[]
   createdAt: string
   updatedAt: string
@@ -241,6 +245,21 @@ export interface ActivityDto {
   name: string
   icon: string
   defaultDurationMinutes?: number
+}
+
+export interface SportTemplateRequest {
+  name: string
+  sport: string
+  durationMinutes: number
+  distanceKm: number | null
+  intensity: 'low' | 'moderate' | 'high'
+  calories: number
+}
+
+export interface SportTemplateDto extends SportTemplateRequest {
+  id: string
+  householdId: string
+  isArchived: boolean
 }
 
 export interface StockItemDto {

@@ -13,6 +13,8 @@ public static class FoodItemMapper
         {
             Id = foodItem.Id,
             HouseholdId = foodItem.HouseholdId,
+            ArticleId = foodItem.ArticleId,
+            IsArchived = foodItem.IsArchived,
             Name = foodItem.Name,
             ReferenceUnit = foodItem.ReferenceUnit,
             Nutrition = foodItem.Nutrition == null ? null : new NutritionDto

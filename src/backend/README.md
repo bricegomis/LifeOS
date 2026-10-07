@@ -15,6 +15,8 @@ diagnostics.
 | Area | Endpoints | Notes |
 | --- | --- | --- |
 | Build diagnostics | `GET /api/version` | Public; returns the API component name and configured build ID. |
+| Manual planner | `GET/POST /api/manual-planner/weeks`, `GET /api/manual-planner/weeks/{id}`, `POST /api/manual-planner/meals`, `PUT/DELETE /api/manual-planner/meals/{id}`, equivalent `/sports` commands | Household-scoped civil times, independent empty weeks, meals/food snapshots and sports occurrence overrides. |
+| Sport catalog | `GET/POST /api/sport-templates`, `PUT/DELETE /api/sport-templates/{id}` | Household-scoped persisted templates; DELETE archives; calories are a manual total. No silent seed. |
 | Stores | `GET /api/stores` | Read-only, scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Articles | `GET/POST /api/articles`, `PUT/DELETE /api/articles/{id}`, `POST /api/articles/{id}/price-entries`, `DELETE /api/articles/{id}/price-entries/{priceEntryId}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); mirrors the frontend's `GroceryItem` (name, description, unit, price history). |
 | Library | `GET /api/meal-components`, `GET /api/composite-dishes`, `GET /api/activities` | Read-only, shared across users; still served from an **in-memory** seed catalog (mirrors `src/frontend/src/data/localLibrary.ts`), not yet migrated to PostgreSQL. |
@@ -27,6 +29,25 @@ diagnostics.
 | Nutrition | `GET/POST /api/nutrition/configuration`, `GET/POST/PUT/DELETE /api/activity-sessions/*`, `GET /api/nutrition/calculations/day/{dayPlanId}` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
 | Week planning | `GET/POST/DELETE /api/weeks/*`, `/api/day-plans/*`, `/api/planned-meals/*`, `/api/weeks/{id}/balanced-plan/*` | Full week/day-plan/planned-meal CRUD plus the single balanced-plan computation, scoped to the caller's household. Week creation accepts an optional `weekMode`; when omitted, the API uses the configured alternation/override and initializes each day from that mode's template. PostgreSQL-backed (EF Core). |
 | Stock & shopping list | `GET/POST/PUT/DELETE /api/stock-items/*`, `/api/shopping-list/*` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
+
+**The Angular MVP uses the manual planner**, not historical week generation or
+the shared in-memory library. Balanced-plan computation/application and automatic
+shopping generation reject manual weeks. Historical configuration remains stored.
+Food-item and recipe DELETE now archive rather than erase. Archived entries are
+returned for historical consultation but cannot be selected for new events.
+`PUT /api/food-items/{id}/article` explicitly links an existing purchase article;
+ingredient POST/PUT/DELETE operates below `/api/recipes/{id}/ingredients`.
+Recipe ingredient `FoodItemId` still references an **article**, not a FoodItem;
+the optional unique `FoodItem.ArticleId` provides the nutrition connection without
+name-based merging or price-history changes.
+
+Manual meals store relational snapshots, personal portion and children count.
+Preparation = personal quantity × (1 + 0.5 × children), never additional personal
+nutrition. Unknown values or incompatible units return null totals and warnings.
+Start/end minutes use the week's IANA timezone as civil intentions, with same-day
+end > start; legacy null times stay unpositioned. First placement of a legacy meal
+captures current values explicitly, without claiming to reconstruct past nutrition.
+See [ADR 0004](../../docs/architecture/decisions/0004-manual-planner.md).
 
 Only the shared meal library (`MealComponent`, `CompositeDish`, `Activity`) still lives in
 in-memory repositories; every household-scoped bounded context above is persisted in

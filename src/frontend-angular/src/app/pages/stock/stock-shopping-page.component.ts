@@ -294,11 +294,14 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
                 Planifiez d’abord une semaine pour générer une liste de courses.
               </p>
             }
+            @if (isManualWeek()) {
+              <p class="stock-hint">Les courses automatiques sont hors MVP manuel. Les listes historiques restent consultables.</p>
+            }
             <button
               class="stock-button is-primary"
               type="button"
               (click)="generateList()"
-              [disabled]="!selectedWeekId() || loadingList() || busy() !== ''"
+              [disabled]="isManualWeek() || !selectedWeekId() || loadingList() || busy() !== ''"
             >
               {{ busy() === 'generate' ? 'Génération…' : 'Générer la liste de courses' }}
             </button>
@@ -725,7 +728,7 @@ export class StockShoppingPageComponent {
 
   async generateList(): Promise<void> {
     const weekId = this.selectedWeekId()
-    if (!weekId || this.busy() || this.loadingList()) return
+    if (!weekId || this.busy() || this.loadingList() || this.isManualWeek()) return
     this.busy.set('generate')
     this.shoppingActionError.set('')
     this.shoppingError.set('')
@@ -745,6 +748,11 @@ export class StockShoppingPageComponent {
     } finally {
       this.busy.set('')
     }
+
+  }
+
+  isManualWeek(): boolean {
+    return this.weeks().find(w => w.id === this.selectedWeekId())?.isManual ?? false
   }
 
   async setChecked(item: ShoppingListItemDto, event: Event): Promise<void> {

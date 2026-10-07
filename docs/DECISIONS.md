@@ -2,6 +2,45 @@
 
 This document captures the most important product and technical decisions that shape the current project. It is intentionally not a log of every implementation choice; it focuses on durable decisions that explain why the app currently looks and behaves the way it does.
 
+## 2026-10-07 — MVP semainier entièrement manuel (décision actuelle)
+
+Le parcours livré est Angular + ASP.NET Core/EF Core/PostgreSQL.
+Supabase assure l'authentification uniquement, avec JWT et isolation par foyer.
+Vue/Pinia/localStorage est une interface historique, non concernée par la refonte.
+
+Le MVP est un calendrier de sept jours (affichage 6–20, journée mobile) avec
+plusieurs événements alimentation/sport, formulaires accessibles et trois
+bibliothèques administrables. Recette ou produits directs ; portions personnelles
+et préparation enfants séparées ; calories sportives manuelles, snapshots,
+archivage et migration sans heures inventées. Voir le
+[cadrage approuvé](01-scope-and-versions.md).
+
+Les décisions ci-dessous sur Vue/local-first, trois repas fixes, génération,
+alternance, contexte de travail et menu équilibré sont **historiques et remplacées
+pour le parcours MVP**, pas une autorisation de supprimer leurs données.
+Les décisions PostgreSQL/foyer/auth restent applicables. Les nouveaux événements
+ne doivent pas être influencés silencieusement par les anciens réglages.
+
+Documentation puis lots séquentiels autorisés sans approbation intermédiaire.
+L'utilisateur a explicitement autorisé les PR/merges automatiques après contrôles,
+sans attendre sa recette finale ; protections et CI restent obligatoires.
+Pas de reset/suppression de données ni intervention manuelle de production.
+Les workflows de livraison existants peuvent être déclenchés par les merges ;
+un merge ne prouve pas un déploiement.
+
+## 2026-10-07 — Contrôles Angular natifs, sans runtime PrimeNG
+
+PrimeNG 22 et PrimeUI Themes 3 exigent une clé de licence et affichaient un
+avis de licence invalide dans le navigateur. L'inspection a confirmé qu'aucun
+composant/directive PrimeNG n'était utilisé : seulement le fournisseur Aura et
+des classes sur les éléments HTML natifs.
+
+Le coordinateur a approuvé leur retrait. Les contrôles natifs gardent les tokens
+LifeOS, styles partagés, focus clavier et cibles tactiles ; les classes deviennent
+`lifeos-button`/`lifeos-input`. PrimeIcons (MIT), réellement utilisé pour la
+navigation, reste présent. Aucun mécanisme de licence n'est masqué ou contourné ;
+les dépendances/runtime concernés sont retirés. Vue/PrimeVue historique inchangé.
+
 ## 2026 — Keep LifeOS focused on food and weekly planning
 Context:
 The project started as a general personal planning app idea and historically evolved from meal tracking toward a broader life dashboard. The current codebase deliberately narrows back to the nutrition-focused workflow.

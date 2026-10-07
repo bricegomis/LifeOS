@@ -1,10 +1,12 @@
 import { firstValueFrom } from 'rxjs'
-import { Component, inject, signal } from '@angular/core'
+import { Component, computed, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import {
   FoodItemDto,
   FoodItemRequest,
   NutritionPerUnitDto,
+  ArticleDto,
+  GroceryItemUnit,
 } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 
@@ -172,6 +174,10 @@ const emptyEditor = (): FoodEditor => ({
                 <h2 id="catalog-heading">Vos aliments</h2>
                 <p>Les aliments disponibles pour la planification de vos repas.</p>
               </div>
+              <label class="foods-field"><span>Filtrer vos produits</span>
+                <input type="search" [(ngModel)]="catalogSearch" placeholder="Nom du produit" />
+              </label>
+              <label><input type="checkbox" [(ngModel)]="showArchived" /> Afficher les produits archivés</label>
               <button class="foods-secondary" type="button" (click)="loadItems()" [disabled]="loading() || busy()">
                 {{ loading() ? 'Actualisation…' : 'Actualiser' }}
               </button>
@@ -185,7 +191,7 @@ const emptyEditor = (): FoodEditor => ({
               </div>
             } @else {
               <ul class="foods-list">
-                @for (item of items(); track item.id) {
+                @for (item of visibleItems(); track item.id) {
                   <li class="foods-item">
                     <div class="foods-item-copy">
                       <div class="foods-item-title">
@@ -198,6 +204,28 @@ const emptyEditor = (): FoodEditor => ({
                         }
                       </div>
                       <p>{{ item.referenceUnit }} · {{ nutritionSummary(item.nutrition) }}</p>
+                      @if (item.isArchived) { <p>Archivé — historique conservé</p> }
+                      <p>Article d’achat : {{ articleName(item.articleId) }}</p>
+                      @if (!item.isArchived) {
+                        <label class="foods-field"><span>Raccord explicite aux achats</span>
+                          <select [ngModel]="articleChoice[item.id] ?? item.articleId ?? ''"
+                            (ngModelChange)="articleChoice[item.id] = $event">
+                            <option value="">Sans raccord</option>
+                            @for (article of articles(); track article.id) {
+                              <option [value]="article.id">{{ article.name }}</option>
+                            }
+                          </select>
+                        </label>
+                        <button type="button" class="foods-secondary" [disabled]="busy()" (click)="linkArticle(item)">Enregistrer le raccord</button>
+                        @if (!item.articleId) {
+                          <label class="foods-field"><span>Unité d’achat du nouvel article</span>
+                            <select [ngModel]="purchaseUnit[item.id] ?? 'unit'" (ngModelChange)="purchaseUnit[item.id] = $event">
+                              <option value="unit">À l’unité</option><option value="kilogram">Au kilogramme</option><option value="liter">Au litre</option>
+                            </select>
+                          </label>
+                          <button type="button" class="foods-secondary" [disabled]="busy()" (click)="createArticle(item)">Créer un article d’achat et le relier</button>
+                        }
+                      }
                       @if (item.offBarcode) {
                         <small>Code-barres : {{ item.offBarcode }}</small>
                       }
@@ -212,12 +240,12 @@ const emptyEditor = (): FoodEditor => ({
                         (click)="startCorrection(item)">Corriger</button>
                       @if (deleteConfirmationId() === item.id) {
                         <button class="foods-danger" type="button" [disabled]="busy()"
-                          (click)="deleteFood(item)">Confirmer la suppression</button>
+                          (click)="deleteFood(item)">Confirmer l’archivage</button>
                         <button class="foods-secondary" type="button"
                           (click)="deleteConfirmationId.set('')">Conserver</button>
                       } @else {
                         <button class="foods-danger" type="button" [disabled]="busy()"
-                          (click)="deleteConfirmationId.set(item.id)">Supprimer</button>
+                          (click)="deleteConfirmationId.set(item.id)">Archiver</button>
                       }
                     </div>
                   </li>
@@ -295,6 +323,16 @@ export class FoodItemsPageComponent {
   private readonly api = inject(LifeosApiService)
 
   readonly items = signal<FoodItemDto[]>([])
+  readonly articles = signal<ArticleDto[]>([])
+  catalogSearch = ''
+  showArchived = false
+  articleChoice: Record<string, string> = {}
+  purchaseUnit: Record<string, GroceryItemUnit> = {}
+  visibleItems(): FoodItemDto[] {
+    return this.items().filter(i => (this.showArchived || !i.isArchived)
+      && i.name.toLocaleLowerCase('fr').includes(this.catalogSearch.toLocaleLowerCase('fr')))
+  }
+  readonly activeCount = computed(() => this.items().filter(i => !i.isArchived).length)
   readonly searchResults = signal<FoodItemDto[]>([])
   readonly loading = signal(false)
   readonly busy = signal(false)
@@ -313,6 +351,39 @@ export class FoodItemsPageComponent {
 
   constructor() {
     void this.loadItems()
+    this.api.get<ArticleDto[]>('/articles').subscribe({
+      next: articles => this.articles.set(articles),
+      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
+    })
+  }
+
+  articleName(id: string | null): string {
+    return this.articles().find(a => a.id === id)?.name ?? 'Non relié'
+  }
+
+  async linkArticle(item: FoodItemDto): Promise<void> {
+    this.busy.set(true)
+    this.error.set('')
+    try {
+      const updated = await firstValueFrom(this.api.put<FoodItemDto>(`/food-items/${item.id}/article`,
+        { articleId: (this.articleChoice[item.id] ?? item.articleId) || null }))
+      this.items.update(items => items.map(i => i.id === item.id ? updated : i))
+      this.notice.set('Raccord enregistré. Les prix et achats sont conservés.')
+    } catch (error) { this.error.set(apiErrorMessage(error)) }
+    finally { this.busy.set(false) }
+  }
+
+  async createArticle(item: FoodItemDto): Promise<void> {
+    this.busy.set(true)
+    this.error.set('')
+    try {
+      const article = await firstValueFrom(this.api.post<ArticleDto>('/articles',
+        { name: item.name, description: '', unit: this.purchaseUnit[item.id] ?? 'unit' }))
+      this.articles.update(items => [...items, article])
+      this.articleChoice[item.id] = article.id
+      await this.linkArticle(item)
+    } catch (error) { this.error.set(apiErrorMessage(error)) }
+    finally { this.busy.set(false) }
   }
 
   async loadItems(): Promise<void> {
@@ -426,7 +497,7 @@ export class FoodItemsPageComponent {
       await firstValueFrom(this.api.delete<void>(`/food-items/${item.id}`))
       this.deleteConfirmationId.set('')
       if (this.editingId() === item.id) this.resetEditor()
-      await this.reloadAfterMutation(`L’aliment « ${item.name} » a été supprimé.`)
+      await this.reloadAfterMutation(`L’aliment « ${item.name} » a été archivé. Les événements sont conservés.`)
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {

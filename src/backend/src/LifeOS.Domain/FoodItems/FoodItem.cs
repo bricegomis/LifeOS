@@ -9,6 +9,8 @@ namespace LifeOS.Domain.FoodItems;
 public sealed class FoodItem : Entity
 {
     public Guid HouseholdId { get; private set; }
+    public Guid? ArticleId { get; private set; }
+    public bool IsArchived { get; private set; }
     public string Name { get; private set; }
     public string ReferenceUnit { get; private set; }
     public Nutrition? Nutrition { get; private set; }
@@ -18,6 +20,19 @@ public sealed class FoodItem : Entity
     public Guid? IsCorrectionOf { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+
+    public void LinkArticle(Guid? articleId)
+    {
+        if (articleId == Guid.Empty) throw new ArgumentException("Article invalide.");
+        ArticleId = articleId;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void Archive()
+    {
+        IsArchived = true;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 
 #pragma warning disable CS8618
     private FoodItem()

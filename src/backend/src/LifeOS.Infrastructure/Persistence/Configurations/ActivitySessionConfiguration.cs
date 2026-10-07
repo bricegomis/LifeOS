@@ -8,7 +8,11 @@ internal sealed class ActivitySessionConfiguration : IEntityTypeConfiguration<Ac
 {
     public void Configure(EntityTypeBuilder<ActivitySession> builder)
     {
-        builder.ToTable("activity_sessions");
+        builder.ToTable("activity_sessions", t =>
+            t.HasCheckConstraint("ck_activity_time", "(\"StartMinute\" IS NULL AND \"EndMinute\" IS NULL) OR (\"StartMinute\" IS NOT NULL AND \"EndMinute\" IS NOT NULL AND \"StartMinute\" >= 0 AND \"EndMinute\" <= 1440 AND \"EndMinute\" > \"StartMinute\")"));
+        builder.Property(s => s.Name).HasMaxLength(200);
+        builder.Property(s => s.DistanceKm).HasPrecision(12, 3);
+        builder.HasOne<SportTemplate>().WithMany().HasForeignKey(s => s.SportTemplateId).OnDelete(DeleteBehavior.Restrict);
 
         builder.HasKey(session => session.Id);
         builder.Property(session => session.Id).ValueGeneratedNever();

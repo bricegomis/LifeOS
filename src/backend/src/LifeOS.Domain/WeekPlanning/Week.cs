@@ -13,12 +13,26 @@ public sealed class Week : Entity
     public DateOnly StartsOn { get; private set; }
     public string Status { get; private set; } // draft, active, past
     public WeekMode WeekMode { get; private set; }
+    public bool IsManual { get; private set; }
+    public string TimeZoneId { get; private set; } = "Europe/Paris";
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
     public ICollection<DayPlan> DayPlans { get; set; } = [];
     public ICollection<BalancedWeekPlan> BalancedPlans { get; set; } = [];
+
+    public static Week CreateManual(Guid householdId, DateOnly startsOn, string timeZoneId)
+    {
+        if (startsOn.DayOfWeek != DayOfWeek.Monday) throw new ArgumentException("La semaine commence un lundi.");
+        if (timeZoneId.Length > 100 || !TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out _))
+            throw new ArgumentException("Fuseau horaire inconnu.");
+        var week = Create(householdId, startsOn);
+        week.IsManual = true;
+        week.TimeZoneId = timeZoneId;
+        for (var i = 0; i < 7; i++) week.DayPlans.Add(DayPlan.Create(week.Id, startsOn.AddDays(i), "home", false));
+        return week;
+    }
 
     private Week(
         Guid id,

@@ -1,5 +1,43 @@
 # LifeOS — Project Memory
 
+## État actuel et recentrage approuvé — 7 octobre 2026
+
+L'implémentation active est **`src/frontend-angular` (Angular 22, contrôles natifs
+et styles LifeOS, PrimeIcons MIT)** avec
+**`src/backend` (ASP.NET Core/EF Core/PostgreSQL)** comme source de vérité.
+Supabase est utilisé pour l'authentification/JWT uniquement ; l'API isole les
+données par `household_id`. `src/frontend` est le frontend Vue historique.
+
+Le nouveau [MVP approuvé](01-scope-and-versions.md) est un semainier entièrement
+manuel alimentation/sport, avec produits, recettes et catalogue sportif,
+nutrition personnelle, préparation enfants séparée et conservation historique.
+La [roadmap séquentielle](03-roadmap.md) décrit les lots implémentés et validés.
+
+Le calendrier et Aujourd'hui partagent les événements API datés/horaires, avec
+plusieurs repas/séances par jour, vue journée mobile, hors plage, chevauchements,
+déplacement par formulaire et erreurs explicites. `sport_templates` est un
+catalogue par foyer ; `meal_food_lines` préserve les quantités et valeurs
+nutritionnelles de chaque événement. Modifier/archiver un catalogue ne réécrit
+pas ces snapshots. La présence d'enfants ne change que la préparation.
+
+Articles et FoodItems restent distincts, liés explicitement par `ArticleId` ;
+les ingrédients gardent leur FK historique vers les articles. Prix/achats et
+anciens repas composés sont conservés. Les nouvelles semaines sont vides et
+n'utilisent pas les anciens réglages ; calcul équilibré et génération de courses
+sont refusés pour les semaines manuelles. L'API historique reste disponible.
+Voir [ADR 0004](architecture/decisions/0004-manual-planner.md) pour les limites
+de migration, la précision, les heures civiles et les snapshots.
+
+Validation locale : tests domaine/API sur PostgreSQL vierge et historique,
+redémarrage logique, deux foyers, contrôles Angular et parcours navigateur
+desktop/mobile. OAuth réel et déploiement en production ne sont pas vérifiés
+par ces contrôles locaux.
+
+**Le texte ci-dessous conserve la mémoire historique** de Vue/local-first et
+des parcours de génération ; il ne décrit plus la cible active. Les décisions
+de génération/alternance/menu équilibré sont remplacées pour le MVP, leurs données
+restent conservées. Les détails d'authentification et d'isolation restent valides.
+
 LifeOS is a personal planning app built to reduce daily decision fatigue around food and weekly activity. The current implementation is intentionally not a broad “all-of-life” dashboard. It is a narrow, practical tool focused on meals, planned eating, and the weekly rhythm that supports them.
 
 ## Why this project exists

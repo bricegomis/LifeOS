@@ -1,114 +1,87 @@
-# LifeOS — Cadrage fonctionnel du MVP
+# LifeOS — MVP semainier manuel
 
-## Finalité du MVP
+## Décision validée et état de livraison
 
-Le MVP permet de préparer manuellement une semaine de repas flexible, puis de
-demander un menu équilibré révisable avant son application. Il couvre tous les
-repas du foyer : petit-déjeuner, déjeuner, dîner, collations facultatives et
-plusieurs collations dans une même journée.
+Le cadrage du 7 octobre 2026 remplace le MVP centré sur la génération et le
+menu équilibré. Ce périmètre est maintenant **implémenté et validé localement**.
+Voir [roadmap](03-roadmap.md) pour les lots et les limites de validation.
+La réalisation concerne Angular / contrôles natifs LifeOS et l'API ASP.NET Core / PostgreSQL ;
+le frontend Vue historique n'est pas refondu.
 
-Le planning prend aussi en compte les repas rapides et les restes. La
-suggestion est lancée à la demande et produit un seul menu : l'utilisateur ne
-choisit aucun objectif. Le calcul cherche un compromis entre équilibre
-nutritionnel (traité comme contrainte prioritaire), budget bas, diversité sur
-le mois et réduction du gaspillage, et expose ses arbitrages ainsi que ses
-limites.
+## Périmètre
 
-## Contexte du foyer et de la semaine
+- Planifier manuellement sept jours, avec plusieurs prises alimentaires et
+  séances sportives par jour. Aucun événement libre, travail ou garde d'enfants.
+- Calendrier desktop initial de 6 h à 20 h ; journée navigable sur mobile.
+  Cette plage limite l'affichage, jamais le stockage ou l'accès aux événements.
+- Ajouter, éditer, déplacer et supprimer par formulaire et clavier, sans
+  dépendre du glisser-déposer. Chevauchements autorisés et lisibles.
+- Trois bibliothèques administrables et persistées : produits alimentaires,
+  recettes et séances sportives, isolées par foyer.
+- Un repas est une recette avec portion personnelle, **ou** une liste de
+  produits avec quantités et unités. Une banane est un produit, pas une recette.
+  Les anciens repas composés restent lisibles et migrables sans perte.
+- Séance catalogue : nom, sport, durée habituelle positive, distance optionnelle,
+  intensité explicite et calories totales manuelles non négatives. L'occurrence
+  reprend ces valeurs et peut les modifier sans modifier le modèle.
+  Changer durée/distance ne redimensionne pas les calories.
 
-- La présence de chaque enfant est saisie manuellement pour chaque semaine.
-  Les portions sont recalculées à partir des membres présents.
-- Le télétravail ou le bureau est renseigné au jour le jour ; les journées au
-  bureau favorisent des repas transportables.
-- Les séances sportives et trajets vélo sont saisis chaque semaine avec leur
-  type, intensité et durée. Les estimations de dépense sont configurables par
-  type et intensité.
-- Un changement de séance pendant la semaine ne modifie pas automatiquement
-  les repas : LifeOS actualise et signale uniquement l'effet sur la balance
-  énergétique et le déficit.
+## Nutrition personnelle et préparation
 
-## Bibliothèque alimentaire et repas
+Suivre énergie, protéines, glucides et lipides de l'utilisateur seulement.
+Chaque repas porte un nombre d'enfants présents, zéro compris.
+Chaque enfant mange une demi-portion personnelle :
 
-La bibliothèque contrôlée est créée manuellement. Elle contient :
+`quantités à préparer = quantités personnelles × (1 + 0,5 × nombre d'enfants)`
 
-- des recettes simples ou complètes ;
-- des composants réutilisables (protéine, légumes rôtis, féculents, etc.) ;
-- des repas composés qui assemblent ces composants.
+100 g personnels avec deux enfants donnent 200 g à préparer, mais la nutrition
+reste celle des 100 g. Aucun suivi individuel enfant ni automatisation de présence.
+Séparer apports alimentaires, préparation et dépense sportive ; apports moins
+sport n'est pas une dépense quotidienne complète. Nutrition inconnue : afficher
+un total incomplet, jamais un zéro inventé. Pas de conversion g/ml/pièces sans
+information sûre.
 
-Un repas planifié peut assembler plusieurs recettes et composants. Chaque
-recette comporte des ingrédients, des étapes, un nombre de portions de
-référence identiques, une durée, des métadonnées structurées et des tags.
+## Conservation
 
-Les propriétés calculables restent structurées. Les tags servent aux filtres
-souples — par exemple `transportable`, `froid`, `réchauffable`, `express`,
-`végétarien` ou `randonnée` — et leur catalogue initial peut être étendu par
-chaque foyer. Les profils du foyer définissent un coefficient de portion
-habituel ajustable par repas.
+API et PostgreSQL restent la source de vérité. Les semaines sont indépendantes.
+Les valeurs utilisées par les événements sont préservées : éditer ou archiver
+le catalogue ne réécrit pas l'historique. Remplacer le contenu est une action
+explicite. Préférer l'archivage des éléments référencés.
+Raccorder articles d'achat et produits nutritionnels explicitement, sans fusion
+par nom, sans perdre prix ou achats. Les anciennes semaines sans horaires
+restent « à positionner » jusqu'à placement manuel, sans heure inventée.
+Conserver auth Supabase/JWT et isolation `household_id`.
 
-Les composants de batch cooking produisent des portions à répartir sur plusieurs
-repas, sans suivi détaillé du réfrigérateur ou du congélateur dans le MVP. Les
-repas récurrents simples (shaker, sardines avec restes, oeufs durs, collation)
-sont des recettes ordinaires.
+## Reporté / exclu
 
-## Nutrition
+Semaines types avec/sans enfant, alternance, récurrence, règles de fréquence,
+génération, menu équilibré et optimisation sont hors parcours MVP. Les données
+historiques sont conservées ; les anciens réglages ne doivent pas influencer
+silencieusement les nouvelles semaines.
+Pas de fatigue, calories sportives automatiques, connecteurs sportifs, suivi
+nutritionnel enfant, nouveaux types d'événement, stock/tickets/courses automatiques,
+ni refonte Vue. Une automatisation future sera guidée par l'usage réel.
 
-Open Food Facts est utilisé pour rechercher un produit par texte ou code-barres
-saisi manuellement. Le scan par caméra est différé. Les données sont conservées
-localement et restent corrigeables ; les produits bruts ou introuvables peuvent
-être créés comme articles génériques avec macros et unité.
+## Acceptation
 
-Le MVP calcule calories, protéines, glucides et lipides. Le suivi personnel peut
-être précis face à des cibles ; les valeurs enfants sont informatives et ne
-portent pas de cible médicale. L'utilisateur saisit dépense quotidienne de base,
-déficit net cible et objectifs de macros. Les protéines sont fixes, les glucides
-sont adaptés prioritairement aux jours d'effort et les lipides restent dans une
-plage cible.
+- Deux semaines indépendantes ; recette petit-déjeuner, banane à 16 h 30 et
+  course à 17 h retrouvées après navigation et rechargement.
+- Deux vélos et une autre séance le même jour.
+- 100 g + deux enfants = 200 g préparés, nutrition personnelle des 100 g ;
+  modifier portions/enfants ne touche que le repas concerné, zéro enfant fonctionne.
+- Déplacement, édition et suppression accessibles par formulaire/clavier.
+- Modification/archivage de catalogue sans perte ni réécriture historique.
+- Anciennes semaines accessibles sans horaire arbitraire ; événements hors plage
+  et chevauchements lisibles ; nutrition manquante et erreurs API explicites.
+- Aucun recalcul automatique des repas après ajout de sport ; aucun succès
+  affiché avant sauvegarde effective.
 
-La cible alimentaire est :
+  ## Limites livrées
 
-`dépense de base + dépenses des séances - déficit net cible`
-
-LifeOS affiche les hypothèses et avertissements nécessaires, sans prétention de
-précision médicale. Le suivi du poids et l'ajustement automatique sont hors MVP.
-
-## Courses, stock et budget
-
-Le stock est saisi manuellement, avec des unités adaptées (g, ml, pièce,
-paquet, etc.) et un nombre limité de conversions sûres. La liste de courses est
-consolidée depuis le menu puis déduite du stock.
-
-Sur téléphone, le MVP permet de consulter et cocher la liste de courses. Le
-budget est une information de comparaison : il n'impose ni plafond ni alerte.
-Les prix par magasin et leur historique sont prévus en V2, avec saisie manuelle
-et import de tickets ultérieur. Magasin favori et alternatives ne seront
-proposés que lorsque l'économie est significative.
-
-La mutualisation des ingrédients et leur réutilisation sont prioritaires dans les
-suggestions. La répétition des repas est laissée au choix de l'utilisateur et
-signalée, jamais arbitrairement bloquée.
-
-## Suggestions et historique
-
-Le moteur de suggestion est déterministe, transparent et testable. L'IA est une
-couche d'assistance ultérieure. Le moteur peut classer les recettes, assembler
-les composants existants et ajuster les portions en tenant compte du temps, des
-ingrédients et stocks, des préférences souples, du budget informatif, des
-macros et du sport. Il n'applique aucune modification silencieuse et ne génère
-pas de nouvelles recettes par IA dans le MVP.
-
-Les semaines passées sont conservées, consultables et duplicables, sans
-statistiques avancées. Chaque repas peut être marqué prévu, consommé, remplacé
-ou ignoré ; une consommation non planifiée peut être ajoutée en recherchant une
-recette ou un article. Le stock n'est pas mis à jour automatiquement.
-
-## Hors périmètre explicite du MVP
-
-- allergies, contraintes médicales et recommandations nutritionnelles médicales ;
-- notifications ;
-- créneaux de cuisine et modèle d'équipement ;
-- scan caméra des codes-barres ;
-- prix par magasin, historique de prix et import de tickets ;
-- gestion avancée du frigo, congélateur et péremptions ;
-- statistiques avancées, suivi du poids et ajustement nutritionnel automatique ;
-- génération de recettes par IA ;
-- collaboration adulte et invitations.
+  Les événements restent dans une seule date civile (pas de traversée de minuit).
+  Les historiques non figés utilisent leurs valeurs catalogue actuelles lors du
+  premier placement, annoncé explicitement ; leur nutrition passée n'est pas
+  reconstruite. Pas de drag-and-drop nécessaire : déplacement par formulaire,
+  y compris entre deux semaines existantes. Aucun import sportif automatique.
+  Le stockage accepte une fin à 24 h ; le champ horaire natif saisit jusqu'à
+  23 h 59. Les horaires comme 22 h restent disponibles hors plage.

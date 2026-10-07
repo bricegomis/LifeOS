@@ -18,6 +18,8 @@ public sealed class ApiExceptionHandler(
         {
             ArgumentException or FormatException => (StatusCodes.Status400BadRequest, "Invalid request"),
             DuplicateHouseholdMemberException => (StatusCodes.Status409Conflict, "Household membership conflict"),
+            Microsoft.EntityFrameworkCore.DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: "23505" } } =>
+                (StatusCodes.Status409Conflict, "Ce raccord ou cette semaine existe déjà. Actualisez puis réessayez."),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };
 
@@ -41,7 +43,9 @@ public sealed class ApiExceptionHandler(
             {
                 Status = statusCode,
                 Title = title,
-                Detail = statusCode < StatusCodes.Status500InternalServerError || environment.IsDevelopment()
+                Detail = statusCode == StatusCodes.Status409Conflict && exception is Microsoft.EntityFrameworkCore.DbUpdateException
+                    ? title
+                    : statusCode < StatusCodes.Status500InternalServerError || environment.IsDevelopment()
                     ? exception.Message
                     : null,
                 Instance = httpContext.Request.Path

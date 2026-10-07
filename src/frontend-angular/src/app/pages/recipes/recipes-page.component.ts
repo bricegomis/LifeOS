@@ -7,6 +7,8 @@ import {
   FoodItemDto,
   RecipeDto,
   RecipeRequest,
+  ArticleDto,
+  RecipeIngredientDto,
 } from '@/app/core/api/api.models'
 
 @Component({
@@ -44,7 +46,7 @@ import {
     .recipe-feedback { margin: 0; color: var(--lifeos-accent-strong); font-weight: 700; }
     .recipe-error { margin: 0; padding: 12px 14px; border-radius: 12px; background: #fff0ed; color: #8f2017; font-weight: 700; }
     .recipe-empty { margin: 0; color: var(--lifeos-text-soft); line-height: 1.5; }
-    .recipe-form-actions .p-button { min-height: 2.65rem; }
+    .recipe-form-actions .lifeos-button { min-height: 2.65rem; }
     @media (max-width: 850px) { .recipes-workspace { grid-template-columns: minmax(0, 1fr); } }
     @media (max-width: 560px) { .recipe-editor-form { grid-template-columns: minmax(0, 1fr); } .recipe-field-wide, .recipe-form-actions, .recipe-feedback, .recipe-ingredients { grid-column: auto; } .recipes-directory, .recipe-editor { padding: 17px; } }
   `],
@@ -54,6 +56,13 @@ export class RecipesPageComponent implements OnInit {
 
   readonly recipes = signal<RecipeDto[]>([])
   readonly foodItems = signal<FoodItemDto[]>([])
+  readonly articles = signal<ArticleDto[]>([])
+  search = ''
+  visibleRecipes(): RecipeDto[] {
+    return this.recipes().filter(r => !r.isArchived && r.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr')))
+  }
+  linkedFoods(): FoodItemDto[] { return this.foodItems().filter(f => !f.isArchived && f.articleId) }
+  ingredientEdit: { id: string; quantity: number; unit: string } | null = null
   readonly selectedRecipe = signal<RecipeDto | null>(null)
   readonly loading = signal(false)
   readonly loadingFoodItems = signal(false)
@@ -73,6 +82,10 @@ export class RecipesPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadRecipes()
     this.loadFoodItems()
+    this.api.get<ArticleDto[]>('/articles').subscribe({
+      next: items => this.articles.set(items),
+      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
+    })
   }
 
   get recipeNameValue(): string {
@@ -140,7 +153,8 @@ export class RecipesPageComponent implements OnInit {
   }
 
   foodItemName(id: string): string {
-    return this.foodItems().find((food) => food.id === id)?.name ?? `Aliment indisponible · ${id}`
+    return this.foodItems().find((food) => food.articleId === id)?.name
+      ?? this.articles().find(a => a.id === id)?.name ?? `Article indisponible · ${id}`
   }
 
   startNewRecipe(): void {
@@ -239,7 +253,7 @@ export class RecipesPageComponent implements OnInit {
       this.error.set('Enregistrez ou sélectionnez une recette avant d’ajouter un ingrédient.')
       return
     }
-    if (!this.foodItems().some((food) => food.id === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
+    if (!this.linkedFoods().some((food) => food.articleId === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
       this.error.set('Choisissez un aliment du catalogue, une quantité supérieure à zéro et une unité.')
       return
     }
@@ -265,19 +279,43 @@ export class RecipesPageComponent implements OnInit {
 
   deleteRecipe(): void {
     const recipe = this.selectedRecipe()
-    if (!recipe || !window.confirm(`Supprimer la recette « ${recipe.name} » ?`)) return
+    if (!recipe || !window.confirm(`Archiver la recette « ${recipe.name} » ? Les repas existants restent conservés.`)) return
     this.saving.set(true)
     this.error.set(null)
     this.api.delete(`/recipes/${encodeURIComponent(recipe.id)}`).subscribe({
       next: () => {
         this.saving.set(false)
         this.startNewRecipe()
-        this.feedback.set('Recette supprimée.')
+        this.feedback.set('Recette archivée. Les repas existants sont conservés.')
         this.loadRecipes()
       },
       error: (error: unknown) => {
         this.error.set(apiErrorMessage(error))
         this.saving.set(false)
+      },
+    })
+  }
+
+  editIngredient(ingredient: RecipeIngredientDto): void {
+    this.ingredientEdit = { id: ingredient.id, quantity: ingredient.quantity, unit: ingredient.unit }
+  }
+
+  saveIngredient(remove = false): void {
+    const recipe = this.selectedRecipe()
+    const edit = this.ingredientEdit
+    if (!recipe || !edit || this.saving()) return
+    this.saving.set(true)
+    const path = `/recipes/${recipe.id}/ingredients/${edit.id}`
+    const request = remove ? this.api.delete(path) : this.api.put(path, edit)
+    request.subscribe({
+      next: () => {
+        this.saving.set(false)
+        this.ingredientEdit = null
+        this.loadRecipes(recipe.id)
+      },
+      error: (error: unknown) => {
+        this.saving.set(false)
+        this.error.set(apiErrorMessage(error))
       },
     })
   }

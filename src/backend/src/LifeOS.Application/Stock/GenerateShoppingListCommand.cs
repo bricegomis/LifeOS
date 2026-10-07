@@ -46,6 +46,9 @@ public sealed class GenerateShoppingListCommand(
             throw new ArgumentException("Week not found or does not belong to this household.", nameof(weekId));
         }
 
+        if (week.IsManual || week.DayPlans.Any(d => d.PlannedMeals.Any(m => m.ContentName is not null)))
+            throw new ArgumentException("Les courses automatiques sont hors MVP manuel. Les listes historiques restent consultables.");
+
         // Clear existing shopping list for this week
         var existingItems = await _shoppingListItemRepository.GetAllForWeekAsync(householdId, weekId, cancellationToken);
         await _shoppingListItemRepository.RemoveRangeAsync(existingItems, cancellationToken);

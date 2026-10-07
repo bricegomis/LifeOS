@@ -1,4 +1,38 @@
-# LifeOS — Modèle de données initial (conceptuel)
+# LifeOS — Modèle de données
+
+## Implémentation actuelle du semainier manuel
+
+PostgreSQL/API est la source de vérité, avec isolation par foyer et relations
+fortes. Le schéma réel est défini par les configurations EF et migrations ;
+voir [ADR 0004](decisions/0004-manual-planner.md).
+
+| Table existante/nouvelle | Données livrées |
+| --- | --- |
+| `weeks` | `IsManual`, `TimeZoneId` IANA ; nouvelle semaine manuelle avec sept journées vides, sans alternance/règles. |
+| `day_plans` | Date civile et FK semaine conservées ; plusieurs événements par jour. |
+| `planned_meals` | Début/fin locaux nullables, `PersonalPortion`, `ChildrenCount`, nom figé, recette ou lignes ; référence repas composé historique conservée. |
+| `meal_food_lines` | FK repas, FK produit facultative, nom, quantité/unité, unité nutritionnelle et énergie/protéines/glucides/lipides nullables figés ; quantité numeric(28,12). |
+| `activity_sessions` | Horaires nullables, nom/distance et FK catalogue facultative ; type/intensité/durée/calories copiés et modifiables par occurrence. |
+| `sport_templates` | Foyer, nom, sport, durée positive, distance optionnelle, intensité, calories manuelles totales, archivage ; aucun seed silencieux. |
+| `food_items` | Archivage et `ArticleId` nullable unique vers `articles`, raccord explicite dans le même foyer. |
+| `recipes` / `recipe_ingredients` | Archivage, portions, ingrédients numeric(16,6) ; la FK historique `FoodItemId` pointe toujours vers `articles`. |
+
+Préparation = quantité personnelle × (1 + 0,5 × enfants). Les enfants n'augmentent
+jamais la nutrition personnelle. Le sport reste séparé des apports. Aucune
+conversion masse/volume/pièces sans information sûre ; totaux incomplets explicites.
+Modifier/archiver un catalogue ne modifie pas les snapshots des événements.
+
+Les migrations ne fusionnent aucun nom, ne suppriment aucun historique d'achat
+et n'inventent aucune heure. Les anciens repas sans snapshot restent consultables
+à partir des valeurs actuelles ; leur premier placement manuel les fige avec
+avertissement. Les contextes/règles/profils historiques restent stockés mais ne
+pilotent plus le parcours MVP.
+
+## Référence conceptuelle historique — non normative pour le MVP
+
+**Tout le modèle et les anciens états d'implémentation ci-dessous sont conservés
+comme référence antérieure.** Ils ne décrivent pas le schéma manuel actuel :
+profils enfants, contexte travail et menu équilibré ne sont plus ses exigences.
 
 Ce document décrit le modèle de données conceptuel visé pour la base
 PostgreSQL cible. Il est volontairement **non final** : il sert de point de

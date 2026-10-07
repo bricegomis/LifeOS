@@ -116,6 +116,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("ArticleId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -123,6 +126,11 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid")
                         .HasColumnName("household_id");
+
+                    b.Property<bool>("IsArchived")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<Guid?>("IsCorrectionOf")
                         .HasColumnType("uuid")
@@ -160,6 +168,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ArticleId")
+                        .IsUnique();
 
                     b.HasIndex("HouseholdId")
                         .HasDatabaseName("idx_food_items_household_id");
@@ -370,6 +381,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
                     b.Property<Dictionary<string, object>>("Metadata")
                         .HasColumnType("jsonb");
 
@@ -405,8 +419,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("Quantity")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
+                        .HasPrecision(16, 6)
+                        .HasColumnType("numeric(16,6)");
 
                     b.Property<Guid>("RecipeId")
                         .HasColumnType("uuid");
@@ -584,7 +598,14 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("DayPlanId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("DistanceKm")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)");
+
                     b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("EndMinute")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("EstimatedEnergyKcal")
@@ -595,6 +616,16 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("SportTemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("StartMinute")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -608,7 +639,12 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("DayPlanId");
 
-                    b.ToTable("activity_sessions", (string)null);
+                    b.HasIndex("SportTemplateId");
+
+                    b.ToTable("activity_sessions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_activity_time", "(\"StartMinute\" IS NULL AND \"EndMinute\" IS NULL) OR (\"StartMinute\" IS NOT NULL AND \"EndMinute\" IS NOT NULL AND \"StartMinute\" >= 0 AND \"EndMinute\" <= 1440 AND \"EndMinute\" > \"StartMinute\")");
+                        });
                 });
 
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.BalancedWeekPlan", b =>
@@ -678,13 +714,74 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("day_plans", (string)null);
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.WeekPlanning.MealFoodLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("Calories")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Carbs")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Fat")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid?>("FoodItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PlannedMealId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("Protein")
+                        .HasColumnType("double precision");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(28, 12)
+                        .HasColumnType("numeric(28,12)");
+
+                    b.Property<string>("ReferenceUnit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FoodItemId");
+
+                    b.HasIndex("PlannedMealId");
+
+                    b.ToTable("meal_food_lines", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_line_quantity", "\"Quantity\" > 0");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.PlannedMeal", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("ChildrenCount")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("ComposedMealId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ContentName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -692,13 +789,25 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("DayPlanId")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("EndMinute")
+                        .HasColumnType("integer");
+
                     b.Property<string>("MealType")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<decimal>("PersonalPortion")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(12, 4)
+                        .HasColumnType("numeric(12,4)")
+                        .HasDefaultValue(1m);
+
                     b.Property<Guid?>("RecipeId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("StartMinute")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -716,7 +825,12 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("RecipeId");
 
-                    b.ToTable("planned_meals", (string)null);
+                    b.ToTable("planned_meals", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_meal_portions", "\"PersonalPortion\" > 0 AND \"ChildrenCount\" >= 0");
+
+                            t.HasCheckConstraint("ck_meal_time", "(\"StartMinute\" IS NULL AND \"EndMinute\" IS NULL) OR (\"StartMinute\" IS NOT NULL AND \"EndMinute\" IS NOT NULL AND \"StartMinute\" >= 0 AND \"EndMinute\" <= 1440 AND \"EndMinute\" > \"StartMinute\")");
+                        });
                 });
 
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.PlannedMealPart", b =>
@@ -743,6 +857,55 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("planned_meal_parts", (string)null);
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.WeekPlanning.SportTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Calories")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<decimal?>("DistanceKm")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Intensity")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Sport")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId");
+
+                    b.ToTable("sport_templates", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_sport_duration", "\"DurationMinutes\" > 0 AND \"DurationMinutes\" <= 1440");
+
+                            t.HasCheckConstraint("ck_sport_values", "\"Calories\" >= 0 AND (\"DistanceKm\" IS NULL OR \"DistanceKm\" >= 0)");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.Week", b =>
                 {
                     b.Property<Guid>("Id")
@@ -754,6 +917,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsManual")
+                        .HasColumnType("boolean");
+
                     b.Property<DateOnly>("StartsOn")
                         .HasColumnType("date");
 
@@ -761,6 +927,13 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("Europe/Paris");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -775,6 +948,10 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasIndex("HouseholdId");
 
                     b.HasIndex("HouseholdId", "StartsOn");
+
+                    b.HasIndex("HouseholdId", "StartsOn", "IsManual")
+                        .IsUnique()
+                        .HasFilter("\"IsManual\" = true");
 
                     b.ToTable("weeks", (string)null);
                 });
@@ -847,6 +1024,11 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LifeOS.Domain.FoodItems.FoodItem", b =>
                 {
+                    b.HasOne("LifeOS.Domain.Articles.GroceryItem", null)
+                        .WithMany()
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("LifeOS.Domain.Households.Household", null)
                         .WithMany()
                         .HasForeignKey("HouseholdId")
@@ -1019,6 +1201,11 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasForeignKey("DayPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.WeekPlanning.SportTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("SportTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.BalancedWeekPlan", b =>
@@ -1035,6 +1222,20 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasOne("LifeOS.Domain.WeekPlanning.Week", null)
                         .WithMany("DayPlans")
                         .HasForeignKey("WeekId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.WeekPlanning.MealFoodLine", b =>
+                {
+                    b.HasOne("LifeOS.Domain.FoodItems.FoodItem", null)
+                        .WithMany()
+                        .HasForeignKey("FoodItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LifeOS.Domain.WeekPlanning.PlannedMeal", null)
+                        .WithMany("FoodLines")
+                        .HasForeignKey("PlannedMealId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1073,6 +1274,15 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.WeekPlanning.SportTemplate", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.Week", b =>
                 {
                     b.HasOne("LifeOS.Domain.Households.Household", null)
@@ -1106,6 +1316,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("LifeOS.Domain.WeekPlanning.PlannedMeal", b =>
                 {
+                    b.Navigation("FoodLines");
+
                     b.Navigation("Parts");
                 });
 

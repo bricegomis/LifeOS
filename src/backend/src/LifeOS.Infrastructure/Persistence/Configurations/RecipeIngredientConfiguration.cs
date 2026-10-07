@@ -15,7 +15,7 @@ internal sealed class RecipeIngredientConfiguration : IEntityTypeConfiguration<R
 
         builder.Property(ingredient => ingredient.RecipeId).IsRequired();
         builder.Property(ingredient => ingredient.FoodItemId).IsRequired();
-        builder.Property(ingredient => ingredient.Quantity).IsRequired().HasPrecision(10, 2);
+        builder.Property(ingredient => ingredient.Quantity).IsRequired().HasPrecision(16, 6);
         builder.Property(ingredient => ingredient.Unit)
             .IsRequired()
             .HasMaxLength(50);

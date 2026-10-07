@@ -1,454 +1,204 @@
-<section class="page-stack planning-page" aria-labelledby="planning-title">
-  <header class="page-hero planner-hero">
-    <div>
-      <p class="eyebrow">Planification</p>
-      <h1 id="planning-title">Semaine à relire</h1>
-      <p>Préparez la semaine avec le contexte de travail, les repas et les activités, puis calculez le menu équilibré avant de le retenir.</p>
+<section class="page-stack manual-planner">
+  <header class="page-hero">
+    <div><h1>{{ todayOnly ? 'Aujourd’hui' : 'Semainier' }}</h1><p>Alimentation et sport, à votre rythme. Aucun menu généré.</p></div>
+    <div class="calendar-toolbar">
+      <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(-1)" aria-label="Semaine précédente">←</button>
+      <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="today()">Aujourd’hui</button>
+      <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(1)" aria-label="Semaine suivante">→</button>
     </div>
-    <form class="planning-inline-form" (ngSubmit)="createWeek()" aria-label="Créer une semaine">
-      <label class="planning-field">
-        <span>Début de semaine</span>
-        <input class="text-input" type="date" name="newWeekStartsOn" [(ngModel)]="newWeekStartsOn" required />
-      </label>
-      <label class="planning-field">
-        <span>Type de semaine</span>
-        <select class="text-input" name="newWeekMode" [(ngModel)]="newWeekMode">
-          @for (mode of weekModeChoices; track mode.value) {
-            <option [value]="mode.value">{{ mode.label }}</option>
-          }
-        </select>
-      </label>
-      <button class="planning-button" type="submit" [disabled]="busy() !== null">
-        {{ busy() === 'create-week' ? 'Création…' : 'Créer une semaine' }}
-      </button>
-    </form>
   </header>
+  <div class="calendar-toolbar">
+    <label>Aller à la date <input class="text-input" type="date" [ngModel]="selectedDate" (ngModelChange)="chooseWeek($event)" [disabled]="loading() || busy()" /></label>
+    <span>{{ dateLabel(startDate) }} — {{ dateLabel(week()?.days[6]?.date ?? startDate) }}</span>
+    @if (week(); as current) { <span>Horaires locaux · {{ current.timeZoneId }}</span> }
+    <a routerLink="/foods">Produits</a><a routerLink="/recipes">Recettes</a><a routerLink="/sports">Sport</a>
+  </div>
 
-  @if (error()) {
-    <p class="planning-feedback is-error" role="alert">{{ error() }}</p>
-  }
-  @if (message()) {
-    <p class="planning-feedback is-info" role="status">{{ message() }}</p>
-  }
-  @if (catalogueError()) {
-    <p class="planning-feedback is-error" role="alert">{{ catalogueError() }}</p>
-  }
+  @if (error()) { <p class="calendar-error" role="alert">{{ error() }} <button type="button" [disabled]="busy()" (click)="loadWeek()">Réessayer la lecture</button></p> }
+  @if (notice()) { <p class="calendar-notice" role="status">{{ notice() }}</p> }
+  @if (catalogError()) { <p class="calendar-error" role="alert">Bibliothèques indisponibles : {{ catalogError() }} <button type="button" (click)="loadCatalogs()">Réessayer</button></p> }
 
-  @if (loadingWeeks()) {
-    <p class="muted" role="status">Chargement des semaines…</p>
-  } @else if (!weeks().length) {
-    <p class="muted">Aucune semaine planifiée pour le moment. Créez-en une pour commencer.</p>
-  }
-
-  @if (selectedWeek(); as week) {
-    <section class="planning-section" aria-labelledby="week-heading">
-      <div class="week-title-row">
-        <label class="planning-field">
-          <span>Semaine</span>
-          <select class="text-input" name="selectedWeek" [ngModel]="selectedWeekId()" (ngModelChange)="selectWeek($event)">
-            @for (entry of sortedWeeks(); track entry.id) {
-              <option [value]="entry.id">{{ weekLabel(entry) }}</option>
+  @if (draft; as edit) {
+    <section class="event-editor surface-card" aria-labelledby="event-heading" [attr.aria-busy]="busy()">
+      <h2 id="event-heading" #editorHeading tabindex="-1">{{ edit.id ? 'Modifier / déplacer' : 'Ajouter' }} · {{ edit.kind === 'meal' ? 'Alimentation' : 'Sport' }}</h2>
+      <form (ngSubmit)="save()">
+        @if (!edit.id) {
+          <fieldset class="editor-actions"><legend>Type d’événement</legend>
+            <label><input name="kind" type="radio" value="meal" [ngModel]="edit.kind" (ngModelChange)="changeKind($event)" /> Alimentation</label>
+            <label><input name="kind" type="radio" value="sport" [ngModel]="edit.kind" (ngModelChange)="changeKind($event)" /> Sport</label>
+          </fieldset>
+        }
+        <div class="editor-grid">
+          @if (edit.id) {
+            <label>Semaine de destination <select class="text-input" name="destinationWeek" [ngModel]="destinationWeekId" (ngModelChange)="moveToWeek($event)" [disabled]="busy()">
+              @for (summary of summaries(); track summary.id) { <option [value]="summary.id">{{ dateLabel(summary.startsOn) }}</option> }
+            </select></label>
+          }
+          <label>Jour / déplacement <select class="text-input" name="day" [(ngModel)]="edit.dayId">
+            @for (day of destinationDays(); track day.id) { <option [value]="day.id">{{ dateLabel(day.date) }}</option> }
+          </select></label>
+          <label>Début <input class="text-input" name="start" type="time" required [(ngModel)]="edit.start" /></label>
+          <label>Fin <input class="text-input" name="end" type="time" required [(ngModel)]="edit.end" /></label>
+        </div>
+        @if (!edit.hasSnapshot) { <p class="calendar-warning">Repas historique : aucun horaire inventé. Le premier enregistrement fige les valeurs actuelles du catalogue, pas une nutrition passée inconnue.</p> }
+        @if (edit.id && !edit.replaceContent) {
+          <p><strong>{{ edit.name }}</strong> · contenu enregistré conservé</p>
+          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="replace()">Remplacer explicitement le contenu</button>
+        }
+        @if (contentEditable()) {
+          <label>Rechercher dans les bibliothèques <input class="text-input" name="catalogSearch" type="search" [(ngModel)]="catalogSearch" /></label>
+        }
+        @if (edit.kind === 'meal') {
+          @if (contentEditable()) {
+            <label>Contenu <select class="text-input" name="source" [(ngModel)]="edit.source"><option value="recipe">Recette</option><option value="foods">Produits / ingrédients</option></select></label>
+            @if (edit.source === 'recipe') {
+              <label>Recette <select class="text-input" name="recipe" required [(ngModel)]="edit.recipeId">
+                <option value="">Choisir une recette</option>
+                @for (recipe of activeRecipes(); track recipe.id) { <option [value]="recipe.id">{{ recipe.name }} · {{ recipe.servings }} portions de référence</option> }
+              </select></label>
             }
-          </select>
-        </label>
-        <h2 id="week-heading" class="sr-only">{{ weekLabel(week) }}</h2>
-        <div class="week-controls">
-          <p class="planner-note">
-            Modèle appliqué : {{ week.weekMode === 'kids' ? 'Avec enfant' : 'Sans enfant' }}
-          </p>
-          <label class="planning-field">
-            <span>Statut</span>
-            <select
-              class="text-input"
-              name="weekStatus"
-              [ngModel]="week.status"
-              (ngModelChange)="updateWeekStatus(week, $event)"
-              [disabled]="busy() !== null"
-            >
-              @for (status of weekStatuses; track status.value) {
-                <option [value]="status.value">{{ status.label }}</option>
-              }
-            </select>
-          </label>
-          <button class="planning-button is-danger" type="button" (click)="deleteWeek(week)" [disabled]="busy() !== null">
-            Supprimer la semaine
-          </button>
-        </div>
-      </div>
-
-      <div class="week-summary-strip" aria-label="Résumé de la semaine">
-        <div><span>Jours planifiés</span><strong>{{ summary().days }} / 7</strong></div>
-        <div><span>Repas</span><strong>{{ summary().meals }}</strong></div>
-        <div><span>Consommés</span><strong>{{ summary().consumed }}</strong></div>
-        <div><span>Jours au bureau</span><strong>{{ summary().officeDays }}</strong></div>
-        <div><span>Trajets vélo</span><strong>{{ summary().bikeDays }}</strong></div>
-        <div>
-          <span>Menu retenu</span>
-          <strong>{{ summary().retainedPlan ? percent(summary().retainedPlan!.overallScore) : 'Aucun' }}</strong>
-        </div>
-      </div>
-    </section>
-
-    <section class="planning-section week-planner-surface" aria-labelledby="balanced-plan-heading">
-      <div class="planning-section-heading">
-        <h2 id="balanced-plan-heading">Menu équilibré</h2>
-        <p class="planner-note">
-          Un seul calcul, aucun scénario à choisir : l’équilibre nutritionnel est une contrainte, le budget, la diversité
-          sur le mois et l’anti-gaspillage sont optimisés ensemble. Rien n’est retenu sans votre validation.
-        </p>
-      </div>
-      <form class="planning-inline-form" (ngSubmit)="computeBalancedPlan(week)">
-        <button class="planning-button" type="submit" [disabled]="busy() !== null">
-          {{ busy() === 'compute' ? 'Calcul…' : 'Calculer le menu équilibré' }}
-        </button>
-      </form>
-      @if (planError()) {
-        <p class="planning-feedback is-error" role="alert">{{ planError() }}</p>
-      }
-      @if (plansLoading()) {
-        <p class="muted" role="status">Chargement du menu équilibré…</p>
-      } @else if (!plans().length) {
-        <p class="muted">Aucun calcul pour cette semaine.</p>
-      } @else {
-        <ul class="plan-list">
-          @for (plan of plans(); track plan.id) {
-            <li class="plan-card" [class.is-applied]="plan.applied">
-              <div class="plan-card-header">
-                <h3>Score global : {{ percent(plan.overallScore) }}</h3>
-                <span class="plan-flag" [class.is-warning]="!plan.nutritionConstraintMet">
-                  {{ plan.nutritionConstraintMet ? 'Contrainte nutritionnelle respectée' : 'Contrainte nutritionnelle non atteinte' }}
-                </span>
+          }
+          <div class="editor-grid">
+            <label>{{ edit.source === 'recipe' ? 'Ma portion (nombre de portions de référence)' : 'Multiplicateur de ma portion' }}
+              <input class="text-input" name="portion" type="number" required min="0.001" max="1000" step="any" [(ngModel)]="edit.personalPortion" /></label>
+            <label>Enfants présents (demi-portion chacun) <input class="text-input" name="children" type="number" min="0" max="100" step="1" required [(ngModel)]="edit.children" /></label>
+          </div>
+          <p>Préparation : ma quantité × {{ number(1 + 0.5 * edit.children) }}. Les enfants ne majorent jamais mes calories ni mes macros.</p>
+          @if (edit.source === 'foods') {
+            @for (line of edit.lines; track $index; let index = $index) {
+              <div class="ingredient-editor">
+                @if (contentEditable()) {
+                  <label>Produit <select class="text-input" [name]="'food'+index" [(ngModel)]="line.foodItemId" required>
+                    <option value="">Choisir</option>
+                    @for (food of activeFoods(); track food.id) { <option [value]="food.id">{{ food.name }} · nutrition / {{ food.referenceUnit }}</option> }
+                  </select></label>
+                } @else { <strong>{{ lineName(line) }}</strong> }
+                <label>Quantité personnelle de référence <input class="text-input" [name]="'quantity'+index" type="number" min="0.001" max="1000000" step="any" required [(ngModel)]="line.quantity" /></label>
+                <label>Unité <input class="text-input" [name]="'unit'+index" maxlength="50" required [(ngModel)]="line.unit" [readonly]="!contentEditable()" placeholder="g, ml, piece" /></label>
+                <span>À préparer : {{ number(line.quantity * edit.personalPortion * (1 + 0.5 * edit.children)) }} {{ line.unit }}</span>
+                @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit.lines.splice(index, 1)">Retirer</button> }
               </div>
-              <p class="muted">Calculé le {{ formatDate(plan.createdAt, { day: 'numeric', month: 'short' }) }}</p>
-              @if (plan.text) {
-                <p>{{ plan.text }}</p>
+            }
+            @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addLine()">Ajouter un produit</button> }
+          }
+        } @else {
+          @if (contentEditable()) {
+            <label>Modèle sportif <select class="text-input" name="template" [ngModel]="edit.templateId" (ngModelChange)="selectTemplate($event)" required>
+              <option value="">Choisir une séance</option>
+              @for (template of activeTemplates(); track template.id) { <option [value]="template.id">{{ template.name }}</option> }
+            </select></label>
+          }
+          <div class="editor-grid">
+            <label>Nom de cette occurrence <input class="text-input" name="sportName" maxlength="200" required [(ngModel)]="edit.name" /></label>
+            <label>Sport <input class="text-input" name="sport" maxlength="50" required [(ngModel)]="edit.sport" /></label>
+            <label>Intensité <select class="text-input" name="intensity" [(ngModel)]="edit.intensity"><option value="low">Faible</option><option value="moderate">Modérée</option><option value="high">Élevée</option></select></label>
+            <label>Distance (km, facultative) <input class="text-input" name="distance" type="number" min="0" step="any" [(ngModel)]="edit.distance" /></label>
+            <label>Calories totales manuelles <input class="text-input" name="calories" type="number" min="0" step="any" required [(ngModel)]="edit.calories" /></label>
+          </div>
+          <p>Durée = fin − début. Modifier le créneau ou la distance ne recalcule pas les calories. Seule cette occurrence change.</p>
+        }
+        <div class="editor-actions">
+          <button class="lifeos-button" type="submit" [disabled]="busy() || loading()">{{ busy() ? 'Enregistrement…' : 'Enregistrer l’événement' }}</button>
+          <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="busy()" (click)="draft = null">Annuler</button>
+          @if (edit.id) { <button class="lifeos-button lifeos-button-secondary danger" type="button" [disabled]="busy()" (click)="remove()">Supprimer cet événement</button> }
+        </div>
+      </form>
+    </section>
+  }
+
+  @if (loading()) { <p role="status">Chargement de la semaine…</p> }
+  @else if (week(); as current) {
+    <nav class="day-navigation" aria-label="Choisir le jour">
+      @for (day of current.days; track day.id) {
+        <button type="button" [attr.aria-pressed]="selectedDate === day.date" (click)="selectedDate = day.date" [disabled]="busy()">{{ dateLabel(day.date, true) }}</button>
+      }
+    </nav>
+    @if (selectedDay(); as day) {
+      <section class="day-agenda" [class.today-agenda]="todayOnly">
+        <div class="calendar-toolbar"><h2>{{ dateLabel(day.date) }}</h2>
+          <button type="button" class="lifeos-button" [disabled]="busy()" (click)="add(day)">Ajouter un événement</button></div>
+        <p>Mes apports : {{ number(day.nutrition.calories) }} kcal · P {{ number(day.nutrition.protein) }} g · G {{ number(day.nutrition.carbs) }} g · L {{ number(day.nutrition.fat) }} g</p>
+        <p>Sport déclaré : {{ number(sportTotal(day)) }} kcal — pas une dépense quotidienne totale.</p>
+        @if (!day.nutrition.isComplete) { <p class="calendar-warning">Total nutritionnel incomplet.</p> }
+        @if (!events(day).length) { <p>Aucun événement ce jour. Ajoutez un repas, une collation ou une séance.</p> }
+        @for (event of events(day); track event.key) {
+          <button type="button" class="agenda-event" [class.sport]="event.kind === 'sport'" [disabled]="busy()" (click)="edit(event)">
+            <span>{{ time(event.value.startMinute) }} @if (event.value.endMinute !== null) { — {{ time(event.value.endMinute) }} }</span>
+            <strong>{{ event.value.name }}</strong><span>{{ event.kind === 'meal' ? 'Alimentation' : 'Sport' }} · Modifier / déplacer</span>
+          </button>
+        }
+      </section>
+    }
+    @if (!todayOnly) {
+      <section class="desktop-calendar" aria-label="Calendrier hebdomadaire de 6 heures à 20 heures">
+        <div class="calendar-head"><span>6–20 h</span>
+          @for (day of current.days; track day.id) {
+            <div class="day-heading"><h2>{{ dateLabel(day.date, true) }}</h2>
+              <button type="button" [disabled]="busy()" (click)="add(day)">Ajouter</button>
+              <small>Moi : {{ number(day.nutrition.calories) }} kcal</small>
+              <small>Sport : {{ number(sportTotal(day)) }} kcal</small>
+              @if (!day.nutrition.isComplete) { <small class="calendar-warning">Apports incomplets</small> }
+            </div>
+          }
+        </div>
+        <div class="calendar-body">
+          <div class="time-axis">@for (hour of hours; track hour) { <span>{{ hour }} h</span> }<span class="last-hour">20 h</span></div>
+          @for (day of current.days; track day.id) {
+            <div class="calendar-day">
+              @for (hour of hours; track hour) {
+                <button class="calendar-slot" type="button" [disabled]="busy()" (click)="add(day, hour * 60)" [attr.aria-label]="'Ajouter le ' + dateLabel(day.date) + ' à ' + hour + ' heures'"></button>
               }
-              @if (plan.parseError) {
-                <p class="muted">Explication non structurée renvoyée par l’API.</p>
-              }
-              @if (plan.dimensions.length) {
-                <ul class="plan-dimensions">
-                  @for (dimension of plan.dimensions; track dimension.key) {
-                    <li>
-                      <div class="plan-dimension-title">
-                        <strong>{{ dimensionLabel(dimension.key) }}</strong>
-                        <span>{{ percent(dimension.score) }} · poids {{ percent(dimension.weight) }}</span>
-                      </div>
-                      <p class="muted">{{ dimension.summary }}</p>
-                    </li>
-                  }
-                </ul>
-              }
-              @if (plan.tradeoffs.length) {
-                <div class="plan-notes">
-                  <h4>Arbitrages</h4>
-                  <ul>
-                    @for (tradeoff of plan.tradeoffs; track tradeoff) {
-                      <li>{{ tradeoff }}</li>
-                    }
-                  </ul>
-                </div>
-              }
-              @if (plan.limitations.length) {
-                <div class="plan-notes is-limits">
-                  <h4>Limites du calcul</h4>
-                  <ul>
-                    @for (limitation of plan.limitations; track limitation) {
-                      <li>{{ limitation }}</li>
-                    }
-                  </ul>
-                </div>
-              }
-              @if (plan.applied) {
-                <strong>Menu retenu</strong>
-              } @else {
-                <button
-                  class="planning-button is-secondary"
-                  type="button"
-                  (click)="retainPlan(week, plan)"
-                  [disabled]="busy() !== null"
-                >
-                  {{ busy() === 'apply-' + plan.id ? 'Validation…' : 'Retenir ce menu' }}
+              @for (event of layout(day); track event.key) {
+                <button class="calendar-event" type="button" [class.sport]="event.kind === 'sport'"
+                  [style.top.px]="event.top" [style.height.px]="event.height"
+                  [style.left.%]="event.lane / event.lanes * 100" [style.width.%]="100 / event.lanes"
+                  [title]="event.value.name + ' · ' + time(event.value.startMinute) + ' — ' + time(event.value.endMinute)"
+                  [disabled]="busy()" (click)="edit(event)">
+                  <small>{{ time(event.value.startMinute) }}</small><strong>{{ event.value.name }}</strong>
+                  <small>{{ event.kind === 'meal' ? 'Repas' : 'Sport' }}</small>
                 </button>
               }
-            </li>
-          }
-        </ul>
-      }
-    </section>
-
-    <section class="planning-section" aria-labelledby="days-heading">
-      <div class="planning-section-heading">
-        <h2 id="days-heading">Jours</h2>
-        <p class="planner-note">Le contexte de travail et les trajets vélo sont enregistrés dès leur modification.</p>
-      </div>
-
-      @if (missingDates().length) {
-        <div class="missing-days" role="group" aria-label="Jours manquants">
-          @for (date of missingDates(); track date) {
-            <button class="planning-button is-secondary is-small" type="button" (click)="addDay(week, date)" [disabled]="busy() !== null">
-              Ajouter {{ formatDate(date) }}
-            </button>
+            </div>
           }
         </div>
-      }
-
-      <ul class="day-list">
-        @for (day of sortedDays(); track day.id) {
-          <li class="day-card">
-            <div class="day-card-header">
-              <div>
-                <h3 class="day-name">{{ formatDate(day.date, { weekday: 'long' }) }}</h3>
-                <span class="day-date">{{ formatDate(day.date, { day: 'numeric', month: 'long' }) }}</span>
-              </div>
-              <button
-                class="planning-button is-danger is-small"
-                type="button"
-                (click)="deleteDay(week, day)"
-                [disabled]="busy() !== null"
-                [attr.aria-label]="'Supprimer ' + formatDate(day.date)"
-              >
-                Supprimer
-              </button>
-            </div>
-
-            <div class="day-context-controls">
-              <label class="planning-field">
-                <span>Contexte</span>
-                <select
-                  class="text-input"
-                  [name]="'workContext-' + day.id"
-                  [ngModel]="day.workContext"
-                  (ngModelChange)="updateDay(week, day, { workContext: $event })"
-                  [disabled]="busy() !== null"
-                >
-                  @for (context of workContexts; track context.value) {
-                    <option [value]="context.value">{{ context.label }}</option>
-                  }
-                  @if (!isKnown(workContexts, day.workContext)) {
-                    <option [value]="day.workContext">{{ day.workContext }}</option>
-                  }
-                </select>
-              </label>
-              <label class="planning-check">
-                <input
-                  type="checkbox"
-                  [name]="'bike-' + day.id"
-                  [ngModel]="day.bikeCommute"
-                  (ngModelChange)="updateDay(week, day, { bikeCommute: $event })"
-                  [disabled]="busy() !== null"
-                />
-                Trajet à vélo
-              </label>
-            </div>
-
-            @if (day.plannedMeals.length) {
-              <ul class="meal-list" [attr.aria-label]="'Repas du ' + formatDate(day.date)">
-                @for (meal of sortedMeals(day); track meal.id) {
-                  <li class="meal-item">
-                    <div class="meal-item-title">
-                      <span class="meal-kind">{{ label(mealTypes, meal.mealType) }}</span>
-                      <strong>{{ mealName(meal) }}</strong>
-                    </div>
-                    <div class="meal-item-actions">
-                      <label class="planning-field">
-                        <span>Statut</span>
-                        <select
-                          class="text-input"
-                          [name]="'mealStatus-' + meal.id"
-                          [ngModel]="meal.status"
-                          (ngModelChange)="updateMealStatus(week, meal, $event)"
-                          [disabled]="busy() !== null"
-                        >
-                          @for (status of mealStatuses; track status.value) {
-                            <option [value]="status.value">{{ status.label }}</option>
-                          }
-                        </select>
-                      </label>
-                      <label class="planning-field">
-                        <span>Remplacer par</span>
-                        <select class="text-input" [name]="'replace-' + meal.id" [(ngModel)]="replaceDrafts[meal.id]">
-                          <option value="">Choisir…</option>
-                          @for (option of mealSourceOptions(); track option.value) {
-                            <option [value]="option.value">{{ option.label }}</option>
-                          }
-                        </select>
-                      </label>
-                      <button
-                        class="planning-button is-secondary is-small"
-                        type="button"
-                        (click)="replaceMeal(week, meal)"
-                        [disabled]="busy() !== null || !replaceDrafts[meal.id]"
-                      >
-                        Remplacer
-                      </button>
-                      <button
-                        class="planning-button is-danger is-small"
-                        type="button"
-                        (click)="deleteMeal(week, meal)"
-                        [disabled]="busy() !== null"
-                        [attr.aria-label]="'Supprimer ' + mealName(meal)"
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                    @if (meal.parts.length) {
-                      <ul class="meal-parts" aria-label="Portions par membre">
-                        @for (part of meal.parts; track part.id) {
-                          <li>
-                            <label class="planning-field">
-                              <span>Portion membre {{ part.memberProfileId.slice(0, 8) }}</span>
-                              <input
-                                class="text-input"
-                                type="number"
-                                min="0.1"
-                                step="0.1"
-                                [name]="'part-' + part.id"
-                                [ngModel]="partDraft(part)"
-                                (ngModelChange)="partDrafts[part.id] = $event"
-                              />
-                            </label>
-                            <button class="planning-button is-secondary is-small" type="button" (click)="updatePart(week, meal, part)" [disabled]="busy() !== null">
-                              Enregistrer
-                            </button>
-                            <button class="planning-button is-danger is-small" type="button" (click)="deletePart(week, meal, part)" [disabled]="busy() !== null">
-                              Retirer
-                            </button>
-                          </li>
-                        }
-                      </ul>
-                    }
-                  </li>
-                }
-              </ul>
-            } @else {
-              <p class="muted">Aucun repas planifié.</p>
+      </section>
+    }
+    <section class="week-details" aria-label="Détails des événements et préparation">
+      @for (day of current.days; track day.id) {
+        @if ((!todayOnly || day.date === selectedDate) && events(day).length) {
+          <details [open]="todayOnly || unplaced(day).length > 0 || outOfRange(day).length > 0"><summary>{{ dateLabel(day.date) }} · {{ events(day).length }} événements
+            @if (unplaced(day).length) { · {{ unplaced(day).length }} à positionner }
+            @if (outOfRange(day).length) { · {{ outOfRange(day).length }} hors plage }
+            · apports et préparation</summary>
+            @if (unplaced(day).length) { <h3>À positionner (historique sans heure)</h3> }
+            @for (event of unplaced(day); track event.key) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit(event)">{{ event.value.name }} · Positionner</button> }
+            @if (outOfRange(day).length) { <h3>Hors plage 6–20 h</h3> }
+            @for (event of outOfRange(day); track event.key) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit(event)">{{ time(event.value.startMinute) }} · {{ event.value.name }} · Modifier</button> }
+            <p>Mes apports : {{ number(day.nutrition.calories) }} kcal · Protéines {{ number(day.nutrition.protein) }} g · Glucides {{ number(day.nutrition.carbs) }} g · Lipides {{ number(day.nutrition.fat) }} g</p>
+            <p>Sport déclaré : {{ number(sportTotal(day)) }} kcal (séparé des apports).</p>
+            @for (meal of day.meals; track meal.id) {
+              <h3>{{ time(meal.startMinute) }} · {{ meal.name }}</h3>
+              <p>Moi : {{ number(meal.nutrition.calories) }} kcal · {{ meal.childrenCount }} enfants · portion personnelle × {{ meal.personalPortion }}</p>
+              <ul>@for (line of meal.lines; track line.id) { <li>{{ line.name }} : moi {{ number(line.personalQuantity) }} {{ line.unit }} / à préparer {{ number(line.preparationQuantity) }} {{ line.unit }}</li> }</ul>
+              @if (!meal.nutrition.isComplete) {
+                <p class="calendar-warning">Nutrition incomplète :</p>
+                <ul>@for (warning of meal.nutrition.warnings; track warning) { <li>{{ warning }}</li> }</ul>
+              }
+              <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit({key: meal.id, kind: 'meal', value: meal, lane: 0, lanes: 1, top: 0, height: 0})">Modifier / déplacer le repas</button>
             }
-
-            <form class="planning-inline-form" (ngSubmit)="addMeal(week, day)" [attr.aria-label]="'Ajouter un repas le ' + formatDate(day.date)">
-              <label class="planning-field">
-                <span>Moment</span>
-                <select class="text-input" [name]="'newMealType-' + day.id" [(ngModel)]="mealDraft(day.id).mealType">
-                  @for (type of mealTypes; track type.value) {
-                    <option [value]="type.value">{{ type.label }}</option>
-                  }
-                </select>
-              </label>
-              <label class="planning-field">
-                <span>Plat</span>
-                <select class="text-input" [name]="'newMealSource-' + day.id" [(ngModel)]="mealDraft(day.id).source" required>
-                  <option value="">Choisir…</option>
-                  @for (option of mealSourceOptions(); track option.value) {
-                    <option [value]="option.value">{{ option.label }}</option>
-                  }
-                </select>
-              </label>
-              <button class="planning-button is-small" type="submit" [disabled]="busy() !== null || !mealDraft(day.id).source">
-                Ajouter le repas
-              </button>
-            </form>
-
-            <button
-              class="planning-button is-secondary is-small"
-              type="button"
-              (click)="toggleDayDetails(day.id)"
-              [attr.aria-expanded]="isExpanded(day.id)"
-              [attr.aria-controls]="'details-' + day.id"
-            >
-              {{ isExpanded(day.id) ? 'Masquer activités et objectifs' : 'Activités et objectifs' }}
-            </button>
-
-            @if (isExpanded(day.id)) {
-              <div class="day-details" [id]="'details-' + day.id">
-                @let details = dayDetails()[day.id];
-                @if (details?.error) {
-                  <p class="planning-feedback is-error" role="alert">{{ details!.error }}</p>
-                }
-                @if (details?.loading) {
-                  <p class="muted" role="status">Chargement…</p>
-                } @else {
-                  @if (details?.sessions?.length) {
-                    <ul class="session-list" aria-label="Activités du jour">
-                      @for (session of details!.sessions; track session.id) {
-                        <li>
-                          <span>
-                            {{ label(activityTypes, session.type) }} · {{ label(activityIntensities, session.intensity) }} ·
-                            {{ session.durationMinutes }} min · {{ session.estimatedEnergyKcal }} kcal
-                          </span>
-                          <span>
-                            <button class="planning-button is-secondary is-small" type="button" (click)="editSession(day.id, session)">Modifier</button>
-                            <button class="planning-button is-danger is-small" type="button" (click)="deleteSession(day.id, session)" [disabled]="busy() !== null">
-                              Supprimer
-                            </button>
-                          </span>
-                        </li>
-                      }
-                    </ul>
-                  } @else {
-                    <p class="muted">Aucune activité déclarée.</p>
-                  }
-                }
-
-                <form class="planning-inline-form" (ngSubmit)="saveSession(day.id)" aria-label="Activité">
-                  <label class="planning-field">
-                    <span>Type</span>
-                    <input
-                      class="text-input"
-                      [name]="'activityType-' + day.id"
-                      [attr.list]="'activity-types-' + day.id"
-                      [(ngModel)]="activityDraft(day.id).type"
-                      required
-                    />
-                    <datalist [id]="'activity-types-' + day.id">
-                      @for (type of activityTypes; track type.value) {
-                        <option [value]="type.value">{{ type.label }}</option>
-                      }
-                    </datalist>
-                  </label>
-                  <label class="planning-field">
-                    <span>Intensité</span>
-                    <select class="text-input" [name]="'activityIntensity-' + day.id" [(ngModel)]="activityDraft(day.id).intensity">
-                      @for (intensity of activityIntensities; track intensity.value) {
-                        <option [value]="intensity.value">{{ intensity.label }}</option>
-                      }
-                    </select>
-                  </label>
-                  <label class="planning-field">
-                    <span>Durée (min)</span>
-                    <input class="text-input" type="number" min="1" step="1" [name]="'activityDuration-' + day.id" [(ngModel)]="activityDraft(day.id).durationMinutes" required />
-                  </label>
-                  <label class="planning-field">
-                    <span>Dépense estimée (kcal, facultatif)</span>
-                    <input class="text-input" type="number" min="0" step="1" [name]="'activityKcal-' + day.id" [(ngModel)]="activityDraft(day.id).estimatedEnergyKcal" />
-                  </label>
-                  <button class="planning-button is-small" type="submit" [disabled]="busy() !== null">
-                    {{ activityDraft(day.id).editingId ? 'Mettre à jour' : 'Ajouter l’activité' }}
-                  </button>
-                  @if (activityDraft(day.id).editingId) {
-                    <button class="planning-button is-secondary is-small" type="button" (click)="cancelSessionEdit(day.id)">Annuler</button>
-                  }
-                </form>
-                <p class="muted">L’API ne calcule pas la dépense : sans valeur, elle vaut 0 kcal à la création et reste inchangée en modification.</p>
-
-                @if (details?.nutritionError) {
-                  <p class="planning-feedback is-error" role="alert">{{ details!.nutritionError }}</p>
-                }
-                @if (details?.nutrition; as nutrition) {
-                  <dl class="nutrition-grid" aria-label="Objectif nutritionnel du jour">
-                    <dt>Base énergétique</dt><dd>{{ nutrition.dailyBaseEnergyKcal }} kcal</dd>
-                    <dt>Activité</dt><dd>{{ nutrition.activityEnergyKcal }} kcal</dd>
-                    <dt>Déficit visé</dt><dd>{{ nutrition.targetNetDeficitKcal }} kcal</dd>
-                    <dt>Cible alimentaire</dt><dd>{{ nutrition.dailyFoodTargetKcal }} kcal</dd>
-                    <dt>Protéines</dt><dd>{{ nutrition.targetProteinG }} g</dd>
-                    <dt>Glucides</dt><dd>{{ nutrition.targetCarbsG }} g</dd>
-                    <dt>Lipides</dt><dd>{{ nutrition.targetFatsG }} g</dd>
-                  </dl>
-                }
-              </div>
+            @for (sport of day.sports; track sport.id) {
+              <h3>{{ time(sport.startMinute) }} · {{ sport.name }}</h3><p>{{ sport.durationMinutes }} min · {{ sport.distanceKm ?? '—' }} km · {{ sport.calories }} kcal manuelles</p>
+              <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit({key: sport.id, kind: 'sport', value: sport, lane: 0, lanes: 1, top: 0, height: 0})">Modifier / déplacer la séance</button>
             }
-          </li>
+          </details>
         }
-      </ul>
+      }
+    </section>
+  } @else if (!error()) {
+    <section class="surface-card">
+      <h2>Une semaine à composer</h2><p>Créez les sept journées, puis ajoutez vos repas et séances. Les autres semaines restent inchangées.</p>
+      <label>Fuseau des horaires <input class="text-input" [(ngModel)]="timeZone" aria-label="Fuseau horaire de la semaine" /></label>
+      <button class="lifeos-button" type="button" [disabled]="busy()" (click)="createWeek()">{{ busy() ? 'Création…' : 'Créer cette semaine vide' }}</button>
     </section>
   }
 </section>

@@ -14,11 +14,48 @@ public sealed class PlannedMeal : Entity
     public string Status { get; private set; } // planned, consumed, replaced, skipped
     public Guid? ComposedMealId { get; private set; }
     public Guid? RecipeId { get; private set; }
+    public int? StartMinute { get; private set; }
+    public int? EndMinute { get; private set; }
+    public string? ContentName { get; private set; }
+    public decimal PersonalPortion { get; private set; } = 1;
+    public int ChildrenCount { get; private set; }
+    public List<MealFoodLine> FoodLines { get; private set; } = [];
+    public decimal PreparationFactor => 1 + 0.5m * ChildrenCount;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
     // Navigation property for EF Core
     public List<PlannedMealPart> Parts { get; private set; } = [];
+
+    public static PlannedMeal CreateManual(Guid dayId)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new PlannedMeal(Guid.NewGuid(), dayId, "snack", "planned", null, null, now, now);
+    }
+
+    public void Schedule(Guid dayId, int? start, int? end, decimal personalPortion, int children)
+    {
+        if (dayId == Guid.Empty) throw new ArgumentException("Journée obligatoire.");
+        EventTime.Validate(start, end);
+        if (personalPortion < 0.0001m || personalPortion > 1000 || decimal.Round(personalPortion, 4) != personalPortion || children < 0 || children > 100)
+            throw new ArgumentException("Portion entre 0,0001 et 1000 (quatre décimales), enfants entre 0 et 100.");
+        DayPlanId = dayId;
+        StartMinute = start;
+        EndMinute = end;
+        PersonalPortion = personalPortion;
+        ChildrenCount = children;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void SetContent(string name, Guid? recipeId, Guid? composedMealId, List<MealFoodLine> lines)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 500) throw new ArgumentException("Nom obligatoire (500 caractères maximum).");
+        ContentName = name.Trim();
+        RecipeId = recipeId;
+        ComposedMealId = composedMealId;
+        FoodLines = lines;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
 
     private PlannedMeal(
         Guid id,
@@ -105,6 +142,7 @@ public sealed class PlannedMeal : Entity
     /// </summary>
     public void ReplaceMeal(Guid? composedMealId = null, Guid? recipeId = null)
     {
+        if (ContentName is not null) throw new ArgumentException("Utilisez le remplacement explicite du semainier manuel pour préserver les snapshots.");
         if ((composedMealId.HasValue && composedMealId.Value != Guid.Empty && recipeId.HasValue && recipeId.Value != Guid.Empty) ||
             (!composedMealId.HasValue && !recipeId.HasValue) ||
             (composedMealId == Guid.Empty && recipeId == Guid.Empty))
@@ -121,6 +159,7 @@ public sealed class PlannedMeal : Entity
 
     public PlannedMealPart AddPart(Guid memberProfileId, decimal portionMultiplier)
     {
+        if (ContentName is not null) throw new ArgumentException("Utilisez la portion personnelle et le nombre d'enfants du semainier manuel.");
         var existingPart = Parts.FirstOrDefault(part => part.MemberProfileId == memberProfileId);
 
         if (existingPart is not null)
@@ -139,6 +178,7 @@ public sealed class PlannedMeal : Entity
 
     public bool UpdatePart(Guid partId, decimal portionMultiplier)
     {
+        if (ContentName is not null) throw new ArgumentException("Utilisez la portion personnelle et le nombre d'enfants du semainier manuel.");
         var part = Parts.FirstOrDefault(candidate => candidate.Id == partId);
 
         if (part is null)

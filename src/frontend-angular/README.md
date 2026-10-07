@@ -1,10 +1,26 @@
 # LifeOS Angular frontend
 
 The frontend is a standalone Angular 22 + TypeScript single-page application,
-built with the Angular CLI and styled with PrimeNG and the existing LifeOS
-design system. It is a separate, API-backed implementation alongside the
+built with the Angular CLI and styled with native HTML controls and the existing
+LifeOS CSS tokens. Unused PrimeNG/PrimeUI providers and dependencies were removed;
+PrimeIcons (MIT) remains in use for navigation. It is an API-backed implementation alongside the
 existing Vue frontend. It is the frontend published by the Docker delivery
 workflow for VPS deployments.
+
+## Manual weekly planner
+
+`/planning` shows a seven-day 06:00–20:00 calendar on desktop and a navigable
+day agenda on mobile. `/` shows Today using the same events and calculations.
+Create an empty independent week, then add meals (recipe or individual foods)
+and sports selected from the household libraries (`/foods`, `/recipes`, `/sports`).
+The form supports editing, moving between existing weeks and deletion without
+drag-and-drop. Out-of-range and unpositioned historical events remain accessible.
+
+Personal nutrition and children preparation quantities are separate; sport
+calories are manually entered totals, not automatic daily expenditure.
+Missing nutrition is explicit. Saving errors keep the draft for retry.
+Changing or archiving catalog entries preserves already snapshotted events.
+Generation, alternation and rules are absent from the manual navigation.
 
 ## Local development
 

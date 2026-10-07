@@ -1,42 +1,61 @@
-# LifeOS — Roadmap fonctionnelle
+# LifeOS — Livraison du MVP semainier manuel
 
-Cette roadmap décrit l'ordre de découverte et de livraison envisagé. Elle ne
-vaut pas décision d'architecture : le premier jalon est un audit de l'existant.
+Plan approuvé le 7 octobre 2026 : documentation d'abord, puis tous les lots
+séquentiellement sans nouvelle approbation intermédiaire. Les lots ci-dessous
+sont implémentés dans l'interface Angular et l'API, sans refonte Vue.
 
-| Étape | Objectif |
-| --- | --- |
-| 1. Audit technique | Évaluer l'existant, ses éléments sains, ses limites et les migrations nécessaires avant toute architecture cible définitive. |
-| 2. Modèle repas et planning | Reconstruire un modèle cohérent en ne préservant des éléments existants que les bases saines liées aux articles et magasins. |
-| 3. Bibliothèque alimentaire | Livrer recettes, composants, portions et macros corrigibles. |
-| 4. Planning hebdomadaire | Ajouter contexte foyer, bureau/télétravail, sport et calculs associés. |
-| 5. Scénarios et suggestions | Produire des propositions déterministes, explicables et modifiables. |
-| 6. Stock et courses | Ajouter stock manuel et liste de courses consolidée. |
-| 7. Prix magasins | Introduire comparaison de prix et historique par magasin. |
-| 8. Approfondissements | Étudier batch cooking et congélation avancés, micronutriments, tickets et connecteurs sport. |
+| Lot | Objectif et critère de sortie | État |
+| --- | --- | --- |
+| 0 | Cadrage, vocabulaire, UX, décisions et distinction cible/existant versionnés. | Documenté |
+| 1 | Inspection Angular/API/OpenAPI/calculs/migrations/tests ; ADR des horaires, portions, snapshots, raccord achats et migration non destructive. | Implémenté |
+| 2 | Produits et recettes persistés, CRUD/recherche/archivage, ingrédients/unités/portions/nutrition ; achats/prix préservés. | Implémenté |
+| 3 | Catalogue sportif par foyer, CRUD/recherche/archivage ; durée positive, calories non négatives, aucun import silencieux. | Implémenté |
+| 4 | API événement horaire, CRUD/déplacement, recette ou produits, occurrences sportives, préparation enfants et snapshots ; historique et isolation préservés. | Implémenté |
+| 5 | Semainier Angular desktop 6–20 et journée mobile, bibliothèques, formulaires accessibles, Aujourd'hui/résumés, hors plage/chevauchements/à positionner, erreurs explicites. | Implémenté |
+| 6 | Accueil/navigation/création manuels ; retirer génération, alternance et règles du parcours sans supprimer les données. | Implémenté |
+| 7 | Domaine/API/PostgreSQL/frontend, migration vierge et existante, redémarrage, deux foyers, inspection desktop/mobile bornée, documentation et contrôles de publication. | Validé localement ; fusion soumise à CI/review |
 
-Les éléments des étapes 7 et 8 ne font pas partie du MVP. Chaque étape doit être
-réévaluée à l'aune de l'usage réel et de la réduction effective de la charge
-mentale.
+Les critères fonctionnels sont dans [le cadrage](01-scope-and-versions.md).
+La cible est Angular/API/PostgreSQL, pas une seconde refonte Vue.
+Réutiliser semaines/journées et les domaines existants, migrations incrémentales,
+relations fortes et auth/JWT/isolation. Pas de framework spéculatif.
 
-## Roadmap technique
+## Autorisations et limites
 
-L'audit technique (étape 1 ci-dessus) est consigné dans
-[`docs/architecture/00-technical-audit.md`](architecture/00-technical-audit.md),
-et les décisions d'architecture qui en découlent dans
-[`docs/architecture/01-target-architecture.md`](architecture/01-target-architecture.md),
-[`docs/architecture/02-data-model.md`](architecture/02-data-model.md) et les
-ADR du dossier [`docs/architecture/decisions/`](architecture/decisions/).
+L'utilisateur a ensuite explicitement autorisé **tous les merges automatiques**
+dans l'ordre des dépendances, sans attendre sa recette finale. Chaque merge
+reste conditionné aux tests/checks et protections/reviews du dépôt ; aucune
+protection contournée ni CI rouge ignorée. Corriger les conflits sans perdre
+les changements d'autrui.
+Cette autorisation ne couvre ni suppression/reset de données, ni intervention
+manuelle en production. Les workflows existants déclenchés par les merges
+restent applicables. Distinguer branche, fusion, livraison et déploiement vérifié.
 
-| Jalon | Objectif technique |
-| --- | --- |
-| 1. Fondations | Foyer + PostgreSQL réelle + EF Core, avec un domaine existant porté de bout en bout. |
-| 2. Modèle repas/planning | Modèle repas / recettes / planning et moteur de génération backend, testé. |
-| 3. Bibliothèque alimentaire | Bibliothèque alimentaire persistée et intégration Open Food Facts. |
-| 4. Contexte et nutrition | Contexte foyer, portions par membre, nutrition et sport. |
-| 5. Scénarios | Scénarios de suggestion déterministes. |
-| 6. Stock et courses | Stock manuel et liste de courses consolidée. |
-| 7. Prix magasins V2 | Comparaison de prix et historique par magasin. |
-| 8. Approfondissements | Batch cooking avancé, micronutriments, tickets, connecteurs sport. |
+Signaler une décision produit réellement non résolue ou un blocage de validation,
+sans inventer une règle métier ou une réussite. Les achats/stock existants sont
+préservés, pas étendus. Automatisation, semaines types, nouvelles catégories
+d'événement, fatigue et connecteurs sont reportés.
 
-Cette roadmap technique correspond aux étapes fonctionnelles ci-dessus, avec
-un niveau de détail supplémentaire côté implémentation.
+## Références techniques
+
+[Audit historique](architecture/00-technical-audit.md),
+[architecture](architecture/01-target-architecture.md),
+[modèle de données](architecture/02-data-model.md),
+[ADR](architecture/decisions/). Les anciennes roadmaps de génération sont
+remplacées par les lots ci-dessus ; leurs implémentations/données ne sont pas
+implicitement supprimées.
+
+## Validation et limites
+
+Suite backend Release sur PostgreSQL 16 via Testcontainers (38 tests domaine,
+57 intégration), 26 tests frontend, type-check/lint/build Angular et absence de
+changement EF non migré. Upgrade réel depuis `SeparateWeekTypes` avec achats,
+prix, repas composés et séances historiques préservés, sans horaire inventé.
+Parcours navigateur desktop 1440 px et mobile 390 px : rechargement, deux
+semaines, riz 100 g/200 g préparés, banane, plusieurs séances, chevauchements,
+22 h, nutrition inconnue, panne API/retry et édition/suppression mobile.
+
+Les contrôles emploient une authentification synthétique uniquement en
+environnement Testing, pas une session Supabase de production. Un navigateur
+local et un merge ne prouvent pas le déploiement VPS. Aucune base utilisateur
+n'a été effacée et aucune opération manuelle de production n'est incluse.
