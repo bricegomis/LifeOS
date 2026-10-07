@@ -1,5 +1,29 @@
 # LifeOS — Project Memory
 
+## État actuel et recentrage approuvé — 7 octobre 2026
+
+La cible active publiée est **`src/frontend-angular` (Angular/PrimeNG)** avec
+**`src/backend` (ASP.NET Core/EF Core/PostgreSQL)** comme source de vérité.
+Supabase est utilisé pour l'authentification/JWT uniquement ; l'API isole les
+données par `household_id`. `src/frontend` est le frontend Vue historique.
+
+Le nouveau [MVP approuvé](01-scope-and-versions.md) est un semainier entièrement
+manuel alimentation/sport, avec produits, recettes et catalogue sportif,
+nutrition personnelle, préparation enfants séparée et conservation historique.
+La [roadmap séquentielle](03-roadmap.md) distingue documentation et livraison :
+les fonctionnalités cibles ne sont pas encore livrées par cette mise à jour.
+
+Le code pré-refonte persiste déjà semaines/journées/repas, recettes, ingrédients,
+produits nutritionnels, articles/prix et séances datées dans PostgreSQL.
+Il n'a pas encore le calendrier horaire ni un catalogue sportif administrable.
+Articles et FoodItems sont distincts ; les ingrédients référencent des articles.
+Les anciens repas composés doivent rester lisibles.
+
+**Le texte ci-dessous conserve la mémoire historique** de Vue/local-first et
+des parcours de génération ; il ne décrit plus la cible active. Les décisions
+de génération/alternance/menu équilibré sont remplacées pour le MVP, leurs données
+restent conservées. Les détails d'authentification et d'isolation restent valides.
+
 LifeOS is a personal planning app built to reduce daily decision fatigue around food and weekly activity. The current implementation is intentionally not a broad “all-of-life” dashboard. It is a narrow, practical tool focused on meals, planned eating, and the weekly rhythm that supports them.
 
 ## Why this project exists

@@ -1,5 +1,34 @@
 # LifeOS — Modèle de données initial (conceptuel)
 
+## Cible approuvée du semainier manuel — non encore implémentée
+
+Le modèle conceptuel historique ci-dessous est conservé pour expliciter l'écart
+avec le code ; les profils par membre, contexte travail et menu équilibré ne
+sont plus des exigences du parcours MVP. L'état réel est détaillé dans les
+sections « État d'implémentation ».
+
+La cible conserve `weeks` et `day_plans` datés/isolés par foyer et introduit
+des horaires début/fin pour deux types seulement : alimentation et sport.
+Les événements historiques sans heures restent à positionner, sans backfill
+arbitraire. Relations typées et fortes, pas de JSON métier générique.
+L'ADR du lot 1 précisera date/fuseau/invariants et migrations exactes.
+
+Un événement alimentaire référence une recette ou porte des lignes de produits
+(quantités/unités explicites), avec portion personnelle et nombre d'enfants.
+Préparation = personnel × (1 + 0,5 × enfants), nutrition personnelle inchangée.
+Les repas composés existants restent accessibles/migrables sans perte.
+Les valeurs utilisées sont préservées dans des snapshots explicites.
+
+Un catalogue sportif par foyer stockera nom, sport, durée, distance optionnelle,
+intensité et calories manuelles. L'occurrence copie les valeurs et les ajuste
+indépendamment ; calories non proportionnelles aux changements de durée/distance.
+Archiver les contenus référencés, sans réécrire les occurrences.
+
+`articles` et `food_items` sont actuellement distincts ; proposer un raccord
+explicite non destructif, jamais une fusion par nom. Préserver achats et prix.
+Pas de conversions g/ml/pièces sans information fiable ; totaux incomplets
+explicites. Aucune création de semaine manuelle ne dépendra des anciennes règles.
+
 Ce document décrit le modèle de données conceptuel visé pour la base
 PostgreSQL cible. Il est volontairement **non final** : il sert de point de
 départ pour la roadmap technique (voir `docs/03-roadmap.md`) et sera affiné
