@@ -12,6 +12,7 @@ import { SettingsPageComponent } from '@/app/pages/settings/settings-page.compon
 import { StockShoppingPageComponent } from '@/app/pages/stock/stock-shopping-page.component'
 import { StoresArticlesPageComponent } from '@/app/pages/stores/stores-articles-page.component'
 import { AppLayoutComponent } from '@/app/shell/app-layout.component'
+import { SportsPageComponent } from '@/app/pages/sports/sports-page.component'
 
 const requireAuthentication: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService)
@@ -35,6 +36,7 @@ export const routes: Routes = [
       { path: 'recipes', component: RecipesPageComponent },
       { path: 'meals', component: ComposedMealsPageComponent },
       { path: 'foods', component: FoodItemsPageComponent },
+      { path: 'sports', component: SportsPageComponent },
       { path: 'stores', component: StoresArticlesPageComponent },
       { path: 'articles', pathMatch: 'full', redirectTo: 'stores' },
       { path: 'stock', component: StockShoppingPageComponent },

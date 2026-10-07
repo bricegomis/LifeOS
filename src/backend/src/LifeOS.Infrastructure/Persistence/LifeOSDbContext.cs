@@ -46,6 +46,7 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     // Jalon 4: Nutrition and Sports Context
     public DbSet<UserConfiguration> UserConfigurations => Set<UserConfiguration>();
     public DbSet<ActivitySession> ActivitySessions => Set<ActivitySession>();
+    public DbSet<SportTemplate> SportTemplates => Set<SportTemplate>();
 
     // Planning configuration
     public DbSet<PlanningRule> PlanningRules => Set<PlanningRule>();

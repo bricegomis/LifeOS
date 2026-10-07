@@ -246,6 +246,21 @@ export interface ActivityDto {
   defaultDurationMinutes?: number
 }
 
+export interface SportTemplateRequest {
+  name: string
+  sport: string
+  durationMinutes: number
+  distanceKm: number | null
+  intensity: 'low' | 'moderate' | 'high'
+  calories: number
+}
+
+export interface SportTemplateDto extends SportTemplateRequest {
+  id: string
+  householdId: string
+  isArchived: boolean
+}
+
 export interface StockItemDto {
   id: string
   householdId: string
