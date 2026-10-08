@@ -70,6 +70,13 @@ describe('event creation dialog draft', () => {
     assert.equal(eventDraftProblem(draft, false), '')
   })
 
+  it('loads an existing event ending at 1440 as an explicit end-of-day value', () => {
+    const event = { ...sport, endMinute: 1440 }
+    const draft = eventDraftFrom({ key: event.id, kind: 'sport', value: event, lane: 0, lanes: 1, top: 0, height: 0 })
+    assert.equal(draft.end, '24:00')
+    assert.equal(eventDraftProblem(draft, false), '')
+  })
+
   it('is dirty only after the user changes something', () => {
     const draft = newEventDraft('day-1')
     const initial = formSnapshot(draft)
