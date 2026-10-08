@@ -4,7 +4,7 @@
       <h1>Repas composés</h1>
       <p>Assemblez plusieurs recettes pour les retrouver ensemble dans vos repas planifiés.</p>
     </div>
-    <button class="lifeos-button" type="button" (click)="startNewMeal()">Nouveau repas composé</button>
+    <button class="lifeos-button" type="button" (click)="openMealDialog(null)"><i class="pi pi-plus" aria-hidden="true"></i> Nouveau repas composé</button>
   </header>
 
   @if (error()) { <p class="meal-error" role="alert">{{ error() }}</p> }
@@ -38,41 +38,27 @@
       }
     </aside>
 
-    <section class="meal-editor" aria-labelledby="meal-editor-title">
-      <div class="meal-editor-heading">
-        <div>
-          <h2 id="meal-editor-title">{{ editingId() ? 'Modifier le repas composé' : 'Créer un repas composé' }}</h2>
-          <p class="meal-empty">Réunissez les recettes utiles à un repas en un seul endroit.</p>
-        </div>
-        @if (selectedMeal()) {
-          <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="deleteMeal()">
-            Supprimer
-          </button>
-        }
-      </div>
-
-      <form class="meal-editor-content" (ngSubmit)="saveMeal()">
-        <label class="meal-field">
-          <span>Nom du repas composé</span>
-          <input name="mealName" type="text" required [(ngModel)]="mealNameValue" />
-        </label>
-        <div class="meal-form-actions">
-          <button class="lifeos-button" type="submit" [disabled]="saving()">
-            {{ saving() ? 'Enregistrement…' : editingId() ? 'Enregistrer les modifications' : 'Créer le repas composé' }}
-          </button>
-          @if (editingId()) {
-            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="startNewMeal()">
-              Annuler la modification
-            </button>
-          }
-        </div>
-      </form>
-
+    <section class="meal-editor" aria-labelledby="meal-detail-title">
       @if (selectedMeal(); as meal) {
+        <div class="meal-editor-heading">
+          <div>
+            <h2 id="meal-detail-title">{{ meal.name }}</h2>
+            <p class="meal-empty">Réunissez les recettes utiles à un repas en un seul endroit.</p>
+          </div>
+          <div class="meal-form-actions">
+            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="openMealDialog(meal)">Renommer</button>
+            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="deleteMeal()">Supprimer</button>
+          </div>
+        </div>
+
         <section class="meal-section meal-parts" aria-labelledby="meal-parts-title">
           <div class="meal-section-heading">
-            <h3 id="meal-parts-title">Recettes du repas</h3>
-            <span class="meal-muted">{{ meal.parts.length }}</span>
+            <h3 id="meal-parts-title">Recettes du repas <span class="meal-muted">{{ meal.parts.length }}</span></h3>
+            @if (recipes().length) {
+              <button class="lifeos-button lifeos-button-sm" type="button" [disabled]="saving()" (click)="openPartDialog()">
+                <i class="pi pi-plus" aria-hidden="true"></i> Ajouter une recette
+              </button>
+            }
           </div>
           @if (meal.parts.length) {
             @for (part of meal.parts; track part.id) {
@@ -95,27 +81,43 @@
             <p class="meal-empty" role="status">Chargement des recettes…</p>
           } @else if (recipes().length === 0) {
             <p class="meal-empty">Aucune recette disponible. Créez d’abord une recette.</p>
-          } @else {
-            <form class="meal-inline-form" (ngSubmit)="addPart()">
-              <label class="meal-field">
-                <span>Recette</span>
-                <select name="recipeId" required [(ngModel)]="selectedRecipeIdValue">
-                  @for (recipe of recipes(); track recipe.id) {
-                    <option [value]="recipe.id">{{ recipe.name }}</option>
-                  }
-                </select>
-              </label>
-              <label class="meal-field">
-                <span>Facteur de quantité</span>
-                <input name="quantityFactor" type="number" min="0.001" step="any" required [(ngModel)]="quantityFactorValue" />
-              </label>
-              <button class="lifeos-button" type="submit" [disabled]="saving()">Ajouter la recette</button>
-            </form>
           }
         </section>
       } @else {
+        <h2 id="meal-detail-title" class="sr-only">Détail du repas composé</h2>
         <p class="meal-empty">Sélectionnez un repas composé pour gérer ses recettes, ou créez-en un nouveau.</p>
       }
     </section>
   </section>
 </section>
+
+<app-lifeos-dialog [open]="dialog() === 'meal'" [heading]="editingId() ? 'Renommer le repas composé' : 'Nouveau repas composé'"
+  formId="meal-dialog-form" [submitLabel]="editingId() ? 'Enregistrer' : 'Créer'" [busy]="saving()" [dirty]="isDirty()"
+  [error]="dialogError()" (dismissed)="closeDialog()">
+  <form id="meal-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveMeal()">
+    <label class="dialog-field">
+      <span>Nom du repas composé</span>
+      <input class="text-input" name="mealName" type="text" required [(ngModel)]="mealNameValue" />
+    </label>
+  </form>
+</app-lifeos-dialog>
+
+<app-lifeos-dialog [open]="dialog() === 'part'" heading="Ajouter une recette" [description]="selectedMeal()?.name ?? ''"
+  formId="meal-part-form" submitLabel="Ajouter" [busy]="saving()" [dirty]="isDirty()"
+  [error]="dialogError()" (dismissed)="closeDialog()">
+  <form id="meal-part-form" class="dialog-form" ngNativeValidate (ngSubmit)="addPart()">
+    <label class="dialog-field">
+      <span>Recette</span>
+      <select class="text-input" name="recipeId" required [(ngModel)]="selectedRecipeIdValue">
+        @for (recipe of recipes(); track recipe.id) {
+          <option [value]="recipe.id">{{ recipe.name }}</option>
+        }
+      </select>
+    </label>
+    <label class="dialog-field">
+      <span>Facteur de quantité</span>
+      <input class="text-input" name="quantityFactor" type="number" min="0.001" step="any" required [(ngModel)]="quantityFactorValue" />
+      <small class="dialog-hint">1 = la recette telle quelle, 0,5 = une demi-recette.</small>
+    </label>
+  </form>
+</app-lifeos-dialog>

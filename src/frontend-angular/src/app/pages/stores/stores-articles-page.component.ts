@@ -1,4 +1,4 @@
-import { firstValueFrom } from 'rxjs'
+import { firstValueFrom, Observable } from 'rxjs'
 import { Component, inject, signal } from '@angular/core'
 import { DecimalPipe } from '@angular/common'
 import { FormsModule } from '@angular/forms'
@@ -12,6 +12,8 @@ import {
   StoreRequest,
 } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 
 type StoreEditor = {
   name: string
@@ -33,6 +35,14 @@ const emptyStoreEditor = (): StoreEditor => ({
   isLocal: false,
 })
 
+type PriceDraft = {
+  storeId: string
+  amount: number | null
+  observedAt: string
+}
+
+const today = (): string => new Date().toISOString().slice(0, 10)
+
 const emptyArticleEditor = (): ArticleEditor => ({
   name: '',
   description: '',
@@ -42,7 +52,7 @@ const emptyArticleEditor = (): ArticleEditor => ({
 @Component({
   selector: 'app-stores-articles-page',
   standalone: true,
-  imports: [DecimalPipe, FormsModule],
+  imports: [DecimalPipe, FormsModule, LifeosDialogComponent],
   template: `
     <section class="page-stack stores-page" aria-labelledby="stores-page-title">
       <header class="page-hero">
@@ -69,40 +79,13 @@ const emptyArticleEditor = (): ArticleEditor => ({
             <h2 id="stores-heading">Magasins</h2>
             <p>Enregistrez les lieux où vous faites vos courses pour associer les prix aux bons magasins.</p>
           </div>
-          <span class="stores-count">{{ filteredStores().length }} affiché{{ filteredStores().length > 1 ? 's' : '' }}</span>
+          <div class="stores-area-actions">
+            <span class="stores-count">{{ filteredStores().length }} affiché{{ filteredStores().length > 1 ? 's' : '' }}</span>
+            <button class="lifeos-button" type="button" [disabled]="busy()" (click)="openStoreDialog()"><i class="pi pi-plus" aria-hidden="true"></i> Nouveau magasin</button>
+          </div>
         </div>
 
         <div class="stores-workspace">
-          <form class="stores-form" (ngSubmit)="saveStore()">
-            <div>
-              <h2>{{ editingStoreId() ? 'Modifier un magasin' : 'Ajouter un magasin' }}</h2>
-              <p>{{ editingStoreId() ? 'Modifiez les informations de ce magasin.' : 'Ajoutez les magasins où vous faites vos courses.' }}</p>
-            </div>
-            <label class="stores-field">
-              <span>Nom du magasin</span>
-              <input class="stores-native-input" name="storeName" type="text" required maxlength="160"
-                [(ngModel)]="storeEditor.name" />
-            </label>
-            <label class="stores-field">
-              <span>Adresse (facultatif)</span>
-              <input class="stores-native-input" name="storeAddress" type="text" maxlength="300"
-                [(ngModel)]="storeEditor.address" />
-            </label>
-            <fieldset class="stores-options">
-              <legend>Caractéristiques du magasin</legend>
-              <label><input name="isOrganic" type="checkbox" [(ngModel)]="storeEditor.isOrganic" /> Magasin bio</label>
-              <label><input name="isLocal" type="checkbox" [(ngModel)]="storeEditor.isLocal" /> Commerce local</label>
-            </fieldset>
-            <div class="stores-form-actions">
-              <button class="stores-native-button is-primary" type="submit" [disabled]="busy()">
-                {{ busy() ? 'Enregistrement…' : editingStoreId() ? 'Enregistrer le magasin' : 'Ajouter le magasin' }}
-              </button>
-              @if (editingStoreId()) {
-                <button class="stores-native-button" type="button" [disabled]="busy()" (click)="resetStoreEditor()">Annuler</button>
-              }
-            </div>
-          </form>
-
           <section class="stores-directory" aria-label="Liste des magasins">
             <div class="stores-directory-heading">
               <div>
@@ -121,7 +104,7 @@ const emptyArticleEditor = (): ArticleEditor => ({
               <div class="stores-empty">
                 <div>
                   <h3>{{ storeSearch ? 'Aucun magasin correspondant' : 'Aucun magasin pour le moment' }}</h3>
-                  <p>{{ storeSearch ? 'Essayez un autre nom ou effacez le filtre.' : 'Ajoutez un magasin pour commencer à relever les prix par lieu.' }}</p>
+                  <p>{{ storeSearch ? 'Essayez un autre nom ou effacez le filtre.' : 'Ajoutez un magasin avec « Nouveau magasin » pour relever les prix par lieu.' }}</p>
                 </div>
               </div>
             } @else {
@@ -140,7 +123,7 @@ const emptyArticleEditor = (): ArticleEditor => ({
                       </div>
                     </div>
                     <div class="store-row-actions">
-                      <button class="stores-native-button" type="button" [disabled]="busy()" (click)="editStore(store)">Modifier</button>
+                      <button class="stores-native-button" type="button" [disabled]="busy()" (click)="openStoreDialog(store)">Modifier</button>
                       @if (storeDeleteConfirmationId() === store.id) {
                         <button class="stores-native-button is-danger" type="button" [disabled]="busy()" (click)="deleteStore(store)">Confirmer la suppression</button>
                         <button class="stores-native-button" type="button" (click)="storeDeleteConfirmationId.set('')">Conserver</button>
@@ -163,42 +146,12 @@ const emptyArticleEditor = (): ArticleEditor => ({
             <h2 id="articles-heading">Articles d’épicerie</h2>
             <p>Enregistrez les produits que vous achetez et comparez leurs prix au fil du temps.</p>
           </div>
-          <span class="stores-count">{{ filteredArticles().length }} affiché{{ filteredArticles().length > 1 ? 's' : '' }}</span>
+          <div class="stores-area-actions">
+            <span class="stores-count">{{ filteredArticles().length }} affiché{{ filteredArticles().length > 1 ? 's' : '' }}</span>
+            <button class="lifeos-button" type="button" [disabled]="busy()" (click)="openArticleDialog()"><i class="pi pi-plus" aria-hidden="true"></i> Nouvel article</button>
+          </div>
         </div>
         <div class="stores-workspace">
-          <form class="stores-form" (ngSubmit)="saveArticle()">
-            <div>
-              <h2>{{ editingArticleId() ? 'Modifier un article' : 'Ajouter un article' }}</h2>
-              <p>{{ editingArticleId() ? 'Modifiez les informations de cet article.' : 'Créez un article avant d’y associer ses prix en magasin.' }}</p>
-            </div>
-            <label class="stores-field">
-              <span>Nom de l’article</span>
-              <input class="stores-native-input" name="articleName" type="text" required maxlength="180"
-                [(ngModel)]="articleEditor.name" />
-            </label>
-            <label class="stores-field">
-              <span>Description (facultatif)</span>
-              <textarea class="stores-native-input" name="articleDescription" rows="3" maxlength="500"
-                [(ngModel)]="articleEditor.description"></textarea>
-            </label>
-            <label class="stores-field">
-              <span>Unité de prix</span>
-              <select class="stores-native-input" name="articleUnit" [(ngModel)]="articleEditor.unit">
-                <option value="unit">À la pièce</option>
-                <option value="kilogram">Au kilogramme</option>
-                <option value="liter">Au litre</option>
-              </select>
-            </label>
-            <div class="stores-form-actions">
-              <button class="stores-native-button is-primary" type="submit" [disabled]="busy()">
-                {{ busy() ? 'Enregistrement…' : editingArticleId() ? 'Enregistrer l’article' : 'Ajouter l’article' }}
-              </button>
-              @if (editingArticleId()) {
-                <button class="stores-native-button" type="button" [disabled]="busy()" (click)="resetArticleEditor()">Annuler</button>
-              }
-            </div>
-          </form>
-
           <section class="stores-directory" aria-label="Liste des articles d’épicerie">
             <div class="stores-directory-heading">
               <div>
@@ -217,7 +170,7 @@ const emptyArticleEditor = (): ArticleEditor => ({
               <div class="stores-empty">
                 <div>
                   <h3>{{ articleSearch ? 'Aucun article correspondant' : 'Aucun article pour le moment' }}</h3>
-                  <p>{{ articleSearch ? 'Essayez un autre nom ou effacez le filtre.' : 'Ajoutez un article pour regrouper ses prix.' }}</p>
+                  <p>{{ articleSearch ? 'Essayez un autre nom ou effacez le filtre.' : 'Ajoutez un article avec « Nouvel article » pour regrouper ses prix.' }}</p>
                 </div>
               </div>
             } @else {
@@ -233,7 +186,7 @@ const emptyArticleEditor = (): ArticleEditor => ({
                       <span class="article-price-count">{{ article.priceHistory.length }} prix</span>
                     </div>
                     <div class="store-row-actions">
-                      <button class="stores-native-button" type="button" [disabled]="busy()" (click)="editArticle(article)">Modifier</button>
+                      <button class="stores-native-button" type="button" [disabled]="busy()" (click)="openArticleDialog(article)">Modifier</button>
                       <button class="stores-native-button" type="button" [attr.aria-expanded]="expandedArticleId() === article.id"
                         (click)="togglePrices(article.id)">{{ expandedArticleId() === article.id ? 'Masquer les prix' : 'Voir les prix' }}</button>
                       @if (articleDeleteConfirmationId() === article.id) {
@@ -246,30 +199,11 @@ const emptyArticleEditor = (): ArticleEditor => ({
                     </div>
                     @if (expandedArticleId() === article.id) {
                       <div class="article-price-panel">
-                        <form class="article-price-form" (ngSubmit)="addPrice(article)">
-                          <label class="stores-field">
-                            <span>Magasin</span>
-                            <select class="stores-native-input" name="priceStore-{{ article.id }}" required [(ngModel)]="priceStoreId">
-                              <option value="" disabled>Choisir un magasin</option>
-                              @for (store of stores(); track store.id) {
-                                <option [value]="store.id">{{ store.name }}</option>
-                              }
-                            </select>
-                          </label>
-                          <label class="stores-field">
-                            <span>Prix</span>
-                            <input class="stores-native-input" name="priceAmount-{{ article.id }}" type="number" min="0" step="0.01"
-                              inputmode="decimal" required [(ngModel)]="priceAmount" />
-                          </label>
-                          <label class="stores-field">
-                            <span>Relevé le</span>
-                            <input class="stores-native-input" name="priceDate-{{ article.id }}" type="date" required
-                              [(ngModel)]="priceObservedAt" />
-                          </label>
-                          <button class="stores-native-button is-primary" type="submit" [disabled]="busy() || !stores().length">
-                            {{ busy() ? 'Enregistrement…' : 'Ajouter le prix' }}
+                        <div>
+                          <button class="stores-native-button is-primary" type="button" [disabled]="busy() || !stores().length" (click)="openPriceDialog(article)">
+                            <i class="pi pi-plus" aria-hidden="true"></i> Ajouter un prix
                           </button>
-                        </form>
+                        </div>
                         @if (stores().length === 0) {
                           <p class="stores-empty-inline">Ajoutez d’abord un magasin pour pouvoir relever un prix.</p>
                         }
@@ -300,6 +234,82 @@ const emptyArticleEditor = (): ArticleEditor => ({
         </div>
       </section>
     </section>
+
+    <app-lifeos-dialog [open]="dialog() === 'store'" [heading]="editingStoreId() ? 'Modifier le magasin' : 'Nouveau magasin'"
+      formId="store-dialog-form" [submitLabel]="editingStoreId() ? 'Enregistrer' : 'Créer'"
+      [busy]="busy()" [dirty]="isDirty(storeEditor)" [error]="dialogError()" (dismissed)="closeDialog()">
+      <form id="store-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveStore()">
+        <label class="dialog-field">
+          <span>Nom du magasin</span>
+          <input class="text-input" name="storeName" type="text" required maxlength="160" [(ngModel)]="storeEditor.name" />
+        </label>
+        <details class="dialog-more" [open]="showMore">
+          <summary>Adresse, bio, commerce local</summary>
+          <div>
+            <label class="dialog-field">
+              <span>Adresse (facultatif)</span>
+              <input class="text-input" name="storeAddress" type="text" maxlength="300" [(ngModel)]="storeEditor.address" />
+            </label>
+            <label class="dialog-check"><input name="isOrganic" type="checkbox" [(ngModel)]="storeEditor.isOrganic" /> Magasin bio</label>
+            <label class="dialog-check"><input name="isLocal" type="checkbox" [(ngModel)]="storeEditor.isLocal" /> Commerce local</label>
+          </div>
+        </details>
+      </form>
+    </app-lifeos-dialog>
+
+    <app-lifeos-dialog [open]="dialog() === 'article'" [heading]="editingArticleId() ? 'Modifier l’article' : 'Nouvel article'"
+      formId="article-dialog-form" [submitLabel]="editingArticleId() ? 'Enregistrer' : 'Créer'"
+      [busy]="busy()" [dirty]="isDirty(articleEditor)" [error]="dialogError()" (dismissed)="closeDialog()">
+      <form id="article-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveArticle()">
+        <div class="dialog-row">
+          <label class="dialog-field">
+            <span>Nom de l’article</span>
+            <input class="text-input" name="articleName" type="text" required maxlength="180" [(ngModel)]="articleEditor.name" />
+          </label>
+          <label class="dialog-field">
+            <span>Unité de prix</span>
+            <select class="text-input" name="articleUnit" [(ngModel)]="articleEditor.unit">
+              <option value="unit">À la pièce</option>
+              <option value="kilogram">Au kilogramme</option>
+              <option value="liter">Au litre</option>
+            </select>
+          </label>
+        </div>
+        <details class="dialog-more" [open]="showMore">
+          <summary>Description</summary>
+          <div>
+            <label class="dialog-field">
+              <span>Description (facultatif)</span>
+              <textarea class="text-input" name="articleDescription" rows="3" maxlength="500" [(ngModel)]="articleEditor.description"></textarea>
+            </label>
+          </div>
+        </details>
+      </form>
+    </app-lifeos-dialog>
+
+    <app-lifeos-dialog [open]="dialog() === 'price'" heading="Nouveau prix" [description]="priceArticle()?.name ?? ''"
+      formId="price-dialog-form" submitLabel="Ajouter le prix"
+      [busy]="busy()" [dirty]="isDirty(priceDraft)" [error]="dialogError()" (dismissed)="closeDialog()">
+      <form id="price-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="addPrice()">
+        <label class="dialog-field">
+          <span>Magasin</span>
+          <select class="text-input" name="priceStore" required [(ngModel)]="priceDraft.storeId">
+            <option value="" disabled>Choisir un magasin</option>
+            @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
+          </select>
+        </label>
+        <div class="dialog-row">
+          <label class="dialog-field">
+            <span>Prix</span>
+            <input class="text-input" name="priceAmount" type="number" min="0" step="0.01" inputmode="decimal" required [(ngModel)]="priceDraft.amount" />
+          </label>
+          <label class="dialog-field">
+            <span>Relevé le</span>
+            <input class="text-input" name="priceDate" type="date" required [(ngModel)]="priceDraft.observedAt" />
+          </label>
+        </div>
+      </form>
+    </app-lifeos-dialog>
   `,
   styles: [`
     :host { display: block; }
@@ -310,7 +320,7 @@ const emptyArticleEditor = (): ArticleEditor => ({
     .stores-area-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
     .stores-area-heading h2 { margin: 0; font-size: clamp(1.45rem, 2.4vw, 2rem); }
     .stores-area-heading p { margin: 7px 0 0; color: var(--lifeos-text-soft); line-height: 1.5; }
-    .stores-area .stores-workspace { grid-template-columns: minmax(260px, .7fr) minmax(0, 1.6fr); }
+    .stores-area-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
     .stores-native-input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid var(--lifeos-line); border-radius: 10px; background: var(--lifeos-surface); color: var(--lifeos-text); font: inherit; }
     textarea.stores-native-input { resize: vertical; }
     .stores-native-input:focus-visible { border-color: var(--lifeos-accent); outline: 3px solid rgb(53 109 79 / 24%); }
@@ -321,9 +331,6 @@ const emptyArticleEditor = (): ArticleEditor => ({
     .stores-native-button.is-primary { border-color: var(--lifeos-accent); background: var(--lifeos-accent); color: white; }
     .stores-native-button.is-primary:hover:not(:disabled) { background: var(--lifeos-accent-strong); }
     .stores-native-button.is-danger { color: #8b2c20; }
-    .stores-form textarea { min-height: 86px; }
-    .stores-form .stores-field > span { color: var(--lifeos-text-soft); font-size: .82rem; font-weight: 800; }
-    .stores-options label { min-height: 28px; }
     .stores-search { min-width: 190px; }
     .stores-search .stores-native-input { min-height: 40px; }
     .stores-list { width: 100%; }
@@ -334,11 +341,9 @@ const emptyArticleEditor = (): ArticleEditor => ({
     .stores-status { margin: 0; padding: 12px 14px; border-radius: 12px; font-weight: 750; line-height: 1.45; }
     .stores-status-error { background: #fff0ed; color: #8b2c20; }
     .stores-status-success { background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); }
-    @media (max-width: 960px) {
-      .stores-area .stores-workspace { grid-template-columns: 1fr; }
-    }
     @media (max-width: 620px) {
-      .stores-area-heading { align-items: flex-start; }
+      .stores-area-heading { flex-wrap: wrap; align-items: flex-start; }
+      .stores-area-actions { justify-content: flex-start; }
       .stores-page-nav { width: 100%; }
       .stores-search { width: 100%; min-width: 0; }
       .article-row-main { grid-template-columns: auto minmax(0, 1fr); }
@@ -361,14 +366,18 @@ export class StoresArticlesPageComponent {
   readonly storeDeleteConfirmationId = signal('')
   readonly articleDeleteConfirmationId = signal('')
   readonly expandedArticleId = signal('')
+  readonly dialog = signal<'store' | 'article' | 'price' | null>(null)
+  readonly dialogError = signal('')
+  readonly priceArticle = signal<ArticleDto | null>(null)
 
   storeEditor = emptyStoreEditor()
   articleEditor = emptyArticleEditor()
   storeSearch = ''
   articleSearch = ''
   priceStoreId = ''
-  priceAmount: number | null = null
-  priceObservedAt = new Date().toISOString().slice(0, 10)
+  priceDraft: PriceDraft = { storeId: '', amount: null, observedAt: today() }
+  showMore = false
+  private initialSnapshot = ''
 
   constructor() {
     void this.loadData()
@@ -411,15 +420,33 @@ export class StoresArticlesPageComponent {
     }
   }
 
-  editStore(store: StoreDto): void {
-    this.editingStoreId.set(store.id)
-    this.storeEditor = {
+  isDirty(draft: unknown): boolean { return hasChanges(this.initialSnapshot, draft) }
+
+  closeDialog(): void {
+    this.dialog.set(null)
+    this.dialogError.set('')
+    this.priceArticle.set(null)
+    this.resetStoreEditor()
+    this.resetArticleEditor()
+  }
+
+  openStoreDialog(store?: StoreDto): void {
+    this.editingStoreId.set(store?.id ?? '')
+    this.storeEditor = store ? {
       name: store.name,
       address: store.address ?? '',
       isOrganic: store.isOrganic,
       isLocal: store.isLocal,
-    }
+    } : emptyStoreEditor()
+    this.showMore = Boolean(this.storeEditor.address || this.storeEditor.isOrganic || this.storeEditor.isLocal)
+    this.openDialog('store', this.storeEditor)
+  }
+
+  private openDialog(kind: 'store' | 'article' | 'price', draft: unknown): void {
+    this.initialSnapshot = formSnapshot(draft)
+    this.dialogError.set('')
     this.notice.set('')
+    this.dialog.set(kind)
   }
 
   async saveStore(): Promise<void> {
@@ -429,18 +456,29 @@ export class StoresArticlesPageComponent {
       isOrganic: this.storeEditor.isOrganic,
       isLocal: this.storeEditor.isLocal,
     }
-    if (!request.name) return
-    this.beginRequest()
+    if (!request.name) {
+      this.dialogError.set('Indiquez le nom du magasin.')
+      return
+    }
+    await this.submitDialog('Magasin enregistré.', () => this.editingStoreId()
+      ? this.api.put<StoreDto>(`/stores/${this.editingStoreId()}`, request)
+      : this.api.post<StoreDto>('/stores', request))
+  }
+
+  private async submitDialog(message: string, request: () => Observable<unknown>): Promise<void> {
+    if (this.busy()) return
+    this.busy.set(true)
+    this.dialogError.set('')
+    this.notice.set('')
+    let persisted = false
     try {
-      if (this.editingStoreId()) {
-        await firstValueFrom(this.api.put<StoreDto>(`/stores/${this.editingStoreId()}`, request))
-      } else {
-        await firstValueFrom(this.api.post<StoreDto>('/stores', request))
-      }
-      this.resetStoreEditor()
-      await this.reloadAfterMutation('Magasin enregistré.')
+      await firstValueFrom(request())
+      persisted = true
+      this.closeDialog()
+      await this.reloadAfterMutation(message)
     } catch (error) {
-      this.error.set(apiErrorMessage(error))
+      if (persisted) this.error.set(`${message} L’actualisation a échoué : ${apiErrorMessage(error)}`)
+      else this.dialogError.set(apiErrorMessage(error))
     } finally {
       this.busy.set(false)
     }
@@ -451,7 +489,6 @@ export class StoresArticlesPageComponent {
     try {
       await firstValueFrom(this.api.delete<void>(`/stores/${store.id}`))
       this.storeDeleteConfirmationId.set('')
-      if (this.editingStoreId() === store.id) this.resetStoreEditor()
       await this.reloadAfterMutation(`Le magasin « ${store.name} » a été supprimé.`)
     } catch (error) {
       this.error.set(apiErrorMessage(error))
@@ -465,14 +502,15 @@ export class StoresArticlesPageComponent {
     this.editingStoreId.set('')
   }
 
-  editArticle(article: ArticleDto): void {
-    this.editingArticleId.set(article.id)
-    this.articleEditor = {
+  openArticleDialog(article?: ArticleDto): void {
+    this.editingArticleId.set(article?.id ?? '')
+    this.articleEditor = article ? {
       name: article.name,
       description: article.description,
       unit: article.unit,
-    }
-    this.notice.set('')
+    } : emptyArticleEditor()
+    this.showMore = Boolean(this.articleEditor.description)
+    this.openDialog('article', this.articleEditor)
   }
 
   async saveArticle(): Promise<void> {
@@ -481,24 +519,13 @@ export class StoresArticlesPageComponent {
       description: this.articleEditor.description.trim(),
       unit: this.articleEditor.unit,
     }
-    if (!request.name) return
-    this.beginRequest()
-    try {
-      if (this.editingArticleId()) {
-        await firstValueFrom(this.api.put<ArticleDto>(
-          `/articles/${this.editingArticleId()}`,
-          request,
-        ))
-      } else {
-        await firstValueFrom(this.api.post<ArticleDto>('/articles', request))
-      }
-      this.resetArticleEditor()
-      await this.reloadAfterMutation('Article enregistré.')
-    } catch (error) {
-      this.error.set(apiErrorMessage(error))
-    } finally {
-      this.busy.set(false)
+    if (!request.name) {
+      this.dialogError.set('Indiquez le nom de l’article.')
+      return
     }
+    await this.submitDialog('Article enregistré.', () => this.editingArticleId()
+      ? this.api.put<ArticleDto>(`/articles/${this.editingArticleId()}`, request)
+      : this.api.post<ArticleDto>('/articles', request))
   }
 
   async deleteArticle(article: ArticleDto): Promise<void> {
@@ -506,7 +533,6 @@ export class StoresArticlesPageComponent {
     try {
       await firstValueFrom(this.api.delete<void>(`/articles/${article.id}`))
       this.articleDeleteConfirmationId.set('')
-      if (this.editingArticleId() === article.id) this.resetArticleEditor()
       if (this.expandedArticleId() === article.id) this.expandedArticleId.set('')
       await this.reloadAfterMutation(`L’article « ${article.name} » a été supprimé.`)
     } catch (error) {
@@ -527,26 +553,27 @@ export class StoresArticlesPageComponent {
     this.notice.set('')
   }
 
-  async addPrice(article: ArticleDto): Promise<void> {
-    if (!this.priceStoreId || this.priceAmount === null || this.priceAmount < 0) return
+  openPriceDialog(article: ArticleDto): void {
+    this.priceArticle.set(article)
+    this.priceDraft = { storeId: this.priceStoreId || this.stores().at(0)?.id || '', amount: null, observedAt: today() }
+    this.openDialog('price', this.priceDraft)
+  }
+
+  async addPrice(): Promise<void> {
+    const article = this.priceArticle()
+    if (!article) return
+    if (!this.priceDraft.storeId || this.priceDraft.amount === null || this.priceDraft.amount < 0) {
+      this.dialogError.set('Choisissez un magasin et indiquez un prix positif ou nul.')
+      return
+    }
     const request: AddPriceEntryRequest = {
-      storeId: this.priceStoreId,
-      price: this.priceAmount,
-      observedAt: new Date(`${this.priceObservedAt}T12:00:00`).toISOString(),
+      storeId: this.priceDraft.storeId,
+      price: this.priceDraft.amount,
+      observedAt: new Date(`${this.priceDraft.observedAt}T12:00:00`).toISOString(),
     }
-    this.beginRequest()
-    try {
-      await firstValueFrom(this.api.post<ArticlePriceEntryDto>(
-        `/articles/${article.id}/price-entries`,
-        request,
-      ))
-      this.priceAmount = null
-      await this.reloadAfterMutation('Prix ajouté à l’historique.')
-    } catch (error) {
-      this.error.set(apiErrorMessage(error))
-    } finally {
-      this.busy.set(false)
-    }
+    this.priceStoreId = request.storeId
+    await this.submitDialog('Prix ajouté à l’historique.', () =>
+      this.api.post<ArticlePriceEntryDto>(`/articles/${article.id}/price-entries`, request))
   }
 
   async removePrice(article: ArticleDto, entry: ArticlePriceEntryDto): Promise<void> {

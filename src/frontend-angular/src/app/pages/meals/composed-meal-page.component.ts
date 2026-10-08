@@ -1,6 +1,8 @@
 import { Component, OnInit, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import {
   AddComposedMealPartRequest,
   ComposedMealDto,
@@ -11,7 +13,7 @@ import {
 @Component({
   selector: 'app-composed-meals-page',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, LifeosDialogComponent],
   templateUrl: './composed-meal-page.component.html',
   styles: [`
     .composed-meals-page { gap: 28px; }
@@ -24,13 +26,10 @@ import {
     .meal-row:hover, .meal-row.is-selected { border-color: var(--lifeos-accent); background: var(--lifeos-accent-soft); }
     .meal-row span { min-width: 0; font-weight: 800; overflow-wrap: anywhere; }
     .meal-row small { color: var(--lifeos-text-soft); white-space: nowrap; }
-    .meal-directory-list, .meal-editor-content, .meal-parts { display: grid; gap: 12px; }
+    .meal-directory-list, .meal-parts { display: grid; gap: 12px; }
     .meal-editor { display: grid; gap: 22px; }
     .meal-editor-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px; }
     .meal-editor-heading h2 { margin: 0; font-size: 1.3rem; }
-    .meal-field { display: grid; gap: 7px; color: var(--lifeos-text); font-weight: 700; }
-    .meal-field > span { color: var(--lifeos-text-soft); font-size: .78rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
-    .meal-field input, .meal-field select { width: 100%; min-height: 2.8rem; padding: .65rem .75rem; border: 1px solid var(--lifeos-line); border-radius: 9px; background: #fff; color: var(--lifeos-text); font: inherit; }
     .meal-section { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--lifeos-line); }
     .meal-part-row { flex-wrap: wrap; padding: 12px 14px; border-radius: 13px; background: var(--lifeos-surface-soft); }
     .meal-part-row strong { overflow-wrap: anywhere; }
@@ -38,10 +37,9 @@ import {
     .meal-empty { margin: 0; line-height: 1.5; }
     .meal-error { margin: 0; padding: 12px 14px; border-radius: 12px; background: #fff0ed; color: #8f2017; font-weight: 700; }
     .meal-feedback { margin: 0; color: var(--lifeos-accent-strong); font-weight: 700; }
-    .meal-inline-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, .55fr) auto; align-items: end; gap: 10px; }
     .meal-form-actions { display: flex; flex-wrap: wrap; gap: 10px; }
     @media (max-width: 850px) { .meals-workspace { grid-template-columns: minmax(0, 1fr); } }
-    @media (max-width: 560px) { .meal-inline-form { grid-template-columns: minmax(0, 1fr); } .meals-directory, .meal-editor { padding: 17px; } }
+    @media (max-width: 560px) { .meals-directory, .meal-editor { padding: 17px; } }
   `],
 })
 export class ComposedMealsPageComponent implements OnInit {
@@ -59,6 +57,9 @@ export class ComposedMealsPageComponent implements OnInit {
   readonly mealName = signal('')
   readonly selectedRecipeId = signal('')
   readonly quantityFactor = signal(1)
+  readonly dialog = signal<'meal' | 'part' | null>(null)
+  readonly dialogError = signal('')
+  private initialSnapshot = ''
 
   ngOnInit(): void {
     this.loadMeals()
@@ -93,12 +94,38 @@ export class ComposedMealsPageComponent implements OnInit {
     return this.recipes().find((recipe) => recipe.id === recipeId)?.name ?? `Recette ${recipeId}`
   }
 
-  startNewMeal(): void {
-    this.editingId.set(null)
-    this.selectedMeal.set(null)
-    this.mealName.set('')
+  openMealDialog(meal: ComposedMealDto | null): void {
+    this.editingId.set(meal?.id ?? null)
+    this.mealName.set(meal?.name ?? '')
+    this.openDialog('meal')
+  }
+
+  openPartDialog(): void {
+    const recipeId = this.selectedRecipeId()
+    if (!this.recipes().some((recipe) => recipe.id === recipeId)) this.selectedRecipeId.set(this.recipes().at(0)?.id ?? '')
+    this.quantityFactor.set(1)
+    this.openDialog('part')
+  }
+
+  isDirty(): boolean {
+    return hasChanges(this.initialSnapshot, this.dialogValues())
+  }
+
+  closeDialog(): void {
+    this.dialog.set(null)
+    this.dialogError.set('')
+  }
+
+  private openDialog(kind: 'meal' | 'part'): void {
+    this.dialog.set(kind)
+    this.dialogError.set('')
     this.error.set(null)
     this.feedback.set('')
+    this.initialSnapshot = formSnapshot(this.dialogValues())
+  }
+
+  private dialogValues(): unknown {
+    return this.dialog() === 'meal' ? [this.mealName()] : [this.selectedRecipeId(), this.quantityFactor()]
   }
 
   selectMeal(id: string): void {
@@ -108,8 +135,6 @@ export class ComposedMealsPageComponent implements OnInit {
     this.api.get<ComposedMealDto>(`/composed-meals/${encodeURIComponent(id)}`).subscribe({
       next: (meal) => {
         this.selectedMeal.set(meal)
-        this.editingId.set(meal.id)
-        this.mealName.set(meal.name)
         this.loadingMeals.set(false)
       },
       error: (error: unknown) => {
@@ -122,13 +147,13 @@ export class ComposedMealsPageComponent implements OnInit {
   saveMeal(): void {
     const name = this.mealName().trim()
     if (!name) {
-      this.error.set('Saisissez un nom pour le repas composé.')
+      this.dialogError.set('Saisissez un nom pour le repas composé.')
       return
     }
     const request: ComposedMealRequest = { name }
     const id = this.editingId()
     this.saving.set(true)
-    this.error.set(null)
+    this.dialogError.set('')
     this.feedback.set('')
     const request$ = id
       ? this.api.put<ComposedMealDto>(`/composed-meals/${encodeURIComponent(id)}`, request)
@@ -136,11 +161,12 @@ export class ComposedMealsPageComponent implements OnInit {
     request$.subscribe({
       next: (meal) => {
         this.saving.set(false)
+        this.closeDialog()
         this.feedback.set(id ? 'Repas composé mis à jour.' : 'Repas composé créé.')
         this.loadMeals(meal?.id ?? id ?? undefined)
       },
       error: (error: unknown) => {
-        this.error.set(apiErrorMessage(error))
+        this.dialogError.set(apiErrorMessage(error))
         this.saving.set(false)
       },
     })
@@ -151,26 +177,27 @@ export class ComposedMealsPageComponent implements OnInit {
     const recipeId = this.selectedRecipeId()
     const quantityFactor = Number(this.quantityFactor())
     if (!meal) {
-      this.error.set('Enregistrez ou sélectionnez un repas composé avant d’ajouter une recette.')
+      this.dialogError.set('Enregistrez ou sélectionnez un repas composé avant d’ajouter une recette.')
       return
     }
     if (!recipeId || !Number.isFinite(quantityFactor) || quantityFactor <= 0) {
-      this.error.set('Choisissez une recette et indiquez un facteur de quantité supérieur à zéro.')
+      this.dialogError.set('Choisissez une recette et indiquez un facteur de quantité supérieur à zéro.')
       return
     }
 
     const request: AddComposedMealPartRequest = { recipeId, quantityFactor }
     this.saving.set(true)
-    this.error.set(null)
+    this.dialogError.set('')
     this.api.post<ComposedMealDto>(`/composed-meals/${encodeURIComponent(meal.id)}/parts`, request).subscribe({
       next: () => {
         this.saving.set(false)
         this.quantityFactor.set(1)
+        this.closeDialog()
         this.feedback.set('Recette ajoutée au repas composé.')
         this.loadMeals(meal.id)
       },
       error: (error: unknown) => {
-        this.error.set(apiErrorMessage(error))
+        this.dialogError.set(apiErrorMessage(error))
         this.saving.set(false)
       },
     })
@@ -202,7 +229,7 @@ export class ComposedMealsPageComponent implements OnInit {
     this.api.delete(`/composed-meals/${encodeURIComponent(meal.id)}`).subscribe({
       next: () => {
         this.saving.set(false)
-        this.startNewMeal()
+        this.selectedMeal.set(null)
         this.feedback.set('Repas composé supprimé.')
         this.loadMeals()
       },

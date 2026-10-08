@@ -4,7 +4,7 @@
       <h1>Recettes</h1>
       <p>Gardez vos recettes prêtes à composer les repas de la semaine.</p>
     </div>
-    <button class="lifeos-button" type="button" (click)="startNewRecipe()">Nouvelle recette</button>
+    <button class="lifeos-button" type="button" (click)="openRecipeDialog(null)"><i class="pi pi-plus" aria-hidden="true"></i> Nouvelle recette</button>
   </header>
 
   @if (error()) { <p class="recipe-error" role="alert">{{ error() }}</p> }
@@ -39,57 +39,30 @@
       }
     </aside>
 
-    <section class="recipe-editor" aria-labelledby="recipe-editor-title">
-      <div class="recipe-editor-heading">
-        <div>
-          <h2 id="recipe-editor-title">{{ editingId() ? 'Modifier la recette' : 'Créer une recette' }}</h2>
-          <p class="recipe-empty">Nom, portions et durée restent modifiables à tout moment.</p>
-        </div>
-        @if (selectedRecipe()) {
-          <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="deleteRecipe()">
-            Archiver
-          </button>
-        }
-      </div>
-
-      <form class="recipe-editor-form" (ngSubmit)="saveRecipe()">
-        <label class="recipe-field recipe-field-wide">
-          <span>Nom de la recette</span>
-          <input name="recipeName" type="text" maxlength="200" required [(ngModel)]="recipeNameValue" />
-        </label>
-        <label class="recipe-field">
-          <span>Portions</span>
-          <input name="servings" type="number" min="1" step="any" required [(ngModel)]="servingsValue" />
-        </label>
-        <label class="recipe-field">
-          <span>Durée (minutes)</span>
-          <input name="durationMinutes" type="number" min="0" step="any" required [(ngModel)]="durationValue" />
-        </label>
-        <label class="recipe-field recipe-field-wide">
-          <span>Étiquettes, séparées par des virgules</span>
-          <input name="tags" type="text" placeholder="rapide, végétarien" [(ngModel)]="tagsValue" />
-        </label>
-        <label class="recipe-field recipe-field-wide">
-          <span>Métadonnées (objet JSON, facultatif)</span>
-          <textarea name="metadata" rows="3" placeholder='{"source":"maison"}' [(ngModel)]="metadataValue"></textarea>
-        </label>
-        <div class="recipe-form-actions">
-          <button class="lifeos-button" type="submit" [disabled]="saving()">
-            {{ saving() ? 'Enregistrement…' : editingId() ? 'Enregistrer les modifications' : 'Créer la recette' }}
-          </button>
-          @if (editingId()) {
-            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="startNewRecipe()">
-              Annuler la modification
-            </button>
-          }
-        </div>
-      </form>
-
+    <section class="recipe-editor" aria-labelledby="recipe-detail-title">
       @if (selectedRecipe(); as recipe) {
+        <div class="recipe-editor-heading">
+          <div>
+            <h2 id="recipe-detail-title">{{ recipe.name }}</h2>
+            <p class="recipe-empty">
+              {{ recipe.servings }} portion{{ recipe.servings === 1 ? '' : 's' }} · {{ recipe.durationMinutes }} min
+              @if (recipe.tags.length) { · {{ recipe.tags.join(', ') }} }
+            </p>
+          </div>
+          <div class="recipe-form-actions">
+            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="openRecipeDialog(recipe)">Modifier</button>
+            <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="deleteRecipe()">Archiver</button>
+          </div>
+        </div>
+
         <section class="recipe-section recipe-ingredients" aria-labelledby="ingredients-title">
           <div class="recipe-section-heading">
-            <h3 id="ingredients-title">Ingrédients</h3>
-            <span class="recipe-muted">{{ recipe.ingredients.length }}</span>
+            <h3 id="ingredients-title">Ingrédients <span class="recipe-muted">{{ recipe.ingredients.length }}</span></h3>
+            @if (linkedFoods().length) {
+              <button class="lifeos-button lifeos-button-sm" type="button" [disabled]="saving()" (click)="openIngredientDialog()">
+                <i class="pi pi-plus" aria-hidden="true"></i> Ajouter un ingrédient
+              </button>
+            }
           </div>
           @if (recipe.ingredients.length) {
             @for (ingredient of recipe.ingredients; track ingredient.id) {
@@ -98,15 +71,6 @@
                 <span>{{ ingredient.quantity }} {{ ingredient.unit }}</span>
                 <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="saving()" (click)="editIngredient(ingredient)">Modifier</button>
               </div>
-            }
-            @if (ingredientEdit; as edit) {
-              <form class="recipe-inline-form" (ngSubmit)="saveIngredient()">
-                <label class="recipe-field"><span>Quantité</span><input name="editQty" type="number" min="0.001" step="any" required [(ngModel)]="edit.quantity" /></label>
-                <label class="recipe-field"><span>Unité</span><input name="editUnit" required [(ngModel)]="edit.unit" /></label>
-                <button type="submit" class="lifeos-button" [disabled]="saving()">Enregistrer</button>
-                <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="saving()" (click)="saveIngredient(true)">Retirer l’ingrédient</button>
-                <button type="button" class="lifeos-button lifeos-button-secondary" (click)="ingredientEdit = null">Annuler</button>
-              </form>
             }
           } @else {
             <p class="recipe-empty">Aucun ingrédient ajouté.</p>
@@ -118,32 +82,93 @@
               Ajoutez un produit et reliez-le explicitement à un article d’achat pour l’utiliser dans une recette.
               <a routerLink="/foods">Ouvrir le catalogue d’aliments</a>
             </p>
-          } @else {
-            <form class="recipe-inline-form" (ngSubmit)="addIngredient()">
-              <label class="recipe-field">
-                <span>Aliment</span>
-                <select name="foodItemId" required [(ngModel)]="ingredientFoodItemIdValue">
-                  <option value="" disabled>Choisir un aliment</option>
-                  @for (food of linkedFoods(); track food.id) {
-                    <option [value]="food.articleId">{{ food.name }}</option>
-                  }
-                </select>
-              </label>
-              <label class="recipe-field">
-                <span>Quantité</span>
-                <input name="ingredientQuantity" type="number" min="0.001" step="any" required [(ngModel)]="ingredientQuantityValue" />
-              </label>
-              <label class="recipe-field">
-                <span>Unité</span>
-                <input name="ingredientUnit" type="text" required [(ngModel)]="ingredientUnitValue" />
-              </label>
-              <button class="lifeos-button" type="submit" [disabled]="saving()">Ajouter l’ingrédient</button>
-            </form>
           }
         </section>
       } @else {
+        <h2 id="recipe-detail-title" class="sr-only">Détail de la recette</h2>
         <p class="recipe-empty">Sélectionnez une recette pour consulter ses ingrédients, ou créez-en une nouvelle.</p>
       }
     </section>
   </section>
 </section>
+
+<app-lifeos-dialog [open]="dialog() === 'recipe'" [heading]="editingId() ? 'Modifier la recette' : 'Nouvelle recette'"
+  formId="recipe-dialog-form" [submitLabel]="editingId() ? 'Enregistrer' : 'Créer'" [busy]="saving()" [dirty]="isDirty()"
+  [error]="dialogError()" (dismissed)="closeDialog()">
+  <form id="recipe-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveRecipe()">
+    <label class="dialog-field">
+      <span>Nom de la recette</span>
+      <input class="text-input" name="recipeName" type="text" maxlength="200" required [(ngModel)]="recipeNameValue" />
+    </label>
+    <div class="dialog-row">
+      <label class="dialog-field">
+        <span>Portions</span>
+        <input class="text-input" name="servings" type="number" min="1" step="any" required [(ngModel)]="servingsValue" />
+      </label>
+      <label class="dialog-field">
+        <span>Durée (minutes)</span>
+        <input class="text-input" name="durationMinutes" type="number" min="0" step="any" required [(ngModel)]="durationValue" />
+      </label>
+    </div>
+    <details class="dialog-more" [open]="showMore">
+      <summary>Plus d’options</summary>
+      <label class="dialog-field">
+        <span>Étiquettes, séparées par des virgules</span>
+        <input class="text-input" name="tags" type="text" placeholder="rapide, végétarien" [(ngModel)]="tagsValue" />
+      </label>
+      <label class="dialog-field">
+        <span>Métadonnées (objet JSON, facultatif)</span>
+        <textarea class="text-input" name="metadata" rows="3" placeholder='{"source":"maison"}' [(ngModel)]="metadataValue"></textarea>
+      </label>
+    </details>
+  </form>
+</app-lifeos-dialog>
+
+<app-lifeos-dialog [open]="dialog() === 'ingredient'" heading="Ajouter un ingrédient" [description]="selectedRecipe()?.name ?? ''"
+  formId="ingredient-dialog-form" submitLabel="Ajouter" [busy]="saving()" [dirty]="isDirty()"
+  [error]="dialogError()" (dismissed)="closeDialog()">
+  <form id="ingredient-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="addIngredient()">
+    <label class="dialog-field">
+      <span>Aliment</span>
+      <select class="text-input" name="foodItemId" required [(ngModel)]="ingredientFoodItemIdValue">
+        <option value="" disabled>Choisir un aliment</option>
+        @for (food of linkedFoods(); track food.id) {
+          <option [value]="food.articleId">{{ food.name }}</option>
+        }
+      </select>
+    </label>
+    <div class="dialog-row">
+      <label class="dialog-field">
+        <span>Quantité</span>
+        <input class="text-input" name="ingredientQuantity" type="number" min="0.001" step="any" required [(ngModel)]="ingredientQuantityValue" />
+      </label>
+      <label class="dialog-field">
+        <span>Unité</span>
+        <input class="text-input" name="ingredientUnit" type="text" required [(ngModel)]="ingredientUnitValue" />
+      </label>
+    </div>
+  </form>
+</app-lifeos-dialog>
+
+<app-lifeos-dialog [open]="dialog() === 'editIngredient'" heading="Modifier l’ingrédient"
+  [description]="ingredientEdit ? foodItemName(ingredientEdit.foodItemId) : ''"
+  formId="ingredient-edit-form" submitLabel="Enregistrer" [busy]="saving()" [dirty]="isDirty()"
+  [error]="dialogError()" (dismissed)="closeDialog()">
+  @if (ingredientEdit; as edit) {
+    <form id="ingredient-edit-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveIngredient()">
+      <div class="dialog-row">
+        <label class="dialog-field">
+          <span>Quantité</span>
+          <input class="text-input" name="editQty" type="number" min="0.001" step="any" required [(ngModel)]="edit.quantity" />
+        </label>
+        <label class="dialog-field">
+          <span>Unité</span>
+          <input class="text-input" name="editUnit" required [(ngModel)]="edit.unit" />
+        </label>
+      </div>
+    </form>
+  }
+  <button dialogExtraActions type="button" class="lifeos-button lifeos-button-secondary" [disabled]="saving()" (click)="saveIngredient(true)">
+    Retirer l’ingrédient
+  </button>
+</app-lifeos-dialog>

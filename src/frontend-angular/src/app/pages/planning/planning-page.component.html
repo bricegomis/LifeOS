@@ -1,110 +1,24 @@
 <section class="page-stack manual-planner">
   <header class="page-hero">
     <div><h1>{{ todayOnly ? 'Aujourd’hui' : 'Semainier' }}</h1><p>Alimentation et sport, à votre rythme. Aucun menu généré.</p></div>
+    @if (week()) {
+      <button type="button" class="lifeos-button planner-create" [disabled]="loading() || busy()" (click)="add()"><i class="pi pi-plus" aria-hidden="true"></i> Nouvel événement</button>
+    }
+  </header>
+  <div class="calendar-toolbar planner-navigation">
     <div class="calendar-toolbar">
       <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(-1)" aria-label="Semaine précédente">←</button>
       <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="today()">Aujourd’hui</button>
       <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(1)" aria-label="Semaine suivante">→</button>
     </div>
-  </header>
-  <div class="calendar-toolbar">
-    <label>Aller à la date <input class="text-input" type="date" [ngModel]="selectedDate" (ngModelChange)="chooseWeek($event)" [disabled]="loading() || busy()" /></label>
-    <span>{{ dateLabel(startDate) }} — {{ dateLabel(week()?.days[6]?.date ?? startDate) }}</span>
-    @if (week(); as current) { <span>Horaires locaux · {{ current.timeZoneId }}</span> }
-    <a routerLink="/foods">Produits</a><a routerLink="/recipes">Recettes</a><a routerLink="/sports">Sport</a>
+    <strong>{{ dateLabel(startDate) }} — {{ dateLabel(week()?.days[6]?.date ?? startDate) }}</strong>
+    <label class="planner-date"><span class="sr-only">Aller à la date</span><input class="text-input" type="date" aria-label="Aller à la date" [ngModel]="selectedDate" (ngModelChange)="chooseWeek($event)" [disabled]="loading() || busy()" /></label>
+    @if (week(); as current) { <small>Horaires locaux · {{ current.timeZoneId }}</small> }
   </div>
 
   @if (error()) { <p class="calendar-error" role="alert">{{ error() }} <button type="button" [disabled]="busy()" (click)="loadWeek()">Réessayer la lecture</button></p> }
   @if (notice()) { <p class="calendar-notice" role="status">{{ notice() }}</p> }
   @if (catalogError()) { <p class="calendar-error" role="alert">Bibliothèques indisponibles : {{ catalogError() }} <button type="button" (click)="loadCatalogs()">Réessayer</button></p> }
-
-  @if (draft; as edit) {
-    <section class="event-editor surface-card" aria-labelledby="event-heading" [attr.aria-busy]="busy()">
-      <h2 id="event-heading" #editorHeading tabindex="-1">{{ edit.id ? 'Modifier / déplacer' : 'Ajouter' }} · {{ edit.kind === 'meal' ? 'Alimentation' : 'Sport' }}</h2>
-      <form (ngSubmit)="save()">
-        @if (!edit.id) {
-          <fieldset class="editor-actions"><legend>Type d’événement</legend>
-            <label><input name="kind" type="radio" value="meal" [ngModel]="edit.kind" (ngModelChange)="changeKind($event)" /> Alimentation</label>
-            <label><input name="kind" type="radio" value="sport" [ngModel]="edit.kind" (ngModelChange)="changeKind($event)" /> Sport</label>
-          </fieldset>
-        }
-        <div class="editor-grid">
-          @if (edit.id) {
-            <label>Semaine de destination <select class="text-input" name="destinationWeek" [ngModel]="destinationWeekId" (ngModelChange)="moveToWeek($event)" [disabled]="busy()">
-              @for (summary of summaries(); track summary.id) { <option [value]="summary.id">{{ dateLabel(summary.startsOn) }}</option> }
-            </select></label>
-          }
-          <label>Jour / déplacement <select class="text-input" name="day" [(ngModel)]="edit.dayId">
-            @for (day of destinationDays(); track day.id) { <option [value]="day.id">{{ dateLabel(day.date) }}</option> }
-          </select></label>
-          <label>Début <input class="text-input" name="start" type="time" required [(ngModel)]="edit.start" /></label>
-          <label>Fin <input class="text-input" name="end" type="time" required [(ngModel)]="edit.end" /></label>
-        </div>
-        @if (!edit.hasSnapshot) { <p class="calendar-warning">Repas historique : aucun horaire inventé. Le premier enregistrement fige les valeurs actuelles du catalogue, pas une nutrition passée inconnue.</p> }
-        @if (edit.id && !edit.replaceContent) {
-          <p><strong>{{ edit.name }}</strong> · contenu enregistré conservé</p>
-          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="replace()">Remplacer explicitement le contenu</button>
-        }
-        @if (contentEditable()) {
-          <label>Rechercher dans les bibliothèques <input class="text-input" name="catalogSearch" type="search" [(ngModel)]="catalogSearch" /></label>
-        }
-        @if (edit.kind === 'meal') {
-          @if (contentEditable()) {
-            <label>Contenu <select class="text-input" name="source" [(ngModel)]="edit.source"><option value="recipe">Recette</option><option value="foods">Produits / ingrédients</option></select></label>
-            @if (edit.source === 'recipe') {
-              <label>Recette <select class="text-input" name="recipe" required [(ngModel)]="edit.recipeId">
-                <option value="">Choisir une recette</option>
-                @for (recipe of activeRecipes(); track recipe.id) { <option [value]="recipe.id">{{ recipe.name }} · {{ recipe.servings }} portions de référence</option> }
-              </select></label>
-            }
-          }
-          <div class="editor-grid">
-            <label>{{ edit.source === 'recipe' ? 'Ma portion (nombre de portions de référence)' : 'Multiplicateur de ma portion' }}
-              <input class="text-input" name="portion" type="number" required min="0.001" max="1000" step="any" [(ngModel)]="edit.personalPortion" /></label>
-            <label>Enfants présents (demi-portion chacun) <input class="text-input" name="children" type="number" min="0" max="100" step="1" required [(ngModel)]="edit.children" /></label>
-          </div>
-          <p>Préparation : ma quantité × {{ number(1 + 0.5 * edit.children) }}. Les enfants ne majorent jamais mes calories ni mes macros.</p>
-          @if (edit.source === 'foods') {
-            @for (line of edit.lines; track $index; let index = $index) {
-              <div class="ingredient-editor">
-                @if (contentEditable()) {
-                  <label>Produit <select class="text-input" [name]="'food'+index" [(ngModel)]="line.foodItemId" required>
-                    <option value="">Choisir</option>
-                    @for (food of activeFoods(); track food.id) { <option [value]="food.id">{{ food.name }} · nutrition / {{ food.referenceUnit }}</option> }
-                  </select></label>
-                } @else { <strong>{{ lineName(line) }}</strong> }
-                <label>Quantité personnelle de référence <input class="text-input" [name]="'quantity'+index" type="number" min="0.001" max="1000000" step="any" required [(ngModel)]="line.quantity" /></label>
-                <label>Unité <input class="text-input" [name]="'unit'+index" maxlength="50" required [(ngModel)]="line.unit" [readonly]="!contentEditable()" placeholder="g, ml, piece" /></label>
-                <span>À préparer : {{ number(line.quantity * edit.personalPortion * (1 + 0.5 * edit.children)) }} {{ line.unit }}</span>
-                @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit.lines.splice(index, 1)">Retirer</button> }
-              </div>
-            }
-            @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addLine()">Ajouter un produit</button> }
-          }
-        } @else {
-          @if (contentEditable()) {
-            <label>Modèle sportif <select class="text-input" name="template" [ngModel]="edit.templateId" (ngModelChange)="selectTemplate($event)" required>
-              <option value="">Choisir une séance</option>
-              @for (template of activeTemplates(); track template.id) { <option [value]="template.id">{{ template.name }}</option> }
-            </select></label>
-          }
-          <div class="editor-grid">
-            <label>Nom de cette occurrence <input class="text-input" name="sportName" maxlength="200" required [(ngModel)]="edit.name" /></label>
-            <label>Sport <input class="text-input" name="sport" maxlength="50" required [(ngModel)]="edit.sport" /></label>
-            <label>Intensité <select class="text-input" name="intensity" [(ngModel)]="edit.intensity"><option value="low">Faible</option><option value="moderate">Modérée</option><option value="high">Élevée</option></select></label>
-            <label>Distance (km, facultative) <input class="text-input" name="distance" type="number" min="0" step="any" [(ngModel)]="edit.distance" /></label>
-            <label>Calories totales manuelles <input class="text-input" name="calories" type="number" min="0" step="any" required [(ngModel)]="edit.calories" /></label>
-          </div>
-          <p>Durée = fin − début. Modifier le créneau ou la distance ne recalcule pas les calories. Seule cette occurrence change.</p>
-        }
-        <div class="editor-actions">
-          <button class="lifeos-button" type="submit" [disabled]="busy() || loading()">{{ busy() ? 'Enregistrement…' : 'Enregistrer l’événement' }}</button>
-          <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="busy()" (click)="draft = null">Annuler</button>
-          @if (edit.id) { <button class="lifeos-button lifeos-button-secondary danger" type="button" [disabled]="busy()" (click)="remove()">Supprimer cet événement</button> }
-        </div>
-      </form>
-    </section>
-  }
 
   @if (loading()) { <p role="status">Chargement de la semaine…</p> }
   @else if (week(); as current) {
@@ -116,7 +30,7 @@
     @if (selectedDay(); as day) {
       <section class="day-agenda" [class.today-agenda]="todayOnly">
         <div class="calendar-toolbar"><h2>{{ dateLabel(day.date) }}</h2>
-          <button type="button" class="lifeos-button" [disabled]="busy()" (click)="add(day)">Ajouter un événement</button></div>
+          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="add(day)"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter ce jour</button></div>
         <p>Mes apports : {{ number(day.nutrition.calories) }} kcal · P {{ number(day.nutrition.protein) }} g · G {{ number(day.nutrition.carbs) }} g · L {{ number(day.nutrition.fat) }} g</p>
         <p>Sport déclaré : {{ number(sportTotal(day)) }} kcal — pas une dépense quotidienne totale.</p>
         @if (!day.nutrition.isComplete) { <p class="calendar-warning">Total nutritionnel incomplet.</p> }
@@ -134,7 +48,7 @@
         <div class="calendar-head"><span>6–20 h</span>
           @for (day of current.days; track day.id) {
             <div class="day-heading"><h2>{{ dateLabel(day.date, true) }}</h2>
-              <button type="button" [disabled]="busy()" (click)="add(day)">Ajouter</button>
+              <button type="button" [disabled]="busy()" (click)="add(day)" [attr.aria-label]="'Ajouter un événement le ' + dateLabel(day.date)">Ajouter</button>
               <small>Moi : {{ number(day.nutrition.calories) }} kcal</small>
               <small>Sport : {{ number(sportTotal(day)) }} kcal</small>
               @if (!day.nutrition.isComplete) { <small class="calendar-warning">Apports incomplets</small> }
@@ -197,8 +111,111 @@
   } @else if (!error()) {
     <section class="surface-card">
       <h2>Une semaine à composer</h2><p>Créez les sept journées, puis ajoutez vos repas et séances. Les autres semaines restent inchangées.</p>
-      <label>Fuseau des horaires <input class="text-input" [(ngModel)]="timeZone" aria-label="Fuseau horaire de la semaine" /></label>
+      <details class="dialog-more"><summary>Fuseau horaire · {{ timeZone }}</summary>
+        <div><label class="dialog-field"><span>Fuseau des horaires</span><input class="text-input" [(ngModel)]="timeZone" /></label></div>
+      </details>
       <button class="lifeos-button" type="button" [disabled]="busy()" (click)="createWeek()">{{ busy() ? 'Création…' : 'Créer cette semaine vide' }}</button>
     </section>
   }
 </section>
+
+<app-lifeos-dialog [open]="draft !== null" [wide]="true"
+  [heading]="draft?.id ? 'Modifier l’événement' : 'Nouvel événement'"
+  [description]="draft && draft.id ? (draft.kind === 'meal' ? 'Repas' : 'Séance') + ' · ' + draft.name : ''"
+  formId="event-dialog-form" [submitLabel]="draft?.id ? 'Enregistrer' : 'Créer'"
+  [busy]="busy()" [submitDisabled]="loading()" [dirty]="isDirty()" [error]="dialogError()" (dismissed)="closeDialog()">
+  @if (draft; as edit) {
+    <form id="event-dialog-form" class="dialog-form event-form" ngNativeValidate (ngSubmit)="save()">
+      @if (!edit.id) {
+        <fieldset class="event-kind"><legend class="sr-only">Type d’événement</legend>
+          <label><input name="kind" type="radio" value="meal" [ngModel]="edit.kind" (ngModelChange)="changeKind($event)" /> <span>Repas</span></label>
+          <label><input name="kind" type="radio" value="sport" [ngModel]="edit.kind" (ngModelChange)="changeKind($event)" /> <span>Sport</span></label>
+        </fieldset>
+      }
+      <div class="dialog-row event-when">
+        <label class="dialog-field"><span>Jour</span><select class="text-input" name="day" [(ngModel)]="edit.dayId">
+          @for (day of destinationDays(); track day.id) { <option [value]="day.id">{{ dateLabel(day.date) }}</option> }
+        </select></label>
+        <label class="dialog-field"><span>Début</span><input class="text-input" name="start" type="time" required [(ngModel)]="edit.start" /></label>
+        <label class="dialog-field"><span>Fin</span><input class="text-input" name="end" type="time" required [(ngModel)]="edit.end" /></label>
+      </div>
+      @if (!edit.hasSnapshot) { <p class="calendar-warning">Repas historique : aucun horaire inventé. Le premier enregistrement fige les valeurs actuelles du catalogue, pas une nutrition passée inconnue.</p> }
+      @if (edit.id && !edit.replaceContent) {
+        <div class="event-kept">
+          <p><strong>{{ edit.name }}</strong> · contenu enregistré conservé</p>
+          <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="replace()">Remplacer le contenu</button>
+        </div>
+      }
+      @if (edit.kind === 'meal') {
+        @if (contentEditable()) {
+          <div class="dialog-row">
+            <label class="dialog-field"><span>Contenu</span><select class="text-input" name="source" [(ngModel)]="edit.source"><option value="recipe">Recette</option><option value="foods">Produits / ingrédients</option></select></label>
+            @if (edit.source === 'recipe') {
+              <label class="dialog-field"><span>Recette</span><select class="text-input" name="recipe" required [(ngModel)]="edit.recipeId">
+                <option value="">Choisir une recette</option>
+                @for (recipe of activeRecipes(); track recipe.id) { <option [value]="recipe.id">{{ recipe.name }} · {{ recipe.servings }} portions de référence</option> }
+              </select></label>
+            }
+          </div>
+        }
+        <label class="dialog-field"><span>{{ edit.source === 'recipe' ? 'Ma portion (portions de référence)' : 'Multiplicateur de ma portion' }}</span>
+          <input class="text-input" name="portion" type="number" required min="0.001" max="1000" step="any" [(ngModel)]="edit.personalPortion" /></label>
+        @if (edit.source === 'foods') {
+          @for (line of edit.lines; track $index; let index = $index) {
+            <div class="ingredient-editor">
+              @if (contentEditable()) {
+                <label class="dialog-field"><span>Produit</span><select class="text-input" [name]="'food'+index" [(ngModel)]="line.foodItemId" required>
+                  <option value="">Choisir</option>
+                  @for (food of activeFoods(); track food.id) { <option [value]="food.id">{{ food.name }} · nutrition / {{ food.referenceUnit }}</option> }
+                </select></label>
+              } @else { <strong>{{ lineName(line) }}</strong> }
+              <label class="dialog-field"><span>Ma quantité</span><input class="text-input" [name]="'quantity'+index" type="number" min="0.001" max="1000000" step="any" required [(ngModel)]="line.quantity" /></label>
+              <label class="dialog-field"><span>Unité</span><input class="text-input" [name]="'unit'+index" maxlength="50" required [(ngModel)]="line.unit" [readonly]="!contentEditable()" placeholder="g, ml, piece" /></label>
+              <span class="dialog-hint">À préparer : {{ number(line.quantity * edit.personalPortion * (1 + 0.5 * edit.children)) }} {{ line.unit }}</span>
+              @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="edit.lines.splice(index, 1)">Retirer</button> }
+            </div>
+          }
+          @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addLine()"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter un produit</button> }
+        }
+      } @else {
+        @if (contentEditable()) {
+          <label class="dialog-field"><span>Modèle de séance</span><select class="text-input" name="template" [ngModel]="edit.templateId" (ngModelChange)="selectTemplate($event)" required>
+            <option value="">Choisir une séance</option>
+            @for (template of activeTemplates(); track template.id) { <option [value]="template.id">{{ template.name }}</option> }
+          </select></label>
+        }
+        <div class="dialog-row">
+          <label class="dialog-field"><span>Nom de cette séance</span><input class="text-input" name="sportName" maxlength="200" required [(ngModel)]="edit.name" /></label>
+          <label class="dialog-field"><span>Calories (total manuel)</span><input class="text-input" name="calories" type="number" min="0" step="any" required [(ngModel)]="edit.calories" /></label>
+        </div>
+        <p class="dialog-hint">Durée = fin − début. Changer le créneau ou la distance ne recalcule pas les calories. Seule cette occurrence change.</p>
+      }
+      <details class="dialog-more" [open]="showMoreOptions">
+        <summary>Plus d’options</summary>
+        <div>
+          @if (contentEditable()) {
+            <label class="dialog-field"><span>Filtrer les bibliothèques</span><input class="text-input" name="catalogSearch" type="search" [(ngModel)]="catalogSearch" /></label>
+          }
+          @if (edit.kind === 'meal') {
+            <label class="dialog-field"><span>Enfants présents (demi-portion chacun)</span><input class="text-input" name="children" type="number" min="0" max="100" step="1" [(ngModel)]="edit.children" /></label>
+            <p class="dialog-hint">Préparation : ma quantité × {{ number(1 + 0.5 * edit.children) }}. Les enfants ne majorent jamais mes calories ni mes macros.</p>
+          } @else {
+            <div class="dialog-row">
+              <label class="dialog-field"><span>Sport</span><input class="text-input" name="sport" maxlength="50" [(ngModel)]="edit.sport" /></label>
+              <label class="dialog-field"><span>Intensité</span><select class="text-input" name="intensity" [(ngModel)]="edit.intensity"><option value="low">Faible</option><option value="moderate">Modérée</option><option value="high">Élevée</option></select></label>
+              <label class="dialog-field"><span>Distance (km)</span><input class="text-input" name="distance" type="number" min="0" step="any" [(ngModel)]="edit.distance" /></label>
+            </div>
+          }
+          @if (edit.id) {
+            <label class="dialog-field"><span>Déplacer vers la semaine</span><select class="text-input" name="destinationWeek" [ngModel]="destinationWeekId" (ngModelChange)="moveToWeek($event)" [disabled]="busy()">
+              @for (summary of summaries(); track summary.id) { <option [value]="summary.id">{{ dateLabel(summary.startsOn) }}</option> }
+            </select></label>
+          }
+        </div>
+      </details>
+    </form>
+  }
+  @if (draft?.id) {
+    <button dialogExtraActions class="lifeos-button lifeos-button-secondary danger" type="button" [disabled]="busy()" (click)="remove()">Supprimer</button>
+  }
+</app-lifeos-dialog>
