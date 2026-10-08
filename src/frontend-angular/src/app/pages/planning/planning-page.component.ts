@@ -137,6 +137,10 @@ export class PlanningPageComponent implements OnInit {
 
   isDirty(): boolean { return Boolean(this.draft && hasChanges(this.initialDraft, this.draft)) }
 
+  setEndOfDay(draft: EventDraft, event: Event): void {
+    draft.end = (event.target as HTMLInputElement).checked ? '24:00' : ''
+  }
+
   closeDialog(): void { this.draft = null; this.dialogError.set('') }
 
   private openDraft(draft: EventDraft): void {

@@ -60,18 +60,31 @@ export class LifeosDialogComponent {
   readonly descriptionId = `${this.headingId}-description`
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog')
   private returnFocus: HTMLElement | null = null
+  private returnFocusSelector: string | null = null
+  private returnFocusIndex = -1
 
   constructor() {
     afterRenderEffect(() => {
       const element = this.dialog().nativeElement
       const shouldOpen = this.open()
+      const busy = this.busy()
       if (shouldOpen && !element.open) {
         const active = document.activeElement
         this.returnFocus = active instanceof HTMLElement ? active : null
+        if (this.returnFocus) {
+          const selector = this.returnFocus.id
+            ? `#${CSS.escape(this.returnFocus.id)}`
+            : `${this.returnFocus.tagName.toLowerCase()}${Array.from(this.returnFocus.classList)
+              .map(className => `.${CSS.escape(className)}`).join('')}`
+          this.returnFocusSelector = selector
+          this.returnFocusIndex = Array.from(document.querySelectorAll(selector)).indexOf(this.returnFocus)
+        }
         element.showModal()
         this.focusFirstField(element)
       } else if (!shouldOpen && element.open) {
         element.close()
+      } else if (!shouldOpen && !busy && this.returnFocus) {
+        this.restoreFocus()
       }
     })
   }
@@ -95,14 +108,25 @@ export class LifeosDialogComponent {
       element.showModal()
       return
     }
-    const target = this.returnFocus
-    this.returnFocus = null
-    if (target?.isConnected) target.focus()
+    if (!this.busy()) this.restoreFocus()
   }
 
   private focusFirstField(element: HTMLDialogElement): void {
     const body = element.querySelector('.lifeos-dialog-body')
     const field = body?.querySelector<HTMLElement>(focusableFieldSelector)
     ;(field ?? element.querySelector<HTMLElement>('.lifeos-dialog-close'))?.focus()
+  }
+
+  private restoreFocus(): void {
+    const original = this.returnFocus
+    const selector = this.returnFocusSelector
+    const index = this.returnFocusIndex
+    this.returnFocus = null
+    this.returnFocusSelector = null
+    this.returnFocusIndex = -1
+    if (!original) return
+    const candidates = selector ? Array.from(document.querySelectorAll<HTMLElement>(selector)) : []
+    const target = original.isConnected ? original : candidates[index]
+    if (target?.isConnected && !target.matches(':disabled')) target.focus()
   }
 }

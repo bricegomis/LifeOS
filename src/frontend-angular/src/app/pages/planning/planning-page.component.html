@@ -137,7 +137,8 @@
           @for (day of destinationDays(); track day.id) { <option [value]="day.id">{{ dateLabel(day.date) }}</option> }
         </select></label>
         <label class="dialog-field"><span>Début</span><input class="text-input" name="start" type="time" required [(ngModel)]="edit.start" /></label>
-        <label class="dialog-field"><span>Fin</span><input class="text-input" name="end" type="time" required [(ngModel)]="edit.end" /></label>
+        <label class="dialog-field"><span>Fin</span><input class="text-input" name="end" type="time" [required]="edit.end !== '24:00'" [disabled]="edit.end === '24:00'" [(ngModel)]="edit.end" /></label>
+        <label class="dialog-check"><input type="checkbox" [checked]="edit.end === '24:00'" (change)="setEndOfDay(edit, $event)" /> Fin de journée (24:00)</label>
       </div>
       @if (!edit.hasSnapshot) { <p class="calendar-warning">Repas historique : aucun horaire inventé. Le premier enregistrement fige les valeurs actuelles du catalogue, pas une nutrition passée inconnue.</p> }
       @if (edit.id && !edit.replaceContent) {

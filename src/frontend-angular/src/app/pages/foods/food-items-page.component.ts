@@ -11,6 +11,7 @@ import {
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
+import { purchaseDraftHasChanges } from './purchase-draft'
 
 type FoodEditor = {
   name: string
@@ -203,18 +204,18 @@ const emptyEditor = (): FoodEditor => ({
           </label>
           <label class="dialog-field">
             <span>Calories (kcal)</span>
-            <input class="text-input" name="calories" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.caloriesPerUnit" />
+            <input class="text-input" name="calories" type="number" min="0" step="any" inputmode="decimal" [(ngModel)]="editor.caloriesPerUnit" />
           </label>
         </div>
         <details class="dialog-more" [open]="showMacros">
           <summary>Protéines, glucides, lipides</summary>
           <div class="dialog-row">
             <label class="dialog-field"><span>Protéines (g)</span>
-              <input class="text-input" name="protein" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.proteinsPerUnit" /></label>
+              <input class="text-input" name="protein" type="number" min="0" step="any" inputmode="decimal" [(ngModel)]="editor.proteinsPerUnit" /></label>
             <label class="dialog-field"><span>Glucides (g)</span>
-              <input class="text-input" name="carbs" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.carbsPerUnit" /></label>
+              <input class="text-input" name="carbs" type="number" min="0" step="any" inputmode="decimal" [(ngModel)]="editor.carbsPerUnit" /></label>
             <label class="dialog-field"><span>Lipides (g)</span>
-              <input class="text-input" name="fat" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.fatsPerUnit" /></label>
+              <input class="text-input" name="fat" type="number" min="0" step="any" inputmode="decimal" [(ngModel)]="editor.fatsPerUnit" /></label>
           </div>
         </details>
       </form>
@@ -362,7 +363,7 @@ export class FoodItemsPageComponent {
 
   isPurchaseDirty(): boolean {
     const item = this.purchaseItem()
-    return Boolean(item && this.purchaseArticleId !== (item.articleId ?? ''))
+    return Boolean(item && purchaseDraftHasChanges(item.articleId, this.purchaseArticleId, this.purchaseUnitChoice))
   }
 
   async linkArticle(item: FoodItemDto): Promise<void> {
