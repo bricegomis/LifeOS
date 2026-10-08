@@ -10,11 +10,13 @@ import type {
   WeekDto,
 } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 
 @Component({
   selector: 'app-stock-shopping-page',
   standalone: true,
-  imports: [DecimalPipe, FormsModule],
+  imports: [DecimalPipe, FormsModule, LifeosDialogComponent],
   template: `
     <div class="page-stack stores-page stock-page">
       <header class="page-hero">
@@ -37,125 +39,18 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
             <h2 id="stock-heading">En stock</h2>
             <p>Indiquez les quantités disponibles avant de générer la liste de courses.</p>
           </div>
-          @if (!loadingStock() && !stockError()) {
-            <span class="stores-count"
-              >{{ stock().length }} {{ stock().length === 1 ? 'article' : 'articles' }}</span
-            >
-          }
+          <div class="stock-heading-actions">
+            @if (!loadingStock() && !stockError()) {
+              <span class="stores-count"
+                >{{ stock().length }} {{ stock().length === 1 ? 'article' : 'articles' }}</span
+              >
+            }
+            <button class="lifeos-button" type="button" (click)="openCreate()" [disabled]="busy() !== '' || loadingStock() || !!stockError()">
+              <i class="pi pi-plus" aria-hidden="true"></i> Ajouter au stock
+            </button>
+          </div>
         </div>
         <div class="stores-workspace">
-          <form class="stores-form stock-form" (ngSubmit)="saveStock()">
-            <div>
-              <h2>{{ editingId() ? 'Modifier le stock' : 'Ajouter au stock' }}</h2>
-              <p>
-                {{
-                  editingId()
-                    ? 'Modifiez la quantité disponible.'
-                    : 'Choisissez un article et indiquez la quantité disponible.'
-                }}
-              </p>
-            </div>
-            @if (articlesError()) {
-              <p class="stock-feedback is-error" role="alert">
-                Impossible de charger les articles : {{ articlesError() }}
-              </p>
-              <button
-                class="stock-button"
-                type="button"
-                (click)="loadArticles()"
-                [disabled]="loadingArticles()"
-              >
-                Réessayer de charger les articles
-              </button>
-            }
-            <label class="stores-field">
-              <span>Article</span>
-              <select
-                class="stock-input"
-                name="groceryItemId"
-                required
-                [(ngModel)]="editor.groceryItemId"
-                (ngModelChange)="articleChanged()"
-                [disabled]="busy() !== '' || loadingArticles() || !!editingId()"
-              >
-                <option value="" disabled>Choisir un article</option>
-                @if (editingId() && !hasArticle(editor.groceryItemId)) {
-                  <option [value]="editor.groceryItemId">{{ editor.groceryItemId }}</option>
-                }
-                @for (article of articles(); track article.id) {
-                  <option [value]="article.id">{{ article.name }}</option>
-                }
-              </select>
-            </label>
-            @if (!loadingArticles() && !articlesError() && articles().length === 0) {
-              <p class="stock-hint">
-                Aucun article disponible. Ajoutez-en un dans la rubrique Magasins et articles.
-              </p>
-            }
-            <label class="stores-field">
-              <span>Quantité</span>
-              <input
-                class="stock-input"
-                type="number"
-                name="quantity"
-                min="0.001"
-                step="any"
-                inputmode="decimal"
-                required
-                [(ngModel)]="editor.quantity"
-                [disabled]="busy() !== ''"
-              />
-            </label>
-            <label class="stores-field">
-              <span>Unité</span>
-              <input
-                class="stock-input"
-                type="text"
-                name="unit"
-                required
-                maxlength="40"
-                [(ngModel)]="editor.unit"
-                [disabled]="busy() !== ''"
-              />
-            </label>
-            <div class="stores-form-actions">
-              <button
-                class="stock-button is-primary"
-                type="submit"
-                [disabled]="
-                  busy() !== '' ||
-                  loadingStock() ||
-                  !!stockError() ||
-                  !editor.groceryItemId ||
-                  (!editingId() && (loadingArticles() || !!articlesError() || !articles().length))
-                "
-              >
-                {{
-                  busy() === 'stock'
-                    ? 'Enregistrement…'
-                    : editingId()
-                      ? 'Enregistrer la quantité'
-                      : 'Ajouter au stock'
-                }}
-              </button>
-              @if (editingId()) {
-                <button
-                  class="stock-button"
-                  type="button"
-                  (click)="resetEditor()"
-                  [disabled]="busy() !== ''"
-                >
-                  Annuler
-                </button>
-              }
-            </div>
-            @if (stockActionError()) {
-              <p class="stock-feedback is-error" role="alert">
-                Impossible d’enregistrer le stock : {{ stockActionError() }}
-              </p>
-            }
-          </form>
-
           <section class="stores-directory" aria-label="Stock actuel">
             <div class="stores-directory-heading">
               <div>
@@ -178,7 +73,7 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
             } @else if (loadingStock()) {
               <p class="stock-hint" role="status">Chargement du stock…</p>
             } @else if (!stock().length) {
-              <p class="stock-hint">Aucun article en stock. Ajoutez-en un pour commencer.</p>
+              <p class="stock-hint">Aucun article en stock. Utilisez « Ajouter au stock » pour commencer.</p>
             } @else {
               <div class="stores-list">
                 @for (item of stock(); track item.id) {
@@ -249,28 +144,8 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
           </div>
         </div>
         <div class="stores-workspace">
-          <div class="stores-form stock-form">
-            <div>
-              <h2>Préparer les courses</h2>
-              <p>
-                La génération recalcule la liste de la semaine choisie à partir des repas prévus et
-                du stock actuel.
-              </p>
-            </div>
-            @if (weeksError()) {
-              <p class="stock-feedback is-error" role="alert">
-                Impossible de charger les semaines : {{ weeksError() }}
-              </p>
-              <button
-                class="stock-button"
-                type="button"
-                (click)="loadWeeks()"
-                [disabled]="loadingWeeks()"
-              >
-                Réessayer de charger les semaines
-              </button>
-            }
-            <label class="stores-field">
+          <div class="stock-toolbar">
+            <label class="stores-field stock-week-field">
               <span>Semaine planifiée</span>
               <select
                 class="stock-input"
@@ -287,16 +162,6 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
                 }
               </select>
             </label>
-            @if (loadingWeeks()) {
-              <p class="stock-hint" role="status">Chargement des semaines…</p>
-            } @else if (!weeksError() && !weeks().length) {
-              <p class="stock-hint">
-                Planifiez d’abord une semaine pour générer une liste de courses.
-              </p>
-            }
-            @if (isManualWeek()) {
-              <p class="stock-hint">Les courses automatiques sont hors MVP manuel. Les listes historiques restent consultables.</p>
-            }
             <button
               class="stock-button is-primary"
               type="button"
@@ -305,10 +170,35 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
             >
               {{ busy() === 'generate' ? 'Génération…' : 'Générer la liste de courses' }}
             </button>
-            @if (shoppingActionError()) {
-              <p class="stock-feedback is-error" role="alert">{{ shoppingActionError() }}</p>
-            }
           </div>
+          @if (weeksError()) {
+            <p class="stock-feedback is-error" role="alert">
+              Impossible de charger les semaines : {{ weeksError() }}
+            </p>
+            <button
+              class="stock-button"
+              type="button"
+              (click)="loadWeeks()"
+              [disabled]="loadingWeeks()"
+            >
+              Réessayer de charger les semaines
+            </button>
+          }
+          @if (loadingWeeks()) {
+            <p class="stock-hint" role="status">Chargement des semaines…</p>
+          } @else if (!weeksError() && !weeks().length) {
+            <p class="stock-hint">
+              Planifiez d’abord une semaine pour générer une liste de courses.
+            </p>
+          } @else {
+            <p class="stock-hint">La génération recalcule la liste de la semaine choisie à partir des repas prévus et du stock actuel.</p>
+          }
+          @if (isManualWeek()) {
+            <p class="stock-hint">Les courses automatiques sont hors MVP manuel. Les listes historiques restent consultables.</p>
+          }
+          @if (shoppingActionError()) {
+            <p class="stock-feedback is-error" role="alert">{{ shoppingActionError() }}</p>
+          }
 
           <section class="stores-directory" aria-label="Liste de courses de la semaine choisie">
             <div class="stores-directory-heading">
@@ -372,6 +262,47 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
         </div>
       </section>
     </div>
+
+    <app-lifeos-dialog [open]="dialogOpen()" [heading]="editingId() ? 'Modifier le stock' : 'Ajouter au stock'"
+      [description]="editingId() ? 'Modifiez la quantité disponible.' : 'Choisissez un article et indiquez la quantité disponible.'"
+      formId="stock-dialog-form" [submitLabel]="editingId() ? 'Enregistrer' : 'Ajouter'"
+      [busy]="busy() === 'stock'" [dirty]="isDirty()" [error]="stockActionError()"
+      [submitDisabled]="busy() !== '' || (!editingId() && (loadingArticles() || !!articlesError() || !articles().length))"
+      (dismissed)="closeDialog()">
+      <form id="stock-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveStock()">
+        @if (articlesError()) {
+          <p class="stock-feedback is-error" role="alert">Impossible de charger les articles : {{ articlesError() }}</p>
+          <button class="stock-button" type="button" (click)="loadArticles()" [disabled]="loadingArticles()">Réessayer de charger les articles</button>
+        }
+        <label class="dialog-field">
+          <span>Article</span>
+          <select class="text-input" name="groceryItemId" required [(ngModel)]="editor.groceryItemId" (ngModelChange)="articleChanged()"
+            [disabled]="busy() !== '' || loadingArticles() || !!editingId()">
+            <option value="" disabled>Choisir un article</option>
+            @if (editingId() && !hasArticle(editor.groceryItemId)) {
+              <option [value]="editor.groceryItemId">{{ editor.groceryItemId }}</option>
+            }
+            @for (article of articles(); track article.id) {
+              <option [value]="article.id">{{ article.name }}</option>
+            }
+          </select>
+        </label>
+        @if (!loadingArticles() && !articlesError() && articles().length === 0) {
+          <p class="dialog-hint">Aucun article disponible. Ajoutez-en un dans la rubrique Magasins et articles.</p>
+        }
+        <div class="dialog-row">
+          <label class="dialog-field">
+            <span>Quantité</span>
+            <input class="text-input" type="number" name="quantity" min="0.001" step="any" inputmode="decimal" required
+              [(ngModel)]="editor.quantity" [disabled]="busy() !== ''" />
+          </label>
+          <label class="dialog-field">
+            <span>Unité</span>
+            <input class="text-input" type="text" name="unit" required maxlength="40" [(ngModel)]="editor.unit" [disabled]="busy() !== ''" />
+          </label>
+        </div>
+      </form>
+    </app-lifeos-dialog>
   `,
   styles: [
     `
@@ -507,18 +438,28 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
         color: var(--lifeos-text-soft);
         text-decoration: line-through;
       }
-      @media (max-width: 800px) {
-        .stock-page .stores-workspace {
-          grid-template-columns: 1fr;
-        }
-        .stock-page .stores-form {
-          position: static;
-        }
+      .stock-heading-actions,
+      .stock-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 12px;
+      }
+      .stock-heading-actions {
+        align-items: center;
+        justify-content: flex-end;
+      }
+      .stock-week-field {
+        flex: 1 1 240px;
+        max-width: 360px;
       }
       @media (max-width: 620px) {
         .stock-section-heading {
           align-items: start;
           flex-direction: column;
+        }
+        .stock-heading-actions {
+          justify-content: flex-start;
         }
         .stock-page .store-row-actions {
           justify-content: flex-start;
@@ -553,6 +494,8 @@ export class StockShoppingPageComponent {
   readonly stockDeleteError = signal('')
   readonly shoppingActionError = signal('')
   readonly notice = signal('')
+  readonly dialogOpen = signal(false)
+  private initialEditor = ''
 
   editor: { groceryItemId: string; quantity: number | null; unit: string } = {
     groceryItemId: '',
@@ -652,12 +595,32 @@ export class StockShoppingPageComponent {
     this.editor.unit = article?.unit ?? ''
   }
 
+  openCreate(): void {
+    this.resetEditor()
+    this.openDialog()
+  }
+
   editStock(item: StockItemDto): void {
     this.editingId.set(item.id)
     this.editor = { groceryItemId: item.groceryItemId, quantity: item.quantity, unit: item.unit }
+    this.deleteConfirmationId.set('')
+    this.openDialog()
+  }
+
+  isDirty(): boolean {
+    return hasChanges(this.initialEditor, this.editor)
+  }
+
+  closeDialog(): void {
+    this.dialogOpen.set(false)
+    this.resetEditor()
+  }
+
+  private openDialog(): void {
+    this.initialEditor = formSnapshot(this.editor)
     this.stockActionError.set('')
     this.notice.set('')
-    this.deleteConfirmationId.set('')
+    this.dialogOpen.set(true)
   }
 
   resetEditor(): void {
@@ -699,7 +662,7 @@ export class StockShoppingPageComponent {
       this.stock.update((items) =>
         id ? items.map((entry) => (entry.id === id ? item : entry)) : [...items, item],
       )
-      this.resetEditor()
+      this.closeDialog()
       this.notice.set(id ? 'Stock modifié.' : 'Article ajouté au stock.')
     } catch (error) {
       this.stockActionError.set(apiErrorMessage(error))
@@ -716,7 +679,6 @@ export class StockShoppingPageComponent {
     try {
       await firstValueFrom(this.api.delete(`/stock-items/${item.id}`))
       this.stock.update((items) => items.filter((entry) => entry.id !== item.id))
-      if (this.editingId() === item.id) this.resetEditor()
       this.deleteConfirmationId.set('')
       this.notice.set('Article supprimé du stock.')
     } catch (error) {

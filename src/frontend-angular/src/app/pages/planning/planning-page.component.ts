@@ -1,48 +1,28 @@
-import { Component, ElementRef, inject, Input, OnInit, signal, ViewChild } from '@angular/core'
+import { Component, inject, Input, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
-import { RouterLink } from '@angular/router'
 import { firstValueFrom, forkJoin } from 'rxjs'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import type { FoodItemDto, RecipeDto, SportTemplateDto } from '@/app/core/api/api.models'
 import type {
-  ManualDay, ManualMeal, ManualSport, ManualWeek, ManualWeekSummary, MealLinePayload,
-  MealPayload, SportPayload,
+  ManualDay, ManualWeek, ManualWeekSummary, MealLinePayload, MealPayload, SportPayload,
 } from '@/app/core/api/manual-planner.models'
+import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { addDays, dayEvents, isoDate, layoutEvents, monday, outsideDisplay, parseTime, timeLabel } from './calendar'
 import type { CalendarEvent } from './calendar'
-
-interface EventDraft {
-  kind: 'meal' | 'sport'
-  id: string
-  dayId: string
-  start: string
-  end: string
-  personalPortion: number
-  children: number
-  source: 'recipe' | 'foods' | 'legacy'
-  recipeId: string
-  lines: MealLinePayload[]
-  templateId: string
-  name: string
-  sport: string
-  intensity: string
-  distance: number | null
-  calories: number
-  replaceContent: boolean
-  hasSnapshot: boolean
-}
+import { eventDraftFrom, eventDraftHasSecondaryValues, eventDraftProblem, newEventDraft } from './event-draft'
+import type { EventDraft } from './event-draft'
 
 @Component({
   selector: 'app-planning-page',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, LifeosDialogComponent],
   templateUrl: './planning-page.component.html',
   styleUrl: './planning-page.component.css',
 })
 export class PlanningPageComponent implements OnInit {
   private readonly api = inject(LifeosApiService)
   @Input() todayOnly = false
-  @ViewChild('editorHeading') editorHeading?: ElementRef<HTMLElement>
   readonly week = signal<ManualWeek | null>(null)
   readonly summaries = signal<ManualWeekSummary[]>([])
   readonly foods = signal<FoodItemDto[]>([])
@@ -53,6 +33,7 @@ export class PlanningPageComponent implements OnInit {
   readonly error = signal('')
   readonly notice = signal('')
   readonly catalogError = signal('')
+  readonly dialogError = signal('')
   readonly destinationDays = signal<ManualDay[]>([])
   readonly hours = Array.from({ length: 14 }, (_, index) => index + 6)
   readonly events = dayEvents
@@ -65,6 +46,8 @@ export class PlanningPageComponent implements OnInit {
   catalogSearch = ''
   destinationWeekId = ''
   draft: EventDraft | null = null
+  showMoreOptions = false
+  private initialDraft = ''
 
   ngOnInit(): void { void this.loadWeek(); void this.loadCatalogs() }
 
@@ -142,62 +125,38 @@ export class PlanningPageComponent implements OnInit {
     finally { this.busy.set(false) }
   }
 
-  add(day: ManualDay, minute = 480, kind: 'meal' | 'sport' = 'meal'): void {
-    if (this.busy()) return
-    this.catalogSearch = ''; this.error.set(''); this.notice.set('')
-    this.draft = {
-      kind, id: '', dayId: day.id, start: timeLabel(minute), end: timeLabel(minute + 30),
-      personalPortion: 1, children: 0, source: 'recipe', recipeId: '', lines: [],
-      templateId: '', name: '', sport: 'run', intensity: 'moderate', distance: null, calories: 0,
-      replaceContent: false, hasSnapshot: true,
-    }
-    this.destinationWeekId = this.week()!.id
-    this.destinationDays.set(this.week()!.days)
-    this.focusEditor()
+  add(day: ManualDay | undefined = this.selectedDay() ?? this.week()?.days[0], minute = 480, kind: 'meal' | 'sport' = 'meal'): void {
+    if (this.busy() || !day) return
+    this.openDraft(newEventDraft(day.id, minute, kind))
   }
 
   edit(event: CalendarEvent): void {
     if (this.busy()) return
-    const value = event.value
-    this.catalogSearch = ''; this.error.set(''); this.notice.set('')
-    this.draft = {
-      kind: event.kind, id: value.id, dayId: value.dayPlanId,
-      start: value.startMinute === null ? '' : timeLabel(value.startMinute),
-      end: value.endMinute === null ? '' : timeLabel(value.endMinute),
-      personalPortion: 1, children: 0, source: 'foods', recipeId: '', lines: [],
-      templateId: '', name: value.name, sport: 'run', intensity: 'moderate', distance: null, calories: 0,
-      replaceContent: false, hasSnapshot: true,
-    }
-    this.destinationWeekId = this.week()!.id
-    this.destinationDays.set(this.week()!.days)
-    if (event.kind === 'meal') {
-      const meal = value as ManualMeal
-      Object.assign(this.draft, {
-        personalPortion: meal.personalPortion, children: meal.childrenCount,
-        source: meal.composedMealId ? 'legacy' : meal.recipeId ? 'recipe' : 'foods',
-        recipeId: meal.recipeId ?? '', hasSnapshot: meal.hasSnapshot,
-        lines: meal.lines.map(l => ({ foodItemId: l.foodItemId, quantity: l.quantity, unit: l.unit, snapshotLineId: l.id })),
-      })
-    } else {
-      const sport = value as ManualSport
-      Object.assign(this.draft, { templateId: sport.sportTemplateId ?? '', sport: sport.sport, intensity: sport.intensity, distance: sport.distanceKm, calories: sport.calories })
-    }
-    this.focusEditor()
+    this.openDraft(eventDraftFrom(event))
   }
 
-  private focusEditor(): void {
-    setTimeout(() => this.editorHeading?.nativeElement.focus(), 0)
+  isDirty(): boolean { return Boolean(this.draft && hasChanges(this.initialDraft, this.draft)) }
+
+  closeDialog(): void { this.draft = null; this.dialogError.set('') }
+
+  private openDraft(draft: EventDraft): void {
+    this.catalogSearch = ''; this.dialogError.set(''); this.notice.set('')
+    this.draft = draft
+    this.initialDraft = formSnapshot(draft)
+    this.showMoreOptions = eventDraftHasSecondaryValues(draft)
+    this.destinationWeekId = this.week()!.id
+    this.destinationDays.set(this.week()!.days)
   }
 
   async moveToWeek(id: string): Promise<void> {
     if (!this.draft || this.busy()) return
-    this.busy.set(true); this.error.set('')
+    this.busy.set(true); this.dialogError.set('')
     try {
       const week = await firstValueFrom(this.api.get<ManualWeek>(`/manual-planner/weeks/${id}`))
       this.destinationWeekId = id
       this.destinationDays.set(week.days)
       this.draft.dayId = week.days[0]!.id
-    } catch (error) { this.error.set(apiErrorMessage(error)) }
+    } catch (error) { this.dialogError.set(apiErrorMessage(error)) }
     finally { this.busy.set(false) }
   }
 
@@ -236,22 +195,10 @@ export class PlanningPageComponent implements OnInit {
   async save(): Promise<void> {
     const draft = this.draft
     if (!draft || this.busy()) return
-    const start = parseTime(draft.start)
-    const end = draft.end === '24:00' ? 1440 : parseTime(draft.end)
-    if (start === null || end === null || end <= start) {
-      this.error.set('Choisissez un début et une fin valides dans la même journée, fin après début.')
-      return
-    }
-    if (draft.kind === 'meal' && (!Number.isFinite(draft.personalPortion) || draft.personalPortion <= 0
-      || !Number.isInteger(draft.children) || draft.children < 0)) {
-      this.error.set('La portion doit être positive et le nombre d’enfants un entier non négatif.')
-      return
-    }
-    if (draft.kind === 'meal' && this.contentEditable()
-      && (draft.source === 'recipe' ? !draft.recipeId : !draft.lines.length || draft.lines.some(l => !l.foodItemId || l.quantity <= 0 || !l.unit))) {
-      this.error.set('Sélectionnez une recette, ou au moins un produit avec quantité et unité.')
-      return
-    }
+    const problem = eventDraftProblem(draft, this.contentEditable())
+    if (problem) { this.dialogError.set(problem); return }
+    const start = parseTime(draft.start)!
+    const end = draft.end === '24:00' ? 1440 : parseTime(draft.end)!
     const meal: MealPayload = {
       dayPlanId: draft.dayId, startMinute: start, endMinute: end,
       personalPortion: draft.personalPortion, childrenCount: draft.children,
@@ -264,28 +211,35 @@ export class PlanningPageComponent implements OnInit {
       intensity: draft.intensity, durationMinutes: end - start, distanceKm: draft.distance,
       calories: draft.calories, replaceContent: draft.replaceContent,
     }
-    this.busy.set(true); this.error.set(''); this.notice.set('')
+    this.busy.set(true); this.dialogError.set(''); this.notice.set('')
     let persisted = false
     try {
       const path = `/manual-planner/${draft.kind === 'meal' ? 'meals' : 'sports'}`
       await firstValueFrom(draft.id ? this.api.put(`${path}/${draft.id}`, draft.kind === 'meal' ? meal : sport)
         : this.api.post(path, draft.kind === 'meal' ? meal : sport))
       persisted = true
-      this.draft = null
+      this.closeDialog()
       await this.refresh()
-      this.notice.set('Événement enregistré.')
-    } catch (error) { this.error.set(`${persisted ? 'Événement sauvegardé, mais actualisation impossible. Réessayez la lecture. ' : ''}${apiErrorMessage(error)}`) }
+      this.notice.set(draft.id ? 'Événement enregistré.' : 'Événement créé.')
+    } catch (error) {
+      if (persisted) this.error.set(`Événement sauvegardé, mais actualisation impossible. Réessayez la lecture. ${apiErrorMessage(error)}`)
+      else this.dialogError.set(apiErrorMessage(error))
+    }
     finally { this.busy.set(false) }
   }
 
   async remove(): Promise<void> {
     const draft = this.draft
     if (!draft?.id || this.busy() || !window.confirm(`Supprimer cet événement « ${draft.name} » ?`)) return
-    this.busy.set(true); this.error.set(''); this.notice.set('')
+    this.busy.set(true); this.dialogError.set(''); this.notice.set('')
+    let removed = false
     try {
       await firstValueFrom(this.api.delete(`/manual-planner/${draft.kind === 'meal' ? 'meals' : 'sports'}/${draft.id}`))
-      this.draft = null; await this.refresh(); this.notice.set('Événement supprimé.')
-    } catch (error) { this.error.set(apiErrorMessage(error)) }
+      removed = true; this.closeDialog(); await this.refresh(); this.notice.set('Événement supprimé.')
+    } catch (error) {
+      if (removed) this.error.set(`Événement supprimé, mais actualisation impossible. Réessayez la lecture. ${apiErrorMessage(error)}`)
+      else this.dialogError.set(apiErrorMessage(error))
+    }
     finally { this.busy.set(false) }
   }
 

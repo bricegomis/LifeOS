@@ -265,3 +265,21 @@ Consequences:
 - Le coût est normalisé par rapport à l'amplitude réellement atteignable avec la bibliothèque de recettes du foyer ; en dessous de deux recettes entièrement valorisables, la dimension est déclarée non calculable.
 - Les conversions d'unités ne sont pas gérées (unité de recette vs unité d'article) et les quantités sont agrégées telles quelles ; c'est une limite connue du calcul de coût et de nutrition.
 - Une semaine vide ne reçoit pas de score global : l'API renvoie `overallScore: null` avec une limite explicite.
+
+## 2026 — Créations et modifications dans un dialogue partagé
+Context:
+L'utilisateur trouvait l'interface trop complexe : chaque page exposait en permanence un formulaire (panneau collant, éditeur inséré au-dessus du calendrier, formulaires en ligne), ce qui mélangeait consultation et saisie.
+
+Decision:
+Le frontend Angular utilise un composant unique `app-lifeos-dialog` (élément natif `<dialog>` ouvert en modal, sans nouvelle dépendance) pour toutes les créations et modifications. Les pages ne gardent qu'un bouton de création clair et leurs listes/calendrier. Le même dialogue sert à créer et à modifier un élément. Les champs secondaires sont repliés dans « Plus d'options » et ouverts automatiquement s'ils contiennent déjà une valeur. La logique de fermeture (ignorer pendant l'enregistrement, confirmer si la saisie a changé) est un module pur testé (`dialog-guard.ts`) ; la validation des événements du calendrier est extraite dans `event-draft.ts` et testée.
+
+Reasons:
+- séparer consultation et saisie rend chaque page plus lisible, surtout sur mobile ;
+- un seul composant garantit un comportement accessible homogène (titre, focus, Échap, erreurs, état d'attente) ;
+- `<dialog>` natif suffit et évite d'ajouter une bibliothèque UI.
+
+Consequences:
+- Les payloads et routes API sont inchangés ; aucune fonctionnalité n'est retirée.
+- Un dialogue ne se ferme qu'après succès ; une erreur reste affichée dans le dialogue avec la saisie conservée.
+- `tsconfig.json` autorise les imports relatifs en `.ts` pour que les modules purs restent testables avec `node --test`.
+

@@ -9,6 +9,8 @@ import {
   GroceryItemUnit,
 } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 
 type FoodEditor = {
   name: string
@@ -31,7 +33,7 @@ const emptyEditor = (): FoodEditor => ({
 @Component({
   selector: 'app-food-items-page',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, LifeosDialogComponent],
   template: `
     <section class="page-stack foods-page" aria-labelledby="foods-page-title">
       <header class="page-hero foods-hero">
@@ -39,9 +41,14 @@ const emptyEditor = (): FoodEditor => ({
           <h1 id="foods-page-title">Catalogue alimentaire</h1>
           <p>Retrouvez des aliments et leurs valeurs nutritionnelles pour planifier vos repas.</p>
         </div>
-        <div class="foods-count" aria-label="Nombre d’aliments dans le catalogue">
-          <strong>{{ items().length }}</strong>
-          <span>{{ items().length === 1 ? 'aliment' : 'aliments' }}</span>
+        <div class="foods-hero-actions">
+          <div class="foods-count" aria-label="Nombre d’aliments dans le catalogue">
+            <strong>{{ items().length }}</strong>
+            <span>{{ items().length === 1 ? 'aliment' : 'aliments' }}</span>
+          </div>
+          <button class="lifeos-button" type="button" [disabled]="busy()" (click)="openCreate()">
+            <i class="pi pi-plus" aria-hidden="true"></i> Ajouter un aliment
+          </button>
         </div>
       </header>
 
@@ -52,65 +59,7 @@ const emptyEditor = (): FoodEditor => ({
         <p class="foods-feedback foods-notice" role="status">{{ notice() }}</p>
       }
 
-      <section class="foods-layout" aria-label="Gestion du catalogue alimentaire">
-        <form class="foods-editor" (ngSubmit)="saveFood()">
-          <div class="foods-editor-heading">
-            <h2>{{ correctionOf() ? 'Corriger un aliment' : editingId() ? 'Modifier un aliment' : 'Ajouter un aliment' }}</h2>
-            <p>
-              @if (correctionOf(); as originalId) {
-                La correction sera liée à l’aliment d’origine.
-              } @else {
-                Enregistrez un aliment réutilisable et ses valeurs nutritionnelles par unité de référence.
-              }
-            </p>
-          </div>
-
-          <label class="foods-field">
-            <span>Nom</span>
-            <input name="foodName" type="text" autocomplete="off" required maxlength="180"
-              [(ngModel)]="editor.name" />
-          </label>
-          <label class="foods-field">
-            <span>Unité de référence</span>
-            <input name="referenceUnit" type="text" required maxlength="40"
-              placeholder="100 g, 1 tasse, 1 pièce" [(ngModel)]="editor.referenceUnit" />
-          </label>
-
-          <fieldset class="foods-macros">
-            <legend>Valeurs nutritionnelles par unité de référence</legend>
-            <label class="foods-field">
-              <span>Calories (kcal)</span>
-              <input name="calories" type="number" min="0" step="0.1" inputmode="decimal"
-                [(ngModel)]="editor.caloriesPerUnit" />
-            </label>
-            <label class="foods-field">
-              <span>Protéines (g)</span>
-              <input name="protein" type="number" min="0" step="0.1" inputmode="decimal"
-                [(ngModel)]="editor.proteinsPerUnit" />
-            </label>
-            <label class="foods-field">
-              <span>Glucides (g)</span>
-              <input name="carbs" type="number" min="0" step="0.1" inputmode="decimal"
-                [(ngModel)]="editor.carbsPerUnit" />
-            </label>
-            <label class="foods-field">
-              <span>Lipides (g)</span>
-              <input name="fat" type="number" min="0" step="0.1" inputmode="decimal"
-                [(ngModel)]="editor.fatsPerUnit" />
-            </label>
-          </fieldset>
-
-          <div class="foods-actions">
-            <button class="foods-primary" type="submit" [disabled]="busy()">
-              {{ busy() ? 'Enregistrement…' : correctionOf() ? 'Enregistrer la correction' : editingId() ? 'Enregistrer les modifications' : 'Ajouter l’aliment' }}
-            </button>
-            @if (editingId() || correctionOf()) {
-              <button class="foods-secondary" type="button" [disabled]="busy()" (click)="resetEditor()">Annuler</button>
-            }
-          </div>
-        </form>
-
-        <div class="foods-main-column">
+      <div class="foods-main-column">
           <section class="foods-search-block" aria-labelledby="off-search-title">
             <div class="foods-section-heading">
               <div>
@@ -150,7 +99,7 @@ const emptyEditor = (): FoodEditor => ({
             @if (searchResults().length > 0) {
               <ul class="foods-results" aria-label="Résultats de recherche Open Food Facts enregistrés">
                 @for (result of searchResults(); track result.id) {
-                  <li class="foods-result" [class.is-selected]="editingId() === result.id">
+                  <li class="foods-result">
                     <div class="foods-item-copy">
                       <h3>{{ result.name }}</h3>
                       <p>{{ result.referenceUnit }} · {{ nutritionSummary(result.nutrition) }}</p>
@@ -159,9 +108,7 @@ const emptyEditor = (): FoodEditor => ({
                       }
                     </div>
                     <button class="foods-secondary" type="button" [disabled]="busy()"
-                      (click)="editFood(result)">
-                      {{ editingId() === result.id ? 'Modification en cours' : 'Modifier' }}
-                    </button>
+                      (click)="editFood(result)">Modifier</button>
                   </li>
                 }
               </ul>
@@ -187,7 +134,7 @@ const emptyEditor = (): FoodEditor => ({
             } @else if (items().length === 0) {
               <div class="foods-empty">
                 <h3>Votre catalogue ne contient pas encore d’aliments</h3>
-                <p>Ajoutez un aliment manuellement ou recherchez-le dans Open Food Facts ci-dessus.</p>
+                <p>Ajoutez un aliment avec le bouton « Ajouter un aliment » ou recherchez-le dans Open Food Facts ci-dessus.</p>
               </div>
             } @else {
               <ul class="foods-list">
@@ -206,26 +153,6 @@ const emptyEditor = (): FoodEditor => ({
                       <p>{{ item.referenceUnit }} · {{ nutritionSummary(item.nutrition) }}</p>
                       @if (item.isArchived) { <p>Archivé — historique conservé</p> }
                       <p>Article d’achat : {{ articleName(item.articleId) }}</p>
-                      @if (!item.isArchived) {
-                        <label class="foods-field"><span>Raccord explicite aux achats</span>
-                          <select [ngModel]="articleChoice[item.id] ?? item.articleId ?? ''"
-                            (ngModelChange)="articleChoice[item.id] = $event">
-                            <option value="">Sans raccord</option>
-                            @for (article of articles(); track article.id) {
-                              <option [value]="article.id">{{ article.name }}</option>
-                            }
-                          </select>
-                        </label>
-                        <button type="button" class="foods-secondary" [disabled]="busy()" (click)="linkArticle(item)">Enregistrer le raccord</button>
-                        @if (!item.articleId) {
-                          <label class="foods-field"><span>Unité d’achat du nouvel article</span>
-                            <select [ngModel]="purchaseUnit[item.id] ?? 'unit'" (ngModelChange)="purchaseUnit[item.id] = $event">
-                              <option value="unit">À l’unité</option><option value="kilogram">Au kilogramme</option><option value="liter">Au litre</option>
-                            </select>
-                          </label>
-                          <button type="button" class="foods-secondary" [disabled]="busy()" (click)="createArticle(item)">Créer un article d’achat et le relier</button>
-                        }
-                      }
                       @if (item.offBarcode) {
                         <small>Code-barres : {{ item.offBarcode }}</small>
                       }
@@ -238,6 +165,10 @@ const emptyEditor = (): FoodEditor => ({
                         (click)="editFood(item)">Modifier</button>
                       <button class="foods-secondary" type="button" [disabled]="busy()"
                         (click)="startCorrection(item)">Corriger</button>
+                      @if (!item.isArchived) {
+                        <button class="foods-secondary" type="button" [disabled]="busy()"
+                          (click)="openPurchase(item)">Achats</button>
+                      }
                       @if (deleteConfirmationId() === item.id) {
                         <button class="foods-danger" type="button" [disabled]="busy()"
                           (click)="deleteFood(item)">Confirmer l’archivage</button>
@@ -253,9 +184,70 @@ const emptyEditor = (): FoodEditor => ({
               </ul>
             }
           </section>
-        </div>
-      </section>
+      </div>
     </section>
+
+    <app-lifeos-dialog [open]="editorOpen()" [heading]="editorHeading()"
+      [description]="correctionOf() ? 'La correction sera liée à l’aliment d’origine.' : 'Valeurs nutritionnelles par unité de référence.'"
+      formId="food-dialog-form" [submitLabel]="editingId() || correctionOf() ? 'Enregistrer' : 'Créer'"
+      [busy]="busy()" [dirty]="isEditorDirty()" [error]="dialogError()" (dismissed)="closeEditor()">
+      <form id="food-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveFood()">
+        <label class="dialog-field">
+          <span>Nom</span>
+          <input class="text-input" name="foodName" type="text" autocomplete="off" required maxlength="180" [(ngModel)]="editor.name" />
+        </label>
+        <div class="dialog-row">
+          <label class="dialog-field">
+            <span>Unité de référence</span>
+            <input class="text-input" name="referenceUnit" type="text" required maxlength="40" placeholder="100 g, 1 tasse, 1 pièce" [(ngModel)]="editor.referenceUnit" />
+          </label>
+          <label class="dialog-field">
+            <span>Calories (kcal)</span>
+            <input class="text-input" name="calories" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.caloriesPerUnit" />
+          </label>
+        </div>
+        <details class="dialog-more" [open]="showMacros">
+          <summary>Protéines, glucides, lipides</summary>
+          <div class="dialog-row">
+            <label class="dialog-field"><span>Protéines (g)</span>
+              <input class="text-input" name="protein" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.proteinsPerUnit" /></label>
+            <label class="dialog-field"><span>Glucides (g)</span>
+              <input class="text-input" name="carbs" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.carbsPerUnit" /></label>
+            <label class="dialog-field"><span>Lipides (g)</span>
+              <input class="text-input" name="fat" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.fatsPerUnit" /></label>
+          </div>
+        </details>
+      </form>
+    </app-lifeos-dialog>
+
+    <app-lifeos-dialog [open]="purchaseItem() !== null" heading="Article d’achat"
+      [description]="purchaseItem()?.name ?? ''" formId="food-purchase-form" submitLabel="Enregistrer le raccord"
+      [busy]="busy()" [dirty]="isPurchaseDirty()" [error]="dialogError()" (dismissed)="closePurchase()">
+      @if (purchaseItem(); as item) {
+        <form id="food-purchase-form" class="dialog-form" ngNativeValidate (ngSubmit)="linkArticle(item)">
+          <p class="dialog-hint">Actuellement : {{ articleName(item.articleId) }}. Les prix et achats existants sont conservés.</p>
+          <label class="dialog-field"><span>Raccord explicite aux achats</span>
+            <select class="text-input" name="articleChoice" [(ngModel)]="purchaseArticleId">
+              <option value="">Sans raccord</option>
+              @for (article of articles(); track article.id) { <option [value]="article.id">{{ article.name }}</option> }
+            </select>
+          </label>
+          @if (!item.articleId) {
+            <details class="dialog-more">
+              <summary>Aucun article ne convient ? En créer un</summary>
+              <div>
+                <label class="dialog-field"><span>Unité d’achat du nouvel article « {{ item.name }} »</span>
+                  <select class="text-input" name="purchaseUnit" [(ngModel)]="purchaseUnitChoice">
+                    <option value="unit">À l’unité</option><option value="kilogram">Au kilogramme</option><option value="liter">Au litre</option>
+                  </select>
+                </label>
+                <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="createArticle(item)">Créer l’article et le relier</button>
+              </div>
+            </details>
+          }
+        </form>
+      }
+    </app-lifeos-dialog>
   `,
   styles: [`
     :host { display: block; }
@@ -263,24 +255,20 @@ const emptyEditor = (): FoodEditor => ({
     .foods-count { display: flex; align-items: baseline; gap: 8px; padding: 12px 16px; border-radius: 999px; background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); }
     .foods-count strong { font-size: 1.3rem; }
     .foods-count span { font-size: .84rem; font-weight: 750; }
-    .foods-layout { display: grid; grid-template-columns: minmax(280px, .72fr) minmax(0, 1.6fr); align-items: start; gap: 24px; }
-    .foods-editor, .foods-search-block, .foods-catalog { display: grid; gap: 18px; min-width: 0; padding: 22px; border-radius: 22px; background: var(--lifeos-surface); box-shadow: var(--lifeos-shadow); }
-    .foods-editor { position: sticky; top: 28px; }
+    .foods-hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
+    .foods-search-block, .foods-catalog { display: grid; gap: 18px; min-width: 0; padding: 22px; border-radius: 22px; background: var(--lifeos-surface); box-shadow: var(--lifeos-shadow); }
     .foods-main-column { display: grid; gap: 22px; min-width: 0; }
-    .foods-editor-heading h2, .foods-section-heading h2, .foods-empty h3, .foods-item h3 { margin: 0; }
-    .foods-editor-heading p, .foods-section-heading p { margin: 7px 0 0; color: var(--lifeos-text-soft); font-size: .9rem; line-height: 1.5; }
+    .foods-section-heading h2, .foods-empty h3, .foods-item h3 { margin: 0; }
+    .foods-section-heading p { margin: 7px 0 0; color: var(--lifeos-text-soft); font-size: .9rem; line-height: 1.5; }
     .foods-field { display: grid; gap: 7px; min-width: 0; }
-    .foods-field > span, .foods-macros legend { color: var(--lifeos-text-soft); font-size: .82rem; font-weight: 800; }
+    .foods-field > span { color: var(--lifeos-text-soft); font-size: .82rem; font-weight: 800; }
     .foods-field input { width: 100%; min-height: 2.7rem; padding: .65rem .75rem; border: 1px solid var(--lifeos-line); border-radius: 10px; background: var(--lifeos-surface); color: var(--lifeos-text); font: inherit; }
     .foods-field input:focus-visible { outline: 3px solid rgb(53 109 79 / 28%); border-color: var(--lifeos-accent); }
-    .foods-macros { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 14px 0 0; border: 0; border-top: 1px solid var(--lifeos-line); }
-    .foods-macros legend { padding: 0 8px 0 0; }
-    .foods-actions, .foods-item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .foods-primary, .foods-secondary, .foods-danger { min-height: 40px; padding: 9px 13px; border: 1px solid var(--lifeos-line); border-radius: 10px; background: var(--lifeos-surface-soft); color: var(--lifeos-text); font: inherit; font-weight: 750; cursor: pointer; }
-    .foods-primary { border-color: var(--lifeos-accent); background: var(--lifeos-accent); color: white; }
+    .foods-item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .foods-secondary, .foods-danger { min-height: 40px; padding: 9px 13px; border: 1px solid var(--lifeos-line); border-radius: 10px; background: var(--lifeos-surface-soft); color: var(--lifeos-text); font: inherit; font-weight: 750; cursor: pointer; }
     .foods-danger { color: #8b2c20; }
-    .foods-primary:hover:not(:disabled), .foods-secondary:hover:not(:disabled), .foods-danger:hover:not(:disabled) { filter: brightness(.96); }
-    .foods-primary:focus-visible, .foods-secondary:focus-visible, .foods-danger:focus-visible { outline: 3px solid rgb(53 109 79 / 28%); outline-offset: 2px; }
+    .foods-secondary:hover:not(:disabled), .foods-danger:hover:not(:disabled) { filter: brightness(.96); }
+    .foods-secondary:focus-visible, .foods-danger:focus-visible { outline: 3px solid rgb(53 109 79 / 28%); outline-offset: 2px; }
     button:disabled { cursor: wait; opacity: .65; }
     .foods-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
     .foods-searches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -289,7 +277,6 @@ const emptyEditor = (): FoodEditor => ({
     .foods-results { gap: 8px; }
     .foods-result, .foods-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0; border-top: 1px solid var(--lifeos-line); }
     .foods-result { padding: 12px; border: 1px solid var(--lifeos-line); border-radius: 13px; }
-    .foods-result.is-selected { background: var(--lifeos-accent-soft); }
     .foods-item-copy { min-width: 0; overflow-wrap: anywhere; }
     .foods-item-copy p { margin: 5px 0 0; color: var(--lifeos-text-soft); font-size: .9rem; }
     .foods-item-copy small { display: block; margin-top: 4px; color: var(--lifeos-text-soft); }
@@ -305,11 +292,9 @@ const emptyEditor = (): FoodEditor => ({
     .foods-empty { padding: 28px 4px 8px; }
     .foods-empty p { margin: 7px 0 0; }
     .foods-empty-inline { margin: 0; font-size: .9rem; }
-    @media (max-width: 900px) {
-      .foods-layout { grid-template-columns: 1fr; }
-      .foods-editor { position: static; }
-    }
     @media (max-width: 620px) {
+      .foods-hero { flex-wrap: wrap; align-items: flex-start; }
+      .foods-hero-actions { justify-content: flex-start; }
       .foods-searches { grid-template-columns: 1fr; }
       .foods-item, .foods-result { align-items: flex-start; flex-direction: column; }
       .foods-item-actions { width: 100%; }
@@ -326,8 +311,13 @@ export class FoodItemsPageComponent {
   readonly articles = signal<ArticleDto[]>([])
   catalogSearch = ''
   showArchived = false
-  articleChoice: Record<string, string> = {}
-  purchaseUnit: Record<string, GroceryItemUnit> = {}
+  purchaseArticleId = ''
+  purchaseUnitChoice: GroceryItemUnit = 'unit'
+  readonly purchaseItem = signal<FoodItemDto | null>(null)
+  readonly editorOpen = signal(false)
+  readonly dialogError = signal('')
+  showMacros = false
+  private initialEditor = formSnapshot(emptyEditor())
   visibleItems(): FoodItemDto[] {
     return this.items().filter(i => (this.showArchived || !i.isArchived)
       && i.name.toLocaleLowerCase('fr').includes(this.catalogSearch.toLocaleLowerCase('fr')))
@@ -361,29 +351,48 @@ export class FoodItemsPageComponent {
     return this.articles().find(a => a.id === id)?.name ?? 'Non relié'
   }
 
+  openPurchase(item: FoodItemDto): void {
+    this.dialogError.set(''); this.notice.set('')
+    this.purchaseArticleId = item.articleId ?? ''
+    this.purchaseUnitChoice = 'unit'
+    this.purchaseItem.set(item)
+  }
+
+  closePurchase(): void { this.purchaseItem.set(null); this.dialogError.set('') }
+
+  isPurchaseDirty(): boolean {
+    const item = this.purchaseItem()
+    return Boolean(item && this.purchaseArticleId !== (item.articleId ?? ''))
+  }
+
   async linkArticle(item: FoodItemDto): Promise<void> {
     this.busy.set(true)
-    this.error.set('')
+    this.dialogError.set('')
     try {
       const updated = await firstValueFrom(this.api.put<FoodItemDto>(`/food-items/${item.id}/article`,
-        { articleId: (this.articleChoice[item.id] ?? item.articleId) || null }))
+        { articleId: this.purchaseArticleId || null }))
       this.items.update(items => items.map(i => i.id === item.id ? updated : i))
+      this.closePurchase()
       this.notice.set('Raccord enregistré. Les prix et achats sont conservés.')
-    } catch (error) { this.error.set(apiErrorMessage(error)) }
+    } catch (error) { this.dialogError.set(apiErrorMessage(error)) }
     finally { this.busy.set(false) }
   }
 
   async createArticle(item: FoodItemDto): Promise<void> {
+    if (this.busy()) return
     this.busy.set(true)
-    this.error.set('')
+    this.dialogError.set('')
     try {
       const article = await firstValueFrom(this.api.post<ArticleDto>('/articles',
-        { name: item.name, description: '', unit: this.purchaseUnit[item.id] ?? 'unit' }))
+        { name: item.name, description: '', unit: this.purchaseUnitChoice }))
       this.articles.update(items => [...items, article])
-      this.articleChoice[item.id] = article.id
-      await this.linkArticle(item)
-    } catch (error) { this.error.set(apiErrorMessage(error)) }
-    finally { this.busy.set(false) }
+      this.purchaseArticleId = article.id
+    } catch (error) {
+      this.dialogError.set(apiErrorMessage(error))
+      this.busy.set(false)
+      return
+    }
+    await this.linkArticle(item)
   }
 
   async loadItems(): Promise<void> {
@@ -445,27 +454,42 @@ export class FoodItemsPageComponent {
     }
   }
 
-  editFood(item: FoodItemDto): void {
-    this.editingId.set(item.id)
-    this.correctionOf.set('')
-    this.editor = this.editorFromItem(item)
-    this.notice.set('')
+  editorHeading(): string {
+    return this.correctionOf() ? 'Corriger un aliment' : this.editingId() ? 'Modifier un aliment' : 'Nouvel aliment'
   }
 
-  startCorrection(item: FoodItemDto): void {
-    this.editingId.set('')
-    this.correctionOf.set(item.id)
-    this.editor = this.editorFromItem(item)
+  openCreate(): void { this.openEditor('', '', emptyEditor()) }
+
+  editFood(item: FoodItemDto): void { this.openEditor(item.id, '', this.editorFromItem(item)) }
+
+  startCorrection(item: FoodItemDto): void { this.openEditor('', item.id, this.editorFromItem(item)) }
+
+  isEditorDirty(): boolean { return hasChanges(this.initialEditor, this.editor) }
+
+  closeEditor(): void { this.editorOpen.set(false); this.dialogError.set(''); this.resetEditor() }
+
+  private openEditor(editingId: string, correctionOf: string, editor: FoodEditor): void {
+    this.editingId.set(editingId)
+    this.correctionOf.set(correctionOf)
+    this.editor = editor
+    this.initialEditor = formSnapshot(editor)
+    this.showMacros = [editor.proteinsPerUnit, editor.carbsPerUnit, editor.fatsPerUnit].some(v => v !== null)
+    this.dialogError.set('')
     this.notice.set('')
+    this.editorOpen.set(true)
   }
 
   async saveFood(): Promise<void> {
     const request = this.toRequest()
-    if (!request.name.trim() || !request.referenceUnit.trim()) return
+    if (!request.name.trim() || !request.referenceUnit.trim()) {
+      this.dialogError.set('Indiquez un nom et une unité de référence.')
+      return
+    }
 
     this.busy.set(true)
-    this.error.set('')
+    this.dialogError.set('')
     this.notice.set('')
+    let persisted = false
     try {
       if (this.correctionOf()) {
         await firstValueFrom(this.api.post<FoodItemDto>(
@@ -480,10 +504,12 @@ export class FoodItemsPageComponent {
       } else {
         await firstValueFrom(this.api.post<FoodItemDto>('/food-items', request))
       }
-      this.resetEditor()
+      persisted = true
+      this.closeEditor()
       await this.reloadAfterMutation('Aliment enregistré dans votre catalogue.')
     } catch (error) {
-      this.error.set(apiErrorMessage(error))
+      if (persisted) this.error.set(`Aliment enregistré, mais l’actualisation a échoué. ${apiErrorMessage(error)}`)
+      else this.dialogError.set(apiErrorMessage(error))
     } finally {
       this.busy.set(false)
     }
@@ -496,7 +522,6 @@ export class FoodItemsPageComponent {
     try {
       await firstValueFrom(this.api.delete<void>(`/food-items/${item.id}`))
       this.deleteConfirmationId.set('')
-      if (this.editingId() === item.id) this.resetEditor()
       await this.reloadAfterMutation(`L’aliment « ${item.name} » a été archivé. Les événements sont conservés.`)
     } catch (error) {
       this.error.set(apiErrorMessage(error))

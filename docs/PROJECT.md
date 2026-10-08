@@ -28,6 +28,16 @@ sont refusés pour les semaines manuelles. L'API historique reste disponible.
 Voir [ADR 0004](architecture/decisions/0004-manual-planner.md) pour les limites
 de migration, la précision, les heures civiles et les snapshots.
 
+Interface de saisie : les pages restent centrées sur la consultation
+(calendrier, listes, détails). Chaque création ou modification (événement,
+séance, aliment, achats d'un aliment, magasin, article, prix, stock, recette,
+ingrédient, repas composé et ses recettes) s'ouvre dans un dialogue partagé
+`app-lifeos-dialog` (`src/frontend-angular/src/app/shared/dialog`) : champs
+essentiels d'abord, options secondaires sous « Plus d'options », focus piégé
+puis restauré, Échap avec confirmation si la saisie est modifiée, erreurs dans
+le dialogue sans fermeture, et feuille basse sur mobile. Les contrats API sont
+inchangés.
+
 Validation locale : tests domaine/API sur PostgreSQL vierge et historique,
 redémarrage logique, deux foyers, contrôles Angular et parcours navigateur
 desktop/mobile. OAuth réel et déploiement en production ne sont pas vérifiés

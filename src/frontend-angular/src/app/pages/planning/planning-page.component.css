@@ -1,22 +1,24 @@
 .manual-planner { min-width: 0; }
-.calendar-toolbar, .editor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.calendar-toolbar a { text-decoration: underline; text-underline-offset: 3px; }
+.calendar-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.planner-navigation { justify-content: flex-start; gap: 12px 20px; }
+.planner-navigation small { color: var(--lifeos-text-soft); }
+.planner-date { width: 11rem; }
+.planner-create { flex: 0 0 auto; }
 button { cursor: pointer; min-height: 44px; }
 button:disabled { opacity: .6; cursor: not-allowed; }
 button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid var(--lifeos-accent); outline-offset: 3px; }
 .calendar-error, .calendar-warning { color: #8b2c20; }
 .calendar-error { padding: 14px; border: 1px solid #b96f60; }
 .calendar-notice { color: var(--lifeos-accent-strong); }
-.event-editor { border: 1px solid var(--lifeos-accent); }
-.event-editor h2 { margin-top: 0; }
-.event-editor form { display: grid; gap: 20px; }
-.editor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
-.event-editor label { display: grid; gap: 8px; }
-.event-editor input, .event-editor select { width: 100%; }
-.editor-actions label { display: flex; align-items: center; }
-.editor-actions input { width: auto; }
-.editor-actions { border: 0; padding: 0; margin: 0; }
-.ingredient-editor { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; padding-block: 12px; border-bottom: 1px solid var(--lifeos-line); }
+.event-kind { display: inline-flex; width: fit-content; margin: 0; padding: 4px; border: 1px solid var(--lifeos-line); border-radius: 12px; background: var(--lifeos-surface-soft); }
+.event-kind label { position: relative; }
+.event-kind input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.event-kind span { display: block; min-width: 96px; padding: 8px 16px; border-radius: 9px; color: var(--lifeos-text-soft); font-weight: 750; text-align: center; }
+.event-kind input:checked + span { background: var(--lifeos-surface); color: var(--lifeos-accent-strong); box-shadow: 0 2px 6px rgb(68 55 35 / 12%); }
+.event-kind input:focus-visible + span { outline: 3px solid var(--lifeos-accent); outline-offset: 2px; }
+.event-kept { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 12px 14px; border-radius: 12px; background: var(--lifeos-surface-soft); }
+.event-kept p { margin: 0; }
+.ingredient-editor { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); align-items: end; padding-block: 12px; border-bottom: 1px solid var(--lifeos-line); }
 .danger { color: #8b2c20; }
 .day-navigation { display: flex; flex-wrap: wrap; gap: 8px; }
 .day-navigation button { border: 1px solid var(--lifeos-line); border-radius: 8px; background: var(--lifeos-surface); color: var(--lifeos-text); padding: 8px 12px; }
@@ -55,6 +57,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
   .calendar-toolbar { align-items: stretch; }
 }
 @media (max-width: 560px) {
-  .editor-grid, .ingredient-editor { grid-template-columns: 1fr; }
+  .ingredient-editor { grid-template-columns: 1fr; }
+  .page-hero { flex-wrap: wrap; align-items: flex-start; }
   .agenda-event { grid-template-columns: 1fr; }
 }
