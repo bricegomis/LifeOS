@@ -60,6 +60,8 @@ export class LifeosDialogComponent {
   readonly descriptionId = `${this.headingId}-description`
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog')
   private returnFocus: HTMLElement | null = null
+  private returnFocusSelector: string | null = null
+  private returnFocusIndex = -1
 
   constructor() {
     afterRenderEffect(() => {
@@ -114,9 +116,6 @@ export class LifeosDialogComponent {
     const field = body?.querySelector<HTMLElement>(focusableFieldSelector)
     ;(field ?? element.querySelector<HTMLElement>('.lifeos-dialog-close'))?.focus()
   }
-
-  private returnFocusSelector: string | null = null
-  private returnFocusIndex = -1
 
   private restoreFocus(): void {
     const original = this.returnFocus
