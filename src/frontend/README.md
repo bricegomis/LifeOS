@@ -68,11 +68,20 @@ The Vue Dockerfile remains available for local or parallel builds. The
 frontend from `src/frontend-angular` as `ghcr.io/bricegomis/lifeos-web`; it no longer
 publishes this Vue image.
 
-The GitHub Pages build injects the commit SHA as the UI build ID and can read the API
-build ID from `GET /api/version`. Set the repository variable `VITE_LIFEOS_API_URL` to
+The GitHub Pages build embeds its own producing run's number, ID, attempt, workflow,
+repository/server URL and commit. It reads the deployed API's metadata separately
+from `GET /api/version`. Set the repository variable `VITE_LIFEOS_API_URL` to
 the API origin (without `/api`) to enable that lookup; configure the same site's origin
 as `GITHUB_PAGES_URL` in the API deployment environment so CORS permits the request.
-The sidebar shows abbreviated UI/API IDs immediately above the signed-in user's email.
-For local development the UI reports `dev`; a local production build reports `local`.
-When building the Vue Docker image directly, pass matching
-`VITE_LIFEOS_BUILD_ID` and `VITE_LIFEOS_API_URL` build arguments.
+The sidebar shows `UI Build #123` / `API Build #456`, each linking to its exact
+GitHub Actions run and attempt. Retries include `· tentative 2`; expandable details
+retain the full commit, run ID and workflow. Pages and Docker are different workflows,
+so equal run numbers do not prove equal builds; compare the commits for source consistency.
+No latest-run lookup is performed. Local development reports `Local (développement)`;
+a local production build reports `Local`, without a fake CI number.
+
+For a Vue Docker build, pass `VITE_LIFEOS_BUILD_ID` (commit),
+`VITE_LIFEOS_BUILD_NUMBER`, `VITE_LIFEOS_RUN_ID`, `VITE_LIFEOS_RUN_ATTEMPT`,
+`VITE_LIFEOS_BUILD_REPOSITORY`, `VITE_LIFEOS_BUILD_SERVER_URL` and
+`VITE_LIFEOS_BUILD_WORKFLOW` from the workflow actually building it, plus
+`VITE_LIFEOS_API_URL`. These are build-time values, not deployment-time overrides.

@@ -3,8 +3,9 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { firstValueFrom, timeout } from 'rxjs'
 import { AuthService } from '@/app/core/auth/auth.service'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
-import type { BuildInfoDto } from '@/app/core/api/api.models'
-import { apiBaseUrl, buildId } from '@/environments/environment'
+import { parseApiBuildInfo, type BuildInfo } from '@/app/core/build-info'
+import { BuildVersionComponent } from '@/app/shared/build-version.component'
+import { apiBaseUrl, buildInfo } from '@/environments/environment'
 
 interface NavigationItem {
   path: string
@@ -16,15 +17,16 @@ interface NavigationItem {
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, BuildVersionComponent],
   templateUrl: './app-layout.component.html',
 })
 export class AppLayoutComponent implements OnInit {
   readonly auth = inject(AuthService)
   private readonly router = inject(Router)
   private readonly api = inject(LifeosApiService)
-  readonly buildId = buildId
-  readonly apiBuildId = signal(apiBaseUrl ? 'chargement…' : 'non configurée')
+  readonly buildInfo = buildInfo
+  readonly apiBuildInfo = signal<BuildInfo | null>(null)
+  readonly apiBuildStatus = signal(apiBaseUrl ? 'chargement…' : 'non configurée')
   readonly signOutError = signal('')
 
   readonly navigation: NavigationItem[] = [
@@ -34,7 +36,12 @@ export class AppLayoutComponent implements OnInit {
     { path: '/products', title: 'Produits', mobileTitle: 'Produits', icon: 'pi pi-apple' },
     { path: '/sports', title: 'Séances sportives', mobileTitle: 'Sport', icon: 'pi pi-bolt' },
     { path: '/stores', title: 'Magasins', mobileTitle: 'Magasins', icon: 'pi pi-shop' },
-    { path: '/stock', title: 'Stock et courses', mobileTitle: 'Courses', icon: 'pi pi-shopping-cart' },
+    {
+      path: '/stock',
+      title: 'Stock et courses',
+      mobileTitle: 'Courses',
+      icon: 'pi pi-shopping-cart',
+    },
     { path: '/settings', title: 'Réglages', mobileTitle: 'Réglages', icon: 'pi pi-cog' },
   ]
 
@@ -42,23 +49,16 @@ export class AppLayoutComponent implements OnInit {
     ['/', '/planning', '/products', '/recipes', '/sports'].includes(item.path),
   )
 
-  displayBuildId(value: string): string {
-    return /^[a-f0-9]{13,}$/i.test(value) ? value.slice(0, 12) : value
-  }
-
   async ngOnInit(): Promise<void> {
     if (!apiBaseUrl) return
 
     try {
       const version = await firstValueFrom(
-        this.api.get<BuildInfoDto>('/version').pipe(timeout({ first: 5000 })),
+        this.api.get<unknown>('/version').pipe(timeout({ first: 5000 })),
       )
-      if (version.component !== 'api' || !version.buildId) {
-        throw new Error('Réponse de version API invalide')
-      }
-      this.apiBuildId.set(version.buildId)
+      this.apiBuildInfo.set(parseApiBuildInfo(version))
     } catch {
-      this.apiBuildId.set('indisponible')
+      this.apiBuildStatus.set('indisponible')
     }
   }
 

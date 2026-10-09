@@ -38,3 +38,4 @@ coverage
 
 # Generated public runtime configuration
 /public/config.js
+/src/environments/build-info.generated.ts

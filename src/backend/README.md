@@ -7,14 +7,14 @@ Clean Architecture / DDD layout as recommended by Microsoft's current guidance
 API data endpoints are protected by Supabase-issued JWT authentication — the same identity
 provider already used by the frontend — and, except for the shared meal library, are
 scoped to the authenticated user (resolved from the JWT `sub` claim). The public
-`GET /api/version` endpoint exposes only the API component name and build ID for deployment
+`GET /api/version` endpoint exposes only the API component name and build provenance for deployment
 diagnostics.
 
 ## Endpoints
 
 | Area | Endpoints | Notes |
 | --- | --- | --- |
-| Build diagnostics | `GET /api/version` | Public; returns the API component name and configured build ID. |
+| Build diagnostics | `GET /api/version` | Public, no-store; returns commit and producing GitHub Actions run metadata. |
 | Manual planner | `GET/POST /api/manual-planner/weeks`, `GET /api/manual-planner/weeks/{id}`, `POST /api/manual-planner/meals`, `PUT/DELETE /api/manual-planner/meals/{id}`, equivalent `/sports` commands | Household-scoped civil times, independent empty weeks, meals/food snapshots and sports occurrence overrides. |
 | Sport catalog | `GET/POST /api/sport-templates`, `PUT/DELETE /api/sport-templates/{id}` | Household-scoped persisted templates; DELETE archives; calories are a manual total. No silent seed. |
 | Stores | `GET /api/stores` | Read-only, scoped to the caller's household. PostgreSQL-backed (EF Core). |
@@ -265,6 +265,26 @@ The `.github/workflows/build-push-docker-images.yml` workflow builds this image 
 the frontend web image) and pushes it to the GitHub Container Registry
 (`ghcr.io/bricegomis/lifeos-api`, tagged `latest`) on every push to `main`. No extra
 secrets are needed: it authenticates with the automatically provided `GITHUB_TOKEN`.
-Both images receive the same full Git commit SHA as `LIFEOS_BUILD_ID`; this value is
-served by the API and embedded in the Angular web image, so their displayed IDs match
-when they were built from the same commit. Local runs default to `local`.
+Both images receive the producing workflow's `github.run_number`, `github.run_id`,
+`github.run_attempt`, repository, server URL and workflow name, alongside the full
+commit SHA. Docker build arguments are `LIFEOS_BUILD_ID` (commit),
+`LIFEOS_BUILD_NUMBER`, `LIFEOS_RUN_ID`, `LIFEOS_RUN_ATTEMPT`,
+`LIFEOS_BUILD_REPOSITORY`, `LIFEOS_BUILD_SERVER_URL`, and `LIFEOS_BUILD_WORKFLOW`.
+The API image retains these under the corresponding `LifeOS__BuildId`,
+`LifeOS__BuildNumber`, `LifeOS__RunId`, `LifeOS__RunAttempt`, `LifeOS__Repository`,
+`LifeOS__ServerUrl`, and `LifeOS__Workflow` configuration keys. Do not replace
+them with deployment-time values or the latest run: they identify the built image.
+
+The UI displays `UI Build #123` and `API Build #123` separately, linking each to
+its exact run and attempt. A rerun displays `Build #123 · tentative 2`.
+Workflow name, run ID, attempt and full commit remain available in expandable
+details. Run numbers are scoped to a workflow, not globally unique. API and Angular
+are built together in this Docker workflow, but independently updated `latest`
+containers may temporarily differ. Vue Pages is built in a separate workflow;
+its number need not match the API even when the commits match.
+
+`GET /api/version` keeps the existing `component` and `buildId` fields and adds
+nullable string fields `buildNumber`, `runId`, `runAttempt`, `repository`,
+`serverUrl`, and `workflow`. Local builds default to `local`, with no CI number.
+An older API returning only a commit is displayed as `Build non identifié`, with
+its commit in details. Missing API configuration and request failures remain explicit.

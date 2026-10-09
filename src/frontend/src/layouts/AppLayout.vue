@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import { useAuthStore } from '@/stores/auth'
+import BuildVersion from '@/components/BuildVersion.vue'
+import { parseApiBuildInfo, type BuildInfo } from '@/utils/buildInfo'
 
 const navigationItems = [
   { to: '/', label: "Aujourd'hui", mobileLabel: 'Auj.', icon: 'pi pi-sun' },
@@ -17,10 +19,18 @@ const authStore = useAuthStore()
 const router = useRouter()
 
 const userLabel = computed(() => authStore.user?.email ?? 'Utilisateur connecté')
-const buildId = import.meta.env.VITE_LIFEOS_BUILD_ID?.trim() || (import.meta.env.DEV ? 'dev' : 'local')
+const buildInfo: BuildInfo = {
+  buildId: import.meta.env.VITE_LIFEOS_BUILD_ID?.trim() || (import.meta.env.DEV ? 'dev' : 'local'),
+  buildNumber: import.meta.env.VITE_LIFEOS_BUILD_NUMBER,
+  runId: import.meta.env.VITE_LIFEOS_RUN_ID,
+  runAttempt: import.meta.env.VITE_LIFEOS_RUN_ATTEMPT,
+  repository: import.meta.env.VITE_LIFEOS_BUILD_REPOSITORY,
+  serverUrl: import.meta.env.VITE_LIFEOS_BUILD_SERVER_URL,
+  workflow: import.meta.env.VITE_LIFEOS_BUILD_WORKFLOW,
+}
 const apiBaseUrl = import.meta.env.VITE_LIFEOS_API_URL?.trim().replace(/\/+$/, '') ?? ''
-const apiBuildId = ref(apiBaseUrl ? 'chargement…' : 'non configurée')
-const shortBuildId = (value: string) => (/^[a-f0-9]{13,}$/i.test(value) ? value.slice(0, 12) : value)
+const apiBuildInfo = ref<BuildInfo | null>(null)
+const apiBuildStatus = ref(apiBaseUrl ? 'chargement…' : 'non configurée')
 
 onMounted(async () => {
   if (!apiBaseUrl) return
@@ -29,19 +39,9 @@ onMounted(async () => {
     const response = await fetch(`${apiBaseUrl}/api/version`, { signal: AbortSignal.timeout(5000) })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const version: unknown = await response.json()
-    if (
-      typeof version !== 'object' ||
-      version === null ||
-      !('component' in version) ||
-      version.component !== 'api' ||
-      !('buildId' in version) ||
-      typeof version.buildId !== 'string'
-    ) {
-      throw new Error('Réponse de version API invalide')
-    }
-    apiBuildId.value = version.buildId
+    apiBuildInfo.value = parseApiBuildInfo(version)
   } catch {
-    apiBuildId.value = 'indisponible'
+    apiBuildStatus.value = 'indisponible'
   }
 })
 
@@ -81,8 +81,8 @@ async function handleSignOut(): Promise<void> {
 
       <div class="app-sidebar-footer">
         <div class="sidebar-build" role="group" aria-label="Versions déployées">
-          <small>UI <code :title="buildId">{{ shortBuildId(buildId) }}</code></small>
-          <small>API <code :title="apiBuildId">{{ shortBuildId(apiBuildId) }}</code></small>
+          <BuildVersion component="UI" :info="buildInfo" />
+          <BuildVersion component="API" :info="apiBuildInfo" :status="apiBuildStatus" />
         </div>
         <small class="sidebar-user">{{ userLabel }}</small>
         <Button label="Déconnexion" severity="secondary" text size="small" @click="handleSignOut" />
@@ -130,10 +130,5 @@ async function handleSignOut(): Promise<void> {
   color: var(--text-color-secondary);
   font-size: 0.72rem;
   line-height: 1.3;
-}
-
-.sidebar-build code {
-  color: var(--text-color);
-  font-size: 0.72rem;
 }
 </style>

@@ -30,3 +30,11 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+        env:
+          LIFEOS_BUILD_ID: ${{ github.sha }}
+          LIFEOS_BUILD_NUMBER: ${{ github.run_number }}
+          LIFEOS_RUN_ID: ${{ github.run_id }}
+          LIFEOS_RUN_ATTEMPT: ${{ github.run_attempt }}
+          LIFEOS_BUILD_REPOSITORY: ${{ github.repository }}
+          LIFEOS_BUILD_SERVER_URL: ${{ github.server_url }}
+          LIFEOS_BUILD_WORKFLOW: ${{ github.workflow }}
