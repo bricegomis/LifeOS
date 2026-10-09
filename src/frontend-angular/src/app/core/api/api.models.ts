@@ -66,6 +66,12 @@ export interface FoodItemDto {
   isArchived: boolean
   name: string
   referenceUnit: string
+  description: string
+  unit: GroceryItemUnit
+  purchaseUnitConfirmed: boolean
+  legacyPurchaseName: string | null
+  migrationOrigin: 'linked' | 'food-only' | 'article-only' | null
+  priceHistory: ArticlePriceEntryDto[]
   nutrition: NutritionPerUnitDto | null
   source: string
   offBarcode: string | null
@@ -77,7 +83,16 @@ export interface FoodItemDto {
 export interface FoodItemRequest {
   name: string
   referenceUnit: string
+  description: string
+  unit: GroceryItemUnit | null
   nutrition: NutritionPerUnitDto | null
+}
+
+export interface ProductUsageDto {
+  recipes: { id: string; name: string; isArchived: boolean }[]
+  stock: { quantity: number; unit: string }[]
+  mealOccurrences: number
+  historicalShoppingLines: number
 }
 
 export interface RecipeIngredientDto {

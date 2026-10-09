@@ -1,3 +1,4 @@
+using LifeOS.Domain.FoodItems;
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Domain.Articles;
 using LifeOS.Infrastructure.Persistence;
@@ -13,7 +14,7 @@ public sealed class EfArticleRepository(LifeOSDbContext dbContext) : IArticleRep
 {
     private readonly LifeOSDbContext _dbContext = dbContext;
 
-    public async Task<IReadOnlyList<GroceryItem>> GetAllForHouseholdAsync(Guid householdId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<FoodItem>> GetAllForHouseholdAsync(Guid householdId, CancellationToken cancellationToken = default)
     {
         return await _dbContext.GroceryItems
             .AsNoTracking()
@@ -21,23 +22,25 @@ public sealed class EfArticleRepository(LifeOSDbContext dbContext) : IArticleRep
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<GroceryItem?> GetByIdAsync(Guid householdId, Guid articleId, CancellationToken cancellationToken = default)
+    public async Task<FoodItem?> GetByIdAsync(Guid householdId, Guid articleId, CancellationToken cancellationToken = default)
     {
+        articleId = await _dbContext.ResolveProductIdAsync(householdId, articleId, cancellationToken);
         return await _dbContext.GroceryItems
             .FirstOrDefaultAsync(article => article.HouseholdId == householdId && article.Id == articleId, cancellationToken);
     }
 
-    public async Task AddAsync(GroceryItem article, CancellationToken cancellationToken = default)
+    public async Task AddAsync(FoodItem article, CancellationToken cancellationToken = default)
     {
         _dbContext.GroceryItems.Add(article);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public Task UpdateAsync(GroceryItem article, CancellationToken cancellationToken = default)
+    public Task UpdateAsync(FoodItem article, CancellationToken cancellationToken = default)
         => _dbContext.SaveChangesAsync(cancellationToken);
 
     public async Task<bool> DeleteAsync(Guid householdId, Guid articleId, CancellationToken cancellationToken = default)
     {
+        articleId = await _dbContext.ResolveProductIdAsync(householdId, articleId, cancellationToken);
         var article = await _dbContext.GroceryItems
             .FirstOrDefaultAsync(item => item.HouseholdId == householdId && item.Id == articleId, cancellationToken);
 
@@ -46,7 +49,7 @@ public sealed class EfArticleRepository(LifeOSDbContext dbContext) : IArticleRep
             return false;
         }
 
-        _dbContext.GroceryItems.Remove(article);
+        article.Archive();
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

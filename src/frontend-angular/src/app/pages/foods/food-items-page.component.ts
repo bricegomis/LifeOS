@@ -1,53 +1,41 @@
 import { firstValueFrom } from 'rxjs'
 import { Component, computed, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { RouterLink } from '@angular/router'
 import {
   FoodItemDto,
   FoodItemRequest,
   NutritionPerUnitDto,
-  ArticleDto,
+  StoreDto,
+  ProductUsageDto,
+  ArticlePriceEntryDto,
   GroceryItemUnit,
 } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
+import { newProductEditor, productEditorFromItem, productRequest, productDraftProblem, type ProductEditor } from './product-draft'
 
-type FoodEditor = {
-  name: string
-  referenceUnit: string
-  caloriesPerUnit: number | null
-  proteinsPerUnit: number | null
-  carbsPerUnit: number | null
-  fatsPerUnit: number | null
-}
-
-const emptyEditor = (): FoodEditor => ({
-  name: '',
-  referenceUnit: '100 g',
-  caloriesPerUnit: null,
-  proteinsPerUnit: null,
-  carbsPerUnit: null,
-  fatsPerUnit: null,
-})
+const emptyEditor = newProductEditor
 
 @Component({
   selector: 'app-food-items-page',
   standalone: true,
-  imports: [FormsModule, LifeosDialogComponent],
+  imports: [FormsModule, RouterLink, LifeosDialogComponent],
   template: `
     <section class="page-stack foods-page" aria-labelledby="foods-page-title">
       <header class="page-hero foods-hero">
         <div>
-          <h1 id="foods-page-title">Catalogue alimentaire</h1>
-          <p>Retrouvez des aliments et leurs valeurs nutritionnelles pour planifier vos repas.</p>
+          <h1 id="foods-page-title">Produits</h1>
+          <p>Une seule fiche pour la nutrition, les achats et les prix par magasin. Les produits sans nutrition ont aussi leur place ici.</p>
         </div>
         <div class="foods-hero-actions">
-          <div class="foods-count" aria-label="Nombre d’aliments dans le catalogue">
+          <div class="foods-count" aria-label="Nombre de produits dans le catalogue">
             <strong>{{ items().length }}</strong>
-            <span>{{ items().length === 1 ? 'aliment' : 'aliments' }}</span>
+            <span>{{ items().length === 1 ? 'produit' : 'produits' }}</span>
           </div>
           <button class="lifeos-button" type="button" [disabled]="busy()" (click)="openCreate()">
-            <i class="pi pi-plus" aria-hidden="true"></i> Ajouter un aliment
+            <i class="pi pi-plus" aria-hidden="true"></i> Nouveau produit
           </button>
         </div>
       </header>
@@ -68,8 +56,8 @@ const emptyEditor = (): FoodEditor => ({
               </div>
             </div>
             <p class="foods-search-notice" role="note">
-              Une recherche dans Open Food Facts peut ajouter automatiquement un aliment au catalogue de votre foyer.
-              Les résultats sont déjà enregistrés : sélectionnez-en un pour modifier ses informations.
+              Une recherche dans Open Food Facts peut ajouter automatiquement un produit au catalogue de votre foyer.
+              Les résultats sont déjà enregistrés : ouvrez leur fiche pour préciser l’unité d’achat. Aucune conversion par nom ou par marque.
             </p>
             <div class="foods-searches">
               <form class="foods-search-form" (ngSubmit)="searchByName()">
@@ -118,8 +106,8 @@ const emptyEditor = (): FoodEditor => ({
           <section class="foods-catalog" aria-labelledby="catalog-heading">
             <div class="foods-section-heading">
               <div>
-                <h2 id="catalog-heading">Vos aliments</h2>
-                <p>Les aliments disponibles pour la planification de vos repas.</p>
+                <h2 id="catalog-heading">Vos produits</h2>
+                <p>Nutrition et achats partagent la même identité.</p>
               </div>
               <label class="foods-field"><span>Filtrer vos produits</span>
                 <input type="search" [(ngModel)]="catalogSearch" placeholder="Nom du produit" />
@@ -130,11 +118,11 @@ const emptyEditor = (): FoodEditor => ({
               </button>
             </div>
             @if (loading() && items().length === 0) {
-              <p class="foods-empty-inline" role="status">Chargement du catalogue alimentaire…</p>
+              <p class="foods-empty-inline" role="status">Chargement des produits…</p>
             } @else if (items().length === 0) {
               <div class="foods-empty">
-                <h3>Votre catalogue ne contient pas encore d’aliments</h3>
-                <p>Ajoutez un aliment avec le bouton « Ajouter un aliment » ou recherchez-le dans Open Food Facts ci-dessus.</p>
+                <h3>Votre catalogue ne contient pas encore de produits</h3>
+                <p>Créez un produit ou recherchez-le dans Open Food Facts ci-dessus.</p>
               </div>
             } @else {
               <ul class="foods-list">
@@ -150,9 +138,13 @@ const emptyEditor = (): FoodEditor => ({
                           <span class="foods-correction">Correction</span>
                         }
                       </div>
-                      <p>{{ item.referenceUnit }} · {{ nutritionSummary(item.nutrition) }}</p>
+                      <p>Nutrition@if (item.referenceUnit) { / {{ item.referenceUnit }} } : {{ nutritionSummary(item.nutrition) }}</p>
                       @if (item.isArchived) { <p>Archivé — historique conservé</p> }
-                      <p>Article d’achat : {{ articleName(item.articleId) }}</p>
+                      <p>Achats : {{ item.purchaseUnitConfirmed ? unitLabel(item.unit) : 'unité à préciser' }} · {{ item.priceHistory.length }} prix relevé(s)</p>
+                      @if (item.legacyPurchaseName) { <small>Ancien nom d’achat conservé : {{ item.legacyPurchaseName }}</small> }
+                      @if (item.migrationOrigin === 'food-only' || item.migrationOrigin === 'article-only') {
+                        <small>Entrée historique sans association : conservée séparément, jamais fusionnée par nom.</small>
+                      }
                       @if (item.offBarcode) {
                         <small>Code-barres : {{ item.offBarcode }}</small>
                       }
@@ -165,10 +157,6 @@ const emptyEditor = (): FoodEditor => ({
                         (click)="editFood(item)">Modifier</button>
                       <button class="foods-secondary" type="button" [disabled]="busy()"
                         (click)="startCorrection(item)">Corriger</button>
-                      @if (!item.isArchived) {
-                        <button class="foods-secondary" type="button" [disabled]="busy()"
-                          (click)="openPurchase(item)">Achats</button>
-                      }
                       @if (deleteConfirmationId() === item.id) {
                         <button class="foods-danger" type="button" [disabled]="busy()"
                           (click)="deleteFood(item)">Confirmer l’archivage</button>
@@ -188,7 +176,7 @@ const emptyEditor = (): FoodEditor => ({
     </section>
 
     <app-lifeos-dialog [open]="editorOpen()" [heading]="editorHeading()"
-      [description]="correctionOf() ? 'La correction sera liée à l’aliment d’origine.' : 'Valeurs nutritionnelles par unité de référence.'"
+      [description]="correctionOf() ? 'Nouveau produit corrigé, lié à l’original. Ses anciens prix restent sur l’original.' : 'Informations générales, nutrition facultative et achats du même produit.'"
       formId="food-dialog-form" [submitLabel]="editingId() || correctionOf() ? 'Enregistrer' : 'Créer'"
       [busy]="busy()" [dirty]="isEditorDirty()" [error]="dialogError()" (dismissed)="closeEditor()">
       <form id="food-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveFood()">
@@ -196,10 +184,16 @@ const emptyEditor = (): FoodEditor => ({
           <span>Nom</span>
           <input class="text-input" name="foodName" type="text" autocomplete="off" required maxlength="180" [(ngModel)]="editor.name" />
         </label>
+        <label class="dialog-field">
+          <span>Description (facultatif)</span>
+          <textarea class="text-input" name="description" rows="2" maxlength="1000" [(ngModel)]="editor.description"></textarea>
+        </label>
+        <h2 class="product-section-title">Nutrition</h2>
+        <p class="dialog-hint">Laissez les valeurs vides pour un produit sans nutrition. L’unité décrit exactement la quantité de ces valeurs, pas l’unité d’achat.</p>
         <div class="dialog-row">
           <label class="dialog-field">
-            <span>Unité de référence</span>
-            <input class="text-input" name="referenceUnit" type="text" required maxlength="40" placeholder="100 g, 1 tasse, 1 pièce" [(ngModel)]="editor.referenceUnit" />
+            <span>Quantité de référence nutritionnelle</span>
+            <input class="text-input" name="referenceUnit" type="text" maxlength="50" placeholder="100 g, 100 ml, 1 pièce" [(ngModel)]="editor.referenceUnit" />
           </label>
           <label class="dialog-field">
             <span>Calories (kcal)</span>
@@ -217,40 +211,75 @@ const emptyEditor = (): FoodEditor => ({
               <input class="text-input" name="fat" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.fatsPerUnit" /></label>
           </div>
         </details>
+        <h2 class="product-section-title">Achats</h2>
+        <label class="dialog-field">
+          <span>Unité d’achat et de prix</span>
+          <select class="text-input" name="purchaseUnit" required [(ngModel)]="editor.unit"
+            [disabled]="(currentProduct()?.priceHistory?.length ?? 0) > 0">
+            <option value="" disabled>À préciser</option>
+            <option value="unit">À l’unité</option><option value="kilogram">Au kilogramme</option><option value="liter">Au litre</option>
+          </select>
+        </label>
+        <p class="dialog-hint">Aucune conversion entre pièces, masse et volume. L’unité d’achat est figée après le premier prix pour ne pas réinterpréter l’historique.</p>
       </form>
-    </app-lifeos-dialog>
-
-    <app-lifeos-dialog [open]="purchaseItem() !== null" heading="Article d’achat"
-      [description]="purchaseItem()?.name ?? ''" formId="food-purchase-form" submitLabel="Enregistrer le raccord"
-      [busy]="busy()" [dirty]="isPurchaseDirty()" [error]="dialogError()" (dismissed)="closePurchase()">
-      @if (purchaseItem(); as item) {
-        <form id="food-purchase-form" class="dialog-form" ngNativeValidate (ngSubmit)="linkArticle(item)">
-          <p class="dialog-hint">Actuellement : {{ articleName(item.articleId) }}. Les prix et achats existants sont conservés.</p>
-          <label class="dialog-field"><span>Raccord explicite aux achats</span>
-            <select class="text-input" name="articleChoice" [(ngModel)]="purchaseArticleId">
-              <option value="">Sans raccord</option>
-              @for (article of articles(); track article.id) { <option [value]="article.id">{{ article.name }}</option> }
-            </select>
-          </label>
-          @if (!item.articleId) {
-            <details class="dialog-more">
-              <summary>Aucun article ne convient ? En créer un</summary>
-              <div>
-                <label class="dialog-field"><span>Unité d’achat du nouvel article « {{ item.name }} »</span>
-                  <select class="text-input" name="purchaseUnit" [(ngModel)]="purchaseUnitChoice">
-                    <option value="unit">À l’unité</option><option value="kilogram">Au kilogramme</option><option value="liter">Au litre</option>
-                  </select>
-                </label>
-                <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="createArticle(item)">Créer l’article et le relier</button>
+      <section class="product-prices" aria-labelledby="product-prices-title">
+        <h2 id="product-prices-title" class="product-section-title">Prix par magasin</h2>
+        @if (priceNotice()) { <p class="dialog-hint" role="status">{{ priceNotice() }}</p> }
+        @if (currentProduct(); as product) {
+          @if (product.priceHistory.length === 0) { <p class="dialog-hint">Aucun prix relevé.</p> }
+          <ul class="foods-list">
+            @for (entry of product.priceHistory; track entry.id) {
+              <li class="foods-item">
+                <span>{{ storeLabel(entry.storeId) }} · {{ formatNumber(entry.price) }} € / {{ unitLabel(product.unit) }} · {{ formatDate(entry.observedAt) }}</span>
+                <button type="button" class="foods-danger" [disabled]="busy()"
+                  [attr.aria-label]="'Supprimer le relevé de ' + storeLabel(entry.storeId)"
+                  (click)="removePrice(product, entry)">Supprimer le relevé</button>
+              </li>
+            }
+          </ul>
+          @if (!product.isArchived && product.purchaseUnitConfirmed) {
+            <form class="dialog-form" ngNativeValidate (ngSubmit)="addPrice(product)">
+              <label class="dialog-field"><span>Magasin</span>
+                <select class="text-input" name="priceStore" required [(ngModel)]="priceDraft.storeId">
+                  <option value="" disabled>Choisir un magasin</option>
+                  @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
+                </select>
+              </label>
+              <div class="dialog-row">
+                <label class="dialog-field"><span>Prix (€ / {{ unitLabel(product.unit) }})</span>
+                  <input class="text-input" name="priceAmount" type="number" min="0" max="99999999.99" step="0.01" required [(ngModel)]="priceDraft.amount" /></label>
+                <label class="dialog-field"><span>Relevé le</span>
+                  <input class="text-input" name="priceDate" type="date" required [(ngModel)]="priceDraft.observedAt" /></label>
               </div>
-            </details>
+              <button class="lifeos-button lifeos-button-secondary" type="submit" [disabled]="busy() || !stores().length || hasUnsavedProductChanges()">Ajouter ce prix</button>
+              @if (hasUnsavedProductChanges()) { <p class="dialog-hint">Enregistrez les modifications de la fiche avant de relever un prix.</p> }
+              @if (!stores().length) { <p class="dialog-hint">Créez d’abord un <a routerLink="/stores">magasin</a>.</p> }
+            </form>
+          } @else if (!product.purchaseUnitConfirmed) {
+            <p class="dialog-hint">Enregistrez une unité d’achat pour relever un prix.</p>
           }
-        </form>
+        } @else { <p class="dialog-hint">Enregistrez le produit pour commencer son historique de prix. Aucun article séparé à créer.</p> }
+      </section>
+      @if (currentProduct()) {
+        <section class="product-prices" aria-labelledby="product-usage-title">
+          <h2 id="product-usage-title" class="product-section-title">Usages et historique</h2>
+          @if (usageLoading()) { <p class="dialog-hint" role="status">Chargement des usages…</p> }
+          @if (usageError()) { <p class="foods-error" role="alert">{{ usageError() }}</p> }
+          @if (usage(); as value) {
+            <p class="dialog-hint">{{ value.mealOccurrences }} événement(s) figé(s) · {{ value.historicalShoppingLines }} ligne(s) de courses historique(s).
+              Modifier cette fiche ne réécrit pas les événements.</p>
+            <p><a routerLink="/recipes">{{ value.recipes.length }} recette(s)</a> · <a routerLink="/stock">Stock et courses</a> · <a routerLink="/planning">Semainier</a></p>
+            @for (recipe of value.recipes; track recipe.id) { <p>{{ recipe.name }}{{ recipe.isArchived ? ' (archivée)' : '' }}</p> }
+            @for (stock of value.stock; track $index) { <p>Stock disponible : {{ formatNumber(stock.quantity) }} {{ stock.unit }}</p> }
+          }
+        </section>
       }
     </app-lifeos-dialog>
   `,
   styles: [`
     :host { display: block; }
+    .product-section-title { margin: 12px 0 0; font-size: 1.05rem; }
+    .product-prices { display: grid; gap: 14px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--lifeos-line); }
     .foods-page { --food-line: var(--lifeos-line); }
     .foods-count { display: flex; align-items: baseline; gap: 8px; padding: 12px 16px; border-radius: 999px; background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); }
     .foods-count strong { font-size: 1.3rem; }
@@ -270,7 +299,7 @@ const emptyEditor = (): FoodEditor => ({
     .foods-secondary:hover:not(:disabled), .foods-danger:hover:not(:disabled) { filter: brightness(.96); }
     .foods-secondary:focus-visible, .foods-danger:focus-visible { outline: 3px solid rgb(53 109 79 / 28%); outline-offset: 2px; }
     button:disabled { cursor: wait; opacity: .65; }
-    .foods-section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .foods-section-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px; }
     .foods-searches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
     .foods-search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
     .foods-results, .foods-list { display: grid; margin: 0; padding: 0; list-style: none; }
@@ -308,12 +337,16 @@ export class FoodItemsPageComponent {
   private readonly api = inject(LifeosApiService)
 
   readonly items = signal<FoodItemDto[]>([])
-  readonly articles = signal<ArticleDto[]>([])
+  readonly stores = signal<StoreDto[]>([])
   catalogSearch = ''
   showArchived = false
-  purchaseArticleId = ''
-  purchaseUnitChoice: GroceryItemUnit = 'unit'
-  readonly purchaseItem = signal<FoodItemDto | null>(null)
+  readonly currentProduct = signal<FoodItemDto | null>(null)
+  readonly usage = signal<ProductUsageDto | null>(null)
+  readonly usageLoading = signal(false)
+  readonly usageError = signal('')
+  priceDraft: { storeId: string; amount: number | null; observedAt: string } = { storeId: '', amount: null, observedAt: this.today() }
+  readonly priceNotice = signal('')
+  private initialPriceDraft = formSnapshot(this.priceDraft)
   readonly editorOpen = signal(false)
   readonly dialogError = signal('')
   showMacros = false
@@ -341,64 +374,82 @@ export class FoodItemsPageComponent {
 
   constructor() {
     void this.loadItems()
-    this.api.get<ArticleDto[]>('/articles').subscribe({
-      next: articles => this.articles.set(articles),
+    this.api.get<StoreDto[]>('/stores').subscribe({
+      next: stores => this.stores.set(stores),
       error: (error: unknown) => this.error.set(apiErrorMessage(error)),
     })
   }
 
-  articleName(id: string | null): string {
-    return this.articles().find(a => a.id === id)?.name ?? 'Non relié'
-  }
-
-  openPurchase(item: FoodItemDto): void {
-    this.dialogError.set(''); this.notice.set('')
-    this.purchaseArticleId = item.articleId ?? ''
-    this.purchaseUnitChoice = 'unit'
-    this.purchaseItem.set(item)
-  }
-
-  closePurchase(): void { this.purchaseItem.set(null); this.dialogError.set('') }
-
-  isPurchaseDirty(): boolean {
-    const item = this.purchaseItem()
-    return Boolean(item && this.purchaseArticleId !== (item.articleId ?? ''))
-  }
-
-  async linkArticle(item: FoodItemDto): Promise<void> {
+  async addPrice(item: FoodItemDto): Promise<void> {
+    if (this.busy()) return
+    if (this.hasUnsavedProductChanges()) {
+      this.dialogError.set('Enregistrez la fiche avant de relever un prix.')
+      return
+    }
+    if (!this.priceDraft.storeId || this.priceDraft.amount === null || !Number.isFinite(this.priceDraft.amount)
+      || this.priceDraft.amount < 0 || !this.priceDraft.observedAt) {
+      this.dialogError.set('Choisissez un magasin, une date et un prix positif ou nul.')
+      return
+    }
     this.busy.set(true)
     this.dialogError.set('')
+    this.priceNotice.set('')
+    let persisted = false
     try {
-      const updated = await firstValueFrom(this.api.put<FoodItemDto>(`/food-items/${item.id}/article`,
-        { articleId: this.purchaseArticleId || null }))
-      this.items.update(items => items.map(i => i.id === item.id ? updated : i))
-      this.closePurchase()
-      this.notice.set('Raccord enregistré. Les prix et achats sont conservés.')
-    } catch (error) { this.dialogError.set(apiErrorMessage(error)) }
+      await firstValueFrom(this.api.post(`/products/${item.id}/price-entries`, {
+        storeId: this.priceDraft.storeId, price: this.priceDraft.amount,
+        observedAt: new Date(`${this.priceDraft.observedAt}T12:00:00`).toISOString(),
+      }))
+      persisted = true
+      this.priceDraft = { storeId: this.priceDraft.storeId, amount: null, observedAt: this.today() }
+      this.initialPriceDraft = formSnapshot(this.priceDraft)
+      await this.refreshProduct(item.id)
+      this.priceNotice.set('Prix ajouté à l’historique.')
+    } catch (error) {
+      this.dialogError.set(`${persisted ? 'Prix ajouté, mais l’actualisation a échoué. ' : ''}${apiErrorMessage(error)}`)
+    } finally { this.busy.set(false) }
+  }
+
+  async removePrice(item: FoodItemDto, entry: ArticlePriceEntryDto): Promise<void> {
+    this.busy.set(true)
+    this.dialogError.set('')
+    this.priceNotice.set('')
+    let persisted = false
+    try {
+      await firstValueFrom(this.api.delete(`/products/${item.id}/price-entries/${entry.id}`))
+      persisted = true
+      await this.refreshProduct(item.id)
+      this.priceNotice.set('Relevé supprimé.')
+    } catch (error) { this.dialogError.set(`${persisted ? 'Relevé supprimé, mais l’actualisation a échoué. ' : ''}${apiErrorMessage(error)}`) }
     finally { this.busy.set(false) }
   }
 
-  async createArticle(item: FoodItemDto): Promise<void> {
-    if (this.busy()) return
-    this.busy.set(true)
-    this.dialogError.set('')
-    try {
-      const article = await firstValueFrom(this.api.post<ArticleDto>('/articles',
-        { name: item.name, description: '', unit: this.purchaseUnitChoice }))
-      this.articles.update(items => [...items, article])
-      this.purchaseArticleId = article.id
-    } catch (error) {
-      this.dialogError.set(apiErrorMessage(error))
-      this.busy.set(false)
-      return
-    }
-    await this.linkArticle(item)
+  private async refreshProduct(id: string): Promise<void> {
+    const product = await firstValueFrom(this.api.get<FoodItemDto>(`/products/${id}`))
+    this.currentProduct.set(product)
+    this.items.update(items => items.map(item => item.id === id ? product : item))
+    this.searchResults.update(items => items.map(item => item.id === id ? product : item))
+  }
+
+  unitLabel(unit: GroceryItemUnit): string {
+    return unit === 'kilogram' ? 'kg' : unit === 'liter' ? 'L' : 'unité'
+  }
+
+  storeLabel(id: string): string {
+    return this.stores().find(store => store.id === id)?.name ?? `Magasin historique (${id})`
+  }
+
+  formatDate(value: string): string { return new Date(value).toLocaleDateString('fr-FR') }
+
+  private today(): string {
+    const date = new Date()
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   }
 
   async loadItems(): Promise<void> {
     this.loading.set(true)
     try {
-      this.items.set(await firstValueFrom(this.api.get<FoodItemDto[]>('/food-items')))
+      this.items.set(await firstValueFrom(this.api.get<FoodItemDto[]>('/products')))
       this.error.set('')
     } catch (error) {
       this.error.set(apiErrorMessage(error))
@@ -418,9 +469,10 @@ export class FoodItemsPageComponent {
     this.searchResults.set([])
     try {
       this.searchResults.set(await firstValueFrom(
-        this.api.get<FoodItemDto[]>('/food-items/search-off', { name }),
+        this.api.get<FoodItemDto[]>('/products/search-off', { name }),
       ))
       this.searched.set(true)
+      await this.loadItems()
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {
@@ -440,10 +492,11 @@ export class FoodItemsPageComponent {
     this.searchResults.set([])
     try {
       const result = await firstValueFrom(
-        this.api.get<FoodItemDto>('/food-items/search-off-barcode', { barcode }),
+        this.api.get<FoodItemDto>('/products/search-off-barcode', { barcode }),
       )
       this.searchResults.set([result])
       this.searched.set(true)
+      await this.loadItems()
     } catch (error) {
       this.searchResults.set([])
       this.error.set(apiErrorMessage(error))
@@ -455,23 +508,45 @@ export class FoodItemsPageComponent {
   }
 
   editorHeading(): string {
-    return this.correctionOf() ? 'Corriger un aliment' : this.editingId() ? 'Modifier un aliment' : 'Nouvel aliment'
+    return this.correctionOf() ? 'Créer un produit corrigé' : this.editingId() ? 'Fiche produit' : 'Nouveau produit'
   }
 
-  openCreate(): void { this.openEditor('', '', emptyEditor()) }
+  openCreate(): void { this.currentProduct.set(null); this.openEditor('', '', emptyEditor()) }
 
-  editFood(item: FoodItemDto): void { this.openEditor(item.id, '', this.editorFromItem(item)) }
+  editFood(item: FoodItemDto): void {
+    this.currentProduct.set(item)
+    this.openEditor(item.id, '', this.editorFromItem(item))
+    void this.loadUsage(item.id)
+  }
 
-  startCorrection(item: FoodItemDto): void { this.openEditor('', item.id, this.editorFromItem(item)) }
+  private async loadUsage(id: string): Promise<void> {
+    this.usage.set(null)
+    this.usageError.set('')
+    this.usageLoading.set(true)
+    try {
+      const usage = await firstValueFrom(this.api.get<ProductUsageDto>(`/products/${id}/usage`))
+      if (this.currentProduct()?.id === id) this.usage.set(usage)
+    } catch (error) {
+      if (this.currentProduct()?.id === id) this.usageError.set(apiErrorMessage(error))
+    } finally {
+      if (this.currentProduct()?.id === id) this.usageLoading.set(false)
+    }
+  }
 
-  isEditorDirty(): boolean { return hasChanges(this.initialEditor, this.editor) }
+  startCorrection(item: FoodItemDto): void { this.currentProduct.set(null); this.openEditor('', item.id, this.editorFromItem(item)) }
+
+  hasUnsavedProductChanges(): boolean { return hasChanges(this.initialEditor, this.editor) }
+  isEditorDirty(): boolean { return this.hasUnsavedProductChanges() || hasChanges(this.initialPriceDraft, this.priceDraft) }
 
   closeEditor(): void { this.editorOpen.set(false); this.dialogError.set(''); this.resetEditor() }
 
-  private openEditor(editingId: string, correctionOf: string, editor: FoodEditor): void {
+  private openEditor(editingId: string, correctionOf: string, editor: ProductEditor): void {
     this.editingId.set(editingId)
     this.correctionOf.set(correctionOf)
     this.editor = editor
+    this.priceDraft = { storeId: '', amount: null, observedAt: this.today() }
+    this.initialPriceDraft = formSnapshot(this.priceDraft)
+    this.priceNotice.set('')
     this.initialEditor = formSnapshot(editor)
     this.showMacros = [editor.proteinsPerUnit, editor.carbsPerUnit, editor.fatsPerUnit].some(v => v !== null)
     this.dialogError.set('')
@@ -481,8 +556,9 @@ export class FoodItemsPageComponent {
 
   async saveFood(): Promise<void> {
     const request = this.toRequest()
-    if (!request.name.trim() || !request.referenceUnit.trim()) {
-      this.dialogError.set('Indiquez un nom et une unité de référence.')
+    const problem = productDraftProblem(request)
+    if (problem) {
+      this.dialogError.set(problem)
       return
     }
 
@@ -491,24 +567,30 @@ export class FoodItemsPageComponent {
     this.notice.set('')
     let persisted = false
     try {
+      let saved: FoodItemDto
       if (this.correctionOf()) {
-        await firstValueFrom(this.api.post<FoodItemDto>(
-          `/food-items/${this.correctionOf()}/correction`,
+        saved = await firstValueFrom(this.api.post<FoodItemDto>(
+          `/products/${this.correctionOf()}/correction`,
           request,
         ))
       } else if (this.editingId()) {
-        await firstValueFrom(this.api.put<FoodItemDto>(
-          `/food-items/${this.editingId()}`,
+        saved = await firstValueFrom(this.api.put<FoodItemDto>(
+          `/products/${this.editingId()}`,
           request,
         ))
       } else {
-        await firstValueFrom(this.api.post<FoodItemDto>('/food-items', request))
+        saved = await firstValueFrom(this.api.post<FoodItemDto>('/products', request))
       }
       persisted = true
-      this.closeEditor()
-      await this.reloadAfterMutation('Aliment enregistré dans votre catalogue.')
+      this.currentProduct.set(saved)
+      this.editingId.set(saved.id)
+      this.correctionOf.set('')
+      this.editor = this.editorFromItem(saved)
+      this.initialEditor = formSnapshot(this.editor)
+      void this.loadUsage(saved.id)
+      await this.reloadAfterMutation('Produit enregistré. Nutrition et achats réunis ; vous pouvez relever ses prix dans cette fiche.')
     } catch (error) {
-      if (persisted) this.error.set(`Aliment enregistré, mais l’actualisation a échoué. ${apiErrorMessage(error)}`)
+      if (persisted) this.error.set(`Produit enregistré, mais l’actualisation a échoué. ${apiErrorMessage(error)}`)
       else this.dialogError.set(apiErrorMessage(error))
     } finally {
       this.busy.set(false)
@@ -520,9 +602,9 @@ export class FoodItemsPageComponent {
     this.error.set('')
     this.notice.set('')
     try {
-      await firstValueFrom(this.api.delete<void>(`/food-items/${item.id}`))
+      await firstValueFrom(this.api.delete<void>(`/products/${item.id}`))
       this.deleteConfirmationId.set('')
-      await this.reloadAfterMutation(`L’aliment « ${item.name} » a été archivé. Les événements sont conservés.`)
+      await this.reloadAfterMutation(`Le produit « ${item.name} » a été archivé. Les prix et événements sont conservés.`)
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {
@@ -559,44 +641,18 @@ export class FoodItemsPageComponent {
     return item.source
   }
 
-  private editorFromItem(item: FoodItemDto): FoodEditor {
-    return {
-      name: item.name,
-      referenceUnit: item.referenceUnit,
-      caloriesPerUnit: item.nutrition?.caloriesPerUnit ?? null,
-      proteinsPerUnit: item.nutrition?.proteinsPerUnit ?? null,
-      carbsPerUnit: item.nutrition?.carbsPerUnit ?? null,
-      fatsPerUnit: item.nutrition?.fatsPerUnit ?? null,
-    }
-  }
+  private editorFromItem(item: FoodItemDto): ProductEditor { return productEditorFromItem(item) }
 
-  private formatNumber(value: number): string {
-    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value)
+  formatNumber(value: number): string {
+    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value)
   }
 
   private toRequest(): FoodItemRequest {
-    const macroValues = [
-      this.editor.caloriesPerUnit,
-      this.editor.proteinsPerUnit,
-      this.editor.carbsPerUnit,
-      this.editor.fatsPerUnit,
-    ]
-    const hasNutrition = macroValues.some((value) => value !== null && value !== undefined)
-    const nutrition = hasNutrition ? {
-      caloriesPerUnit: this.editor.caloriesPerUnit,
-      proteinsPerUnit: this.editor.proteinsPerUnit,
-      carbsPerUnit: this.editor.carbsPerUnit,
-      fatsPerUnit: this.editor.fatsPerUnit,
-    } : null
-    return {
-      name: this.editor.name.trim(),
-      referenceUnit: this.editor.referenceUnit.trim(),
-      nutrition,
-    }
+    return productRequest(this.editor)
   }
 
   private async reloadAfterMutation(message: string): Promise<void> {
-    this.items.set(await firstValueFrom(this.api.get<FoodItemDto[]>('/food-items')))
+    this.items.set(await firstValueFrom(this.api.get<FoodItemDto[]>('/products')))
     this.error.set('')
     this.notice.set(message)
   }

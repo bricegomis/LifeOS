@@ -1,3 +1,4 @@
+using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Recipes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -26,8 +27,8 @@ internal sealed class RecipeIngredientConfiguration : IEntityTypeConfiguration<R
             .HasForeignKey(ingredient => ingredient.RecipeId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // FK to GroceryItem (food_item)
-        builder.HasOne<LifeOS.Domain.Articles.GroceryItem>()
+        // FK to FoodItem (food_item)
+        builder.HasOne<LifeOS.Domain.FoodItems.FoodItem>()
             .WithMany()
             .HasForeignKey(ingredient => ingredient.FoodItemId)
             .OnDelete(DeleteBehavior.Restrict);

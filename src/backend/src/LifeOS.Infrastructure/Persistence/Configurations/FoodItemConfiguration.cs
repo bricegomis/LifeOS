@@ -12,11 +12,23 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
 {
     public void Configure(EntityTypeBuilder<FoodItem> builder)
     {
-        builder.ToTable("food_items");
+        builder.ToTable("products");
         builder.Property(f => f.IsArchived).HasDefaultValue(false);
-        builder.HasOne<LifeOS.Domain.Articles.GroceryItem>().WithMany()
-            .HasForeignKey(f => f.ArticleId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasIndex(f => f.ArticleId).IsUnique();
+        builder.Ignore(f => f.ArticleId);
+        builder.Property(f => f.Description).HasMaxLength(1000).IsRequired();
+        builder.Property(f => f.Unit).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(f => f.LegacyPurchaseName).HasMaxLength(500);
+        builder.Property(f => f.MigrationOrigin).HasMaxLength(20);
+        builder.OwnsMany(f => f.PriceHistory, price =>
+        {
+            price.ToTable("article_price_entries");
+            price.WithOwner().HasForeignKey("ArticleId");
+            price.HasKey(e => e.Id);
+            price.Property(e => e.Id).ValueGeneratedNever();
+            price.Property(e => e.Price).HasPrecision(10, 2).IsRequired();
+            price.HasIndex("ArticleId");
+        });
+        builder.Metadata.FindNavigation(nameof(FoodItem.PriceHistory))!.SetPropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasKey(f => f.Id);
 

@@ -132,13 +132,9 @@ public sealed class ManualPlannerTests(PostgresContainerFixture postgres)
         await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
         using var client = factory.CreateClient().AsUser(Guid.NewGuid());
         var food = await Food(client);
-        var article = await Post<System.Text.Json.JsonElement>(client, "/api/articles",
-            new { name = "Riz acheté", description = "", unit = "kilogram" });
-        var articleId = article.GetProperty("id").GetGuid();
-        (await client.PutAsJsonAsync($"/api/food-items/{food.Id}/article", new { articleId })).EnsureSuccessStatusCode();
         var recipe = await Post<RecipeDto>(client, "/api/recipes", new { name = "Petit déjeuner", servings = 2, durationMinutes = 10 });
         (await client.PostAsJsonAsync($"/api/recipes/{recipe.Id}/ingredients",
-            new { foodItemId = articleId, quantity = 200, unit = "g" })).EnsureSuccessStatusCode();
+            new { foodItemId = food.Id, quantity = 200, unit = "g" })).EnsureSuccessStatusCode();
         var week = await Post<ManualWeekDto>(client, "/api/manual-planner/weeks", new ManualWeekRequest(new(2026, 10, 5)));
         var meal = await Post<ManualMealDto>(client, "/api/manual-planner/meals", new ManualMealRequest(week.Days[0].Id, 480, 510, 1, 2, recipe.Id));
         Assert.Equal(150d, meal.Nutrition.Calories);

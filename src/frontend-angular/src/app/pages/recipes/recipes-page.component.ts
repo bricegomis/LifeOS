@@ -9,7 +9,6 @@ import {
   FoodItemDto,
   RecipeDto,
   RecipeRequest,
-  ArticleDto,
   RecipeIngredientDto,
 } from '@/app/core/api/api.models'
 
@@ -56,12 +55,11 @@ export class RecipesPageComponent implements OnInit {
 
   readonly recipes = signal<RecipeDto[]>([])
   readonly foodItems = signal<FoodItemDto[]>([])
-  readonly articles = signal<ArticleDto[]>([])
   search = ''
   visibleRecipes(): RecipeDto[] {
     return this.recipes().filter(r => !r.isArchived && r.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr')))
   }
-  linkedFoods(): FoodItemDto[] { return this.foodItems().filter(f => !f.isArchived && f.articleId) }
+  activeProducts(): FoodItemDto[] { return this.foodItems().filter(f => !f.isArchived) }
   ingredientEdit: { id: string; foodItemId: string; quantity: number; unit: string } | null = null
   readonly dialog = signal<'recipe' | 'ingredient' | 'editIngredient' | null>(null)
   readonly dialogError = signal('')
@@ -86,10 +84,6 @@ export class RecipesPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadRecipes()
     this.loadFoodItems()
-    this.api.get<ArticleDto[]>('/articles').subscribe({
-      next: items => this.articles.set(items),
-      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
-    })
   }
 
   get recipeNameValue(): string {
@@ -157,8 +151,7 @@ export class RecipesPageComponent implements OnInit {
   }
 
   foodItemName(id: string): string {
-    return this.foodItems().find((food) => food.articleId === id)?.name
-      ?? this.articles().find(a => a.id === id)?.name ?? `Article indisponible · ${id}`
+    return this.foodItems().find((food) => food.id === id)?.name ?? `Produit indisponible · ${id}`
   }
 
   openRecipeDialog(recipe: RecipeDto | null): void {
@@ -291,7 +284,7 @@ export class RecipesPageComponent implements OnInit {
       this.dialogError.set('Enregistrez ou sélectionnez une recette avant d’ajouter un ingrédient.')
       return
     }
-    if (!this.linkedFoods().some((food) => food.articleId === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
+    if (!this.activeProducts().some((food) => food.id === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
       this.dialogError.set('Choisissez un aliment du catalogue, une quantité supérieure à zéro et une unité.')
       return
     }

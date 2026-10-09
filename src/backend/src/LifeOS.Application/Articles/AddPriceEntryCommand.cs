@@ -5,7 +5,7 @@ namespace LifeOS.Application.Articles;
 /// <summary>
 /// Use case: record a new observed price for a grocery article.
 /// </summary>
-public sealed class AddPriceEntryCommand(IArticleRepository articleRepository)
+public sealed class AddPriceEntryCommand(IArticleRepository articleRepository, IStoreRepository storeRepository)
 {
     private readonly IArticleRepository _articleRepository = articleRepository;
 
@@ -24,6 +24,8 @@ public sealed class AddPriceEntryCommand(IArticleRepository articleRepository)
             return null;
         }
 
+        if (await storeRepository.GetByIdAsync(householdId, storeId, cancellationToken) is null)
+            throw new ArgumentException("Magasin indisponible dans votre foyer.");
         article.AddPriceEntry(storeId, price, observedAt);
 
         await _articleRepository.UpdateAsync(article, cancellationToken);

@@ -42,23 +42,7 @@ public sealed class MealFoodLine : Entity
 
     public double? NutritionFactor()
     {
-        var from = Normalize(Unit);
-        var to = Normalize(ReferenceUnit);
-        if (from == to && from.Length > 0) return (double)Quantity;
-        var source = Scale(from);
-        var reference = Scale(to);
-        return source is { } s && reference is { } r && s.Dimension == r.Dimension
-            ? (double)Quantity * s.Amount / r.Amount : null;
+        var converted = QuantityConversion.Convert(Quantity, Unit, ReferenceUnit);
+        return converted is { } value ? (double)value : null;
     }
-
-    private static string Normalize(string unit) => unit.Trim().ToLowerInvariant().Replace(" ", "")
-        .Replace("pièce", "piece").Replace("pièces", "piece");
-
-    private static (string Dimension, double Amount)? Scale(string unit) => unit switch
-    {
-        "g" => ("mass", 1), "100g" => ("mass", 100), "kg" or "kilogram" => ("mass", 1000),
-        "ml" => ("volume", 1), "100ml" => ("volume", 100), "l" or "liter" => ("volume", 1000),
-        "piece" or "1piece" or "unit" => ("count", 1),
-        _ => null,
-    };
 }

@@ -3,7 +3,7 @@ using LifeOS.Domain.Stock;
 
 namespace LifeOS.Application.Stock;
 
-public sealed class CreateStockItemCommand(IStockItemRepository stockItemRepository)
+public sealed class CreateStockItemCommand(IStockItemRepository stockItemRepository, IArticleRepository productRepository)
 {
     private readonly IStockItemRepository _stockItemRepository = stockItemRepository;
 
@@ -14,7 +14,9 @@ public sealed class CreateStockItemCommand(IStockItemRepository stockItemReposit
         string unit,
         CancellationToken cancellationToken)
     {
-        var stockItem = StockItem.Create(householdId, groceryItemId, quantity, unit);
+        var product = await productRepository.GetByIdAsync(householdId, groceryItemId, cancellationToken);
+        if (product is null || product.IsArchived) throw new ArgumentException("Produit indisponible dans votre foyer.");
+        var stockItem = StockItem.Create(householdId, product.Id, quantity, unit);
 
         await _stockItemRepository.AddAsync(stockItem, cancellationToken);
 

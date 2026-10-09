@@ -178,9 +178,8 @@ public static class ManualPlannerEndpoints
             if (composedId is null) name = source.Name;
             foreach (var ingredient in source.Ingredients)
             {
-                var article = await db.GroceryItems.SingleOrDefaultAsync(a => a.Id == ingredient.FoodItemId && a.HouseholdId == household, ct);
-                var food = await db.FoodItems.SingleOrDefaultAsync(f => f.ArticleId == ingredient.FoodItemId && f.HouseholdId == household, ct);
-                lines.Add(MealFoodLine.Snapshot(mealId, food?.Id, food?.Name ?? article?.Name ?? "Ingrédient indisponible",
+                var food = await db.FoodItems.SingleOrDefaultAsync(f => f.Id == ingredient.FoodItemId && f.HouseholdId == household, ct);
+                lines.Add(MealFoodLine.Snapshot(mealId, food?.Id, food?.Name ?? "Ingrédient indisponible",
                     ingredient.Quantity * factor / source.Servings, ingredient.Unit, food?.ReferenceUnit ?? "", food?.Nutrition));
             }
         }

@@ -14,6 +14,9 @@ public static class ArticlesEndpoints
 {
     public static IEndpointRouteBuilder MapArticlesEndpoints(this IEndpointRouteBuilder app)
     {
+        var products = app.MapGroup("/api/products").RequireAuthorization().AddRequestValidation();
+        products.MapPost("/{articleId:guid}/price-entries", AddPriceEntryAsync);
+        products.MapDelete("/{articleId:guid}/price-entries/{priceEntryId:guid}", DeletePriceEntryAsync);
         var group = app.MapGroup("/api/articles")
             .WithTags("Articles")
             .RequireAuthorization()

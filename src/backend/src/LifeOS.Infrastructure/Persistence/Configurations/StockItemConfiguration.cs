@@ -1,3 +1,4 @@
+using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Stock;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -32,7 +33,7 @@ internal sealed class StockItemConfiguration : IEntityTypeConfiguration<StockIte
             .HasForeignKey(item => item.HouseholdId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne<LifeOS.Domain.Articles.GroceryItem>()
+        builder.HasOne<LifeOS.Domain.FoodItems.FoodItem>()
             .WithMany()
             .HasForeignKey(item => item.GroceryItemId)
             .OnDelete(DeleteBehavior.Cascade);

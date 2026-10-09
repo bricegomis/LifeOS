@@ -2,6 +2,19 @@
 
 This document captures the most important product and technical decisions that shape the current project. It is intentionally not a log of every implementation choice; it focuses on durable decisions that explain why the app currently looks and behaves the way it does.
 
+## 2026-10-09 — Produit unique, nutrition et achats réunis
+
+Décision explicite de l'utilisateur, pas un aliment générique associé à plusieurs
+marques : un seul produit, une seule fiche et une seule création/édition.
+Nutrition facultative (produits non alimentaires), unité d'achat indépendante,
+historique de prix possédé, références canoniques pour recettes/stock/courses/repas.
+Migration transactionnelle sans rapprochement par nom, alias historiques,
+snapshots/prix/OFF/corrections/archivage et isolation foyer conservés.
+Les anciens catalogues non associés restent distincts ; unité d'achat à confirmer.
+Voir [ADR 0005](architecture/decisions/0005-unified-products.md) pour stratégie,
+préconditions et limites de retour arrière. Les courses automatiques restent hors
+MVP, y compris sur anciennes semaines ; aucune réécriture des listes historiques.
+
 ## 2026-10-07 — MVP semainier entièrement manuel (décision actuelle)
 
 Le parcours livré est Angular + ASP.NET Core/EF Core/PostgreSQL.
@@ -282,4 +295,3 @@ Consequences:
 - Les payloads et routes API sont inchangés ; aucune fonctionnalité n'est retirée.
 - Un dialogue ne se ferme qu'après succès ; une erreur reste affichée dans le dialogue avec la saisie conservée.
 - `tsconfig.json` autorise les imports relatifs en `.ts` pour que les modules purs restent testables avec `node --test`.
-

@@ -20,23 +20,31 @@ catalogue par foyer ; `meal_food_lines` préserve les quantités et valeurs
 nutritionnelles de chaque événement. Modifier/archiver un catalogue ne réécrit
 pas ces snapshots. La présence d'enfants ne change que la préparation.
 
-Articles et FoodItems restent distincts, liés explicitement par `ArticleId` ;
-les ingrédients gardent leur FK historique vers les articles. Prix/achats et
-anciens repas composés sont conservés. Les nouvelles semaines sont vides et
-n'utilisent pas les anciens réglages ; calcul équilibré et génération de courses
-sont refusés pour les semaines manuelles. L'API historique reste disponible.
+Nutrition et achats sont réunis dans un seul produit (`products`, agrégat C#
+`FoodItem`, nutrition facultative et prix possédés). La fiche `/products` regroupe
+général, nutrition, référence nutritionnelle, unité d'achat, prix/magasins et usages.
+L'agrégat article séparé n'existe plus. Les anciennes routes sont des adaptateurs
+vers le produit canonique ; les ID d'articles sont conservés comme alias exacts.
+Recettes, stock, courses et repas référencent les produits ; les snapshots restent
+inchangés. La migration conserve les homonymes non associés séparément et signale
+les unités d'achat à préciser, sans fusion par nom. Voir
+[ADR 0005](architecture/decisions/0005-unified-products.md).
+Les nouvelles semaines sont vides et n'utilisent pas les anciens réglages ;
+le calcul équilibré reste refusé pour les semaines manuelles et la génération
+automatique de courses est refusée pour toutes les semaines. Les listes historiques
+restent consultables/cochables.
 Voir [ADR 0004](architecture/decisions/0004-manual-planner.md) pour les limites
 de migration, la précision, les heures civiles et les snapshots.
 
 Interface de saisie : les pages restent centrées sur la consultation
 (calendrier, listes, détails). Chaque création ou modification (événement,
-séance, aliment, achats d'un aliment, magasin, article, prix, stock, recette,
+séance, produit (nutrition et achats), magasin, prix, stock, recette,
 ingrédient, repas composé et ses recettes) s'ouvre dans un dialogue partagé
 `app-lifeos-dialog` (`src/frontend-angular/src/app/shared/dialog`) : champs
 essentiels d'abord, options secondaires sous « Plus d'options », focus piégé
 puis restauré, Échap avec confirmation si la saisie est modifiée, erreurs dans
-le dialogue sans fermeture, et feuille basse sur mobile. Les contrats API sont
-inchangés.
+le dialogue sans fermeture, et feuille basse sur mobile. Les achats ne nécessitent
+plus une seconde création : prix et usages se trouvent dans la même fiche produit.
 
 Validation locale : tests domaine/API sur PostgreSQL vierge et historique,
 redémarrage logique, deux foyers, contrôles Angular et parcours navigateur

@@ -1,13 +1,14 @@
+using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Articles;
 
 namespace LifeOS.Application.Articles;
 
 /// <summary>
-/// Maps <see cref="GroceryItem"/> aggregates to their API read model.
+/// Maps <see cref="FoodItem"/> aggregates to their API read model.
 /// </summary>
-internal static class ArticleMapper
+public static class ArticleMapper
 {
-    public static GroceryItemDto ToDto(GroceryItem article)
+    public static GroceryItemDto ToDto(FoodItem article)
     {
         return new GroceryItemDto(
             article.Id,

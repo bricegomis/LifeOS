@@ -3,7 +3,7 @@ import { Component, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
 import type {
-  ArticleDto,
+  FoodItemDto,
   ShoppingListItemDto,
   StockItemDto,
   StockItemRequest,
@@ -138,8 +138,8 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
           <div>
             <h2 id="shopping-heading">Liste de courses</h2>
             <p>
-              Choisissez une semaine planifiée, générez sa liste, puis cochez les articles pendant
-              vos courses.
+              Consultez les listes historiques et cochez les produits pendant vos courses.
+              La génération automatique ne fait pas partie du semainier manuel.
             </p>
           </div>
         </div>
@@ -162,14 +162,6 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
                 }
               </select>
             </label>
-            <button
-              class="stock-button is-primary"
-              type="button"
-              (click)="generateList()"
-              [disabled]="isManualWeek() || !selectedWeekId() || loadingList() || busy() !== ''"
-            >
-              {{ busy() === 'generate' ? 'Génération…' : 'Générer la liste de courses' }}
-            </button>
           </div>
           @if (weeksError()) {
             <p class="stock-feedback is-error" role="alert">
@@ -188,13 +180,8 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
             <p class="stock-hint" role="status">Chargement des semaines…</p>
           } @else if (!weeksError() && !weeks().length) {
             <p class="stock-hint">
-              Planifiez d’abord une semaine pour générer une liste de courses.
+              Aucune semaine enregistrée. Les listes historiques apparaîtront ici.
             </p>
-          } @else {
-            <p class="stock-hint">La génération recalcule la liste de la semaine choisie à partir des repas prévus et du stock actuel.</p>
-          }
-          @if (isManualWeek()) {
-            <p class="stock-hint">Les courses automatiques sont hors MVP manuel. Les listes historiques restent consultables.</p>
           }
           @if (shoppingActionError()) {
             <p class="stock-feedback is-error" role="alert">{{ shoppingActionError() }}</p>
@@ -232,7 +219,7 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
               </p>
             } @else if (!shoppingList().length) {
               <p class="stock-hint">
-                Aucun article pour cette semaine. Planifiez vos repas, puis générez la liste.
+                Aucune liste historique pour cette semaine.
               </p>
             } @else {
               <ul class="stock-shopping-list">
@@ -282,13 +269,13 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
             @if (editingId() && !hasArticle(editor.groceryItemId)) {
               <option [value]="editor.groceryItemId">{{ editor.groceryItemId }}</option>
             }
-            @for (article of articles(); track article.id) {
+            @for (article of availableProducts(); track article.id) {
               <option [value]="article.id">{{ article.name }}</option>
             }
           </select>
         </label>
         @if (!loadingArticles() && !articlesError() && articles().length === 0) {
-          <p class="dialog-hint">Aucun article disponible. Ajoutez-en un dans la rubrique Magasins et articles.</p>
+          <p class="dialog-hint">Aucun produit disponible. Créez sa fiche dans la rubrique Produits.</p>
         }
         <div class="dialog-row">
           <label class="dialog-field">
@@ -476,7 +463,8 @@ export class StockShoppingPageComponent {
 
   readonly stock = signal<StockItemDto[]>([])
   readonly shoppingList = signal<ShoppingListItemDto[]>([])
-  readonly articles = signal<ArticleDto[]>([])
+  readonly articles = signal<FoodItemDto[]>([])
+  availableProducts(): FoodItemDto[] { return this.articles().filter(p => !p.isArchived) }
   readonly weeks = signal<WeekDto[]>([])
   readonly selectedWeekId = signal('')
   readonly editingId = signal('')
@@ -528,7 +516,7 @@ export class StockShoppingPageComponent {
     this.loadingArticles.set(true)
     this.articlesError.set('')
     try {
-      this.articles.set(await firstValueFrom(this.api.get<ArticleDto[]>('/articles')))
+      this.articles.set(await firstValueFrom(this.api.get<FoodItemDto[]>('/products')))
     } catch (error) {
       this.articlesError.set(apiErrorMessage(error))
     } finally {
@@ -592,7 +580,7 @@ export class StockShoppingPageComponent {
 
   articleChanged(): void {
     const article = this.articles().find((entry) => entry.id === this.editor.groceryItemId)
-    this.editor.unit = article?.unit ?? ''
+    this.editor.unit = article?.purchaseUnitConfirmed ? article.unit : ''
   }
 
   openCreate(): void {
@@ -686,35 +674,6 @@ export class StockShoppingPageComponent {
     } finally {
       this.busy.set('')
     }
-  }
-
-  async generateList(): Promise<void> {
-    const weekId = this.selectedWeekId()
-    if (!weekId || this.busy() || this.loadingList() || this.isManualWeek()) return
-    this.busy.set('generate')
-    this.shoppingActionError.set('')
-    this.shoppingError.set('')
-    this.notice.set('')
-    try {
-      const response = await firstValueFrom(
-        this.api.post<{ shoppingList: ShoppingListItemDto[] }>(
-          `/shopping-list/weeks/${weekId}/generate`,
-        ),
-      )
-      this.shoppingList.set(response.shoppingList)
-      this.notice.set('Liste de courses générée pour la semaine choisie.')
-    } catch (error) {
-      this.shoppingActionError.set(
-        `Impossible de générer la liste de courses : ${apiErrorMessage(error)}`,
-      )
-    } finally {
-      this.busy.set('')
-    }
-
-  }
-
-  isManualWeek(): boolean {
-    return this.weeks().find(w => w.id === this.selectedWeekId())?.isManual ?? false
   }
 
   async setChecked(item: ShoppingListItemDto, event: Event): Promise<void> {

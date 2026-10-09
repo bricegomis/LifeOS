@@ -1,15 +1,24 @@
 using LifeOS.Domain.Common;
+using LifeOS.Domain.Articles;
 
 namespace LifeOS.Domain.FoodItems;
 
 /// <summary>
-/// A food item representing a product from Open Food Facts or manually created.
-/// Aggregate root of the FoodItems bounded context.
+/// Canonical household product: optional nutrition and owned purchase history.
+/// The historical FoodItem type name is retained for API/source compatibility.
 /// </summary>
 public sealed class FoodItem : Entity
 {
     public Guid HouseholdId { get; private set; }
-    public Guid? ArticleId { get; private set; }
+    private readonly List<GroceryPriceEntry> _priceHistory = [];
+    public string Description { get; private set; } = "";
+    public GroceryItemUnit Unit { get; private set; } = GroceryItemUnit.Unit;
+    public bool PurchaseUnitConfirmed { get; private set; }
+    public IReadOnlyList<GroceryPriceEntry> PriceHistory => _priceHistory;
+    public string? LegacyPurchaseName { get; private set; }
+    public string? MigrationOrigin { get; private set; }
+    // Compatibility identifier, not an association to another aggregate.
+    public Guid ArticleId => Id;
     public bool IsArchived { get; private set; }
     public string Name { get; private set; }
     public string ReferenceUnit { get; private set; }
@@ -21,11 +30,57 @@ public sealed class FoodItem : Entity
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    public void LinkArticle(Guid? articleId)
+    public void UpdatePurchaseDetails(string description, GroceryItemUnit unit, DateTimeOffset? now = null)
     {
-        if (articleId == Guid.Empty) throw new ArgumentException("Article invalide.");
-        ArticleId = articleId;
-        UpdatedAt = DateTimeOffset.UtcNow;
+        if (!Enum.IsDefined(unit)) throw new ArgumentException("Unité d'achat invalide.");
+        if (description.Length > 1000) throw new ArgumentException("Description limitée à 1000 caractères.");
+        if (unit != Unit && _priceHistory.Count > 0)
+            throw new ArgumentException("L'unité d'achat ne peut pas changer après un relevé de prix : les prix historiques utilisent cette unité.");
+        Description = description.Trim();
+        Unit = unit;
+        PurchaseUnitConfirmed = true;
+        UpdatedAt = now ?? DateTimeOffset.UtcNow;
+    }
+
+    public void UpdateDetails(string name, string description, GroceryItemUnit unit, DateTimeOffset? now = null)
+    {
+        UpdatePurchaseDetails(description, unit, now);
+        UpdateDetails(name, ReferenceUnit, Nutrition, now);
+    }
+
+    public static FoodItem Create(Guid householdId, string name, string description, GroceryItemUnit unit, DateTimeOffset? now = null)
+    {
+        var product = CreateManual(householdId, name, "", now: now);
+        product.UpdatePurchaseDetails(description, unit, now);
+        return product;
+    }
+
+    public static FoodItem Rehydrate(Guid id, Guid householdId, string name, string description,
+        GroceryItemUnit unit, IEnumerable<GroceryPriceEntry> priceHistory, DateTimeOffset createdAt, DateTimeOffset updatedAt)
+    {
+        var product = new FoodItem(id, householdId, name, "", null, FoodItemSource.Manual, null, null, null, createdAt, updatedAt);
+        product.Description = description;
+        product.Unit = unit;
+        product.PurchaseUnitConfirmed = true;
+        product._priceHistory.AddRange(priceHistory);
+        return product;
+    }
+
+    public GroceryPriceEntry AddPriceEntry(Guid storeId, decimal price, DateTimeOffset observedAt, DateTimeOffset? now = null)
+    {
+        if (IsArchived) throw new ArgumentException("Ce produit est archivé.");
+        if (!PurchaseUnitConfirmed) throw new ArgumentException("Précisez d'abord l'unité d'achat du produit.");
+        var entry = GroceryPriceEntry.Create(storeId, price, observedAt, now ?? DateTimeOffset.UtcNow);
+        _priceHistory.Add(entry);
+        UpdatedAt = now ?? DateTimeOffset.UtcNow;
+        return entry;
+    }
+
+    public bool RemovePriceEntry(Guid id, DateTimeOffset? now = null)
+    {
+        var removed = _priceHistory.RemoveAll(e => e.Id == id) > 0;
+        if (removed) UpdatedAt = now ?? DateTimeOffset.UtcNow;
+        return removed;
     }
 
     public void Archive()
@@ -89,7 +144,7 @@ public sealed class FoodItem : Entity
             throw new ArgumentException("Food item name is required.", nameof(name));
         }
 
-        if (string.IsNullOrWhiteSpace(referenceUnit))
+        if (nutrition is not null && string.IsNullOrWhiteSpace(referenceUnit))
         {
             throw new ArgumentException("Reference unit is required.", nameof(referenceUnit));
         }
@@ -132,7 +187,7 @@ public sealed class FoodItem : Entity
             throw new ArgumentException("Food item name is required.", nameof(name));
         }
 
-        if (string.IsNullOrWhiteSpace(referenceUnit))
+        if (nutrition is not null && string.IsNullOrWhiteSpace(referenceUnit))
         {
             throw new ArgumentException("Reference unit is required.", nameof(referenceUnit));
         }
@@ -179,7 +234,7 @@ public sealed class FoodItem : Entity
             throw new ArgumentException("Food item name is required.", nameof(name));
         }
 
-        if (string.IsNullOrWhiteSpace(referenceUnit))
+        if (nutrition is not null && string.IsNullOrWhiteSpace(referenceUnit))
         {
             throw new ArgumentException("Reference unit is required.", nameof(referenceUnit));
         }
@@ -238,7 +293,7 @@ public sealed class FoodItem : Entity
             throw new ArgumentException("Food item name is required.", nameof(name));
         }
 
-        if (string.IsNullOrWhiteSpace(referenceUnit))
+        if (nutrition is not null && string.IsNullOrWhiteSpace(referenceUnit))
         {
             throw new ArgumentException("Reference unit is required.", nameof(referenceUnit));
         }

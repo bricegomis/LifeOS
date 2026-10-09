@@ -7,9 +7,12 @@ Un **foyer** isole les données métier. Supabase authentifie l'utilisateur,
 l'API résout son foyer. Les profils historiques sont conservés, mais la nutrition
 du MVP est exclusivement personnelle.
 
-Un **produit alimentaire** possède une unité nutritionnelle de référence et des
-macros connues ou inconnues. Son raccord à un **article d'achat** est explicite,
-sans rapprochement par nom ; l'article conserve prix, magasins et achats.
+Un **produit** possède dans une seule identité nom, description, nutrition
+facultative, quantité de référence nutritionnelle, unité d'achat et prix par
+magasin. Un produit non alimentaire peut ne porter aucune nutrition.
+Il n'existe plus d'article d'achat indépendant à créer ou relier. Les anciens
+liens explicites sont intégrés sans fusion des homonymes non associés ; les
+unités d'achat inconnues restent à préciser. Voir [ADR 0005](architecture/decisions/0005-unified-products.md).
 
 Une **recette** possède ingrédients, quantités/unités, étapes et nombre positif
 de portions de référence. La portion personnelle d'une occurrence exprime un
