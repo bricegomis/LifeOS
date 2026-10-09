@@ -58,10 +58,14 @@ environment variables for local development and builds. The Supabase
 anonymous key is public client configuration; it must never be replaced with a
 service-role key. API calls fail visibly when the API URL is missing.
 
-The sidebar shows the UI and API build IDs above the signed-in user's email.
-GitHub Actions builds both Docker images from the same commit SHA; the UI reads
-the API's public `GET /api/version` diagnostic endpoint at startup. Local builds
-use `local`, and a missing API URL or failed request is shown as
+The sidebar shows separate `UI Build #123` and `API Build #123` links to the
+producing GitHub Actions run/attempt. Retries show `· tentative 2`; expandable
+details retain the workflow name, run ID, attempt and full commit. The settings page
+uses the same UI version display. The UI reads the API's public, no-store
+`GET /api/version` diagnostic endpoint at startup, never the latest GitHub run.
+Docker builds both images together, but independently updated containers can differ.
+Vue Pages uses a different workflow: compare commits, not just workflow-scoped numbers.
+Local builds show `Local` without a CI number, and a missing API URL or failed request is shown as
 `non configurée` or `indisponible`.
 
 ## Validation
@@ -83,7 +87,7 @@ manual provider setup and is not covered by these tests.
 `Dockerfile` builds a Supabase-independent Angular image and serves
 `dist/browser` from nginx. The nginx entrypoint writes `config.js` at container
 startup from `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and
-`VITE_LIFEOS_API_URL`, plus the build ID baked into the image, so the same image
+`VITE_LIFEOS_API_URL`, so the same image
 can be deployed to different Supabase projects:
 
 ```sh
@@ -103,6 +107,19 @@ runtime variables when starting the container (for example in the root
 the API's `SUPABASE_URL`. The anonymous key is public and must never be
 replaced with a service-role key. The API host must allow the deployed Angular
 origin through its CORS configuration.
+
+Build provenance is generated into an ignored
+`src/environments/build-info.generated.ts` module and compiled into the hashed
+application bundle. An old cached bundle therefore still reports its own build,
+not the identity of a newer server-side file.
+The runtime entrypoint only replaces `config.js`; changing a deployment's environment
+cannot change the UI's build identity. For CI builds, pass Docker build arguments
+`LIFEOS_BUILD_ID` (commit), `LIFEOS_BUILD_NUMBER` (`github.run_number`),
+`LIFEOS_RUN_ID`, `LIFEOS_RUN_ATTEMPT`, `LIFEOS_BUILD_REPOSITORY`,
+`LIFEOS_BUILD_SERVER_URL`, and `LIFEOS_BUILD_WORKFLOW`. The same names are used
+by `scripts/generate-config.mjs` for direct builds. The validation workflow embeds
+its own run, whereas published images embed the Docker publication workflow's run.
+Do not supply metadata from a later deployment or another workflow.
 
 ## Routes and hosting
 

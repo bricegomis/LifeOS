@@ -99,11 +99,20 @@ if (enableOpenApiUi)
 
 app.MapGet("/api/version", (HttpContext context, IConfiguration configuration) =>
 {
+    string? ReadBuildValue(string key) =>
+        configuration[$"LifeOS:{key}"]?.Trim() is { Length: > 0 } value ? value : null;
+
     context.Response.Headers.CacheControl = "no-store";
     return Results.Ok(new
     {
         component = "api",
-        buildId = configuration["LifeOS:BuildId"] ?? "local",
+        buildId = ReadBuildValue("BuildId") ?? "local",
+        buildNumber = ReadBuildValue("BuildNumber"),
+        runId = ReadBuildValue("RunId"),
+        runAttempt = ReadBuildValue("RunAttempt"),
+        repository = ReadBuildValue("Repository"),
+        serverUrl = ReadBuildValue("ServerUrl"),
+        workflow = ReadBuildValue("Workflow"),
     });
 }).AllowAnonymous();
 

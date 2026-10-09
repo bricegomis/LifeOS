@@ -19,12 +19,18 @@
     </nav>
     <div class="app-sidebar-footer">
       <div class="sidebar-build" role="group" aria-label="Versions déployées">
-        <small>UI <code [title]="buildId">{{ displayBuildId(buildId) }}</code></small>
-        <small>API <code [title]="apiBuildId()">{{ displayBuildId(apiBuildId()) }}</code></small>
+        <app-build-version component="UI" [info]="buildInfo" />
+        <app-build-version component="API" [info]="apiBuildInfo()" [status]="apiBuildStatus()" />
       </div>
       <small class="sidebar-user">{{ auth.user()?.email ?? 'Compte du foyer' }}</small>
-      @if (signOutError()) { <small class="api-error" role="alert">{{ signOutError() }}</small> }
-      <button class="lifeos-button lifeos-button-secondary lifeos-button-text lifeos-button-sm" type="button" (click)="signOut()">
+      @if (signOutError()) {
+        <small class="api-error" role="alert">{{ signOutError() }}</small>
+      }
+      <button
+        class="lifeos-button lifeos-button-secondary lifeos-button-text lifeos-button-sm"
+        type="button"
+        (click)="signOut()"
+      >
         Déconnexion
       </button>
     </div>

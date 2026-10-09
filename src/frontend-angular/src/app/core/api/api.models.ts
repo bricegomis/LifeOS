@@ -1,3 +1,5 @@
+import type { BuildInfo } from '../build-info'
+
 export interface StoreDto {
   id: string
   name: string
@@ -8,9 +10,8 @@ export interface StoreDto {
   updatedAt: string
 }
 
-export interface BuildInfoDto {
+export interface BuildInfoDto extends BuildInfo {
   component: 'api'
-  buildId: string
 }
 
 export interface StoreRequest {

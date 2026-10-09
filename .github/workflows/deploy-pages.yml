@@ -39,6 +39,12 @@ jobs:
         env:
           GITHUB_ACTIONS: true
           VITE_LIFEOS_BUILD_ID: ${{ github.sha }}
+          VITE_LIFEOS_BUILD_NUMBER: ${{ github.run_number }}
+          VITE_LIFEOS_RUN_ID: ${{ github.run_id }}
+          VITE_LIFEOS_RUN_ATTEMPT: ${{ github.run_attempt }}
+          VITE_LIFEOS_BUILD_REPOSITORY: ${{ github.repository }}
+          VITE_LIFEOS_BUILD_SERVER_URL: ${{ github.server_url }}
+          VITE_LIFEOS_BUILD_WORKFLOW: ${{ github.workflow }}
           VITE_LIFEOS_API_URL: ${{ vars.VITE_LIFEOS_API_URL }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
