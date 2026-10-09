@@ -58,7 +58,7 @@
         <section class="recipe-section recipe-ingredients" aria-labelledby="ingredients-title">
           <div class="recipe-section-heading">
             <h3 id="ingredients-title">Ingrédients <span class="recipe-muted">{{ recipe.ingredients.length }}</span></h3>
-            @if (linkedFoods().length) {
+            @if (activeProducts().length) {
               <button class="lifeos-button lifeos-button-sm" type="button" [disabled]="saving()" (click)="openIngredientDialog()">
                 <i class="pi pi-plus" aria-hidden="true"></i> Ajouter un ingrédient
               </button>
@@ -76,11 +76,11 @@
             <p class="recipe-empty">Aucun ingrédient ajouté.</p>
           }
           @if (loadingFoodItems()) {
-            <p class="recipe-empty" role="status">Chargement du catalogue d’aliments…</p>
-          } @else if (linkedFoods().length === 0) {
+            <p class="recipe-empty" role="status">Chargement des produits…</p>
+          } @else if (activeProducts().length === 0) {
             <p class="recipe-empty">
-              Ajoutez un produit et reliez-le explicitement à un article d’achat pour l’utiliser dans une recette.
-              <a routerLink="/foods">Ouvrir le catalogue d’aliments</a>
+              Créez un produit pour l’utiliser directement dans une recette. Aucun article séparé à créer.
+              <a routerLink="/products">Ouvrir les produits</a>
             </p>
           }
         </section>
@@ -129,11 +129,11 @@
   [error]="dialogError()" (dismissed)="closeDialog()">
   <form id="ingredient-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="addIngredient()">
     <label class="dialog-field">
-      <span>Aliment</span>
+      <span>Produit</span>
       <select class="text-input" name="foodItemId" required [(ngModel)]="ingredientFoodItemIdValue">
-        <option value="" disabled>Choisir un aliment</option>
-        @for (food of linkedFoods(); track food.id) {
-          <option [value]="food.articleId">{{ food.name }}</option>
+        <option value="" disabled>Choisir un produit</option>
+        @for (food of activeProducts(); track food.id) {
+          <option [value]="food.id">{{ food.name }}</option>
         }
       </select>
     </label>

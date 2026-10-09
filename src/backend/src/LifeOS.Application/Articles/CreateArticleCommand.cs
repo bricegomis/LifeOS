@@ -1,3 +1,4 @@
+using LifeOS.Domain.FoodItems;
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Domain.Articles;
 
@@ -17,7 +18,7 @@ public sealed class CreateArticleCommand(IArticleRepository articleRepository)
         string unit,
         CancellationToken cancellationToken = default)
     {
-        var article = GroceryItem.Create(householdId, name, description, ArticleMapper.ParseUnit(unit));
+        var article = FoodItem.Create(householdId, name, description, ArticleMapper.ParseUnit(unit));
 
         await _articleRepository.AddAsync(article, cancellationToken);
 

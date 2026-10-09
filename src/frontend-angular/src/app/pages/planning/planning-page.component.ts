@@ -77,7 +77,7 @@ export class PlanningPageComponent implements OnInit {
     this.catalogError.set('')
     try {
       const result = await firstValueFrom(forkJoin({
-        foods: this.api.get<FoodItemDto[]>('/food-items'),
+        foods: this.api.get<FoodItemDto[]>('/products'),
         recipes: this.api.get<RecipeDto[]>('/recipes'),
         sports: this.api.get<SportTemplateDto[]>('/sport-templates'),
       }))

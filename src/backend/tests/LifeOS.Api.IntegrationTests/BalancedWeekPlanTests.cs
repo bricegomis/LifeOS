@@ -298,9 +298,7 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
     }
 
     /// <summary>
-    /// Creates a grocery article with an observed price and a food item of the same name
-    /// carrying nutrition values, then returns the article id: recipe ingredients reference
-    /// grocery items, and the engine joins their nutrition by name.
+    /// Creates one canonical product with nutrition and a purchase price.
     /// </summary>
     private static async Task<Guid> CreatePricedIngredientAsync(
         HttpClient client,
@@ -312,19 +310,8 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
         double carbs,
         double fats)
     {
-        var articleResponse = await client.PostAsJsonAsync(
-            "/api/articles",
-            new ArticleRequest(name, name, "kilogram"));
-        articleResponse.EnsureSuccessStatusCode();
-        var article = await articleResponse.Content.ReadFromJsonAsync<GroceryItemDto>();
-
-        var priceResponse = await client.PostAsJsonAsync(
-            $"/api/articles/{article!.Id}/price-entries",
-            new PriceEntryRequest(storeId, price, DateTimeOffset.UtcNow));
-        priceResponse.EnsureSuccessStatusCode();
-
         var foodItemResponse = await client.PostAsJsonAsync(
-            "/api/food-items",
+            "/api/products",
             new CreateFoodItemRequest(
                 name,
                 "kilogram",
@@ -334,10 +321,14 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
                     ProteinsPerUnit = proteins,
                     CarbsPerUnit = carbs,
                     FatsPerUnit = fats,
-                }));
+                }) { Description = name, Unit = "kilogram" });
         foodItemResponse.EnsureSuccessStatusCode();
-
-        return article.Id;
+        var product = (await foodItemResponse.Content.ReadFromJsonAsync<FoodItemDto>())!;
+        var priceResponse = await client.PostAsJsonAsync(
+            $"/api/products/{product.Id}/price-entries",
+            new PriceEntryRequest(storeId, price, DateTimeOffset.UtcNow));
+        priceResponse.EnsureSuccessStatusCode();
+        return product.Id;
     }
 
     private static async Task<Guid> CreateRecipeAsync(

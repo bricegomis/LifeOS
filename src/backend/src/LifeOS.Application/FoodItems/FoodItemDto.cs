@@ -21,6 +21,12 @@ public sealed class FoodItemDto
     public Guid? ArticleId { get; set; }
     public bool IsArchived { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Unit { get; set; } = "unit";
+    public bool PurchaseUnitConfirmed { get; set; }
+    public string? LegacyPurchaseName { get; set; }
+    public string? MigrationOrigin { get; set; }
+    public IReadOnlyList<LifeOS.Application.Articles.GroceryPriceEntryDto> PriceHistory { get; set; } = [];
     public string ReferenceUnit { get; set; } = string.Empty;
     public NutritionDto? Nutrition { get; set; }
     public string Source { get; set; } = string.Empty;

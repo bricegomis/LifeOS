@@ -4,6 +4,7 @@ using LifeOS.Application.Common.Interfaces;
 using LifeOS.Application.ComposedMeals;
 using LifeOS.Application.Recipes;
 using LifeOS.Domain.Articles;
+using LifeOS.Domain.Common;
 using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Recipes;
 using LifeOS.Domain.WeekPlanning;
@@ -169,9 +170,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
             .ToDictionary(meal => meal.Id);
         var foodItemList = (await _foodItemRepository.GetByHouseholdAsync(householdId, cancellationToken)).ToList();
         var foodItems = foodItemList.ToDictionary(item => item.Id);
-        var foodItemsByName = foodItemList
-            .GroupBy(item => item.Name.Trim().ToLowerInvariant())
-            .ToDictionary(group => group.Key, group => group.First());
         var articles = await _articleRepository.GetAllForHouseholdAsync(householdId, cancellationToken);
         var stockItems = await _stockItemRepository.GetAllForHouseholdAsync(householdId, cancellationToken);
         var activityEnergy = await _dataSource.GetActivityEnergyByDayPlanAsync(week.Id, cancellationToken);
@@ -220,7 +218,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
             recipes,
             composedMeals,
             foodItems,
-            foodItemsByName,
             articles,
             stockItems,
             monthReferences,
@@ -343,7 +340,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
                 target.Add(new IngredientLine(
                     meal.MealId,
                     ingredient.FoodItemId,
-                    ingredient.Quantity * factor / servings));
+                    ingredient.Quantity * factor / servings, ingredient.Unit));
             }
         }
     }
@@ -373,13 +370,15 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         {
             var foodItem = ResolveFoodItem(context, line.FoodItemId);
 
-            if (foodItem?.Nutrition is null)
+            if (foodItem?.Nutrition is not { CaloriesPerUnit: not null, ProteinsPerUnit: not null, CarbsPerUnit: not null, FatsPerUnit: not null })
             {
                 continue;
             }
 
+            var converted = QuantityConversion.Convert(line.Quantity, line.Unit, foodItem.ReferenceUnit);
+            if (converted is null) continue;
             covered++;
-            var quantity = (double)line.Quantity;
+            var quantity = (double)converted.Value;
             energy += (foodItem.Nutrition.CaloriesPerUnit ?? 0) * quantity;
             proteins += (foodItem.Nutrition.ProteinsPerUnit ?? 0) * quantity;
             carbs += (foodItem.Nutrition.CarbsPerUnit ?? 0) * quantity;
@@ -395,9 +394,8 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
 
         var coverage = (double)covered / ingredients.Count;
 
-        limitations.Add(
-            "Les quantités sont additionnées sans conversion d'unité entre recettes et articles : " +
-            "budget et apports sont des ordres de grandeur, pas des montants exacts.");
+        if (covered < ingredients.Count)
+            limitations.Add("Nutrition : les valeurs incomplètes ou unités incompatibles sont exclues, jamais converties entre masse, volume et pièces.");
 
         if (coverage < 0.8)
         {
@@ -460,7 +458,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
 
         foreach (var line in ingredients)
         {
-            var price = ResolveUnitPrice(context, prices, line.FoodItemId);
+            var price = ResolveUnitPrice(context, prices, line.FoodItemId, line.Unit);
             if (price is null)
             {
                 continue;
@@ -480,9 +478,8 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
 
         var coverage = (double)covered / ingredients.Count;
 
-        limitations.Add(
-            "Les quantités sont additionnées sans conversion d'unité entre recettes et articles : " +
-            "budget et apports sont des ordres de grandeur, pas des montants exacts.");
+        if (covered < ingredients.Count)
+            limitations.Add("Budget : les prix manquants ou unités incompatibles sont exclus ; aucun prix par kg/L n'est appliqué à une pièce sans conversion explicite.");
 
         if (coverage < 0.8)
         {
@@ -589,37 +586,39 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         }
 
         // Proxy 1: quantities already in stock are consumed instead of being bought again.
-        var stockByGroceryItem = context.StockItems
-            .GroupBy(item => item.GroceryItemId)
-            .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
+        var stockByGroceryItem = context.StockItems.ToDictionary(item => item.GroceryItemId);
 
         var neededByGroceryItem = new Dictionary<Guid, decimal>();
 
         foreach (var line in ingredients)
         {
             var groceryItemId = ResolveGroceryItemId(context, prices, line.FoodItemId);
-            if (groceryItemId is null)
+            if (groceryItemId is null || !prices.ById.TryGetValue(groceryItemId.Value, out var product) || !product.PurchaseUnitConfirmed)
             {
                 continue;
             }
+            var quantity = QuantityConversion.Convert(line.Quantity, line.Unit, Articles.ArticleMapper.ToUnitString(product.Unit));
+            if (quantity is null) continue;
 
             neededByGroceryItem[groceryItemId.Value] =
-                neededByGroceryItem.GetValueOrDefault(groceryItemId.Value) + line.Quantity;
+                neededByGroceryItem.GetValueOrDefault(groceryItemId.Value) + quantity.Value;
         }
 
-        decimal needed = 0;
-        decimal fromStock = 0;
+        var productCoverages = new List<decimal>();
 
         foreach (var (groceryItemId, quantity) in neededByGroceryItem)
         {
-            needed += quantity;
+            if (quantity <= 0) continue;
             if (stockByGroceryItem.TryGetValue(groceryItemId, out var available))
             {
-                fromStock += Math.Min(available, quantity);
+                var converted = QuantityConversion.Convert(available.Quantity, available.Unit,
+                    Articles.ArticleMapper.ToUnitString(prices.ById[groceryItemId].Unit));
+                if (converted is not null) productCoverages.Add(Math.Min(converted.Value, quantity) / quantity);
             }
+            else productCoverages.Add(0);
         }
 
-        var stockCoverage = needed > 0 ? (double)(fromStock / needed) : 0;
+        var stockCoverage = productCoverages.Count > 0 ? (double)productCoverages.Average() : 0;
 
         // Proxy 2: an ingredient used by a single meal is the one most likely to leave a
         // leftover, because the rest of the pack is not planned anywhere else in the week.
@@ -634,7 +633,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         double score;
         double dataCoverage;
 
-        if (neededByGroceryItem.Count == 0)
+        if (productCoverages.Count == 0)
         {
             limitations.Add(
                 "Aucun ingrédient n'est rattaché à un article de course : la part déjà en stock n'a pas pu être mesurée, " +
@@ -662,7 +661,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
 
         var summary =
             $"{reusedCount} ingrédients sur {mealsByFoodItem.Count} servent à au moins deux repas et " +
-            $"{Percent(stockCoverage)} des quantités sont déjà en stock ; {singleUseCount} ingrédients restent à usage unique.";
+            $"la couverture moyenne du stock par produit est {Percent(stockCoverage)} ; {singleUseCount} ingrédients restent à usage unique.";
 
         return new BalancedPlanDimension("waste", Clamp(score), WasteWeight, Round(dataCoverage), summary, metrics);
     }
@@ -767,16 +766,11 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
     private static PriceIndex BuildPriceIndex(WeekEvaluationContext context)
     {
         var byId = context.Articles.ToDictionary(article => article.Id);
-        var byName = context.Articles
-            .GroupBy(article => Normalize(article.Name))
-            .ToDictionary(group => group.Key, group => group.First().Id);
-
-        return new PriceIndex(byId, byName);
+        return new PriceIndex(byId);
     }
 
     /// <summary>
-    /// Mirrors the shopping list resolution: an ingredient either already references a grocery
-    /// item of the household, or is matched to one by food item name.
+    /// Ingredients and purchase observations use the same canonical product identity.
     /// </summary>
     private static Guid? ResolveGroceryItemId(WeekEvaluationContext context, PriceIndex prices, Guid foodItemId)
     {
@@ -785,19 +779,11 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
             return foodItemId;
         }
 
-        if (context.FoodItems.TryGetValue(foodItemId, out var foodItem)
-            && prices.ByName.TryGetValue(Normalize(foodItem.Name), out var articleId))
-        {
-            return articleId;
-        }
-
         return null;
     }
 
     /// <summary>
-    /// Recipe ingredients reference a grocery item of the household. Nutrition lives on food
-    /// items, which are joined by name, so an ingredient is matched either directly to a food
-    /// item or through the name of its grocery item.
+    /// Resolve nutrition by identity, never by a potentially ambiguous product name.
     /// </summary>
     private static FoodItem? ResolveFoodItem(WeekEvaluationContext context, Guid ingredientReferenceId)
     {
@@ -806,17 +792,10 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
             return direct;
         }
 
-        var article = context.Articles.FirstOrDefault(candidate => candidate.Id == ingredientReferenceId);
-
-        if (article is not null && context.FoodItemsByName.TryGetValue(Normalize(article.Name), out var byName))
-        {
-            return byName;
-        }
-
         return null;
     }
 
-    private static decimal? ResolveUnitPrice(WeekEvaluationContext context, PriceIndex prices, Guid foodItemId)
+    private static decimal? ResolveUnitPrice(WeekEvaluationContext context, PriceIndex prices, Guid foodItemId, string quantityUnit)
     {
         var groceryItemId = ResolveGroceryItemId(context, prices, foodItemId);
 
@@ -825,10 +804,12 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
             return null;
         }
 
-        return LatestPrice(article);
+        if (!article.PurchaseUnitConfirmed) return null;
+        var conversion = QuantityConversion.Convert(1, quantityUnit, Articles.ArticleMapper.ToUnitString(article.Unit));
+        return conversion * LatestPrice(article);
     }
 
-    private static decimal? LatestPrice(GroceryItem article)
+    private static decimal? LatestPrice(FoodItem article)
     {
         if (article.PriceHistory.Count == 0)
         {
@@ -861,7 +842,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
 
             foreach (var ingredient in recipe.Ingredients)
             {
-                var price = ResolveUnitPrice(context, prices, ingredient.FoodItemId);
+                var price = ResolveUnitPrice(context, prices, ingredient.FoodItemId, ingredient.Unit);
                 if (price is null)
                 {
                     complete = false;
@@ -908,8 +889,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
 
     private static string Money(double value) => value.ToString("0.00", CultureInfo.InvariantCulture);
 
-    private static string Normalize(string value) => value.Trim().ToLowerInvariant();
-
     private static string LabelOf(string key) => key switch
     {
         "nutrition" => "équilibre nutritionnel",
@@ -921,11 +900,10 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
 
     private sealed record PlannedMealUsage(Guid MealId, DateOnly Date, Guid ReferenceId, decimal Portions);
 
-    private sealed record IngredientLine(Guid MealId, Guid FoodItemId, decimal Quantity);
+    private sealed record IngredientLine(Guid MealId, Guid FoodItemId, decimal Quantity, string Unit);
 
     private sealed record PriceIndex(
-        IReadOnlyDictionary<Guid, GroceryItem> ById,
-        IReadOnlyDictionary<string, Guid> ByName);
+        IReadOnlyDictionary<Guid, FoodItem> ById);
 
     private sealed record WeekEvaluationContext(
         IReadOnlyList<PlannedMealUsage> Meals,
@@ -934,8 +912,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         IReadOnlyDictionary<Guid, Recipe> Recipes,
         IReadOnlyDictionary<Guid, Domain.ComposedMeals.ComposedMeal> ComposedMeals,
         IReadOnlyDictionary<Guid, FoodItem> FoodItems,
-        IReadOnlyDictionary<string, FoodItem> FoodItemsByName,
-        IReadOnlyList<GroceryItem> Articles,
+        IReadOnlyList<FoodItem> Articles,
         IReadOnlyList<Domain.Stock.StockItem> StockItems,
         IReadOnlyList<PlannedMealReference> MonthReferences,
         NutritionTargets? Targets);

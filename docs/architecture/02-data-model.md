@@ -14,8 +14,18 @@ voir [ADR 0004](decisions/0004-manual-planner.md).
 | `meal_food_lines` | FK repas, FK produit facultative, nom, quantité/unité, unité nutritionnelle et énergie/protéines/glucides/lipides nullables figés ; quantité numeric(28,12). |
 | `activity_sessions` | Horaires nullables, nom/distance et FK catalogue facultative ; type/intensité/durée/calories copiés et modifiables par occurrence. |
 | `sport_templates` | Foyer, nom, sport, durée positive, distance optionnelle, intensité, calories manuelles totales, archivage ; aucun seed silencieux. |
-| `food_items` | Archivage et `ArticleId` nullable unique vers `articles`, raccord explicite dans le même foyer. |
-| `recipes` / `recipe_ingredients` | Archivage, portions, ingrédients numeric(16,6) ; la FK historique `FoodItemId` pointe toujours vers `articles`. |
+| `products` | Agrégat unique nutrition facultative + description/unité d'achat/prix ; ancien type C# `FoodItem`, archivage/OFF/corrections conservés. |
+| `product_aliases` | Ancien ID d'article → ID produit canonique ; FK composite avec foyer. |
+| `legacy_articles` | Archive complète des anciennes lignes d'achat, non mappée/non modifiée par l'application. |
+| `article_price_entries` | Observations possédées par `products` ; nom de table/FK historique conservé, IDs/dates/montants inchangés. |
+| `stock_items` / `shopping_list_items` | FK `GroceryItemId` historique → `products`, quantités/unités/cases historiques conservées. |
+| `recipes` / `recipe_ingredients` | Archivage, portions, ingrédients numeric(16,6) ; FK `FoodItemId` → `products`. |
+
+La migration `UnifiedProducts` remplace la séparation de l'ADR 0004 ; voir
+[ADR 0005](decisions/0005-unified-products.md). Les anciens liens explicites sont
+intégrés ; aucune fusion par nom. Les aliments sans achats et articles sans
+nutrition deviennent des produits distincts. Les unités d'achat inconnues
+restent à confirmer ; aucune conversion par conditionnement/densité implicite.
 
 Préparation = quantité personnelle × (1 + 0,5 × enfants). Les enfants n'augmentent
 jamais la nutrition personnelle. Le sport reste séparé des apports. Aucune
@@ -34,7 +44,7 @@ pilotent plus le parcours MVP.
 comme référence antérieure.** Ils ne décrivent pas le schéma manuel actuel :
 profils enfants, contexte travail et menu équilibré ne sont plus ses exigences.
 
-Ce document décrit le modèle de données conceptuel visé pour la base
+Ce document décrit le modèle de données conceptuel historique visé pour la base
 PostgreSQL cible. Il est volontairement **non final** : il sert de point de
 départ pour la roadmap technique (voir `docs/03-roadmap.md`) et sera affiné
 jalon par jalon. Il ne prescrit pas un schéma SQL exact (noms de colonnes,

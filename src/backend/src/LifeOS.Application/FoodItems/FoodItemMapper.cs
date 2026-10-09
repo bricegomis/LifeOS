@@ -16,6 +16,13 @@ public static class FoodItemMapper
             ArticleId = foodItem.ArticleId,
             IsArchived = foodItem.IsArchived,
             Name = foodItem.Name,
+            Description = foodItem.Description,
+            Unit = LifeOS.Application.Articles.ArticleMapper.ToUnitString(foodItem.Unit),
+            PurchaseUnitConfirmed = foodItem.PurchaseUnitConfirmed,
+            LegacyPurchaseName = foodItem.LegacyPurchaseName,
+            MigrationOrigin = foodItem.MigrationOrigin,
+            PriceHistory = foodItem.PriceHistory.Select(e => new LifeOS.Application.Articles.GroceryPriceEntryDto(
+                e.Id, e.StoreId, e.Price, e.ObservedAt, e.CreatedAt)).OrderByDescending(e => e.ObservedAt).ToList(),
             ReferenceUnit = foodItem.ReferenceUnit,
             Nutrition = foodItem.Nutrition == null ? null : new NutritionDto
             {

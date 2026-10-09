@@ -19,11 +19,13 @@ public sealed class CreateFoodItemRequest
     [StringLength(500)]
     public string Name { get; set; }
 
-    [Required]
     [StringLength(50)]
     public string ReferenceUnit { get; set; }
 
     public NutritionDto? Nutrition { get; set; }
+    [StringLength(1000)]
+    public string Description { get; set; } = "";
+    public string? Unit { get; set; }
 }
 
 /// <summary>
@@ -42,11 +44,13 @@ public sealed class UpdateFoodItemRequest
     [StringLength(500)]
     public string Name { get; set; }
 
-    [Required]
     [StringLength(50)]
     public string ReferenceUnit { get; set; }
 
     public NutritionDto? Nutrition { get; set; }
+    [StringLength(1000)]
+    public string? Description { get; set; }
+    public string? Unit { get; set; }
 }
 
 /// <summary>
@@ -65,9 +69,11 @@ public sealed class CreateCorrectionRequest
     [StringLength(500)]
     public string Name { get; set; }
 
-    [Required]
     [StringLength(50)]
     public string ReferenceUnit { get; set; }
 
     public NutritionDto? Nutrition { get; set; }
+    [StringLength(1000)]
+    public string? Description { get; set; }
+    public string? Unit { get; set; }
 }

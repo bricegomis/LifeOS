@@ -7,6 +7,8 @@ using LifeOS.Application.Households;
 using LifeOS.Domain.FoodItems;
 using LifeOS.Infrastructure.FoodItems.OpenFoodFacts;
 using Microsoft.AspNetCore.Mvc;
+using LifeOS.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace LifeOS.Api.Endpoints;
 
@@ -17,6 +19,7 @@ public static class FoodItemsEndpoints
 {
     public static IEndpointRouteBuilder MapFoodItemsEndpoints(this IEndpointRouteBuilder app)
     {
+        MapProductRoutes(app);
         var group = app.MapGroup("/api/food-items")
             .WithTags("Food Items")
             .RequireAuthorization()
@@ -78,6 +81,44 @@ public static class FoodItemsEndpoints
         return app;
     }
 
+    private static void MapProductRoutes(IEndpointRouteBuilder app)
+    {
+        var products = app.MapGroup("/api/products").WithTags("Products").RequireAuthorization().AddRequestValidation();
+        products.MapGet("/", GetFoodItemsAsync);
+        products.MapGet("/{foodItemId:guid}", GetFoodItemByIdAsync);
+        products.MapGet("/{foodItemId:guid}/usage", GetProductUsageAsync);
+        products.MapPost("/", CreateFoodItemAsync);
+        products.MapPut("/{foodItemId:guid}", UpdateFoodItemAsync);
+        products.MapDelete("/{foodItemId:guid}", DeleteFoodItemAsync);
+        products.MapGet("/search-off", SearchOpenFoodFactsByNameAsync);
+        products.MapGet("/search-off-barcode", SearchOpenFoodFactsByBarcodeAsync);
+        products.MapPost("/{foodItemId:guid}/correction", CreateCorrectionAsync);
+    }
+
+    public sealed record ProductRecipeUsage(Guid Id, string Name, bool IsArchived);
+    public sealed record ProductStockUsage(decimal Quantity, string Unit);
+    public sealed record ProductUsageDto(IReadOnlyList<ProductRecipeUsage> Recipes,
+        IReadOnlyList<ProductStockUsage> Stock, int MealOccurrences, int HistoricalShoppingLines);
+
+    private static async Task<IResult> GetProductUsageAsync(Guid foodItemId, ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery households, LifeOSDbContext db, CancellationToken ct)
+    {
+        if (!user.TryGetUserId(out var sub)) return Results.Unauthorized();
+        var household = await households.ExecuteAsync(sub, ct);
+        if (!await db.FoodItems.AnyAsync(p => p.Id == foodItemId && p.HouseholdId == household, ct))
+            return Results.NotFound();
+        var recipes = await db.Recipes.Where(r => r.HouseholdId == household && r.Ingredients.Any(i => i.FoodItemId == foodItemId))
+            .OrderBy(r => r.Name).Select(r => new ProductRecipeUsage(r.Id, r.Name, r.IsArchived)).ToListAsync(ct);
+        var stock = await db.StockItems.Where(s => s.HouseholdId == household && s.GroceryItemId == foodItemId)
+            .Select(s => new ProductStockUsage(s.Quantity, s.Unit)).ToListAsync(ct);
+        var meals = await db.MealFoodLines.Where(l => l.FoodItemId == foodItemId
+                && db.PlannedMeals.Any(m => m.Id == l.PlannedMealId
+                    && db.DayPlans.Any(d => d.Id == m.DayPlanId && db.Weeks.Any(w => w.Id == d.WeekId && w.HouseholdId == household))))
+            .Select(l => l.PlannedMealId).Distinct().CountAsync(ct);
+        var shopping = await db.ShoppingListItems.CountAsync(s => s.HouseholdId == household && s.GroceryItemId == foodItemId, ct);
+        return Results.Ok(new ProductUsageDto(recipes, stock, meals, shopping));
+    }
+
     private static async Task<IResult> GetFoodItemsAsync(
         ClaimsPrincipal user,
         ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
@@ -119,6 +160,7 @@ public static class FoodItemsEndpoints
     }
 
     private static async Task<IResult> CreateFoodItemAsync(
+        HttpContext context,
         ClaimsPrincipal user,
         ResolveHouseholdForUserQuery resolveHouseholdForUserQuery,
         IFoodItemRepository foodItemRepository,
@@ -134,11 +176,15 @@ public static class FoodItemsEndpoints
 
         try
         {
+            if (context.Request.Path.StartsWithSegments("/api/products") && request.Unit is null)
+                throw new ArgumentException("Précisez l'unité d'achat du produit.");
             var nutrition = FoodItemMapper.NutritionFromDto(request.Nutrition);
-            var foodItem = FoodItem.CreateManual(householdId, request.Name, request.ReferenceUnit, nutrition);
+            var foodItem = FoodItem.CreateManual(householdId, request.Name, request.ReferenceUnit ?? "", nutrition);
+            if (request.Unit is not null)
+                foodItem.UpdatePurchaseDetails(request.Description ?? "", LifeOS.Application.Articles.ArticleMapper.ParseUnit(request.Unit));
             await foodItemRepository.AddAsync(foodItem, cancellationToken);
 
-            return Results.Created($"/api/food-items/{foodItem.Id}", FoodItemMapper.ToDto(foodItem));
+            return Results.Created($"/api/products/{foodItem.Id}", FoodItemMapper.ToDto(foodItem));
         }
         catch (ArgumentException exception)
         {
@@ -168,7 +214,9 @@ public static class FoodItemsEndpoints
         try
         {
             var nutrition = FoodItemMapper.NutritionFromDto(request.Nutrition);
-            foodItem.UpdateDetails(request.Name, request.ReferenceUnit, nutrition);
+            foodItem.UpdateDetails(request.Name, request.ReferenceUnit ?? "", nutrition);
+            if (request.Unit is not null)
+                foodItem.UpdatePurchaseDetails(request.Description ?? foodItem.Description, LifeOS.Application.Articles.ArticleMapper.ParseUnit(request.Unit));
             await foodItemRepository.UpdateAsync(foodItem, cancellationToken);
 
             return Results.Ok(FoodItemMapper.ToDto(foodItem));
@@ -326,7 +374,11 @@ public static class FoodItemsEndpoints
         try
         {
             var nutrition = FoodItemMapper.NutritionFromDto(request.Nutrition);
-            var correction = FoodItem.CreateCorrection(householdId, request.Name, request.ReferenceUnit, nutrition, foodItemId);
+            var correction = FoodItem.CreateCorrection(householdId, request.Name, request.ReferenceUnit ?? "", nutrition, foodItemId);
+            if (request.Unit is not null)
+                correction.UpdatePurchaseDetails(request.Description ?? original.Description, LifeOS.Application.Articles.ArticleMapper.ParseUnit(request.Unit));
+            else if (original.PurchaseUnitConfirmed)
+                correction.UpdatePurchaseDetails(request.Description ?? original.Description, original.Unit);
             await foodItemRepository.AddAsync(correction, cancellationToken);
 
             return Results.Created($"/api/food-items/{correction.Id}", FoodItemMapper.ToDto(correction));

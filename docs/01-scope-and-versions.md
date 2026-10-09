@@ -16,7 +16,7 @@ le frontend Vue historique n'est pas refondu.
   Cette plage limite l'affichage, jamais le stockage ou l'accès aux événements.
 - Ajouter, éditer, déplacer et supprimer par formulaire et clavier, sans
   dépendre du glisser-déposer. Chevauchements autorisés et lisibles.
-- Trois bibliothèques administrables et persistées : produits alimentaires,
+- Trois bibliothèques administrables et persistées : produits (nutrition et achats réunis),
   recettes et séances sportives, isolées par foyer.
 - Un repas est une recette avec portion personnelle, **ou** une liste de
   produits avec quantités et unités. Une banane est un produit, pas une recette.
@@ -47,8 +47,9 @@ API et PostgreSQL restent la source de vérité. Les semaines sont indépendante
 Les valeurs utilisées par les événements sont préservées : éditer ou archiver
 le catalogue ne réécrit pas l'historique. Remplacer le contenu est une action
 explicite. Préférer l'archivage des éléments référencés.
-Raccorder articles d'achat et produits nutritionnels explicitement, sans fusion
-par nom, sans perdre prix ou achats. Les anciennes semaines sans horaires
+Réunir nutrition et achats dans un produit unique ; migrer les anciens liens
+explicites sans fusion par nom, sans perdre prix, identifiants ou achats.
+Conserver séparément les entrées non associées. Les anciennes semaines sans horaires
 restent « à positionner » jusqu'à placement manuel, sans heure inventée.
 Conserver auth Supabase/JWT et isolation `household_id`.
 

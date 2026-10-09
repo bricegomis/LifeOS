@@ -12,8 +12,7 @@ public sealed record GroceryPriceEntryDto(
     DateTimeOffset CreatedAt);
 
 /// <summary>
-/// Read model returned by the API for a grocery article, mirroring the frontend's
-/// <c>GroceryItem</c> shape.
+/// Legacy purchase projection of the canonical product. New clients use FoodItemDto.
 /// </summary>
 public sealed record GroceryItemDto(
     Guid Id,

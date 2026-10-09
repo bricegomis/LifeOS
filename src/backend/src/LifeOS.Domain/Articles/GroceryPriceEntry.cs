@@ -1,7 +1,8 @@
+using LifeOS.Domain.FoodItems;
 namespace LifeOS.Domain.Articles;
 
 /// <summary>
-/// A price observed for a <see cref="GroceryItem"/> at a given store and date, mirroring the
+/// A price observed for a <see cref="FoodItem"/> at a given store and date, mirroring the
 /// frontend's <c>GroceryPriceEntry</c> model.
 /// </summary>
 public sealed class GroceryPriceEntry

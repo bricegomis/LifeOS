@@ -25,7 +25,7 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
     public DbSet<Store> Stores => Set<Store>();
-    public DbSet<GroceryItem> GroceryItems => Set<GroceryItem>();
+    public DbSet<FoodItem> GroceryItems => Set<FoodItem>();
 
     // Jalon 2: Recipes and Meals
     public DbSet<Recipe> Recipes => Set<Recipe>();
@@ -43,6 +43,14 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
 
     // Jalon 3: Food Items
     public DbSet<FoodItem> FoodItems => Set<FoodItem>();
+    public DbSet<ProductAlias> ProductAliases => Set<ProductAlias>();
+
+    public async Task<Guid> ResolveProductIdAsync(Guid householdId, Guid id, CancellationToken ct)
+    {
+        // Exact identities only. No name-based matching.
+        return await ProductAliases.Where(a => a.ArticleId == id && a.HouseholdId == householdId)
+            .Select(a => (Guid?)a.ProductId).SingleOrDefaultAsync(ct) ?? id;
+    }
 
     // Jalon 4: Nutrition and Sports Context
     public DbSet<UserConfiguration> UserConfigurations => Set<UserConfiguration>();
