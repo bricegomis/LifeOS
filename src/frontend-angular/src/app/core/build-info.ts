@@ -56,8 +56,6 @@ export function formatBuildInfo(info: BuildInfo) {
   const label =
     major && /^[1-9]\d*$/.test(major) && number && /^[1-9]\d*$/.test(number)
       ? `${major}.${number}`
-      : number && /^[1-9]\d*$/.test(number)
-        ? `Build #${number}`
       : local
         ? info.buildId === 'dev'
           ? 'Local (développement)'

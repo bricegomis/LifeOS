@@ -22,8 +22,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set manually maintained product major
-        run: node -e 'const { version } = require("./src/frontend-angular/package.json"); console.log(`LIFEOS_VERSION_MAJOR=${version.split(".")[0]}`)' >> "$GITHUB_ENV"
+      - name: Read manually maintained product major
+        id: version
+        run: echo "major=$(node -p 'require("./src/frontend-angular/package.json").version.split(".")[0]')" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -44,7 +45,7 @@ jobs:
           tags: ${{ env.API_IMAGE }}:latest
           build-args: |
             LIFEOS_BUILD_ID=${{ github.sha }}
-            LIFEOS_VERSION_MAJOR=${{ env.LIFEOS_VERSION_MAJOR }}
+            LIFEOS_VERSION_MAJOR=${{ steps.version.outputs.major }}
             LIFEOS_BUILD_NUMBER=${{ github.run_number }}
             LIFEOS_RUN_ID=${{ github.run_id }}
             LIFEOS_RUN_ATTEMPT=${{ github.run_attempt }}

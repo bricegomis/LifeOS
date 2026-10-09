@@ -59,7 +59,7 @@ anonymous key is public client configuration; it must never be replaced with a
 service-role key. API calls fail visibly when the API URL is missing.
 
 The sidebar shows separate `UI 1.123` and `API 1.123` versions: the major is
-maintained manually in `package.json`, and the minor is the producing workflow's
+maintained manually in `src/frontend-angular/package.json`, and the minor is the producing workflow's
 build number. The settings page uses the same UI version display. The UI reads the API's public, no-store
 `GET /api/version` diagnostic endpoint at startup, never the latest GitHub run.
 Docker builds both images together, but independently updated containers can differ.

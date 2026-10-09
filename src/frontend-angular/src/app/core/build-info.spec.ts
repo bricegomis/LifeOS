@@ -22,8 +22,9 @@ describe('deployed build provenance', () => {
     assert.equal(retry.label, '1.123')
   })
 
-  it('keeps the build number visible when a legacy API has no major version', () => {
-    assert.equal(formatBuildInfo({ ...build, versionMajor: null }).label, 'Build #123')
+  it('requires both version parts before showing a deployed version', () => {
+    assert.equal(formatBuildInfo({ ...build, versionMajor: null }).label, 'Build non identifié')
+    assert.equal(formatBuildInfo({ ...build, buildNumber: null }).label, 'Build non identifié')
   })
 
   it('keeps local and legacy artifacts explicit without inventing a build number', () => {
