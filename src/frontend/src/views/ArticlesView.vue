@@ -280,6 +280,10 @@ function removePriceEntry(itemId: string, priceEntryId: string): void {
             </div>
 
             <div v-if="expandedItemId === item.id" class="article-price-panel">
+              <p v-if="!stores.length" class="stores-empty-inline">
+                <RouterLink class="article-stores-link" to="/stores">Ajoutez un magasin</RouterLink>
+                pour enregistrer un prix pour cet article.
+              </p>
               <form class="article-price-form" @submit.prevent="submitPriceForm(item.id)">
                 <label class="stores-field">
                   <span>Magasin</span>
