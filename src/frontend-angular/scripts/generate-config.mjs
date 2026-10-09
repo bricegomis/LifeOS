@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 for (const file of ['.env', '.env.local']) {
@@ -18,8 +18,17 @@ const config = {
   apiBaseUrl: process.env.VITE_LIFEOS_API_URL?.trim().replace(/\/+$/, '') ?? '',
 }
 
+const packageVersion = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+).version
+const versionMajor = /^([1-9]\d*)\./.exec(packageVersion)?.[1]
+if (!versionMajor) {
+  throw new Error('La version de package.json doit commencer par un majeur positif')
+}
+
 const buildInfo = {
   buildId: process.env.LIFEOS_BUILD_ID?.trim() || 'local',
+  versionMajor,
   buildNumber: process.env.LIFEOS_BUILD_NUMBER?.trim() || null,
   runId: process.env.LIFEOS_RUN_ID?.trim() || null,
   runAttempt: process.env.LIFEOS_RUN_ATTEMPT?.trim() || null,

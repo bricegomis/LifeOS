@@ -107,6 +107,7 @@ app.MapGet("/api/version", (HttpContext context, IConfiguration configuration) =
     {
         component = "api",
         buildId = ReadBuildValue("BuildId") ?? "local",
+        versionMajor = ReadBuildValue("VersionMajor"),
         buildNumber = ReadBuildValue("BuildNumber"),
         runId = ReadBuildValue("RunId"),
         runAttempt = ReadBuildValue("RunAttempt"),

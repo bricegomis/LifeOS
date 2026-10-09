@@ -5,6 +5,7 @@ import { formatBuildInfo, parseApiBuildInfo } from './build-info.ts'
 const build = {
   component: 'api',
   buildId: 'abcdef0123456789abcdef0123456789abcdef0123',
+  versionMajor: '1',
   buildNumber: '123',
   runId: '987654321',
   runAttempt: '1',
@@ -14,27 +15,15 @@ const build = {
 }
 
 describe('deployed build provenance', () => {
-  it('shows the artifact build number and links to the exact workflow attempt', () => {
+  it('shows only the manually selected major and artifact build number', () => {
     const result = formatBuildInfo(parseApiBuildInfo(build))
-    assert.equal(result.label, 'Build #123')
-    assert.equal(
-      result.runUrl,
-      'https://github.com/bricegomis/LifeOS/actions/runs/987654321/attempts/1',
-    )
-    assert.ok(result.details.includes(`Commit ${build.buildId}`))
-    assert.ok(result.details.includes('Run 987654321'))
-    assert.ok(result.details.includes(build.workflow))
+    assert.equal(result.label, '1.123')
     const retry = formatBuildInfo({ ...build, runAttempt: '2' })
-    assert.equal(retry.label, 'Build #123 · tentative 2')
-    assert.ok(retry.runUrl?.endsWith('/attempts/2'))
+    assert.equal(retry.label, '1.123')
   })
 
-  it('does not conflate workflow-scoped numbers or commits with build identity', () => {
-    const pages = formatBuildInfo({ ...build, runId: '111111', workflow: 'Deploy GitHub Pages' })
-    const docker = formatBuildInfo(build)
-    assert.equal(pages.label, docker.label)
-    assert.notEqual(pages.runUrl, docker.runUrl)
-    assert.notEqual(pages.details, docker.details)
+  it('keeps the build number visible when a legacy API has no major version', () => {
+    assert.equal(formatBuildInfo({ ...build, versionMajor: null }).label, 'Build #123')
   })
 
   it('keeps local and legacy artifacts explicit without inventing a build number', () => {
@@ -42,16 +31,16 @@ describe('deployed build provenance', () => {
     assert.equal(formatBuildInfo({ buildId: 'dev' }).label, 'Local (développement)')
     const legacy = formatBuildInfo(parseApiBuildInfo({ component: 'api', buildId: build.buildId }))
     assert.equal(legacy.label, 'Build non identifié')
-    assert.equal(legacy.runUrl, null)
-    assert.ok(legacy.details.includes(build.buildId))
-    assert.equal(formatBuildInfo({ ...build, buildNumber: null, runId: null }).runUrl, null)
+    assert.equal(formatBuildInfo({ ...build, buildNumber: null, runId: null }).label, 'Build non identifié')
   })
 
-  it('validates unknown API data and never emits unsafe run links', () => {
+  it('validates unknown API data and version numbers', () => {
     for (const invalid of [
       null,
       {},
       { ...build, component: 'ui' },
+      { ...build, versionMajor: '0' },
+      { ...build, versionMajor: '1.2' },
       { ...build, buildNumber: 123 },
       { ...build, runId: 'NaN' },
       { ...build, runAttempt: '-1' },
@@ -59,14 +48,5 @@ describe('deployed build provenance', () => {
     ]) {
       assert.throws(() => parseApiBuildInfo(invalid))
     }
-    for (const serverUrl of [
-      'not a URL',
-      'javascript:alert(1)',
-      'https://user@github.com',
-      'https://github.com/path',
-    ]) {
-      assert.equal(formatBuildInfo({ ...build, serverUrl }).runUrl, null)
-    }
-    assert.equal(formatBuildInfo({ ...build, repository: '../elsewhere' }).runUrl, null)
   })
 })

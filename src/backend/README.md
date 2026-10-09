@@ -275,16 +275,16 @@ The API image retains these under the corresponding `LifeOS__BuildId`,
 `LifeOS__ServerUrl`, and `LifeOS__Workflow` configuration keys. Do not replace
 them with deployment-time values or the latest run: they identify the built image.
 
-The UI displays `UI Build #123` and `API Build #123` separately, linking each to
-its exact run and attempt. A rerun displays `Build #123 · tentative 2`.
-Workflow name, run ID, attempt and full commit remain available in expandable
-details. Run numbers are scoped to a workflow, not globally unique. API and Angular
+The UI displays `UI 1.123` and `API 1.123` separately: the major comes from
+`src/frontend-angular/package.json` and is changed manually, while the minor is
+the producing workflow's run number. Run numbers are scoped to a workflow, not
+globally unique. API and Angular
 are built together in this Docker workflow, but independently updated `latest`
 containers may temporarily differ. Vue Pages is built in a separate workflow;
 its number need not match the API even when the commits match.
 
 `GET /api/version` keeps the existing `component` and `buildId` fields and adds
-nullable string fields `buildNumber`, `runId`, `runAttempt`, `repository`,
+nullable string fields `versionMajor`, `buildNumber`, `runId`, `runAttempt`, `repository`,
 `serverUrl`, and `workflow`. Local builds default to `local`, with no CI number.
 An older API returning only a commit is displayed as `Build non identifié`, with
 its commit in details. Missing API configuration and request failures remain explicit.

@@ -7,23 +7,7 @@ import { formatBuildInfo, type BuildInfo } from '../core/build-info'
   template: `
     <span>{{ component() }} </span>
     @if (version(); as version) {
-      @if (version.runUrl) {
-        <a
-          [href]="version.runUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-          [attr.aria-label]="component() + ' ' + version.label + ' — ouvrir le run GitHub Actions'"
-          >{{ version.label }}</a
-        >
-      } @else {
-        <span>{{ version.label }}</span>
-      }
-      @if (version.details) {
-        <details>
-          <summary>Détails {{ component() }}</summary>
-          <span>{{ version.details }}</span>
-        </details>
-      }
+      <span>{{ version.label }}</span>
     } @else {
       <span>{{ status() }}</span>
     }
@@ -33,16 +17,6 @@ import { formatBuildInfo, type BuildInfo } from '../core/build-info'
       :host {
         display: block;
         overflow-wrap: anywhere;
-      }
-      a {
-        color: inherit;
-        text-decoration: underline;
-      }
-      details {
-        margin-top: 0.2rem;
-      }
-      summary {
-        cursor: pointer;
       }
     `,
   ],

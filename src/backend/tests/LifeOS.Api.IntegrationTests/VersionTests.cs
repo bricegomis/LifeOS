@@ -21,6 +21,7 @@ public sealed class VersionTests
         await using var factory = new VersionApiFactory(new Dictionary<string, string?>
         {
             ["LifeOS:BuildId"] = commit,
+            ["LifeOS:VersionMajor"] = hasCiBuild ? "1" : null,
             ["LifeOS:BuildNumber"] = number,
             ["LifeOS:RunId"] = runId,
             ["LifeOS:RunAttempt"] = attempt,
@@ -37,6 +38,7 @@ public sealed class VersionTests
         var root = document.RootElement;
         Assert.Equal("api", root.GetProperty("component").GetString());
         Assert.Equal(string.IsNullOrWhiteSpace(commit) ? "local" : commit, root.GetProperty("buildId").GetString());
+        Assert.Equal(hasCiBuild ? "1" : null, root.GetProperty("versionMajor").GetString());
         Assert.Equal(hasCiBuild ? number : null, root.GetProperty("buildNumber").GetString());
         Assert.Equal(hasCiBuild ? runId : null, root.GetProperty("runId").GetString());
         Assert.Equal(hasCiBuild ? attempt : null, root.GetProperty("runAttempt").GetString());

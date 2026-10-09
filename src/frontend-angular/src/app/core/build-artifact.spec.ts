@@ -32,6 +32,7 @@ it('embeds CI provenance separately from replaceable deployment config, with hon
     const window: Record<string, Record<string, unknown>> = {}
     runInNewContext(readFileSync(join(cwd, 'public/config.js'), 'utf8'), { window })
     const build = readBuild()
+    assert.equal(build.versionMajor, '1')
     assert.equal(build.buildNumber, '123')
     assert.equal(build.runId, '987654321')
     assert.equal(build.runAttempt, '2')
