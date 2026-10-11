@@ -149,7 +149,7 @@
       @if (edit.kind === 'meal') {
         @if (contentEditable()) {
           <div class="dialog-row">
-            <label class="dialog-field"><span>Contenu</span><select class="text-input" name="source" [(ngModel)]="edit.source"><option value="recipe">Recette</option><option value="foods">Produits / ingrédients</option></select></label>
+            <label class="dialog-field"><span>Contenu</span><select class="text-input" name="source" [(ngModel)]="edit.source"><option value="recipe">Recette</option><option value="foods">Aliments / ingrédients</option></select></label>
             @if (edit.source === 'recipe') {
               <label class="dialog-field"><span>Recette</span><select class="text-input" name="recipe" required [(ngModel)]="edit.recipeId">
                 <option value="">Choisir une recette</option>
@@ -164,7 +164,7 @@
           @for (line of edit.lines; track $index; let index = $index) {
             <div class="ingredient-editor">
               @if (contentEditable()) {
-                <label class="dialog-field"><span>Produit</span><select class="text-input" [name]="'food'+index" [(ngModel)]="line.foodItemId" required>
+                <label class="dialog-field"><span>Aliment</span><select class="text-input" [name]="'food'+index" [(ngModel)]="line.foodItemId" required>
                   <option value="">Choisir</option>
                   @for (food of activeFoods(); track food.id) { <option [value]="food.id">{{ food.name }} · nutrition / {{ food.referenceUnit }}</option> }
                 </select></label>
@@ -175,7 +175,7 @@
               @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="edit.lines.splice(index, 1)">Retirer</button> }
             </div>
           }
-          @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addLine()"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter un produit</button> }
+          @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addLine()"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter un aliment</button> }
         }
       } @else {
         @if (contentEditable()) {

@@ -25,19 +25,16 @@ public sealed class ProductTests
         Assert.Null(QuantityConversion.Convert(1, from, to));
 
     [Fact]
-    public void Product_owns_nutrition_and_prices_without_changing_reference_values()
+    public void Food_completeness_distinguishes_zero_null_base_and_digestive_fields()
     {
-        var product = FoodItem.CreateManual(Guid.NewGuid(), "Riz", "100g", new LifeOS.Domain.FoodItems.Nutrition(150, 3, 30, 1));
-        Assert.False(product.PurchaseUnitConfirmed);
-        Assert.Throws<ArgumentException>(() => product.AddPriceEntry(Guid.NewGuid(), 2.5m, DateTimeOffset.UtcNow));
-        product.UpdatePurchaseDetails("Achats", GroceryItemUnit.Kilogram);
-        product.AddPriceEntry(Guid.NewGuid(), 2.5m, DateTimeOffset.UtcNow);
-        Assert.Equal(150, product.Nutrition!.CaloriesPerUnit);
-        Assert.Equal("100g", product.ReferenceUnit);
-        Assert.Throws<ArgumentException>(() => product.UpdatePurchaseDetails("Changement", GroceryItemUnit.Liter));
-        Assert.Equal(GroceryItemUnit.Kilogram, product.Unit);
-        Assert.Equal("Achats", product.Description);
-        product.Archive();
-        Assert.Single(product.PriceHistory);
+        var food = FoodItem.CreateManual(Guid.NewGuid(), "Riz", "", new LifeOS.Domain.FoodItems.Nutrition(0, 0, 0, 0));
+        Assert.Equal(new[] { "Base nutritionnelle", "FODMAP", "NOVA" }, food.MissingFields);
+        food.UpdateDetails("Riz", "100 g", food.Nutrition);
+        food.UpdateDigestiveInformation("low", 1, null);
+        Assert.Empty(food.MissingFields);
+        food.UpdateDetails("Riz", "100 g", new LifeOS.Domain.FoodItems.Nutrition(0, null, 0, 0));
+        Assert.Equal("Protéines", Assert.Single(food.MissingFields));
+        Assert.Throws<ArgumentException>(() => food.UpdateDigestiveInformation("unknown", 1, ""));
+        Assert.Throws<ArgumentException>(() => food.UpdateDigestiveInformation(null, 5, ""));
     }
 }

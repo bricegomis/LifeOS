@@ -77,7 +77,7 @@ export class PlanningPageComponent implements OnInit {
     this.catalogError.set('')
     try {
       const result = await firstValueFrom(forkJoin({
-        foods: this.api.get<FoodItemDto[]>('/products'),
+        foods: this.api.get<FoodItemDto[]>('/foods'),
         recipes: this.api.get<RecipeDto[]>('/recipes'),
         sports: this.api.get<SportTemplateDto[]>('/sport-templates'),
       }))
@@ -180,7 +180,7 @@ export class PlanningPageComponent implements OnInit {
   lineName(line: MealLinePayload): string {
     const day = this.week()?.days.flatMap(d => d.meals).find(m => m.id === this.draft?.id)
     return day?.lines.find(l => l.id === line.snapshotLineId)?.name
-      ?? this.foods().find(f => f.id === line.foodItemId)?.name ?? 'Produit indisponible'
+      ?? this.foods().find(f => f.id === line.foodItemId)?.name ?? 'Aliment indisponible'
   }
 
   contentEditable(): boolean { return Boolean(this.draft && (!this.draft.id || this.draft.replaceContent)) }

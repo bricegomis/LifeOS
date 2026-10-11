@@ -3,7 +3,6 @@ using System.Text.Json;
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Application.ComposedMeals;
 using LifeOS.Application.Recipes;
-using LifeOS.Domain.Articles;
 using LifeOS.Domain.Common;
 using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Recipes;
@@ -15,7 +14,7 @@ namespace LifeOS.Application.WeekPlanning;
 /// Computes the single balanced plan of a week from the household's own data.
 /// <para>
 /// There is no strategy to pick: nutritional balance is treated as a constraint, then the
-/// engine rewards a low budget, low waste and enough diversity over the surrounding month.
+/// engine measures ingredient reuse and diversity over the surrounding month.
 /// Dimensions the household data cannot support are excluded from the composite score and
 /// reported as limitations instead of being faked.
 /// </para>
@@ -24,8 +23,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
 {
     // Nutrition dominates: it is the constraint the compromise is built around.
     private const double NutritionWeight = 0.40;
-    private const double CostWeight = 0.25;
-    private const double WasteWeight = 0.20;
+    private const double ReuseWeight = 0.20;
     private const double DiversityWeight = 0.15;
 
     /// <summary>Relative gap to the target beyond which a nutrition axis scores zero.</summary>
@@ -50,8 +48,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
     private readonly IRecipeRepository _recipeRepository;
     private readonly IComposedMealRepository _composedMealRepository;
     private readonly IFoodItemRepository _foodItemRepository;
-    private readonly IArticleRepository _articleRepository;
-    private readonly IStockItemRepository _stockItemRepository;
     private readonly IBalancedPlanDataSource _dataSource;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -63,8 +59,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         IRecipeRepository recipeRepository,
         IComposedMealRepository composedMealRepository,
         IFoodItemRepository foodItemRepository,
-        IArticleRepository articleRepository,
-        IStockItemRepository stockItemRepository,
         IBalancedPlanDataSource dataSource,
         IUnitOfWork unitOfWork)
     {
@@ -75,8 +69,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         _recipeRepository = recipeRepository ?? throw new ArgumentNullException(nameof(recipeRepository));
         _composedMealRepository = composedMealRepository ?? throw new ArgumentNullException(nameof(composedMealRepository));
         _foodItemRepository = foodItemRepository ?? throw new ArgumentNullException(nameof(foodItemRepository));
-        _articleRepository = articleRepository ?? throw new ArgumentNullException(nameof(articleRepository));
-        _stockItemRepository = stockItemRepository ?? throw new ArgumentNullException(nameof(stockItemRepository));
         _dataSource = dataSource ?? throw new ArgumentNullException(nameof(dataSource));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
@@ -170,8 +162,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
             .ToDictionary(meal => meal.Id);
         var foodItemList = (await _foodItemRepository.GetByHouseholdAsync(householdId, cancellationToken)).ToList();
         var foodItems = foodItemList.ToDictionary(item => item.Id);
-        var articles = await _articleRepository.GetAllForHouseholdAsync(householdId, cancellationToken);
-        var stockItems = await _stockItemRepository.GetAllForHouseholdAsync(householdId, cancellationToken);
         var activityEnergy = await _dataSource.GetActivityEnergyByDayPlanAsync(week.Id, cancellationToken);
         var targets = await _dataSource.GetNutritionTargetsAsync(householdId, cancellationToken);
 
@@ -218,8 +208,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
             recipes,
             composedMeals,
             foodItems,
-            articles,
-            stockItems,
             monthReferences,
             targets);
     }
@@ -238,7 +226,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
                     EmptyDimension("nutrition", "Aucun repas planifié : équilibre nutritionnel non évaluable."),
                     EmptyDimension("cost", "Aucun repas planifié : budget non évaluable."),
                     EmptyDimension("diversity", "Aucun repas planifié : diversité non évaluable."),
-                    EmptyDimension("waste", "Aucun repas planifié : gaspillage non évaluable."),
+                    EmptyDimension("reuse", "Aucun repas planifié : réutilisation non évaluable."),
                 ],
                 Tradeoffs: [],
                 Limitations: ["Aucun repas n'est planifié sur cette semaine : ajoutez des repas pour obtenir un calcul."],
@@ -249,14 +237,13 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         var tradeoffs = new List<string>();
 
         var ingredients = ResolveIngredients(context, limitations);
-        var prices = BuildPriceIndex(context);
 
         var dimensions = new List<BalancedPlanDimension>
         {
             ScoreNutrition(context, ingredients, limitations),
-            ScoreCost(context, ingredients, prices, limitations),
+            EmptyDimension("cost", "Coût non calculable : aucun produit de référence explicitement choisi pour les aliments."),
             ScoreDiversity(context, limitations),
-            ScoreWaste(context, ingredients, prices, limitations),
+            ScoreReuse(ingredients, limitations),
         };
 
         var (overall, weighted) = Combine(dimensions);
@@ -325,7 +312,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         {
             limitations.Add(
                 $"{unresolvedMeals} repas sur {context.Meals.Count} n'ont aucun ingrédient exploitable " +
-                "(recette absente ou sans ingrédients) : ils ne comptent ni dans la nutrition, ni dans le budget, ni dans le gaspillage.");
+                "(recette absente ou sans ingrédients) : ils ne comptent ni dans la nutrition ni dans la réutilisation.");
         }
 
         return lines;
@@ -442,94 +429,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         return new BalancedPlanDimension("nutrition", Clamp(score), NutritionWeight, Round(coverage), summary, metrics);
     }
 
-    private static BalancedPlanDimension ScoreCost(
-        WeekEvaluationContext context,
-        IReadOnlyList<IngredientLine> ingredients,
-        PriceIndex prices,
-        List<string> limitations)
-    {
-        if (ingredients.Count == 0)
-        {
-            return EmptyDimension("cost", "Aucun ingrédient exploitable sur la semaine.");
-        }
-
-        decimal total = 0;
-        var covered = 0;
-
-        foreach (var line in ingredients)
-        {
-            var price = ResolveUnitPrice(context, prices, line.FoodItemId, line.Unit);
-            if (price is null)
-            {
-                continue;
-            }
-
-            covered++;
-            total += line.Quantity * price.Value;
-        }
-
-        if (covered == 0)
-        {
-            limitations.Add(
-                "Aucun ingrédient de la semaine n'est rattaché à un article avec un prix relevé : " +
-                "le budget n'a pas pu être estimé.");
-            return EmptyDimension("cost", "Aucun prix disponible pour les ingrédients de la semaine.");
-        }
-
-        var coverage = (double)covered / ingredients.Count;
-
-        if (covered < ingredients.Count)
-            limitations.Add("Budget : les prix manquants ou unités incompatibles sont exclus ; aucun prix par kg/L n'est appliqué à une pièce sans conversion explicite.");
-
-        if (coverage < 0.8)
-        {
-            limitations.Add(
-                $"Seuls {Percent(coverage)} des ingrédients ont un prix relevé : " +
-                "le budget estimé est un minorant, pas le coût réel des courses.");
-        }
-
-        var actual = (double)total;
-
-        // The budget is normalised against what the household library itself makes possible:
-        // the cheapest and the most expensive way to fill the same number of meals.
-        var referenceCosts = BuildReferenceMealCosts(context, prices);
-
-        if (referenceCosts.Count < 2)
-        {
-            limitations.Add(
-                "Moins de deux recettes entièrement chiffrables dans la bibliothèque : le budget est affiché " +
-                "mais ne peut pas être comparé à une alternative moins chère.");
-
-            return new BalancedPlanDimension(
-                "cost",
-                Score: null,
-                Weight: 0,
-                Round(coverage),
-                $"Budget estimé à {Money(actual)} € sur la semaine, sans comparaison possible.",
-                new Dictionary<string, double> { ["estimatedCostEur"] = Round(actual) });
-        }
-
-        var mealCount = context.Meals.Count;
-        var cheapest = (double)referenceCosts.Min() * mealCount;
-        var priciest = (double)referenceCosts.Max() * mealCount;
-
-        var score = priciest > cheapest ? (priciest - actual) / (priciest - cheapest) : 1.0;
-
-        var metrics = new Dictionary<string, double>
-        {
-            ["estimatedCostEur"] = Round(actual),
-            ["cheapestReachableCostEur"] = Round(cheapest),
-            ["mostExpensiveReachableCostEur"] = Round(priciest),
-            ["mealCount"] = mealCount,
-        };
-
-        var summary =
-            $"Budget estimé à {Money(actual)} € ; le plan le moins cher possible avec votre bibliothèque " +
-            $"coûterait {Money(cheapest)} €.";
-
-        return new BalancedPlanDimension("cost", Clamp(score), CostWeight, Round(coverage), summary, metrics);
-    }
-
     private static BalancedPlanDimension ScoreDiversity(WeekEvaluationContext context, List<string> limitations)
     {
         var references = context.MonthReferences;
@@ -574,96 +473,16 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         return new BalancedPlanDimension("diversity", Clamp(score), DiversityWeight, 1.0, summary, metrics);
     }
 
-    private static BalancedPlanDimension ScoreWaste(
-        WeekEvaluationContext context,
-        IReadOnlyList<IngredientLine> ingredients,
-        PriceIndex prices,
-        List<string> limitations)
+    private static BalancedPlanDimension ScoreReuse(IReadOnlyList<IngredientLine> ingredients, List<string> limitations)
     {
-        if (ingredients.Count == 0)
-        {
-            return EmptyDimension("waste", "Aucun ingrédient exploitable sur la semaine.");
-        }
-
-        // Proxy 1: quantities already in stock are consumed instead of being bought again.
-        var stockByGroceryItem = context.StockItems.ToDictionary(item => item.GroceryItemId);
-
-        var neededByGroceryItem = new Dictionary<Guid, decimal>();
-
-        foreach (var line in ingredients)
-        {
-            var groceryItemId = ResolveGroceryItemId(context, prices, line.FoodItemId);
-            if (groceryItemId is null || !prices.ById.TryGetValue(groceryItemId.Value, out var product) || !product.PurchaseUnitConfirmed)
-            {
-                continue;
-            }
-            var quantity = QuantityConversion.Convert(line.Quantity, line.Unit, Articles.ArticleMapper.ToUnitString(product.Unit));
-            if (quantity is null) continue;
-
-            neededByGroceryItem[groceryItemId.Value] =
-                neededByGroceryItem.GetValueOrDefault(groceryItemId.Value) + quantity.Value;
-        }
-
-        var productCoverages = new List<decimal>();
-
-        foreach (var (groceryItemId, quantity) in neededByGroceryItem)
-        {
-            if (quantity <= 0) continue;
-            if (stockByGroceryItem.TryGetValue(groceryItemId, out var available))
-            {
-                var converted = QuantityConversion.Convert(available.Quantity, available.Unit,
-                    Articles.ArticleMapper.ToUnitString(prices.ById[groceryItemId].Unit));
-                if (converted is not null) productCoverages.Add(Math.Min(converted.Value, quantity) / quantity);
-            }
-            else productCoverages.Add(0);
-        }
-
-        var stockCoverage = productCoverages.Count > 0 ? (double)productCoverages.Average() : 0;
-
-        // Proxy 2: an ingredient used by a single meal is the one most likely to leave a
-        // leftover, because the rest of the pack is not planned anywhere else in the week.
-        var mealsByFoodItem = ingredients
-            .GroupBy(line => line.FoodItemId)
-            .ToDictionary(group => group.Key, group => group.Select(line => line.MealId).Distinct().Count());
-
-        var reusedCount = mealsByFoodItem.Count(entry => entry.Value >= 2);
-        var reuseRate = mealsByFoodItem.Count > 0 ? (double)reusedCount / mealsByFoodItem.Count : 0;
-        var singleUseCount = mealsByFoodItem.Count - reusedCount;
-
-        double score;
-        double dataCoverage;
-
-        if (productCoverages.Count == 0)
-        {
-            limitations.Add(
-                "Aucun ingrédient n'est rattaché à un article de course : la part déjà en stock n'a pas pu être mesurée, " +
-                "le score anti-gaspillage ne repose que sur la réutilisation des ingrédients entre repas.");
-            score = reuseRate;
-            dataCoverage = 0.5;
-        }
-        else
-        {
-            score = (0.5 * stockCoverage) + (0.5 * reuseRate);
-            dataCoverage = 1.0;
-        }
-
-        limitations.Add(
-            "Le gaspillage est estimé indirectement (stock déjà disponible et ingrédients réutilisés entre plusieurs repas) : " +
-            "sans dates de péremption ni tailles de conditionnement, aucune absence de reste ne peut être garantie.");
-
-        var metrics = new Dictionary<string, double>
-        {
-            ["stockCoverage"] = Round(stockCoverage),
-            ["reusedIngredientRate"] = Round(reuseRate),
-            ["singleUseIngredients"] = singleUseCount,
-            ["distinctIngredients"] = mealsByFoodItem.Count,
-        };
-
-        var summary =
-            $"{reusedCount} ingrédients sur {mealsByFoodItem.Count} servent à au moins deux repas et " +
-            $"la couverture moyenne du stock par produit est {Percent(stockCoverage)} ; {singleUseCount} ingrédients restent à usage unique.";
-
-        return new BalancedPlanDimension("waste", Clamp(score), WasteWeight, Round(dataCoverage), summary, metrics);
+        limitations.Add("La réutilisation mesure uniquement les aliments employés dans plusieurs repas, pas les stocks, la fraîcheur ou les restes.");
+        if (ingredients.Count == 0) return EmptyDimension("reuse", "Aucun ingrédient exploitable.");
+        var uses = ingredients.GroupBy(l => l.FoodItemId).Select(g => g.Select(l => l.MealId).Distinct().Count()).ToList();
+        var reused = uses.Count(n => n >= 2);
+        var rate = (double)reused / uses.Count;
+        return new BalancedPlanDimension("reuse", Clamp(rate), ReuseWeight, 1,
+            $"{reused} aliments sur {uses.Count} servent à plusieurs repas.",
+            new Dictionary<string, double> { ["reusedIngredientRate"] = Round(rate), ["distinctIngredients"] = uses.Count });
     }
 
     // ------------------------------------------------------------ composition
@@ -702,8 +521,7 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
     private static double DefaultWeight(string key) => key switch
     {
         "nutrition" => NutritionWeight,
-        "cost" => CostWeight,
-        "waste" => WasteWeight,
+        "reuse" => ReuseWeight,
         "diversity" => DiversityWeight,
         _ => 0,
     };
@@ -761,106 +579,8 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         return $"Compromis calculé à {Percent(overall.Value)} ({detail}). {constraint}{missing}{caveat}";
     }
 
-    // ----------------------------------------------------------------- prices
-
-    private static PriceIndex BuildPriceIndex(WeekEvaluationContext context)
-    {
-        var byId = context.Articles.ToDictionary(article => article.Id);
-        return new PriceIndex(byId);
-    }
-
-    /// <summary>
-    /// Ingredients and purchase observations use the same canonical product identity.
-    /// </summary>
-    private static Guid? ResolveGroceryItemId(WeekEvaluationContext context, PriceIndex prices, Guid foodItemId)
-    {
-        if (prices.ById.ContainsKey(foodItemId))
-        {
-            return foodItemId;
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Resolve nutrition by identity, never by a potentially ambiguous product name.
-    /// </summary>
-    private static FoodItem? ResolveFoodItem(WeekEvaluationContext context, Guid ingredientReferenceId)
-    {
-        if (context.FoodItems.TryGetValue(ingredientReferenceId, out var direct))
-        {
-            return direct;
-        }
-
-        return null;
-    }
-
-    private static decimal? ResolveUnitPrice(WeekEvaluationContext context, PriceIndex prices, Guid foodItemId, string quantityUnit)
-    {
-        var groceryItemId = ResolveGroceryItemId(context, prices, foodItemId);
-
-        if (groceryItemId is null || !prices.ById.TryGetValue(groceryItemId.Value, out var article))
-        {
-            return null;
-        }
-
-        if (!article.PurchaseUnitConfirmed) return null;
-        var conversion = QuantityConversion.Convert(1, quantityUnit, Articles.ArticleMapper.ToUnitString(article.Unit));
-        return conversion * LatestPrice(article);
-    }
-
-    private static decimal? LatestPrice(FoodItem article)
-    {
-        if (article.PriceHistory.Count == 0)
-        {
-            return null;
-        }
-
-        return article.PriceHistory
-            .OrderByDescending(entry => entry.ObservedAt)
-            .First()
-            .Price;
-    }
-
-    /// <summary>
-    /// Cost of one serving of every fully priceable recipe of the library, used as the reference
-    /// range the week's budget is compared against.
-    /// </summary>
-    private static List<decimal> BuildReferenceMealCosts(WeekEvaluationContext context, PriceIndex prices)
-    {
-        var costs = new List<decimal>();
-
-        foreach (var recipe in context.Recipes.Values)
-        {
-            if (recipe.Ingredients.Count == 0)
-            {
-                continue;
-            }
-
-            decimal cost = 0;
-            var complete = true;
-
-            foreach (var ingredient in recipe.Ingredients)
-            {
-                var price = ResolveUnitPrice(context, prices, ingredient.FoodItemId, ingredient.Unit);
-                if (price is null)
-                {
-                    complete = false;
-                    break;
-                }
-
-                cost += ingredient.Quantity * price.Value;
-            }
-
-            if (complete)
-            {
-                var servings = recipe.Servings > 0 ? recipe.Servings : 1;
-                costs.Add(cost / servings);
-            }
-        }
-
-        return costs;
-    }
+    private static FoodItem? ResolveFoodItem(WeekEvaluationContext context, Guid id) =>
+        context.FoodItems.GetValueOrDefault(id);
 
     // ---------------------------------------------------------------- helpers
 
@@ -894,16 +614,13 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         "nutrition" => "équilibre nutritionnel",
         "cost" => "budget",
         "diversity" => "diversité",
-        "waste" => "anti-gaspillage",
+        "reuse" => "réutilisation",
         _ => key,
     };
 
     private sealed record PlannedMealUsage(Guid MealId, DateOnly Date, Guid ReferenceId, decimal Portions);
 
     private sealed record IngredientLine(Guid MealId, Guid FoodItemId, decimal Quantity, string Unit);
-
-    private sealed record PriceIndex(
-        IReadOnlyDictionary<Guid, FoodItem> ById);
 
     private sealed record WeekEvaluationContext(
         IReadOnlyList<PlannedMealUsage> Meals,
@@ -912,8 +629,6 @@ public sealed class BalancedPlanEngine : IBalancedPlanEngine
         IReadOnlyDictionary<Guid, Recipe> Recipes,
         IReadOnlyDictionary<Guid, Domain.ComposedMeals.ComposedMeal> ComposedMeals,
         IReadOnlyDictionary<Guid, FoodItem> FoodItems,
-        IReadOnlyList<FoodItem> Articles,
-        IReadOnlyList<Domain.Stock.StockItem> StockItems,
         IReadOnlyList<PlannedMealReference> MonthReferences,
         NutritionTargets? Targets);
 }

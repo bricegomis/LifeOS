@@ -1,6 +1,9 @@
 # ADR 0005 — Un produit unique pour nutrition et achats
 
-Statut : accepté et implémenté, 9 octobre 2026. Décision explicite de l'utilisateur :
+Statut : **remplacé par [ADR 0006](0006-foods-products-receipts.md)** le 11 octobre 2026.
+Le texte et la migration ci-dessous sont conservés comme historique, non comme contrat actif.
+
+Ancien statut : accepté et implémenté, 9 octobre 2026. Décision explicite de l'utilisateur :
 « Un même produit, avec nutrition et achats réunis dans une seule fiche ».
 Remplace la séparation aliments/articles de l'ADR 0004.
 

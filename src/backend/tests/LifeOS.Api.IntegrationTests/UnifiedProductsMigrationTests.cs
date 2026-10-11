@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using LifeOS.Api.Contracts;
-using LifeOS.Application.Articles;
 using LifeOS.Application.FoodItems;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -84,20 +83,27 @@ public sealed class UnifiedProductsMigrationTests
                 INSERT INTO shopping_list_items ("Id","HouseholdId","WeekId","GroceryItemId","QuantityNeeded","QuantityFromStock","Checked","CreatedAt","UpdatedAt")
                   VALUES ({shoppingId},{household},{week},{article},3.25,1.25,true,{timestamp},{timestamp});
                 """);
+            await db.GetService<IMigrator>().MigrateAsync("20261009023138_UnifiedProducts");
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO article_price_entries ("Id","ArticleId","StoreId","Price","ObservedAt","CreatedAt")
+                VALUES ({Guid.NewGuid()},{unlinkedFood},{store},7,{timestamp},{timestamp});
+                """);
             await db.Database.MigrateAsync();
         }
         await using (var db = new LifeOSDbContext(options))
         {
-            Assert.Equal(6, await db.FoodItems.CountAsync());
-            var product = await db.FoodItems.SingleAsync(p => p.Id == food);
+            Assert.Equal(4, await db.FoodItems.CountAsync());
+            Assert.Equal(6, await db.Products.CountAsync());
+            var product = await db.Products.SingleAsync(p => p.Id == food);
+            var aliment = await db.FoodItems.SingleAsync(p => p.Id == food);
             Assert.True(product.IsArchived);
             Assert.Equal("Riz nutrition", product.Name);
             Assert.Equal("Ancien nom achat", product.LegacyPurchaseName);
             Assert.Equal("Description achat", product.Description);
-            Assert.Equal("100g", product.ReferenceUnit);
-            Assert.Equal(150, product.Nutrition!.CaloriesPerUnit);
-            Assert.Equal("123456", product.OffBarcode);
-            Assert.Contains("Riz", product.OffPayload!);
+            Assert.Equal("100g", aliment.ReferenceUnit);
+            Assert.Equal(150, aliment.Nutrition!.CaloriesPerUnit);
+            Assert.Equal("123456", aliment.OffBarcode);
+            Assert.Contains("Riz", aliment.OffPayload!);
             Assert.Equal(timestamp, product.CreatedAt);
             var price = Assert.Single(product.PriceHistory);
             Assert.Equal(priceId, price.Id);
@@ -107,17 +113,8 @@ public sealed class UnifiedProductsMigrationTests
             Assert.Equal(food, (await db.RecipeIngredients.SingleAsync()).FoodItemId);
             Assert.Equal(ingredient, (await db.RecipeIngredients.SingleAsync()).Id);
             Assert.Equal(123.456789m, (await db.RecipeIngredients.SingleAsync()).Quantity);
-            var stock = await db.StockItems.SingleAsync();
-            Assert.Equal(stockId, stock.Id);
-            Assert.Equal(food, stock.GroceryItemId);
-            Assert.Equal(2.25m, stock.Quantity);
-            Assert.Equal("kg", stock.Unit);
-            var shopping = await db.ShoppingListItems.SingleAsync();
-            Assert.Equal(shoppingId, shopping.Id);
-            Assert.Equal(food, shopping.GroceryItemId);
-            Assert.True(shopping.Checked);
-            Assert.Equal(3.25m, shopping.QuantityNeeded);
-            Assert.Equal(1.25m, shopping.QuantityFromStock);
+            Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM stock_items").SingleAsync());
+            Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM shopping_list_items").SingleAsync());
             var snapshot = await db.MealFoodLines.SingleAsync();
             Assert.Equal(line, snapshot.Id);
             Assert.Equal(food, snapshot.FoodItemId);
@@ -126,27 +123,28 @@ public sealed class UnifiedProductsMigrationTests
             Assert.Equal(111, snapshot.Calories);
             Assert.Equal("100g", snapshot.ReferenceUnit);
             Assert.Equal(food, (await db.FoodItems.SingleAsync(p => p.Id == correction)).IsCorrectionOf);
-            Assert.Null((await db.FoodItems.SingleAsync(p => p.Id == soap)).Nutrition);
-            Assert.False((await db.FoodItems.SingleAsync(p => p.Id == unlinkedFood)).PurchaseUnitConfirmed);
-            Assert.Equal("food-only", (await db.FoodItems.SingleAsync(p => p.Id == unlinkedFood)).MigrationOrigin);
-            Assert.Equal("article-only", (await db.FoodItems.SingleAsync(p => p.Id == unlinkedArticle)).MigrationOrigin);
+            Assert.Null((await db.Products.SingleAsync(p => p.Id == soap)).FoodItemId);
+            Assert.False(await db.FoodItems.AnyAsync(p => p.Id == soap));
+            Assert.Null((await db.Products.SingleAsync(p => p.Id == unlinkedArticle)).FoodItemId);
+            Assert.Equal(unlinkedFood, (await db.Products.SingleAsync(p => p.Id == unlinkedFood)).FoodItemId);
             Assert.NotEqual(unlinkedFood, unlinkedArticle);
-            Assert.Equal(2, await db.FoodItems.CountAsync(p => p.HouseholdId == household && p.Name == "Même nom"));
+            Assert.Single(await db.FoodItems.Where(p => p.HouseholdId == household && p.Name == "Même nom").ToListAsync());
             Assert.Equal(food, await db.ResolveProductIdAsync(household, article, default));
             Assert.Equal(article, await db.ResolveProductIdAsync(foreignHousehold, article, default));
             Assert.Equal(3, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM legacy_articles").SingleAsync());
             Assert.False(db.Database.HasPendingModelChanges());
+            var unknown = await db.Products.SingleAsync(p => p.Id == unlinkedFood);
+            Assert.False(unknown.PurchaseUnitConfirmed);
+            Assert.Equal("unknown", Assert.Single(unknown.PriceHistory).Unit);
+            Assert.Empty(LifeOS.Domain.Products.ComparablePrices.Minimums([unknown]));
+            Assert.Throws<ArgumentException>(() => unknown.ObservePrice(store, 8, timestamp));
+            unknown.Update(unknown.Name, unknown.Description, "bag", null, null, 400m, "g", true, false);
+            unknown.ObservePrice(store, 8, timestamp.AddDays(1));
+            Assert.Equal("unknown", unknown.PriceHistory[0].Unit);
+            Assert.Equal(20m, Assert.Single(LifeOS.Domain.Products.ComparablePrices.Minimums([unknown])).Price);
+            await db.SaveChangesAsync();
             db.Database.ExecuteSqlRaw("UPDATE products SET \"IsArchived\" = false WHERE id = {0}", food);
         }
-        await using var factory = new LifeOSApiFactory(container.GetConnectionString());
-        using var reader = factory.CreateClient().AsUser(user);
-        var response = await reader.PutAsJsonAsync($"/api/articles/{article}", new ArticleRequest("Nom modifié via alias", "Description", "kilogram"));
-        response.EnsureSuccessStatusCode();
-        Assert.Equal(food, (await response.Content.ReadFromJsonAsync<GroceryItemDto>())!.Id);
-        var read = (await reader.GetFromJsonAsync<FoodItemDto>($"/api/products/{food}"))!;
-        Assert.Equal("Nom modifié via alias", read.Name);
-        Assert.Equal(150, read.Nutrition!.CaloriesPerUnit);
-        Assert.Single(read.PriceHistory);
     }
 
     [Theory]
@@ -176,5 +174,32 @@ public sealed class UnifiedProductsMigrationTests
         Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM articles").SingleAsync());
         Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM food_items").SingleAsync());
         Assert.DoesNotContain(await db.Database.GetAppliedMigrationsAsync(), m => m.EndsWith("UnifiedProducts"));
+    }
+
+    [Fact]
+    public async Task Cross_household_food_usage_aborts_the_new_migration_without_partial_catalogue()
+    {
+        await using var container = Database();
+        await container.StartAsync();
+        var options = new DbContextOptionsBuilder<LifeOSDbContext>().UseNpgsql(container.GetConnectionString()).Options;
+        await using var db = new LifeOSDbContext(options);
+        await db.GetService<IMigrator>().MigrateAsync("20261009023138_UnifiedProducts");
+        var household = Guid.NewGuid(); var other = Guid.NewGuid(); var product = Guid.NewGuid(); var recipe = Guid.NewGuid();
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO households ("Id","Name","CreatedAt","UpdatedAt") VALUES
+              ({household},'Foyer',now(),now()),({other},'Autre',now(),now());
+            INSERT INTO products (id,household_id,name,reference_unit,source,"Description","Unit",created_at,updated_at)
+              VALUES ({product},{household},'Aliment','100g','Manual','','Unit',now(),now());
+            INSERT INTO recipes ("Id","HouseholdId","Name","Servings","DurationMinutes","Tags","CreatedAt","UpdatedAt")
+              VALUES ({recipe},{other},'Recette',1,10,'',now(),now());
+            INSERT INTO recipe_ingredients ("Id","RecipeId","FoodItemId","Quantity","Unit")
+              VALUES ({Guid.NewGuid()},{recipe},{product},1,'g');
+            """);
+        var exception = await Assert.ThrowsAsync<PostgresException>(() => db.Database.MigrateAsync());
+        Assert.Contains("FoodsAndReceipts", exception.MessageText);
+        Assert.DoesNotContain(await db.Database.GetAppliedMigrationsAsync(), m => m.EndsWith("FoodsAndReceipts"));
+        Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM products").SingleAsync());
+        Assert.Null(await db.Database.SqlQueryRaw<string?>("SELECT to_regclass('foods')::text AS \"Value\"").SingleAsync());
+        Assert.Null(await db.Database.SqlQueryRaw<string?>("SELECT to_regclass('receipts')::text AS \"Value\"").SingleAsync());
     }
 }

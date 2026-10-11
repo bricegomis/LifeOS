@@ -64,7 +64,7 @@ details retain the workflow name, run ID, attempt and full commit. The settings 
 uses the same UI version display. The UI reads the API's public, no-store
 `GET /api/version` diagnostic endpoint at startup, never the latest GitHub run.
 Docker builds both images together, but independently updated containers can differ.
-Vue Pages uses a different workflow: compare commits, not just workflow-scoped numbers.
+Angular Pages uses a different workflow: compare commits, not just workflow-scoped numbers.
 Local builds show `Local` without a CI number, and a missing API URL or failed request is shown as
 `non configurée` or `indisponible`.
 

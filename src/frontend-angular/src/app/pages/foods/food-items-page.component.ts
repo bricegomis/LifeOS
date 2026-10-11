@@ -1,659 +1,257 @@
-import { firstValueFrom } from 'rxjs'
-import { Component, computed, inject, signal } from '@angular/core'
+import { Component, HostListener, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
-import {
-  FoodItemDto,
-  FoodItemRequest,
-  NutritionPerUnitDto,
-  StoreDto,
-  ProductUsageDto,
-  ArticlePriceEntryDto,
-  GroceryItemUnit,
-} from '@/app/core/api/api.models'
-import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { firstValueFrom } from 'rxjs'
+import type { FoodItemDto, FoodItemRequest, FoodPricesDto, ProductDto, ProductRequest, StoreDto } from '@/app/core/api/api.models'
+import { LifeosApiService, apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { newFoodDraft, missingFoodFields } from './food-draft'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
-import { newProductEditor, productEditorFromItem, productRequest, productDraftProblem, type ProductEditor } from './product-draft'
 
-const emptyEditor = newProductEditor
+export const newProductDraft = (foodItemId = ''): ProductRequest => ({
+  foodItemId, name: '', description: '', purchaseUnit: 'unit', brand: null, barcode: null,
+  packageQuantity: null, packageUnit: null, packageConfirmed: false, piecesComparable: false,
+})
 
 @Component({
   selector: 'app-food-items-page',
   standalone: true,
   imports: [FormsModule, RouterLink, LifeosDialogComponent],
   template: `
-    <section class="page-stack foods-page" aria-labelledby="foods-page-title">
-      <header class="page-hero foods-hero">
-        <div>
-          <h1 id="foods-page-title">Produits</h1>
-          <p>Une seule fiche pour la nutrition, les achats et les prix par magasin. Les produits sans nutrition ont aussi leur place ici.</p>
-        </div>
-        <div class="foods-hero-actions">
-          <div class="foods-count" aria-label="Nombre de produits dans le catalogue">
-            <strong>{{ items().length }}</strong>
-            <span>{{ items().length === 1 ? 'produit' : 'produits' }}</span>
-          </div>
-          <button class="lifeos-button" type="button" [disabled]="busy()" (click)="openCreate()">
-            <i class="pi pi-plus" aria-hidden="true"></i> Nouveau produit
-          </button>
-        </div>
+    <section class="page-stack">
+      <header class="page-hero">
+        <div><h1>Aliments</h1><p>Vos références culinaires, indépendantes des marques. Nutrition et informations digestives saisies à la main.</p></div>
+        <button class="lifeos-button" [disabled]="busy()" (click)="editFood()">Nouvel aliment</button>
       </header>
-
-      @if (error()) {
-        <p class="foods-feedback foods-error" role="alert">{{ error() }}</p>
-      }
-      @if (notice()) {
-        <p class="foods-feedback foods-notice" role="status">{{ notice() }}</p>
-      }
-
-      <div class="foods-main-column">
-          <section class="foods-search-block" aria-labelledby="off-search-title">
-            <div class="foods-section-heading">
-              <div>
-                <h2 id="off-search-title">Rechercher un produit</h2>
-                <p>Recherchez un produit par son nom ou son code-barres.</p>
-              </div>
-            </div>
-            <p class="foods-search-notice" role="note">
-              Une recherche dans Open Food Facts peut ajouter automatiquement un produit au catalogue de votre foyer.
-              Les résultats sont déjà enregistrés : ouvrez leur fiche pour préciser l’unité d’achat. Aucune conversion par nom ou par marque.
-            </p>
-            <div class="foods-searches">
-              <form class="foods-search-form" (ngSubmit)="searchByName()">
-                <label class="foods-field">
-                  <span>Nom du produit</span>
-                  <input name="offName" type="search" [(ngModel)]="offNameSearch"
-                    placeholder="Rechercher des produits" required />
-                </label>
-                <button class="foods-secondary" type="submit" [disabled]="busy()">
-                  {{ searchingName() ? 'Recherche…' : 'Rechercher' }}
-                </button>
-              </form>
-              <form class="foods-search-form" (ngSubmit)="searchByBarcode()">
-                <label class="foods-field">
-                  <span>Code-barres</span>
-                  <input name="offBarcode" type="search" inputmode="numeric"
-                    [(ngModel)]="offBarcodeSearch" placeholder="Scannez ou saisissez un code-barres" required />
-                </label>
-                <button class="foods-secondary" type="submit" [disabled]="busy()">
-                  {{ searchingBarcode() ? 'Recherche…' : 'Rechercher le code-barres' }}
-                </button>
-              </form>
-            </div>
-            @if (searched() && searchResults().length === 0 && !busy()) {
-              <p class="foods-empty-inline">Aucun produit trouvé. Essayez un autre nom ou code-barres.</p>
-            }
-            @if (searchResults().length > 0) {
-              <ul class="foods-results" aria-label="Résultats de recherche Open Food Facts enregistrés">
-                @for (result of searchResults(); track result.id) {
-                  <li class="foods-result">
-                    <div class="foods-item-copy">
-                      <h3>{{ result.name }}</h3>
-                      <p>{{ result.referenceUnit }} · {{ nutritionSummary(result.nutrition) }}</p>
-                      @if (result.offBarcode) {
-                        <small>Code-barres : {{ result.offBarcode }}</small>
-                      }
-                    </div>
-                    <button class="foods-secondary" type="button" [disabled]="busy()"
-                      (click)="editFood(result)">Modifier</button>
-                  </li>
-                }
-              </ul>
-            }
-          </section>
-
-          <section class="foods-catalog" aria-labelledby="catalog-heading">
-            <div class="foods-section-heading">
-              <div>
-                <h2 id="catalog-heading">Vos produits</h2>
-                <p>Nutrition et achats partagent la même identité.</p>
-              </div>
-              <label class="foods-field"><span>Filtrer vos produits</span>
-                <input type="search" [(ngModel)]="catalogSearch" placeholder="Nom du produit" />
-              </label>
-              <label><input type="checkbox" [(ngModel)]="showArchived" /> Afficher les produits archivés</label>
-              <button class="foods-secondary" type="button" (click)="loadItems()" [disabled]="loading() || busy()">
-                {{ loading() ? 'Actualisation…' : 'Actualiser' }}
-              </button>
-            </div>
-            @if (loading() && items().length === 0) {
-              <p class="foods-empty-inline" role="status">Chargement des produits…</p>
-            } @else if (items().length === 0) {
-              <div class="foods-empty">
-                <h3>Votre catalogue ne contient pas encore de produits</h3>
-                <p>Créez un produit ou recherchez-le dans Open Food Facts ci-dessus.</p>
-              </div>
-            } @else {
-              <ul class="foods-list">
-                @for (item of visibleItems(); track item.id) {
-                  <li class="foods-item">
-                    <div class="foods-item-copy">
-                      <div class="foods-item-title">
-                        <h3>{{ item.name }}</h3>
-                        <span class="foods-source" [class.is-off]="isOffItem(item)">
-                          {{ sourceLabel(item) }}
-                        </span>
-                        @if (item.isCorrectionOf) {
-                          <span class="foods-correction">Correction</span>
-                        }
-                      </div>
-                      <p>Nutrition@if (item.referenceUnit) { / {{ item.referenceUnit }} } : {{ nutritionSummary(item.nutrition) }}</p>
-                      @if (item.isArchived) { <p>Archivé — historique conservé</p> }
-                      <p>Achats : {{ item.purchaseUnitConfirmed ? unitLabel(item.unit) : 'unité à préciser' }} · {{ item.priceHistory.length }} prix relevé(s)</p>
-                      @if (item.legacyPurchaseName) { <small>Ancien nom d’achat conservé : {{ item.legacyPurchaseName }}</small> }
-                      @if (item.migrationOrigin === 'food-only' || item.migrationOrigin === 'article-only') {
-                        <small>Entrée historique sans association : conservée séparément, jamais fusionnée par nom.</small>
-                      }
-                      @if (item.offBarcode) {
-                        <small>Code-barres : {{ item.offBarcode }}</small>
-                      }
-                      @if (item.isCorrectionOf) {
-                        <small>Corrige l’aliment {{ item.isCorrectionOf }}</small>
-                      }
-                    </div>
-                    <div class="foods-item-actions">
-                      <button class="foods-secondary" type="button" [disabled]="busy()"
-                        (click)="editFood(item)">Modifier</button>
-                      <button class="foods-secondary" type="button" [disabled]="busy()"
-                        (click)="startCorrection(item)">Corriger</button>
-                      @if (deleteConfirmationId() === item.id) {
-                        <button class="foods-danger" type="button" [disabled]="busy()"
-                          (click)="deleteFood(item)">Confirmer l’archivage</button>
-                        <button class="foods-secondary" type="button"
-                          (click)="deleteConfirmationId.set('')">Conserver</button>
-                      } @else {
-                        <button class="foods-danger" type="button" [disabled]="busy()"
-                          (click)="deleteConfirmationId.set(item.id)">Archiver</button>
-                      }
-                    </div>
-                  </li>
-                }
-              </ul>
-            }
-          </section>
+      @if (error()) { <p class="lifeos-dialog-error" role="alert">{{ error() }}</p> }
+      @if (notice()) { <p role="status">{{ notice() }}</p> }
+      <div class="catalog-toolbar">
+        <label class="dialog-field"><span>Rechercher un aliment</span><input class="text-input" type="search" [(ngModel)]="search" /></label>
+        <label><input type="checkbox" [(ngModel)]="incompleteOnly" /> À compléter ({{ incompleteCount() }})</label>
+        <label><input type="checkbox" [(ngModel)]="archivedOnly" /> Archives uniquement</label>
+        <button class="lifeos-button lifeos-button-secondary" [disabled]="loading()" (click)="load()">Actualiser</button>
       </div>
-    </section>
-
-    <app-lifeos-dialog [open]="editorOpen()" [heading]="editorHeading()"
-      [description]="correctionOf() ? 'Nouveau produit corrigé, lié à l’original. Ses anciens prix restent sur l’original.' : 'Informations générales, nutrition facultative et achats du même produit.'"
-      formId="food-dialog-form" [submitLabel]="editingId() || correctionOf() ? 'Enregistrer' : 'Créer'"
-      [busy]="busy()" [dirty]="isEditorDirty()" [error]="dialogError()" (dismissed)="closeEditor()">
-      <form id="food-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveFood()">
-        <label class="dialog-field">
-          <span>Nom</span>
-          <input class="text-input" name="foodName" type="text" autocomplete="off" required maxlength="180" [(ngModel)]="editor.name" />
-        </label>
-        <label class="dialog-field">
-          <span>Description (facultatif)</span>
-          <textarea class="text-input" name="description" rows="2" maxlength="1000" [(ngModel)]="editor.description"></textarea>
-        </label>
-        <h2 class="product-section-title">Nutrition</h2>
-        <p class="dialog-hint">Laissez les valeurs vides pour un produit sans nutrition. L’unité décrit exactement la quantité de ces valeurs, pas l’unité d’achat.</p>
-        <div class="dialog-row">
-          <label class="dialog-field">
-            <span>Quantité de référence nutritionnelle</span>
-            <input class="text-input" name="referenceUnit" type="text" maxlength="50" placeholder="100 g, 100 ml, 1 pièce" [(ngModel)]="editor.referenceUnit" />
-          </label>
-          <label class="dialog-field">
-            <span>Calories (kcal)</span>
-            <input class="text-input" name="calories" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.caloriesPerUnit" />
-          </label>
-        </div>
-        <details class="dialog-more" [open]="showMacros">
-          <summary>Protéines, glucides, lipides</summary>
-          <div class="dialog-row">
-            <label class="dialog-field"><span>Protéines (g)</span>
-              <input class="text-input" name="protein" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.proteinsPerUnit" /></label>
-            <label class="dialog-field"><span>Glucides (g)</span>
-              <input class="text-input" name="carbs" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.carbsPerUnit" /></label>
-            <label class="dialog-field"><span>Lipides (g)</span>
-              <input class="text-input" name="fat" type="number" min="0" step="0.1" inputmode="decimal" [(ngModel)]="editor.fatsPerUnit" /></label>
-          </div>
-        </details>
-        <h2 class="product-section-title">Achats</h2>
-        <label class="dialog-field">
-          <span>Unité d’achat et de prix</span>
-          <select class="text-input" name="purchaseUnit" required [(ngModel)]="editor.unit"
-            [disabled]="(currentProduct()?.priceHistory?.length ?? 0) > 0">
-            <option value="" disabled>À préciser</option>
-            <option value="unit">À l’unité</option><option value="kilogram">Au kilogramme</option><option value="liter">Au litre</option>
-          </select>
-        </label>
-        <p class="dialog-hint">Aucune conversion entre pièces, masse et volume. L’unité d’achat est figée après le premier prix pour ne pas réinterpréter l’historique.</p>
-      </form>
-      <section class="product-prices" aria-labelledby="product-prices-title">
-        <h2 id="product-prices-title" class="product-section-title">Prix par magasin</h2>
-        @if (priceNotice()) { <p class="dialog-hint" role="status">{{ priceNotice() }}</p> }
-        @if (currentProduct(); as product) {
-          @if (product.priceHistory.length === 0) { <p class="dialog-hint">Aucun prix relevé.</p> }
-          <ul class="foods-list">
-            @for (entry of product.priceHistory; track entry.id) {
-              <li class="foods-item">
-                <span>{{ storeLabel(entry.storeId) }} · {{ formatNumber(entry.price) }} € / {{ unitLabel(product.unit) }} · {{ formatDate(entry.observedAt) }}</span>
-                <button type="button" class="foods-danger" [disabled]="busy()"
-                  [attr.aria-label]="'Supprimer le relevé de ' + storeLabel(entry.storeId)"
-                  (click)="removePrice(product, entry)">Supprimer le relevé</button>
+      @if (loading()) { <p role="status">Chargement des aliments et des prix…</p> }
+      @else if (!visibleFoods().length) { <p>Aucun aliment dans cette sélection. Créez votre première référence ou modifiez les filtres.</p> }
+      <ul class="catalog-list">
+        @for (food of visibleFoods(); track food.id) {
+          <li class="catalog-row">
+            <div><h2>{{ food.name }}</h2>
+              @if (food.isArchived) { <p>Archivé — historique conservé</p> }
+              @if (missing(food).length) { <p>À compléter : {{ missing(food).join(', ') }}</p> }
+              @else { <p>Informations renseignées · base {{ food.referenceUnit }}</p> }
+              @for (price of pricesFor(food.id); track price.unit) {
+                <p class="price-note">{{ number(price.price) }} € / {{ unitLabel(price.unit) }} · {{ price.productName }} · {{ storeName(price.storeId) }} · {{ date(price.observedAt) }} · {{ price.provenance }}</p>
+              }
+              @if (!pricesFor(food.id).length) { <p class="price-note">Prix à renseigner ou non comparable</p> }
+            </div>
+            <div class="catalog-actions">
+              <button class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="select(food)">Ouvrir la fiche</button>
+              @if (!food.isArchived) { <button class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="archive(food)">Archiver</button> }
+            </div>
+          </li>
+        }
+      </ul>
+      <p class="dialog-hint">Prix observés historiques, non garantis aujourd'hui : minimum des derniers relevés par produit et magasin, par base comparable. Aucun produit n'est choisi pour vos recettes.</p>
+      @if (selected(); as food) {
+        <section class="surface-card detail-section">
+          <header class="catalog-row"><div><h2>{{ food.name }}</h2><p>Nutrition générique / {{ food.referenceUnit || 'base à renseigner' }}</p></div>
+            <button class="lifeos-button" [disabled]="busy()" (click)="editFood(food)">Modifier les informations</button>
+          </header>
+          <p>Calories : {{ number(food.nutrition?.caloriesPerUnit) }} kcal · Protéines : {{ number(food.nutrition?.proteinsPerUnit) }} g · Glucides : {{ number(food.nutrition?.carbsPerUnit) }} g · Lipides : {{ number(food.nutrition?.fatsPerUnit) }} g</p>
+          <p>FODMAP : {{ fodmapLabel(food.fodmap) }} · NOVA : {{ food.nova ?? 'non renseigné' }}</p>
+          @if (food.digestiveNotes) { <p>{{ food.digestiveNotes }}</p> }
+          <p class="dialog-hint">Informations descriptives, sans recommandation médicale. Source historique : {{ food.source }}.</p>
+          <h3>Produits et prix</h3>
+          <p>Un aliment reste utilisable dans les recettes sans produit associé.</p>
+          <button class="lifeos-button lifeos-button-secondary" [disabled]="busy() || food.isArchived" (click)="editProduct()">Associer un nouveau produit</button>
+          <ul class="catalog-list">
+            @for (product of productsFor(food.id); track product.id) {
+              <li class="catalog-row"><div><strong>{{ product.name }}</strong><p>{{ product.brand || 'Sans marque renseignée' }} · {{ unitLabel(product.purchaseUnit) }} @if (product.isArchived) { · archivé }</p></div>
+                <button class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="editProduct(product)">Fiche et prix</button>
               </li>
             }
           </ul>
-          @if (!product.isArchived && product.purchaseUnitConfirmed) {
-            <form class="dialog-form" ngNativeValidate (ngSubmit)="addPrice(product)">
-              <label class="dialog-field"><span>Magasin</span>
-                <select class="text-input" name="priceStore" required [(ngModel)]="priceDraft.storeId">
-                  <option value="" disabled>Choisir un magasin</option>
-                  @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
-                </select>
-              </label>
-              <div class="dialog-row">
-                <label class="dialog-field"><span>Prix (€ / {{ unitLabel(product.unit) }})</span>
-                  <input class="text-input" name="priceAmount" type="number" min="0" max="99999999.99" step="0.01" required [(ngModel)]="priceDraft.amount" /></label>
-                <label class="dialog-field"><span>Relevé le</span>
-                  <input class="text-input" name="priceDate" type="date" required [(ngModel)]="priceDraft.observedAt" /></label>
-              </div>
-              <button class="lifeos-button lifeos-button-secondary" type="submit" [disabled]="busy() || !stores().length || hasUnsavedProductChanges()">Ajouter ce prix</button>
-              @if (hasUnsavedProductChanges()) { <p class="dialog-hint">Enregistrez les modifications de la fiche avant de relever un prix.</p> }
-              @if (!stores().length) { <p class="dialog-hint">Créez d’abord un <a routerLink="/stores">magasin</a>.</p> }
-            </form>
-          } @else if (!product.purchaseUnitConfirmed) {
-            <p class="dialog-hint">Enregistrez une unité d’achat pour relever un prix.</p>
-          }
-        } @else { <p class="dialog-hint">Enregistrez le produit pour commencer son historique de prix. Aucun article séparé à créer.</p> }
-      </section>
-      @if (currentProduct()) {
-        <section class="product-prices" aria-labelledby="product-usage-title">
-          <h2 id="product-usage-title" class="product-section-title">Usages et historique</h2>
-          @if (usageLoading()) { <p class="dialog-hint" role="status">Chargement des usages…</p> }
-          @if (usageError()) { <p class="foods-error" role="alert">{{ usageError() }}</p> }
-          @if (usage(); as value) {
-            <p class="dialog-hint">{{ value.mealOccurrences }} événement(s) figé(s) · {{ value.historicalShoppingLines }} ligne(s) de courses historique(s).
-              Modifier cette fiche ne réécrit pas les événements.</p>
-            <p><a routerLink="/recipes">{{ value.recipes.length }} recette(s)</a> · <a routerLink="/stock">Stock et courses</a> · <a routerLink="/planning">Semainier</a></p>
-            @for (recipe of value.recipes; track recipe.id) { <p>{{ recipe.name }}{{ recipe.isArchived ? ' (archivée)' : '' }}</p> }
-            @for (stock of value.stock; track $index) { <p>Stock disponible : {{ formatNumber(stock.quantity) }} {{ stock.unit }}</p> }
-          }
         </section>
       }
+    </section>
+    <app-lifeos-dialog [open]="dialog() === 'food'" heading="Informations de l'aliment"
+      description="Une saisie partielle peut être enregistrée. Zéro est une valeur ; vide signifie inconnu."
+      formId="food-form" submitLabel="Enregistrer" [busy]="busy()" [dirty]="dirty()" [error]="dialogError()" (dismissed)="dialog.set(null)">
+      <form id="food-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveFood()">
+        <label class="dialog-field"><span>Nom générique</span><input class="text-input" name="name" required maxlength="500" [(ngModel)]="foodDraft.name" /></label>
+        <label class="dialog-field"><span>Base nutritionnelle</span><input class="text-input" name="base" maxlength="50" placeholder="100 g, 100 ml, 1 pièce" [(ngModel)]="foodDraft.referenceUnit" /></label>
+        @if (foodDraft.nutrition; as nutrition) {
+          <div class="dialog-row">
+            <label class="dialog-field"><span>Calories (kcal)</span><input class="text-input" name="kcal" type="number" min="0" step="any" [(ngModel)]="nutrition.caloriesPerUnit" /></label>
+            <label class="dialog-field"><span>Protéines (g)</span><input class="text-input" name="protein" type="number" min="0" step="any" [(ngModel)]="nutrition.proteinsPerUnit" /></label>
+            <label class="dialog-field"><span>Glucides (g)</span><input class="text-input" name="carbs" type="number" min="0" step="any" [(ngModel)]="nutrition.carbsPerUnit" /></label>
+            <label class="dialog-field"><span>Lipides (g)</span><input class="text-input" name="fat" type="number" min="0" step="any" [(ngModel)]="nutrition.fatsPerUnit" /></label>
+          </div>
+        }
+        <div class="dialog-row">
+          <label class="dialog-field"><span>FODMAP</span><select class="text-input" name="fodmap" [(ngModel)]="foodDraft.fodmap">
+            <option [ngValue]="null">Non renseigné</option><option value="low">Bas</option><option value="moderate">Modéré</option><option value="high">Élevé</option>
+          </select></label>
+          <label class="dialog-field"><span>Groupe NOVA (AUT)</span><select class="text-input" name="nova" [(ngModel)]="foodDraft.nova">
+            <option [ngValue]="null">Non renseigné</option><option [ngValue]="1">1 · Peu/non transformé</option><option [ngValue]="2">2 · Ingrédient culinaire transformé</option><option [ngValue]="3">3 · Transformé</option><option [ngValue]="4">4 · Ultra-transformé</option>
+          </select></label>
+        </div>
+        <label class="dialog-field"><span>Notes digestives (facultatif)</span><textarea class="text-input" name="notes" maxlength="2000" rows="3" [(ngModel)]="foodDraft.digestiveNotes"></textarea></label>
+      </form>
+    </app-lifeos-dialog>
+    <app-lifeos-dialog [open]="dialog() === 'product'" heading="Produit et prix"
+      description="Référence commerciale liée à cet aliment. Aucune nutrition par marque."
+      formId="product-form" submitLabel="Enregistrer le produit" [busy]="busy()" [dirty]="dirty()" [error]="dialogError()" (dismissed)="dialog.set(null)">
+      <form id="product-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveProduct()">
+        <label class="dialog-field"><span>Nom commercial</span><input class="text-input" name="productName" required maxlength="500" [(ngModel)]="productDraft.name" /></label>
+        <label class="dialog-field"><span>Description</span><textarea class="text-input" name="description" maxlength="1000" [(ngModel)]="productDraft.description"></textarea></label>
+        <div class="dialog-row">
+          <label class="dialog-field"><span>Marque</span><input class="text-input" name="brand" maxlength="200" [(ngModel)]="productDraft.brand" /></label>
+          <label class="dialog-field"><span>Code-barres</span><input class="text-input" name="barcode" maxlength="50" [(ngModel)]="productDraft.barcode" /></label>
+        </div>
+        <label class="dialog-field"><span>Unité d'achat (confirmation à l'enregistrement)</span><select class="text-input" name="unit" required [disabled]="!!currentProduct()?.priceHistory?.length && !!currentProduct()?.purchaseUnitConfirmed" [(ngModel)]="productDraft.purchaseUnit">
+          <option value="unknown" disabled>À confirmer</option>
+          @for (unit of units; track unit.value) { <option [value]="unit.value">{{ unit.label }}</option> }
+        </select></label>
+        <div class="dialog-row">
+          <label class="dialog-field"><span>Contenance par paquet</span><input class="text-input" name="size" type="number" min="0.000001" step="any" [(ngModel)]="productDraft.packageQuantity" /></label>
+          <label class="dialog-field"><span>Unité de contenance</span><select class="text-input" name="sizeUnit" [(ngModel)]="productDraft.packageUnit"><option [ngValue]="null">Inconnue</option><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="L">L</option></select></label>
+        </div>
+        <label><input type="checkbox" name="confirmed" [(ngModel)]="productDraft.packageConfirmed" /> Contenance vérifiée et confirmée manuellement</label>
+        <label><input type="checkbox" name="pieces" [(ngModel)]="productDraft.piecesComparable" /> Pièces réellement comparables pour cet aliment (même taille)</label>
+        <p class="dialog-hint">Pas de conversion entre masse, volume et pièces. Les futures observations utilisent ces confirmations ; les anciens relevés ne sont jamais réinterprétés.</p>
+      </form>
+      @if (currentProduct(); as product) {
+        @if (product.legacyPurchaseName) { <p>Libellé d'achat historique : {{ product.legacyPurchaseName }}</p> }
+        @if (product.migrationOrigin) { <p>Provenance historique : {{ product.migrationOrigin }}</p> }
+        <h3>Historique des prix</h3>
+        <ul class="catalog-list">@for (price of product.priceHistory; track price.id) {
+          <li><p>{{ number(price.price) }} € / {{ unitLabel(price.unit) }} · {{ storeName(price.storeId) }} · {{ date(price.observedAt) }} · {{ price.provenance }}</p>
+            <p>Contenance du relevé : {{ number(price.packageQuantity) }} {{ price.packageUnit ?? '' }} · {{ price.packageConfirmed ? 'confirmée' : 'non confirmée' }} · {{ price.piecesComparable ? 'pièces comparables' : 'pièces non comparées' }}</p></li>
+        }</ul>
+        @if (!product.priceHistory.length) { <p>Prix à renseigner.</p> }
+        <form class="dialog-form" ngNativeValidate (ngSubmit)="addPrice()">
+          <label class="dialog-field"><span>Magasin</span><select class="text-input" name="store" required [(ngModel)]="priceDraft.storeId"><option value="">Choisir</option>@for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }</select></label>
+          <label class="dialog-field"><span>Prix par {{ unitLabel(product.purchaseUnit) }} (€)</span><input class="text-input" name="price" type="number" required min="0" step="0.01" [(ngModel)]="priceDraft.price" /></label>
+          <label class="dialog-field"><span>Date du relevé</span><input class="text-input" name="date" type="date" required [(ngModel)]="priceDraft.date" /></label>
+          <button class="lifeos-button lifeos-button-secondary" [disabled]="busy() || productDirty() || !product.purchaseUnitConfirmed">Ajouter le relevé</button>
+          @if (!product.purchaseUnitConfirmed) { <p>Confirmez l'unité d'achat et enregistrez le produit avant un nouveau relevé.</p> }
+          @if (productDirty()) { <p>Enregistrez la fiche avant d'ajouter un prix.</p> }
+        </form>
+        <a routerLink="/stores">Gérer les magasins</a>
+        @if (!product.isArchived) { <button class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="archiveProduct()">Archiver ce produit</button> }
+      } @else { <p>Enregistrez le produit pour relever ses prix.</p> }
     </app-lifeos-dialog>
   `,
-  styles: [`
-    :host { display: block; }
-    .product-section-title { margin: 12px 0 0; font-size: 1.05rem; }
-    .product-prices { display: grid; gap: 14px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--lifeos-line); }
-    .foods-page { --food-line: var(--lifeos-line); }
-    .foods-count { display: flex; align-items: baseline; gap: 8px; padding: 12px 16px; border-radius: 999px; background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); }
-    .foods-count strong { font-size: 1.3rem; }
-    .foods-count span { font-size: .84rem; font-weight: 750; }
-    .foods-hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
-    .foods-search-block, .foods-catalog { display: grid; gap: 18px; min-width: 0; padding: 22px; border-radius: 22px; background: var(--lifeos-surface); box-shadow: var(--lifeos-shadow); }
-    .foods-main-column { display: grid; gap: 22px; min-width: 0; }
-    .foods-section-heading h2, .foods-empty h3, .foods-item h3 { margin: 0; }
-    .foods-section-heading p { margin: 7px 0 0; color: var(--lifeos-text-soft); font-size: .9rem; line-height: 1.5; }
-    .foods-field { display: grid; gap: 7px; min-width: 0; }
-    .foods-field > span { color: var(--lifeos-text-soft); font-size: .82rem; font-weight: 800; }
-    .foods-field input { width: 100%; min-height: 2.7rem; padding: .65rem .75rem; border: 1px solid var(--lifeos-line); border-radius: 10px; background: var(--lifeos-surface); color: var(--lifeos-text); font: inherit; }
-    .foods-field input:focus-visible { outline: 3px solid rgb(53 109 79 / 28%); border-color: var(--lifeos-accent); }
-    .foods-item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .foods-secondary, .foods-danger { min-height: 40px; padding: 9px 13px; border: 1px solid var(--lifeos-line); border-radius: 10px; background: var(--lifeos-surface-soft); color: var(--lifeos-text); font: inherit; font-weight: 750; cursor: pointer; }
-    .foods-danger { color: #8b2c20; }
-    .foods-secondary:hover:not(:disabled), .foods-danger:hover:not(:disabled) { filter: brightness(.96); }
-    .foods-secondary:focus-visible, .foods-danger:focus-visible { outline: 3px solid rgb(53 109 79 / 28%); outline-offset: 2px; }
-    button:disabled { cursor: wait; opacity: .65; }
-    .foods-section-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px; }
-    .foods-searches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .foods-search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
-    .foods-results, .foods-list { display: grid; margin: 0; padding: 0; list-style: none; }
-    .foods-results { gap: 8px; }
-    .foods-result, .foods-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0; border-top: 1px solid var(--lifeos-line); }
-    .foods-result { padding: 12px; border: 1px solid var(--lifeos-line); border-radius: 13px; }
-    .foods-item-copy { min-width: 0; overflow-wrap: anywhere; }
-    .foods-item-copy p { margin: 5px 0 0; color: var(--lifeos-text-soft); font-size: .9rem; }
-    .foods-item-copy small { display: block; margin-top: 4px; color: var(--lifeos-text-soft); }
-    .foods-item-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .foods-source, .foods-correction { padding: 3px 8px; border-radius: 999px; background: var(--lifeos-surface-muted); color: var(--lifeos-text-soft); font-size: .72rem; font-weight: 800; }
-    .foods-source.is-off { background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); }
-    .foods-correction { background: #f4ead7; color: #705123; }
-    .foods-feedback { margin: 0; padding: 12px 14px; border-radius: 12px; font-weight: 700; }
-    .foods-error { background: #fff0ed; color: #8b2c20; }
-    .foods-notice { background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); }
-    .foods-search-notice { margin: 0; padding: 12px 14px; border-radius: 11px; background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); font-size: .9rem; line-height: 1.5; }
-    .foods-empty, .foods-empty-inline { color: var(--lifeos-text-soft); line-height: 1.5; }
-    .foods-empty { padding: 28px 4px 8px; }
-    .foods-empty p { margin: 7px 0 0; }
-    .foods-empty-inline { margin: 0; font-size: .9rem; }
-    @media (max-width: 620px) {
-      .foods-hero { flex-wrap: wrap; align-items: flex-start; }
-      .foods-hero-actions { justify-content: flex-start; }
-      .foods-searches { grid-template-columns: 1fr; }
-      .foods-item, .foods-result { align-items: flex-start; flex-direction: column; }
-      .foods-item-actions { width: 100%; }
-      .foods-section-heading { align-items: flex-start; }
-      .foods-search-form { grid-template-columns: 1fr; }
-      .foods-search-form button { justify-self: start; }
-    }
-  `],
+  styleUrl: './catalog.css',
 })
 export class FoodItemsPageComponent {
   private readonly api = inject(LifeosApiService)
-
-  readonly items = signal<FoodItemDto[]>([])
+  readonly foods = signal<FoodItemDto[]>([])
+  readonly products = signal<ProductDto[]>([])
+  readonly prices = signal<FoodPricesDto[]>([])
   readonly stores = signal<StoreDto[]>([])
-  catalogSearch = ''
-  showArchived = false
-  readonly currentProduct = signal<FoodItemDto | null>(null)
-  readonly usage = signal<ProductUsageDto | null>(null)
-  readonly usageLoading = signal(false)
-  readonly usageError = signal('')
-  priceDraft: { storeId: string; amount: number | null; observedAt: string } = { storeId: '', amount: null, observedAt: this.today() }
-  readonly priceNotice = signal('')
-  private initialPriceDraft = formSnapshot(this.priceDraft)
-  readonly editorOpen = signal(false)
-  readonly dialogError = signal('')
-  showMacros = false
-  private initialEditor = formSnapshot(emptyEditor())
-  visibleItems(): FoodItemDto[] {
-    return this.items().filter(i => (this.showArchived || !i.isArchived)
-      && i.name.toLocaleLowerCase('fr').includes(this.catalogSearch.toLocaleLowerCase('fr')))
-  }
-  readonly activeCount = computed(() => this.items().filter(i => !i.isArchived).length)
-  readonly searchResults = signal<FoodItemDto[]>([])
-  readonly loading = signal(false)
+  readonly selected = signal<FoodItemDto | null>(null)
+  readonly currentProduct = signal<ProductDto | null>(null)
+  readonly loading = signal(true)
   readonly busy = signal(false)
-  readonly searchingName = signal(false)
-  readonly searchingBarcode = signal(false)
-  readonly searched = signal(false)
   readonly error = signal('')
   readonly notice = signal('')
-  readonly editingId = signal('')
-  readonly correctionOf = signal('')
-  readonly deleteConfirmationId = signal('')
-
-  editor = emptyEditor()
-  offNameSearch = ''
-  offBarcodeSearch = ''
-
-  constructor() {
-    void this.loadItems()
-    this.api.get<StoreDto[]>('/stores').subscribe({
-      next: stores => this.stores.set(stores),
-      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
-    })
+  readonly dialogError = signal('')
+  readonly dialog = signal<'food' | 'product' | null>(null)
+  search = ''
+  incompleteOnly = false
+  archivedOnly = false
+  foodDraft = newFoodDraft()
+  productDraft = newProductDraft()
+  priceDraft: { storeId: string; price: number | null; date: string } = { storeId: '', price: null, date: '' }
+  private editingFoodId = ''
+  private initial = ''
+  private initialPrice = ''
+  readonly units = purchaseUnits
+  readonly missing = missingFoodFields
+  readonly number = formatNumber
+  readonly date = formatDate
+  readonly unitLabel = unitLabel
+  constructor() { void this.load() }
+  visibleFoods(): FoodItemDto[] { return this.foods().filter(f => f.isArchived === this.archivedOnly && (!this.incompleteOnly || this.missing(f).length) && f.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr'))) }
+  incompleteCount(): number { return this.foods().filter(f => !f.isArchived && this.missing(f).length).length }
+  pricesFor(id: string) { return this.prices().find(p => p.foodItemId === id)?.prices ?? [] }
+  productsFor(id: string) { return this.products().filter(p => p.foodItemId === id) }
+  storeName(id: string): string { return this.stores().find(s => s.id === id)?.name ?? 'Magasin historique' }
+  fodmapLabel(value: string | null): string { return value === 'low' ? 'bas' : value === 'moderate' ? 'modéré' : value === 'high' ? 'élevé' : 'non renseigné' }
+  select(food: FoodItemDto): void { this.selected.set(food) }
+  productDirty(): boolean { return hasChanges(this.initial, this.productDraft) }
+  dirty(): boolean { return this.dialog() === 'food' ? hasChanges(this.initial, this.foodDraft) : this.productDirty() || hasChanges(this.initialPrice, this.priceDraft) }
+  canLeave(): boolean { return !this.dialog() || !this.dirty() || window.confirm('Abandonner les informations non enregistrées ?') }
+  @HostListener('window:beforeunload', ['$event'])
+  beforeUnload(event: BeforeUnloadEvent): void { if (this.dialog() && this.dirty()) { event.preventDefault(); event.returnValue = '' } }
+  async load(): Promise<void> {
+    this.loading.set(true); this.error.set('')
+    try {
+      const [foods, products, prices, stores] = await Promise.all([
+        firstValueFrom(this.api.get<FoodItemDto[]>('/foods')), firstValueFrom(this.api.get<ProductDto[]>('/products')),
+        firstValueFrom(this.api.get<FoodPricesDto[]>('/foods/prices')), firstValueFrom(this.api.get<StoreDto[]>('/stores')),
+      ])
+      this.foods.set(foods); this.products.set(products); this.prices.set(prices); this.stores.set(stores)
+      if (this.selected()) this.selected.set(foods.find(f => f.id === this.selected()?.id) ?? null)
+    } catch (e) { this.error.set(apiErrorMessage(e)) } finally { this.loading.set(false) }
   }
-
-  async addPrice(item: FoodItemDto): Promise<void> {
+  editFood(food?: FoodItemDto): void {
+    this.editingFoodId = food?.id ?? ''
+    this.foodDraft = food ? { name: food.name, referenceUnit: food.referenceUnit, nutrition: { ...newFoodDraft().nutrition!, ...food.nutrition }, fodmap: food.fodmap, nova: food.nova, digestiveNotes: food.digestiveNotes } : newFoodDraft()
+    this.initial = formSnapshot(this.foodDraft); this.dialogError.set(''); this.dialog.set('food')
+  }
+  editProduct(product?: ProductDto): void {
+    this.currentProduct.set(product ?? null)
+    this.productDraft = product ? { ...newProductDraft(), ...product, foodItemId: product.foodItemId ?? '' } : newProductDraft(this.selected()?.id)
+    this.priceDraft = { storeId: '', price: null, date: '' }
+    this.initialPrice = formSnapshot(this.priceDraft)
+    this.initial = formSnapshot(this.productDraft); this.dialogError.set(''); this.dialog.set('product')
+  }
+  async saveFood(): Promise<void> {
+    await this.action(async () => {
+      const food = await firstValueFrom(this.editingFoodId ? this.api.put<FoodItemDto>(`/foods/${this.editingFoodId}`, this.foodDraft) : this.api.post<FoodItemDto>('/foods', this.foodDraft))
+      this.selected.set(food); this.dialog.set(null); await this.load()
+    }, true)
+  }
+  async saveProduct(): Promise<void> {
+    await this.action(async () => {
+      const product = await firstValueFrom(this.currentProduct() ? this.api.put<ProductDto>(`/products/${this.currentProduct()!.id}`, this.productDraft) : this.api.post<ProductDto>('/products', this.productDraft))
+      this.currentProduct.set(product); this.initial = formSnapshot(this.productDraft); await this.load()
+    }, true)
+  }
+  async archive(food: FoodItemDto): Promise<void> {
+    if (!window.confirm(`Archiver « ${food.name} » ? Les recettes et événements historiques sont conservés.`)) return
+    await this.action(async () => { await firstValueFrom(this.api.delete(`/foods/${food.id}`)); await this.load() })
+  }
+  async archiveProduct(): Promise<void> {
+    const product = this.currentProduct()
+    if (!product || !window.confirm(`Archiver « ${product.name} » en conservant achats et prix ?`)) return
+    await this.action(async () => { await firstValueFrom(this.api.delete(`/products/${product.id}`)); this.dialog.set(null); await this.load() }, true)
+  }
+  async addPrice(): Promise<void> {
+    if (this.productDirty()) { this.dialogError.set('Enregistrez la fiche avant le relevé de prix.'); return }
+    await this.action(async () => {
+      const product = await firstValueFrom(this.api.post<ProductDto>(`/products/${this.currentProduct()!.id}/price-entries`,
+        { storeId: this.priceDraft.storeId, price: this.priceDraft.price, observedAt: `${this.priceDraft.date}T00:00:00Z` }))
+      this.currentProduct.set(product); this.priceDraft.price = null; this.initialPrice = formSnapshot(this.priceDraft); await this.load()
+    }, true)
+  }
+  private async action(fn: () => Promise<void>, inDialog = false): Promise<void> {
     if (this.busy()) return
-    if (this.hasUnsavedProductChanges()) {
-      this.dialogError.set('Enregistrez la fiche avant de relever un prix.')
-      return
-    }
-    if (!this.priceDraft.storeId || this.priceDraft.amount === null || !Number.isFinite(this.priceDraft.amount)
-      || this.priceDraft.amount < 0 || !this.priceDraft.observedAt) {
-      this.dialogError.set('Choisissez un magasin, une date et un prix positif ou nul.')
-      return
-    }
-    this.busy.set(true)
-    this.dialogError.set('')
-    this.priceNotice.set('')
-    let persisted = false
-    try {
-      await firstValueFrom(this.api.post(`/products/${item.id}/price-entries`, {
-        storeId: this.priceDraft.storeId, price: this.priceDraft.amount,
-        observedAt: new Date(`${this.priceDraft.observedAt}T12:00:00`).toISOString(),
-      }))
-      persisted = true
-      this.priceDraft = { storeId: this.priceDraft.storeId, amount: null, observedAt: this.today() }
-      this.initialPriceDraft = formSnapshot(this.priceDraft)
-      await this.refreshProduct(item.id)
-      this.priceNotice.set('Prix ajouté à l’historique.')
-    } catch (error) {
-      this.dialogError.set(`${persisted ? 'Prix ajouté, mais l’actualisation a échoué. ' : ''}${apiErrorMessage(error)}`)
-    } finally { this.busy.set(false) }
-  }
-
-  async removePrice(item: FoodItemDto, entry: ArticlePriceEntryDto): Promise<void> {
-    this.busy.set(true)
-    this.dialogError.set('')
-    this.priceNotice.set('')
-    let persisted = false
-    try {
-      await firstValueFrom(this.api.delete(`/products/${item.id}/price-entries/${entry.id}`))
-      persisted = true
-      await this.refreshProduct(item.id)
-      this.priceNotice.set('Relevé supprimé.')
-    } catch (error) { this.dialogError.set(`${persisted ? 'Relevé supprimé, mais l’actualisation a échoué. ' : ''}${apiErrorMessage(error)}`) }
+    this.busy.set(true); this.dialogError.set(''); this.error.set(''); this.notice.set('')
+    try { await fn(); this.notice.set('Enregistrement effectué.') }
+    catch (e) { (inDialog ? this.dialogError : this.error).set(apiErrorMessage(e)) }
     finally { this.busy.set(false) }
   }
-
-  private async refreshProduct(id: string): Promise<void> {
-    const product = await firstValueFrom(this.api.get<FoodItemDto>(`/products/${id}`))
-    this.currentProduct.set(product)
-    this.items.update(items => items.map(item => item.id === id ? product : item))
-    this.searchResults.update(items => items.map(item => item.id === id ? product : item))
-  }
-
-  unitLabel(unit: GroceryItemUnit): string {
-    return unit === 'kilogram' ? 'kg' : unit === 'liter' ? 'L' : 'unité'
-  }
-
-  storeLabel(id: string): string {
-    return this.stores().find(store => store.id === id)?.name ?? `Magasin historique (${id})`
-  }
-
-  formatDate(value: string): string { return new Date(value).toLocaleDateString('fr-FR') }
-
-  private today(): string {
-    const date = new Date()
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  }
-
-  async loadItems(): Promise<void> {
-    this.loading.set(true)
-    try {
-      this.items.set(await firstValueFrom(this.api.get<FoodItemDto[]>('/products')))
-      this.error.set('')
-    } catch (error) {
-      this.error.set(apiErrorMessage(error))
-    } finally {
-      this.loading.set(false)
-    }
-  }
-
-  async searchByName(): Promise<void> {
-    const name = this.offNameSearch.trim()
-    if (!name) return
-    this.busy.set(true)
-    this.searchingName.set(true)
-    this.error.set('')
-    this.notice.set('')
-    this.searched.set(false)
-    this.searchResults.set([])
-    try {
-      this.searchResults.set(await firstValueFrom(
-        this.api.get<FoodItemDto[]>('/products/search-off', { name }),
-      ))
-      this.searched.set(true)
-      await this.loadItems()
-    } catch (error) {
-      this.error.set(apiErrorMessage(error))
-    } finally {
-      this.busy.set(false)
-      this.searchingName.set(false)
-    }
-  }
-
-  async searchByBarcode(): Promise<void> {
-    const barcode = this.offBarcodeSearch.trim()
-    if (!barcode) return
-    this.busy.set(true)
-    this.searchingBarcode.set(true)
-    this.error.set('')
-    this.notice.set('')
-    this.searched.set(false)
-    this.searchResults.set([])
-    try {
-      const result = await firstValueFrom(
-        this.api.get<FoodItemDto>('/products/search-off-barcode', { barcode }),
-      )
-      this.searchResults.set([result])
-      this.searched.set(true)
-      await this.loadItems()
-    } catch (error) {
-      this.searchResults.set([])
-      this.error.set(apiErrorMessage(error))
-      this.searched.set(true)
-    } finally {
-      this.busy.set(false)
-      this.searchingBarcode.set(false)
-    }
-  }
-
-  editorHeading(): string {
-    return this.correctionOf() ? 'Créer un produit corrigé' : this.editingId() ? 'Fiche produit' : 'Nouveau produit'
-  }
-
-  openCreate(): void { this.currentProduct.set(null); this.openEditor('', '', emptyEditor()) }
-
-  editFood(item: FoodItemDto): void {
-    this.currentProduct.set(item)
-    this.openEditor(item.id, '', this.editorFromItem(item))
-    void this.loadUsage(item.id)
-  }
-
-  private async loadUsage(id: string): Promise<void> {
-    this.usage.set(null)
-    this.usageError.set('')
-    this.usageLoading.set(true)
-    try {
-      const usage = await firstValueFrom(this.api.get<ProductUsageDto>(`/products/${id}/usage`))
-      if (this.currentProduct()?.id === id) this.usage.set(usage)
-    } catch (error) {
-      if (this.currentProduct()?.id === id) this.usageError.set(apiErrorMessage(error))
-    } finally {
-      if (this.currentProduct()?.id === id) this.usageLoading.set(false)
-    }
-  }
-
-  startCorrection(item: FoodItemDto): void { this.currentProduct.set(null); this.openEditor('', item.id, this.editorFromItem(item)) }
-
-  hasUnsavedProductChanges(): boolean { return hasChanges(this.initialEditor, this.editor) }
-  isEditorDirty(): boolean { return this.hasUnsavedProductChanges() || hasChanges(this.initialPriceDraft, this.priceDraft) }
-
-  closeEditor(): void { this.editorOpen.set(false); this.dialogError.set(''); this.resetEditor() }
-
-  private openEditor(editingId: string, correctionOf: string, editor: ProductEditor): void {
-    this.editingId.set(editingId)
-    this.correctionOf.set(correctionOf)
-    this.editor = editor
-    this.priceDraft = { storeId: '', amount: null, observedAt: this.today() }
-    this.initialPriceDraft = formSnapshot(this.priceDraft)
-    this.priceNotice.set('')
-    this.initialEditor = formSnapshot(editor)
-    this.showMacros = [editor.proteinsPerUnit, editor.carbsPerUnit, editor.fatsPerUnit].some(v => v !== null)
-    this.dialogError.set('')
-    this.notice.set('')
-    this.editorOpen.set(true)
-  }
-
-  async saveFood(): Promise<void> {
-    const request = this.toRequest()
-    const problem = productDraftProblem(request)
-    if (problem) {
-      this.dialogError.set(problem)
-      return
-    }
-
-    this.busy.set(true)
-    this.dialogError.set('')
-    this.notice.set('')
-    let persisted = false
-    try {
-      let saved: FoodItemDto
-      if (this.correctionOf()) {
-        saved = await firstValueFrom(this.api.post<FoodItemDto>(
-          `/products/${this.correctionOf()}/correction`,
-          request,
-        ))
-      } else if (this.editingId()) {
-        saved = await firstValueFrom(this.api.put<FoodItemDto>(
-          `/products/${this.editingId()}`,
-          request,
-        ))
-      } else {
-        saved = await firstValueFrom(this.api.post<FoodItemDto>('/products', request))
-      }
-      persisted = true
-      this.currentProduct.set(saved)
-      this.editingId.set(saved.id)
-      this.correctionOf.set('')
-      this.editor = this.editorFromItem(saved)
-      this.initialEditor = formSnapshot(this.editor)
-      void this.loadUsage(saved.id)
-      await this.reloadAfterMutation('Produit enregistré. Nutrition et achats réunis ; vous pouvez relever ses prix dans cette fiche.')
-    } catch (error) {
-      if (persisted) this.error.set(`Produit enregistré, mais l’actualisation a échoué. ${apiErrorMessage(error)}`)
-      else this.dialogError.set(apiErrorMessage(error))
-    } finally {
-      this.busy.set(false)
-    }
-  }
-
-  async deleteFood(item: FoodItemDto): Promise<void> {
-    this.busy.set(true)
-    this.error.set('')
-    this.notice.set('')
-    try {
-      await firstValueFrom(this.api.delete<void>(`/products/${item.id}`))
-      this.deleteConfirmationId.set('')
-      await this.reloadAfterMutation(`Le produit « ${item.name} » a été archivé. Les prix et événements sont conservés.`)
-    } catch (error) {
-      this.error.set(apiErrorMessage(error))
-    } finally {
-      this.busy.set(false)
-    }
-  }
-
-  resetEditor(): void {
-    this.editor = emptyEditor()
-    this.editingId.set('')
-    this.correctionOf.set('')
-  }
-
-  nutritionSummary(nutrition: NutritionPerUnitDto | null): string {
-    if (!nutrition) return 'Valeurs nutritionnelles non renseignées'
-    const values = [
-      nutrition.caloriesPerUnit === null ? null : `${this.formatNumber(nutrition.caloriesPerUnit)} kcal`,
-      nutrition.proteinsPerUnit === null ? null : `${this.formatNumber(nutrition.proteinsPerUnit)} g de protéines`,
-      nutrition.carbsPerUnit === null ? null : `${this.formatNumber(nutrition.carbsPerUnit)} g de glucides`,
-      nutrition.fatsPerUnit === null ? null : `${this.formatNumber(nutrition.fatsPerUnit)} g de lipides`,
-    ].filter((value): value is string => value !== null)
-    return values.length ? values.join(' · ') : 'Valeurs nutritionnelles non renseignées'
-  }
-
-  isOffItem(item: FoodItemDto): boolean {
-    return Boolean(item.offBarcode) || item.source.toLowerCase().includes('openfoodfacts')
-      || item.source.toLowerCase().includes('open food facts')
-  }
-
-  sourceLabel(item: FoodItemDto): string {
-    if (item.source.toLowerCase().includes('correction')) return 'Correction'
-    if (this.isOffItem(item)) return 'Open Food Facts'
-    if (!item.source || item.source.toLowerCase() === 'manual') return 'Saisie manuelle'
-    return item.source
-  }
-
-  private editorFromItem(item: FoodItemDto): ProductEditor { return productEditorFromItem(item) }
-
-  formatNumber(value: number): string {
-    return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value)
-  }
-
-  private toRequest(): FoodItemRequest {
-    return productRequest(this.editor)
-  }
-
-  private async reloadAfterMutation(message: string): Promise<void> {
-    this.items.set(await firstValueFrom(this.api.get<FoodItemDto[]>('/products')))
-    this.error.set('')
-    this.notice.set(message)
-  }
 }
+
+export const purchaseUnits = [
+  { value: 'kg', label: 'kg' }, { value: 'g', label: 'g' }, { value: 'L', label: 'L' }, { value: 'ml', label: 'ml' },
+  { value: 'unit', label: 'unité' }, { value: 'bag', label: 'sachet' }, { value: 'box', label: 'boîte' }, { value: 'pot', label: 'pot' }, { value: 'pack', label: 'paquet' },
+]
+export function unitLabel(unit: string): string { return purchaseUnits.find(u => u.value === unit)?.label ?? (unit === 'piece' ? 'pièce comparable' : unit === 'unknown' ? 'unité à confirmer' : unit) }
+export function formatNumber(value: number | null | undefined): string { return value == null ? 'inconnu' : new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 3 }).format(value) }
+export function formatDate(value: string): string { return new Intl.DateTimeFormat('fr-FR', { timeZone: 'UTC' }).format(new Date(value)) }

@@ -78,9 +78,9 @@ public sealed class ManualPlannerMigrationTests
         Assert.Equal(composed, positioned.Days[0].Meals[0].ComposedMealId);
         Assert.Equal(200, positioned.Days[0].Meals[0].Lines[0].PreparationQuantity);
         await using var verify = new LifeOSDbContext(options);
-        Assert.Equal(1, await verify.GroceryItems.CountAsync());
+        Assert.Equal(1, await verify.Products.CountAsync());
         Assert.Equal(1, await verify.ComposedMealParts.CountAsync());
-        var purchase = await verify.GroceryItems.Include(a => a.PriceHistory).SingleAsync();
+        var purchase = await verify.Products.Include(a => a.PriceHistory).SingleAsync();
         Assert.Equal(2.5m, Assert.Single(purchase.PriceHistory).Price);
         Assert.Equal("Kids", (await verify.Weeks.SingleAsync()).WeekMode.ToString());
     }

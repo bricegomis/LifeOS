@@ -4,7 +4,8 @@ using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Households;
 using LifeOS.Domain.Planning;
 using LifeOS.Domain.Recipes;
-using LifeOS.Domain.Stock;
+using LifeOS.Domain.Products;
+using LifeOS.Domain.Receipts;
 using LifeOS.Domain.Stores;
 using LifeOS.Domain.WeekContexts;
 using LifeOS.Domain.WeekPlanning;
@@ -25,7 +26,10 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
     public DbSet<Store> Stores => Set<Store>();
-    public DbSet<FoodItem> GroceryItems => Set<FoodItem>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<Receipt> Receipts => Set<Receipt>();
+    public DbSet<ReceiptLine> ReceiptLines => Set<ReceiptLine>();
+    public DbSet<Purchase> Purchases => Set<Purchase>();
 
     // Jalon 2: Recipes and Meals
     public DbSet<Recipe> Recipes => Set<Recipe>();
@@ -61,10 +65,6 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<PlanningRule> PlanningRules => Set<PlanningRule>();
     public DbSet<FrequencyRule> FrequencyRules => Set<FrequencyRule>();
     public DbSet<WeekContext> WeekContexts => Set<WeekContext>();
-
-    // Jalon 6: Stock and Shopping List
-    public DbSet<StockItem> StockItems => Set<StockItem>();
-    public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

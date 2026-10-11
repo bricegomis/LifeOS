@@ -8,14 +8,11 @@ namespace LifeOS.Api.Endpoints;
 
 public static class CatalogManagementEndpoints
 {
-    public record ArticleLinkRequest(Guid? ArticleId);
     public record IngredientEditRequest(decimal Quantity, string Unit);
 
     public static IEndpointRouteBuilder MapCatalogManagementEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api").RequireAuthorization().WithTags("Catalog management");
-        group.MapPut("/food-items/{id:guid}/article", () =>
-            Results.Problem("Aliments et articles sont désormais un seul produit. Modifiez sa fiche dans /api/products.", statusCode: 410));
         group.MapPut("/recipes/{id:guid}/ingredients/{ingredientId:guid}", async (Guid id, Guid ingredientId,
             IngredientEditRequest request, ClaimsPrincipal user, ResolveHouseholdForUserQuery households,
             LifeOSDbContext db, CancellationToken ct) =>

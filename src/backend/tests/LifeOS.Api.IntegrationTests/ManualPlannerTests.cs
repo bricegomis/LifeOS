@@ -18,7 +18,7 @@ public sealed class ManualPlannerTests(PostgresContainerFixture postgres)
     }
 
     private static Task<FoodItemDto> Food(HttpClient client, string name = "Riz") =>
-        Post<FoodItemDto>(client, "/api/food-items", new
+        Post<FoodItemDto>(client, "/api/foods", new
         {
             name, referenceUnit = "100g",
             nutrition = new { caloriesPerUnit = 150, proteinsPerUnit = 3, carbsPerUnit = 30, fatsPerUnit = 1 }
@@ -98,12 +98,12 @@ public sealed class ManualPlannerTests(PostgresContainerFixture postgres)
             foreach (var start in new[] { 420, 1020, 1320 })
                 await Post<ManualSportDto>(client, "/api/manual-planner/sports",
                     new ManualSportRequest(day.Id, start, start + 30, templateId, "Vélo", "bike", "moderate", 30, 10, 200));
-            (await client.PutAsJsonAsync($"/api/food-items/{food.Id}", new
+            (await client.PutAsJsonAsync($"/api/foods/{food.Id}", new
             {
                 name = "Riz modifié", referenceUnit = "100g",
                 nutrition = new { caloriesPerUnit = 999, proteinsPerUnit = 0, carbsPerUnit = 0, fatsPerUnit = 0 }
             })).EnsureSuccessStatusCode();
-            (await client.DeleteAsync($"/api/food-items/{food.Id}")).EnsureSuccessStatusCode();
+            (await client.DeleteAsync($"/api/foods/{food.Id}")).EnsureSuccessStatusCode();
             (await client.DeleteAsync($"/api/sport-templates/{templateId}")).EnsureSuccessStatusCode();
             var updatedResponse = await client.PutAsJsonAsync($"/api/manual-planner/meals/{meal.Id}",
                 new ManualMealRequest(day.Id, 1000, 1015, 2, 0));
@@ -139,7 +139,7 @@ public sealed class ManualPlannerTests(PostgresContainerFixture postgres)
         var meal = await Post<ManualMealDto>(client, "/api/manual-planner/meals", new ManualMealRequest(week.Days[0].Id, 480, 510, 1, 2, recipe.Id));
         Assert.Equal(150d, meal.Nutrition.Calories);
         Assert.Equal(200, meal.Lines[0].PreparationQuantity);
-        var banana = await Post<FoodItemDto>(client, "/api/food-items", new
+        var banana = await Post<FoodItemDto>(client, "/api/foods", new
         {
             name = "Banane", referenceUnit = "piece",
             nutrition = new { caloriesPerUnit = 90, proteinsPerUnit = 1, carbsPerUnit = 20, fatsPerUnit = 0 }

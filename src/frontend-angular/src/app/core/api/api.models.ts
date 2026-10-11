@@ -21,79 +21,103 @@ export interface StoreRequest {
   isLocal: boolean
 }
 
-export type GroceryItemUnit = 'kilogram' | 'liter' | 'unit'
-
-export interface ArticlePriceEntryDto {
-  id: string
-  storeId: string
-  price: number
-  observedAt: string
-  createdAt: string
-}
-
-export interface ArticleDto {
-  id: string
-  name: string
-  description: string
-  unit: GroceryItemUnit
-  priceHistory: ArticlePriceEntryDto[]
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ArticleRequest {
-  name: string
-  description: string
-  unit: GroceryItemUnit
-}
-
-export interface AddPriceEntryRequest {
-  storeId: string
-  price: number
-  observedAt: string
-}
-
 export interface NutritionPerUnitDto {
   caloriesPerUnit: number | null
   proteinsPerUnit: number | null
   carbsPerUnit: number | null
   fatsPerUnit: number | null
 }
-
-export interface FoodItemDto {
-  id: string
-  householdId: string
-  articleId: string | null
-  isArchived: boolean
-  name: string
-  referenceUnit: string
-  description: string
-  unit: GroceryItemUnit
-  purchaseUnitConfirmed: boolean
-  legacyPurchaseName: string | null
-  migrationOrigin: 'linked' | 'food-only' | 'article-only' | null
-  priceHistory: ArticlePriceEntryDto[]
-  nutrition: NutritionPerUnitDto | null
-  source: string
-  offBarcode: string | null
-  isCorrectionOf: string | null
-  createdAt: string
-  updatedAt: string
-}
-
 export interface FoodItemRequest {
   name: string
   referenceUnit: string
-  description: string
-  unit: GroceryItemUnit | null
   nutrition: NutritionPerUnitDto | null
+  fodmap: 'low' | 'moderate' | 'high' | null
+  nova: number | null
+  digestiveNotes: string | null
 }
-
-export interface ProductUsageDto {
-  recipes: { id: string; name: string; isArchived: boolean }[]
-  stock: { quantity: number; unit: string }[]
-  mealOccurrences: number
-  historicalShoppingLines: number
+export interface FoodItemDto extends FoodItemRequest {
+  id: string
+  householdId: string
+  isArchived: boolean
+  missingFields: string[]
+  source: string
+  createdAt: string
+  updatedAt: string
+}
+export interface ProductRequest {
+  foodItemId: string
+  name: string
+  description: string
+  purchaseUnit: string
+  brand: string | null
+  barcode: string | null
+  packageQuantity: number | null
+  packageUnit: string | null
+  packageConfirmed: boolean
+  piecesComparable: boolean
+}
+export interface ProductDto extends Omit<ProductRequest, 'foodItemId'> {
+  id: string
+  foodItemId: string | null
+  householdId: string
+  isArchived: boolean
+  priceHistory: PriceObservationDto[]
+  purchaseUnitConfirmed: boolean
+  legacyPurchaseName: string | null
+  migrationOrigin: string | null
+}
+export interface PriceObservationDto {
+  id: string
+  storeId: string
+  price: number
+  unit: string
+  observedAt: string
+  provenance: string
+  receiptLineId: string | null
+  packageQuantity: number | null
+  packageUnit: string | null
+  packageConfirmed: boolean
+  piecesComparable: boolean
+}
+export interface ComparablePriceDto {
+  productId: string
+  productName: string
+  storeId: string
+  price: number
+  unit: string
+  observedAt: string
+  provenance: string
+}
+export interface FoodPricesDto { foodItemId: string; prices: ComparablePriceDto[] }
+export interface ReceiptSummaryDto {
+  id: string
+  storeName: string
+  storeId: string | null
+  date: string | null
+  totalLines: number
+  completedLines: number
+}
+export interface ReceiptDto extends Omit<ReceiptSummaryDto, 'totalLines'> {
+  rawDocument: string
+  declaredLines: number | null
+  detectedLines: number | null
+  diagnostic: string | null
+  lines: ReceiptLineDto[]
+}
+export interface ReceiptLineDto {
+  id: string
+  position: number
+  sourceText: string
+  excludedMention: boolean
+  label: string
+  total: number | null
+  quantity: number | null
+  unit: string | null
+  statedUnitPrice: number | null
+  priceMismatchConfirmed: boolean
+  status: 'pending' | 'validated' | 'ignored'
+  productId: string | null
+  diagnostics: string[]
 }
 
 export interface RecipeIngredientDto {
@@ -195,7 +219,7 @@ export interface PlannedMealPartDto {
  * listed in `limitations`.
  */
 export interface BalancedPlanDimension {
-  key: 'nutrition' | 'cost' | 'diversity' | 'waste'
+  key: 'nutrition' | 'cost' | 'diversity' | 'reuse'
   score: number | null
   weight: number
   dataCoverage: number
@@ -229,33 +253,6 @@ export interface ComputedBalancedPlanDto extends Omit<BalancedPlanDto, 'explanat
   explanation: BalancedPlanExplanation
 }
 
-export interface LibraryMealComponentDto {
-  id: string
-  name: string
-  icon: string
-  componentType: string
-  defaultPortionQuantity: number
-  unit: string
-  estimatedCalories: number
-  estimatedProteinGrams: number
-  estimatedCarbohydrateGrams: number
-  estimatedFatGrams: number
-  active: boolean
-}
-
-export interface LibraryCompositeDishDto {
-  id: string
-  name: string
-  icon: string
-  estimatedCalories: number
-  estimatedProteinGrams: number
-  preparationTimeMinutes: number
-  suitableForBreakfast: boolean
-  suitableForLunch: boolean
-  suitableForDinner: boolean
-  active: boolean
-}
-
 export interface ActivityDto {
   id: string
   name: string
@@ -276,30 +273,6 @@ export interface SportTemplateDto extends SportTemplateRequest {
   id: string
   householdId: string
   isArchived: boolean
-}
-
-export interface StockItemDto {
-  id: string
-  householdId: string
-  groceryItemId: string
-  quantity: number
-  unit: string
-}
-
-export interface StockItemRequest {
-  groceryItemId: string
-  quantity: number
-  unit: string
-}
-
-export interface ShoppingListItemDto {
-  id: string
-  householdId: string
-  weekId: string | null
-  groceryItemId: string
-  quantityNeeded: number
-  quantityFromStock: number
-  checked: boolean
 }
 
 export interface UserConfigurationDto {

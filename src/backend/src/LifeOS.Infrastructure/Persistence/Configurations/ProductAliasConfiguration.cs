@@ -10,7 +10,7 @@ internal sealed class ProductAliasConfiguration : IEntityTypeConfiguration<Produ
     {
         builder.ToTable("product_aliases");
         builder.HasKey(a => a.ArticleId);
-        builder.HasOne<FoodItem>().WithMany().HasForeignKey(a => new { a.ProductId, a.HouseholdId })
+        builder.HasOne<LifeOS.Domain.Products.Product>().WithMany().HasForeignKey(a => new { a.ProductId, a.HouseholdId })
             .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
     }
 }

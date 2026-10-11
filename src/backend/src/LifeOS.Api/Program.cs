@@ -124,7 +124,8 @@ app.UseAuthorization();
 
 app.MapStoresEndpoints();
 app.MapHouseholdEndpoints();
-app.MapArticlesEndpoints();
+app.MapProductsEndpoints();
+app.MapReceiptsEndpoints();
 app.MapRecipesEndpoints();
 app.MapCatalogManagementEndpoints();
 app.MapSportTemplatesEndpoints();
@@ -137,8 +138,6 @@ app.MapPlanningEndpoints();
 app.MapWeekContextEndpoints();
 app.MapFoodItemsEndpoints();
 app.MapNutritionEndpoints();
-app.MapStockEndpoints();
-app.MapShoppingListEndpoints();
 
 app.Run();
 

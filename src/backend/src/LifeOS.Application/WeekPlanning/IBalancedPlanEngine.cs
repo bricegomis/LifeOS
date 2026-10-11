@@ -7,7 +7,7 @@ namespace LifeOS.Application.WeekPlanning;
 /// household data does not allow computing it; the dimension is then excluded from the
 /// composite score and reported in <see cref="BalancedPlanExplanation.Limitations"/>.
 /// </summary>
-/// <param name="Key">Stable identifier: nutrition, cost, diversity or waste.</param>
+/// <param name="Key">Stable identifier: nutrition, cost, diversity or reuse.</param>
 /// <param name="Score">Normalised score between 0 and 1, or <c>null</c> when not computable.</param>
 /// <param name="Weight">Effective weight of the dimension in the composite score (0 when excluded).</param>
 /// <param name="DataCoverage">Share of the week backed by real data for this dimension (0 to 1).</param>
@@ -31,7 +31,7 @@ public sealed record BalancedPlanDimension(
 /// when it is not met, the composite score is capped by the nutrition score so a cheap but
 /// unbalanced week can never look good.
 /// </param>
-/// <param name="Dimensions">Per-dimension scores, always in the order nutrition, cost, diversity, waste.</param>
+/// <param name="Dimensions">Per-dimension scores, always in the order nutrition, cost, diversity, reuse.</param>
 /// <param name="Tradeoffs">Explicit arbitrations the engine made, in French.</param>
 /// <param name="Limitations">Data gaps that make part of the result approximate, in French.</param>
 /// <param name="TextExplanation">One paragraph summary, in French.</param>
@@ -48,8 +48,8 @@ public sealed record BalancedPlanExplanation(
 /// Computes the single balanced plan of a week.
 /// <para>
 /// The user never chooses a strategy. The engine always looks for the same compromise:
-/// nutritional balance first (as a constraint), then the lowest reachable budget, the least
-/// waste and enough diversity over the month. Every arbitration and every data gap is reported
+/// nutritional balance first (as a constraint), then ingredient reuse and diversity over
+/// the month. Cost stays unknown without explicit commercial references. Every data gap is reported
 /// so the result stays honest about what it can and cannot guarantee.
 /// </para>
 /// </summary>

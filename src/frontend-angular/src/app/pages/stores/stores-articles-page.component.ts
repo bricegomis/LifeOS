@@ -18,7 +18,7 @@ const emptyStoreEditor = () => ({ name: '', address: '', isOrganic: false, isLoc
       <header class="page-hero">
         <div>
           <h1 id="stores-page-title">Magasins</h1>
-          <p>Les lieux où vous faites vos courses. Les achats et les prix se renseignent dans la <a routerLink="/products">fiche produit</a>.</p>
+          <p>Les lieux où vous faites vos courses. Les achats et les prix se renseignent dans la <a routerLink="/foods">fiche aliment</a>.</p>
         </div>
         <button class="lifeos-button" type="button" [disabled]="busy()" (click)="openStoreDialog()">
           <i class="pi pi-plus" aria-hidden="true"></i> Nouveau magasin
@@ -42,7 +42,7 @@ const emptyStoreEditor = () => ({ name: '', address: '', isOrganic: false, isLoc
         } @else if (filteredStores().length === 0) {
           <div class="stores-empty">
             <h3>{{ storeSearch ? 'Aucun magasin correspondant' : 'Aucun magasin pour le moment' }}</h3>
-            <p>{{ storeSearch ? 'Essayez un autre nom ou effacez le filtre.' : 'Ajoutez un magasin pour relever les prix par lieu dans vos fiches produits.' }}</p>
+            <p>{{ storeSearch ? 'Essayez un autre nom ou effacez le filtre.' : 'Ajoutez un magasin pour relever les prix par lieu dans vos fiches aliments.' }}</p>
           </div>
         } @else {
           <div class="stores-list">

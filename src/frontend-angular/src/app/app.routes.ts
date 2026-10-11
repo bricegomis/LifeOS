@@ -8,7 +8,7 @@ import { ComposedMealsPageComponent } from '@/app/pages/meals/composed-meal-page
 import { PlanningPageComponent } from '@/app/pages/planning/planning-page.component'
 import { RecipesPageComponent } from '@/app/pages/recipes/recipes-page.component'
 import { SettingsPageComponent } from '@/app/pages/settings/settings-page.component'
-import { StockShoppingPageComponent } from '@/app/pages/stock/stock-shopping-page.component'
+import { TicketsPageComponent } from '@/app/pages/tickets/tickets-page.component'
 import { StoresArticlesPageComponent } from '@/app/pages/stores/stores-articles-page.component'
 import { AppLayoutComponent } from '@/app/shell/app-layout.component'
 import { SportsPageComponent } from '@/app/pages/sports/sports-page.component'
@@ -34,13 +34,13 @@ export const routes: Routes = [
       { path: 'planning', component: PlanningPageComponent },
       { path: 'recipes', component: RecipesPageComponent },
       { path: 'meals', component: ComposedMealsPageComponent },
-      { path: 'products', component: FoodItemsPageComponent },
-      { path: 'foods', pathMatch: 'full', redirectTo: 'products' },
+      { path: 'foods', component: FoodItemsPageComponent, canDeactivate: [(component: FoodItemsPageComponent) => component.canLeave()] },
+      { path: 'products', pathMatch: 'full', redirectTo: 'foods' },
       { path: 'sports', component: SportsPageComponent },
       { path: 'stores', component: StoresArticlesPageComponent },
-      { path: 'articles', pathMatch: 'full', redirectTo: 'products' },
-      { path: 'stock', component: StockShoppingPageComponent },
-      { path: 'library', pathMatch: 'full', redirectTo: 'products' },
+      { path: 'articles', pathMatch: 'full', redirectTo: 'foods' },
+      { path: 'tickets', component: TicketsPageComponent, canDeactivate: [(component: TicketsPageComponent) => component.canLeave()] },
+      { path: 'library', pathMatch: 'full', redirectTo: 'foods' },
       { path: 'settings', component: SettingsPageComponent },
       { path: 'today', pathMatch: 'full', redirectTo: '' },
       { path: 'planner', pathMatch: 'full', redirectTo: 'planning' },
