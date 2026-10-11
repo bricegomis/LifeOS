@@ -56,6 +56,16 @@ public static class RecipesEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound);
+        group.MapPut("/{recipeId}/ingredients/{ingredientId}", UpdateRecipeIngredientAsync)
+            .WithName("UpdateRecipeIngredient")
+            .Produces<RecipeDto>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        group.MapDelete("/{recipeId}/ingredients/{ingredientId}", DeleteRecipeIngredientAsync)
+            .WithName("DeleteRecipeIngredient")
+            .Produces<RecipeDto>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }
@@ -122,7 +132,8 @@ public static class RecipesEndpoints
                 request.Servings,
                 request.DurationMinutes,
                 request.Tags,
-                request.Metadata);
+                request.Metadata,
+                request.Instructions);
 
             await recipeRepository.AddAsync(recipe, cancellationToken);
 
@@ -157,7 +168,7 @@ public static class RecipesEndpoints
 
         try
         {
-            recipe.Update(request.Name, request.Servings, request.DurationMinutes, request.Tags, request.Metadata);
+            recipe.Update(request.Name, request.Servings, request.DurationMinutes, request.Tags, request.Metadata, request.Instructions);
             await recipeRepository.UpdateAsync(recipe, cancellationToken);
 
             return Results.Ok(ToDto(recipe));
@@ -239,6 +250,39 @@ public static class RecipesEndpoints
             recipe.Ingredients.Select(i => new RecipeIngredientDto(i.Id, i.FoodItemId, i.Quantity, i.Unit)).ToList(),
             recipe.CreatedAt,
             recipe.UpdatedAt,
-            recipe.IsArchived);
+            recipe.IsArchived,
+            recipe.Instructions);
+    }
+
+    private static async Task<IResult> UpdateRecipeIngredientAsync(
+        Guid recipeId, Guid ingredientId, UpdateRecipeIngredientRequest request, ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery households, IRecipeRepository recipes, CancellationToken ct)
+    {
+        if (!user.TryGetUserId(out var userId)) return Results.Unauthorized();
+        var household = await households.ExecuteAsync(userId, ct);
+        var recipe = await recipes.GetByIdAsync(recipeId, household, ct);
+        var ingredient = recipe?.Ingredients.SingleOrDefault(i => i.Id == ingredientId);
+        if (recipe is null || ingredient is null) return Results.NotFound();
+        try
+        {
+            ingredient.Update(request.Quantity, request.Unit);
+            await recipes.UpdateAsync(recipe, ct);
+            return Results.Ok(ToDto(recipe));
+        }
+        catch (ArgumentException ex) { return Results.Problem(ex.Message, statusCode: 400); }
+    }
+
+    private static async Task<IResult> DeleteRecipeIngredientAsync(
+        Guid recipeId, Guid ingredientId, ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery households, IRecipeRepository recipes, CancellationToken ct)
+    {
+        if (!user.TryGetUserId(out var userId)) return Results.Unauthorized();
+        var household = await households.ExecuteAsync(userId, ct);
+        var recipe = await recipes.GetByIdAsync(recipeId, household, ct);
+        var ingredient = recipe?.Ingredients.SingleOrDefault(i => i.Id == ingredientId);
+        if (recipe is null || ingredient is null) return Results.NotFound();
+        recipe.Ingredients.Remove(ingredient);
+        await recipes.UpdateAsync(recipe, ct);
+        return Results.Ok(ToDto(recipe));
     }
 }

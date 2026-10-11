@@ -48,6 +48,7 @@
               {{ recipe.servings }} portion{{ recipe.servings === 1 ? '' : 's' }} · {{ recipe.durationMinutes }} min
               @if (recipe.tags.length) { · {{ recipe.tags.join(', ') }} }
             </p>
+            @if (recipe.instructions) { <p class="recipe-empty">{{ recipe.instructions }}</p> }
           </div>
           <div class="recipe-form-actions">
             <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="openRecipeDialog(recipe)">Modifier</button>
@@ -84,6 +85,9 @@
             </p>
           }
         </section>
+        <section class="recipe-section">
+          <app-household-reviews targetType="recipe" [targetId]="recipe.id" [profiles]="profiles()" [groups]="groups()" />
+        </section>
       } @else {
         <h2 id="recipe-detail-title" class="sr-only">Détail de la recette</h2>
         <p class="recipe-empty">Sélectionnez une recette pour consulter ses ingrédients, ou créez-en une nouvelle.</p>
@@ -110,17 +114,14 @@
         <input class="text-input" name="durationMinutes" type="number" min="0" step="any" required [(ngModel)]="durationValue" />
       </label>
     </div>
-    <details class="dialog-more" [open]="showMore">
-      <summary>Plus d’options</summary>
-      <label class="dialog-field">
-        <span>Étiquettes, séparées par des virgules</span>
-        <input class="text-input" name="tags" type="text" placeholder="rapide, végétarien" [(ngModel)]="tagsValue" />
-      </label>
-      <label class="dialog-field">
-        <span>Métadonnées (objet JSON, facultatif)</span>
-        <textarea class="text-input" name="metadata" rows="3" placeholder='{"source":"maison"}' [(ngModel)]="metadataValue"></textarea>
-      </label>
-    </details>
+    <label class="dialog-field">
+      <span>Catégories, séparées par des virgules (facultatif)</span>
+      <input class="text-input" name="tags" type="text" placeholder="rapide, dessert, légumes" [(ngModel)]="tagsValue" />
+    </label>
+    <label class="dialog-field">
+      <span>Instructions (facultatif)</span>
+      <textarea class="text-input" name="instructions" rows="4" maxlength="10000" [(ngModel)]="instructionsValue"></textarea>
+    </label>
   </form>
 </app-lifeos-dialog>
 
@@ -130,7 +131,8 @@
   <form id="ingredient-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="addIngredient()">
     <label class="dialog-field">
       <span>Aliment</span>
-      <select class="text-input" name="foodItemId" required [(ngModel)]="ingredientFoodItemIdValue">
+      <select class="text-input" name="foodItemId" required [ngModel]="ingredientFoodItemIdValue"
+        (ngModelChange)="ingredientFoodItemIdValue = $event; ingredientReviewFoodId.set($event)">
         <option value="" disabled>Choisir un aliment</option>
         @for (food of activeFoods(); track food.id) {
           <option [value]="food.id">{{ food.name }}</option>
@@ -147,6 +149,9 @@
         <input class="text-input" name="ingredientUnit" type="text" required [(ngModel)]="ingredientUnitValue" />
       </label>
     </div>
+    @if (ingredientReviewFoodId(); as foodId) {
+      <app-household-reviews targetType="food" [targetId]="foodId" [profiles]="profiles()" [groups]="groups()" />
+    }
   </form>
 </app-lifeos-dialog>
 

@@ -4,7 +4,6 @@ import { AuthService } from '@/app/core/auth/auth.service'
 import { DashboardPageComponent } from '@/app/pages/dashboard/dashboard-page.component'
 import { FoodItemsPageComponent } from '@/app/pages/foods/food-items-page.component'
 import { LoginPageComponent } from '@/app/pages/login/login-page.component'
-import { ComposedMealsPageComponent } from '@/app/pages/meals/composed-meal-page.component'
 import { PlanningPageComponent } from '@/app/pages/planning/planning-page.component'
 import { RecipesPageComponent } from '@/app/pages/recipes/recipes-page.component'
 import { SettingsPageComponent } from '@/app/pages/settings/settings-page.component'
@@ -33,7 +32,6 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', component: DashboardPageComponent },
       { path: 'planning', component: PlanningPageComponent },
       { path: 'recipes', component: RecipesPageComponent },
-      { path: 'meals', component: ComposedMealsPageComponent },
       { path: 'foods', component: FoodItemsPageComponent, canDeactivate: [(component: FoodItemsPageComponent) => component.canLeave()] },
       { path: 'products', pathMatch: 'full', redirectTo: 'foods' },
       { path: 'sports', component: SportsPageComponent },

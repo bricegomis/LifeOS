@@ -1,17 +1,21 @@
 <section class="page-stack manual-planner">
   <header class="page-hero">
-    <div><h1>{{ todayOnly ? 'Aujourd’hui' : 'Semainier' }}</h1><p>Alimentation et sport, à votre rythme. Aucun menu généré.</p></div>
+    <div><h1>{{ todayOnly ? 'Aujourd’hui' : 'Semainier' }}</h1><p>Composez chaque repas avec des recettes et des préparations ponctuelles. Aucun menu généré.</p></div>
     @if (week()) {
-      <button type="button" class="lifeos-button planner-create" [disabled]="loading() || busy()" (click)="add()"><i class="pi pi-plus" aria-hidden="true"></i> Nouvel événement</button>
+      <div class="planner-actions">
+        @if (!todayOnly) { <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="duplicateWeek()">Dupliquer cette semaine</button> }
+        <button type="button" class="lifeos-button planner-create" [disabled]="loading() || busy()" (click)="add()"><i class="pi pi-plus" aria-hidden="true"></i> Nouvel événement</button>
+      </div>
     }
   </header>
+
   <div class="calendar-toolbar planner-navigation">
     <div class="calendar-toolbar">
       <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(-1)" aria-label="Semaine précédente">←</button>
       <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="today()">Aujourd’hui</button>
       <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="loading() || busy()" (click)="navigateWeek(1)" aria-label="Semaine suivante">→</button>
     </div>
-    <strong>{{ dateLabel(startDate) }} — {{ dateLabel(week()?.days[6]?.date ?? startDate) }}</strong>
+    <strong>{{ dateLabel(startDate) }} — {{ dateLabel(week()?.days?.[6]?.date ?? startDate) }}</strong>
     <label class="planner-date"><span class="sr-only">Aller à la date</span><input class="text-input" type="date" aria-label="Aller à la date" [ngModel]="selectedDate" (ngModelChange)="chooseWeek($event)" [disabled]="loading() || busy()" /></label>
     @if (week(); as current) { <small>Horaires locaux · {{ current.timeZoneId }}</small> }
   </div>
@@ -31,14 +35,14 @@
       <section class="day-agenda" [class.today-agenda]="todayOnly">
         <div class="calendar-toolbar"><h2>{{ dateLabel(day.date) }}</h2>
           <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="add(day)"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter ce jour</button></div>
-        <p>Mes apports : {{ number(day.nutrition.calories) }} kcal · P {{ number(day.nutrition.protein) }} g · G {{ number(day.nutrition.carbs) }} g · L {{ number(day.nutrition.fat) }} g</p>
-        <p>Sport déclaré : {{ number(sportTotal(day)) }} kcal — pas une dépense quotidienne totale.</p>
-        @if (!day.nutrition.isComplete) { <p class="calendar-warning">Total nutritionnel incomplet.</p> }
-        @if (!events(day).length) { <p>Aucun événement ce jour. Ajoutez un repas, une collation ou une séance.</p> }
+        <p>Apports calculés : {{ number(day.nutrition.calories) }} kcal · P {{ number(day.nutrition.protein) }} g · G {{ number(day.nutrition.carbs) }} g · L {{ number(day.nutrition.fat) }} g</p>
+        <p>Sport déclaré : {{ number(sportTotal(day)) }} kcal — séparé des apports nutritionnels.</p>
+        @if (!day.nutrition.isComplete) { <p class="calendar-warning">Total nutritionnel incomplet. Les inconnues ne sont pas remplacées par zéro.</p> }
+        @if (!events(day).length) { <p>Aucun événement ce jour. Ajoutez un repas ou une séance.</p> }
         @for (event of events(day); track event.key) {
           <button type="button" class="agenda-event" [class.sport]="event.kind === 'sport'" [disabled]="busy()" (click)="edit(event)">
             <span>{{ time(event.value.startMinute) }} @if (event.value.endMinute !== null) { — {{ time(event.value.endMinute) }} }</span>
-            <strong>{{ event.value.name }}</strong><span>{{ event.kind === 'meal' ? 'Alimentation' : 'Sport' }} · Modifier / déplacer</span>
+            <strong>{{ event.value.name }}</strong><span>{{ event.kind === 'meal' ? 'Repas' : 'Sport' }} · Modifier / déplacer</span>
           </button>
         }
       </section>
@@ -49,7 +53,7 @@
           @for (day of current.days; track day.id) {
             <div class="day-heading"><h2>{{ dateLabel(day.date, true) }}</h2>
               <button type="button" [disabled]="busy()" (click)="add(day)" [attr.aria-label]="'Ajouter un événement le ' + dateLabel(day.date)">Ajouter</button>
-              <small>Moi : {{ number(day.nutrition.calories) }} kcal</small>
+              <small>Repas : {{ number(day.nutrition.calories) }} kcal</small>
               <small>Sport : {{ number(sportTotal(day)) }} kcal</small>
               @if (!day.nutrition.isComplete) { <small class="calendar-warning">Apports incomplets</small> }
             </div>
@@ -77,27 +81,37 @@
         </div>
       </section>
     }
-    <section class="week-details" aria-label="Détails des événements et préparation">
+    <section class="week-details" aria-label="Détails des événements de la semaine">
       @for (day of current.days; track day.id) {
         @if ((!todayOnly || day.date === selectedDate) && events(day).length) {
-          <details [open]="todayOnly || unplaced(day).length > 0 || outOfRange(day).length > 0"><summary>{{ dateLabel(day.date) }} · {{ events(day).length }} événements
-            @if (unplaced(day).length) { · {{ unplaced(day).length }} à positionner }
-            @if (outOfRange(day).length) { · {{ outOfRange(day).length }} hors plage }
-            · apports et préparation</summary>
-            @if (unplaced(day).length) { <h3>À positionner (historique sans heure)</h3> }
+          <details [open]="todayOnly || unplaced(day).length > 0 || outOfRange(day).length > 0"><summary>{{ dateLabel(day.date) }} · {{ events(day).length }} événements · détails et avis</summary>
+            @if (unplaced(day).length) { <h3>À positionner</h3> }
             @for (event of unplaced(day); track event.key) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit(event)">{{ event.value.name }} · Positionner</button> }
             @if (outOfRange(day).length) { <h3>Hors plage 6–20 h</h3> }
             @for (event of outOfRange(day); track event.key) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit(event)">{{ time(event.value.startMinute) }} · {{ event.value.name }} · Modifier</button> }
-            <p>Mes apports : {{ number(day.nutrition.calories) }} kcal · Protéines {{ number(day.nutrition.protein) }} g · Glucides {{ number(day.nutrition.carbs) }} g · Lipides {{ number(day.nutrition.fat) }} g</p>
-            <p>Sport déclaré : {{ number(sportTotal(day)) }} kcal (séparé des apports).</p>
+            <p>Apports calculés : {{ number(day.nutrition.calories) }} kcal · Protéines {{ number(day.nutrition.protein) }} g · Glucides {{ number(day.nutrition.carbs) }} g · Lipides {{ number(day.nutrition.fat) }} g</p>
             @for (meal of day.meals; track meal.id) {
               <h3>{{ time(meal.startMinute) }} · {{ meal.name }}</h3>
-              <p>Moi : {{ number(meal.nutrition.calories) }} kcal · {{ meal.childrenCount }} enfants · portion personnelle × {{ meal.personalPortion }}</p>
-              <ul>@for (line of meal.lines; track line.id) { <li>{{ line.name }} : moi {{ number(line.personalQuantity) }} {{ line.unit }} / à préparer {{ number(line.preparationQuantity) }} {{ line.unit }}</li> }</ul>
-              @if (!meal.nutrition.isComplete) {
-                <p class="calendar-warning">Nutrition incomplète :</p>
-                <ul>@for (warning of meal.nutrition.warnings; track warning) { <li>{{ warning }}</li> }</ul>
+              <p>{{ meal.recipeLines.length }} ligne{{ meal.recipeLines.length === 1 ? '' : 's' }} · {{ meal.nutrition.isComplete ? 'nutrition complète' : 'nutrition incomplète' }}</p>
+              @for (line of meal.recipeLines; track line.id) {
+                <article class="planned-line-summary">
+                  <h4>{{ line.name || 'Préparation ponctuelle' }} · {{ number(line.plannedServings) }} portion{{ line.plannedServings === 1 ? '' : 's' }}</h4>
+                  @if (line.instructions) { <p>{{ line.instructions }}</p> }
+                  <ul>
+                    @for (ingredient of line.ingredients; track ingredient.id) {
+                      <li>{{ ingredient.name }} : {{ number(ingredient.requiredQuantity) }} {{ ingredient.unit }} à préparer</li>
+                    }
+                  </ul>
+                  <p>Nutrition de la ligne : {{ number(line.nutrition.calories) }} kcal · P {{ number(line.nutrition.protein) }} g · G {{ number(line.nutrition.carbs) }} g · L {{ number(line.nutrition.fat) }} g</p>
+                  @if (!line.nutrition.isComplete) {
+                    <ul class="calendar-warning">@for (warning of line.nutrition.warnings; track warning) { <li>{{ warning }}</li> }</ul>
+                  }
+                  @if (line.isAdHoc) {
+                    <app-household-reviews targetType="planned-line" [targetId]="line.id" [profiles]="profiles()" [groups]="groups()" />
+                  }
+                </article>
               }
+              @if (!meal.nutrition.isComplete) { <p class="calendar-warning">Le total du repas est incomplet. Les inconnues restent explicites.</p> }
               <button type="button" class="lifeos-button lifeos-button-secondary" (click)="edit({key: meal.id, kind: 'meal', value: meal, lane: 0, lanes: 1, top: 0, height: 0})">Modifier / déplacer le repas</button>
             }
             @for (sport of day.sports; track sport.id) {
@@ -139,51 +153,85 @@
         <label class="dialog-field"><span>Début</span><input class="text-input" name="start" type="time" required [(ngModel)]="edit.start" /></label>
         <label class="dialog-field"><span>Fin</span><input class="text-input" name="end" type="time" required [(ngModel)]="edit.end" /></label>
       </div>
-      @if (!edit.hasSnapshot) { <p class="calendar-warning">Repas historique : aucun horaire inventé. Le premier enregistrement fige les valeurs actuelles du catalogue, pas une nutrition passée inconnue.</p> }
-      @if (edit.id && !edit.replaceContent) {
-        <div class="event-kept">
-          <p><strong>{{ edit.name }}</strong> · contenu enregistré conservé</p>
-          <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="replace()">Remplacer le contenu</button>
-        </div>
-      }
       @if (edit.kind === 'meal') {
-        @if (contentEditable()) {
-          <div class="dialog-row">
-            <label class="dialog-field"><span>Contenu</span><select class="text-input" name="source" [(ngModel)]="edit.source"><option value="recipe">Recette</option><option value="foods">Aliments / ingrédients</option></select></label>
-            @if (edit.source === 'recipe') {
-              <label class="dialog-field"><span>Recette</span><select class="text-input" name="recipe" required [(ngModel)]="edit.recipeId">
-                <option value="">Choisir une recette</option>
-                @for (recipe of activeRecipes(); track recipe.id) { <option [value]="recipe.id">{{ recipe.name }} · {{ recipe.servings }} portions de référence</option> }
-              </select></label>
-            }
+        @if (edit.id && !edit.replaceContent) {
+          <div class="event-kept">
+            <p><strong>{{ edit.name }}</strong> · ingrédients et portions enregistrés conservés</p>
+            <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="replaceMealContent()">Remplacer le contenu du repas</button>
           </div>
         }
-        <label class="dialog-field"><span>{{ edit.source === 'recipe' ? 'Ma portion (portions de référence)' : 'Multiplicateur de ma portion' }}</span>
-          <input class="text-input" name="portion" type="number" required min="0.001" max="1000" step="any" [(ngModel)]="edit.personalPortion" /></label>
-        @if (edit.source === 'foods') {
-          @for (line of edit.lines; track $index; let index = $index) {
-            <div class="ingredient-editor">
-              @if (contentEditable()) {
-                <label class="dialog-field"><span>Aliment</span><select class="text-input" [name]="'food'+index" [(ngModel)]="line.foodItemId" required>
-                  <option value="">Choisir</option>
-                  @for (food of activeFoods(); track food.id) { <option [value]="food.id">{{ food.name }} · nutrition / {{ food.referenceUnit }}</option> }
-                </select></label>
-              } @else { <strong>{{ lineName(line) }}</strong> }
-              <label class="dialog-field"><span>Ma quantité</span><input class="text-input" [name]="'quantity'+index" type="number" min="0.001" max="1000000" step="any" required [(ngModel)]="line.quantity" /></label>
-              <label class="dialog-field"><span>Unité</span><input class="text-input" [name]="'unit'+index" maxlength="50" required [(ngModel)]="line.unit" [readonly]="!contentEditable()" placeholder="g, ml, piece" /></label>
-              <span class="dialog-hint">À préparer : {{ number(line.quantity * edit.personalPortion * (1 + 0.5 * edit.children)) }} {{ line.unit }}</span>
-              @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="edit.lines.splice(index, 1)">Retirer</button> }
-            </div>
-          }
-          @if (contentEditable()) { <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addLine()"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter un aliment</button> }
+        @if (contentEditable()) {
+          <section class="meal-lines-editor" aria-label="Recettes et préparations du repas">
+            <h2>Recettes et préparations</h2>
+            @for (line of edit.recipeLines; track $index; let lineIndex = $index) {
+              <article class="meal-line-editor">
+                <div class="dialog-row">
+                  <label class="dialog-field"><span>Recette (facultative)</span>
+                    <select class="text-input" [name]="'recipe'+lineIndex" [ngModel]="line.recipeId" (ngModelChange)="selectRecipe(line, $event)">
+                      <option value="">Préparation ponctuelle</option>
+                      @for (recipe of activeRecipes(); track recipe.id) { <option [value]="recipe.id">{{ recipe.name }} · {{ recipe.servings }} portions de référence</option> }
+                    </select>
+                  </label>
+                  @if (!line.recipeId) {
+                    <label class="dialog-field"><span>Nom (facultatif)</span><input class="text-input" [name]="'lineName'+lineIndex" maxlength="200" [(ngModel)]="line.name" /></label>
+                  }
+                </div>
+                @if (line.recipeId) {
+                  <app-household-reviews targetType="recipe" [targetId]="line.recipeId" [profiles]="profiles()" [groups]="groups()" />
+                } @else {
+                  <label class="dialog-field"><span>Instructions (facultatif)</span><textarea class="text-input" [name]="'instructions'+lineIndex" maxlength="10000" rows="2" [(ngModel)]="line.instructions"></textarea></label>
+                  <div class="dialog-row">
+                    <label class="dialog-field"><span>Rendement total (portions)</span><input class="text-input" [name]="'yield'+lineIndex" type="number" min="0.001" step="any" required [(ngModel)]="line.yieldServings" /></label>
+                  </div>
+                  @for (ingredient of line.ingredients; track $index; let ingredientIndex = $index) {
+                    <div class="ingredient-editor">
+                      <label class="dialog-field"><span>Aliment</span><select class="text-input" [name]="'food'+lineIndex+'-'+ingredientIndex" [ngModel]="ingredient.foodItemId" (ngModelChange)="selectIngredient(ingredient, $event)" required>
+                        <option value="">Choisir un aliment</option>
+                        @for (food of activeFoods(); track food.id) { <option [value]="food.id">{{ food.name }} · {{ food.referenceUnit }}</option> }
+                      </select></label>
+                      <label class="dialog-field"><span>Quantité totale</span><input class="text-input" [name]="'quantity'+lineIndex+'-'+ingredientIndex" type="number" min="0.001" step="any" required [(ngModel)]="ingredient.quantity" /></label>
+                      <label class="dialog-field"><span>Unité</span><input class="text-input" [name]="'unit'+lineIndex+'-'+ingredientIndex" maxlength="50" required [(ngModel)]="ingredient.unit" /></label>
+                      <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="line.ingredients.length === 1" (click)="line.ingredients.splice(ingredientIndex, 1)">Retirer</button>
+                      @if (ingredient.foodItemId) {
+                        <app-household-reviews targetType="food" [targetId]="ingredient.foodItemId" [profiles]="profiles()" [groups]="groups()" />
+                      }
+                    </div>
+                  }
+                  <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="addIngredient(line)">Ajouter un aliment</button>
+                }
+                <fieldset class="portion-editor">
+                  <legend>Portions prévues pour cette ligne</legend>
+                  @if (line.portions.length) {
+                    @for (portion of line.portions; track $index; let portionIndex = $index) {
+                      <div class="dialog-row">
+                        <label class="dialog-field"><span>Personne</span><select class="text-input" [name]="'profile'+lineIndex+'-'+portionIndex" [(ngModel)]="portion.memberProfileId" required>
+                          @for (profile of profiles(); track profile.id) { <option [value]="profile.id">{{ profile.displayName }} · coefficient indicatif {{ profile.portionCoefficient }}</option> }
+                        </select></label>
+                        <label class="dialog-field"><span>Portions</span><input class="text-input" [name]="'servings'+lineIndex+'-'+portionIndex" type="number" min="0.001" step="any" required [(ngModel)]="portion.servings" /></label>
+                        <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="removePortion(line, portionIndex)">Retirer</button>
+                      </div>
+                    }
+                    <p class="dialog-hint">Total de la ligne : {{ number(portionTotal(line)) }} portions. La répartition remplace le total explicite.</p>
+                    <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="addPortion(line)">Ajouter une personne</button>
+                  } @else {
+                    <label class="dialog-field"><span>Portions totales, non réparties</span><input class="text-input" [name]="'plannedServings'+lineIndex" type="number" min="0.001" step="any" required [(ngModel)]="line.plannedServings" /></label>
+                    <div class="review-actions">
+                      <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="!profiles().length" (click)="addPortion(line)">Répartir par personne</button>
+                      <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="!profiles().length" (click)="useProfileDefaults(line)">Proposer les coefficients du foyer</button>
+                    </div>
+                  }
+                </fieldset>
+                <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="removeRecipeLine(lineIndex)">Retirer cette ligne</button>
+              </article>
+            }
+            <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addRecipeLine()"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter une recette ou préparation</button>
+          </section>
         }
       } @else {
-        @if (contentEditable()) {
-          <label class="dialog-field"><span>Modèle de séance</span><select class="text-input" name="template" [ngModel]="edit.templateId" (ngModelChange)="selectTemplate($event)" required>
-            <option value="">Choisir une séance</option>
-            @for (template of activeTemplates(); track template.id) { <option [value]="template.id">{{ template.name }}</option> }
-          </select></label>
-        }
+        <label class="dialog-field"><span>Modèle de séance</span><select class="text-input" name="template" [ngModel]="edit.templateId" (ngModelChange)="selectTemplate($event)" required>
+          <option value="">Choisir une séance</option>
+          @for (template of activeTemplates(); track template.id) { <option [value]="template.id">{{ template.name }}</option> }
+        </select></label>
         <div class="dialog-row">
           <label class="dialog-field"><span>Nom de cette séance</span><input class="text-input" name="sportName" maxlength="200" required [(ngModel)]="edit.name" /></label>
           <label class="dialog-field"><span>Calories (total manuel)</span><input class="text-input" name="calories" type="number" min="0" step="any" required [(ngModel)]="edit.calories" /></label>
@@ -196,10 +244,7 @@
           @if (contentEditable()) {
             <label class="dialog-field"><span>Filtrer les bibliothèques</span><input class="text-input" name="catalogSearch" type="search" [(ngModel)]="catalogSearch" /></label>
           }
-          @if (edit.kind === 'meal') {
-            <label class="dialog-field"><span>Enfants présents (demi-portion chacun)</span><input class="text-input" name="children" type="number" min="0" max="100" step="1" [(ngModel)]="edit.children" /></label>
-            <p class="dialog-hint">Préparation : ma quantité × {{ number(1 + 0.5 * edit.children) }}. Les enfants ne majorent jamais mes calories ni mes macros.</p>
-          } @else {
+          @if (edit.kind === 'sport') {
             <div class="dialog-row">
               <label class="dialog-field"><span>Sport</span><input class="text-input" name="sport" maxlength="50" [(ngModel)]="edit.sport" /></label>
               <label class="dialog-field"><span>Intensité</span><select class="text-input" name="intensity" [(ngModel)]="edit.intensity"><option value="low">Faible</option><option value="moderate">Modérée</option><option value="high">Élevée</option></select></label>

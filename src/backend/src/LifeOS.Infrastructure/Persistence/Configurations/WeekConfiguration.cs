@@ -17,12 +17,6 @@ internal sealed class WeekConfiguration : IEntityTypeConfiguration<Week>
 
         builder.Property(week => week.HouseholdId).IsRequired();
         builder.Property(week => week.StartsOn).IsRequired();
-        builder.Property(week => week.WeekMode).HasConversion<string>().HasMaxLength(20).IsRequired();
-
-        builder.Property(week => week.Status)
-            .IsRequired()
-            .HasMaxLength(50);
-
         builder.Property(week => week.CreatedAt).IsRequired();
         builder.Property(week => week.UpdatedAt).IsRequired();
 

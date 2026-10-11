@@ -15,6 +15,7 @@ internal sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Ho
 
         builder.Property(member => member.HouseholdId).IsRequired();
         builder.Property(member => member.SupabaseUserId).IsRequired();
+        builder.HasAlternateKey(member => new { member.SupabaseUserId, member.HouseholdId });
         builder.Property(member => member.Role)
             .HasConversion<string>()
             .HasMaxLength(20)

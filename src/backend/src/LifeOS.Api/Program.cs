@@ -127,15 +127,11 @@ app.MapHouseholdEndpoints();
 app.MapProductsEndpoints();
 app.MapReceiptsEndpoints();
 app.MapRecipesEndpoints();
+app.MapHouseholdSocialEndpoints();
+app.MapReviewEndpoints();
 app.MapCatalogManagementEndpoints();
 app.MapSportTemplatesEndpoints();
 app.MapManualPlannerEndpoints();
-app.MapComposedMealsEndpoints();
-app.MapWeekPlanningEndpoints();
-app.MapWeekBalancedPlanEndpoints();
-app.MapLibraryEndpoints();
-app.MapPlanningEndpoints();
-app.MapWeekContextEndpoints();
 app.MapFoodItemsEndpoints();
 app.MapNutritionEndpoints();
 

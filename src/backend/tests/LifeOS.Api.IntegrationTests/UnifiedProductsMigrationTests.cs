@@ -39,7 +39,6 @@ public sealed class UnifiedProductsMigrationTests
         var week = Guid.NewGuid();
         var day = Guid.NewGuid();
         var meal = Guid.NewGuid();
-        var line = Guid.NewGuid();
         var timestamp = new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero);
         var payload = """{"product_name":"Riz"}""";
         await using (var db = new LifeOSDbContext(options))
@@ -77,7 +76,7 @@ public sealed class UnifiedProductsMigrationTests
                 INSERT INTO planned_meals ("Id","DayPlanId","MealType","Status","CreatedAt","UpdatedAt","ContentName","PersonalPortion","ChildrenCount","StartMinute","EndMinute")
                   VALUES ({meal},{day},'lunch','planned',{timestamp},{timestamp},'Nom figé',1.5,2,720,750);
                 INSERT INTO meal_food_lines ("Id","PlannedMealId","FoodItemId","Name","Quantity","Unit","ReferenceUnit","Calories","Protein","Carbs","Fat")
-                  VALUES ({line},{meal},{food},'Ancien nom figé',41.152263000123,'g','100g',111,2,20,1);
+                  VALUES ({Guid.NewGuid()},{meal},{food},'Ancien nom figé',41.152263000123,'g','100g',111,2,20,1);
                 INSERT INTO stock_items ("Id","HouseholdId","GroceryItemId","Quantity","Unit","CreatedAt","UpdatedAt")
                   VALUES ({stockId},{household},{article},2.25,'kg',{timestamp},{timestamp});
                 INSERT INTO shopping_list_items ("Id","HouseholdId","WeekId","GroceryItemId","QuantityNeeded","QuantityFromStock","Checked","CreatedAt","UpdatedAt")
@@ -110,18 +109,14 @@ public sealed class UnifiedProductsMigrationTests
             Assert.Equal(store, price.StoreId);
             Assert.Equal(2.50m, price.Price);
             Assert.Equal(timestamp, price.ObservedAt);
-            Assert.Equal(food, (await db.RecipeIngredients.SingleAsync()).FoodItemId);
-            Assert.Equal(ingredient, (await db.RecipeIngredients.SingleAsync()).Id);
-            Assert.Equal(123.456789m, (await db.RecipeIngredients.SingleAsync()).Quantity);
+            Assert.Empty(await db.Recipes.ToListAsync());
+            Assert.Empty(await db.RecipeIngredients.ToListAsync());
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>(
+                "SELECT count(*)::int AS \"Value\" FROM planned_meals").SingleAsync());
             Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM stock_items").SingleAsync());
             Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM shopping_list_items").SingleAsync());
-            var snapshot = await db.MealFoodLines.SingleAsync();
-            Assert.Equal(line, snapshot.Id);
-            Assert.Equal(food, snapshot.FoodItemId);
-            Assert.Equal("Ancien nom figé", snapshot.Name);
-            Assert.Equal(41.152263000123m, snapshot.Quantity);
-            Assert.Equal(111, snapshot.Calories);
-            Assert.Equal("100g", snapshot.ReferenceUnit);
+            Assert.Equal(0, await db.Database.SqlQueryRaw<int>(
+                "SELECT count(*)::int AS \"Value\" FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'meal_food_lines'").SingleAsync());
             Assert.Equal(food, (await db.FoodItems.SingleAsync(p => p.Id == correction)).IsCorrectionOf);
             Assert.Null((await db.Products.SingleAsync(p => p.Id == soap)).FoodItemId);
             Assert.False(await db.FoodItems.AnyAsync(p => p.Id == soap));

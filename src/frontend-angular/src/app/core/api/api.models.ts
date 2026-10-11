@@ -135,6 +135,7 @@ export interface RecipeDto {
   durationMinutes: number
   tags: string[]
   metadata: Record<string, unknown> | null
+  instructions: string | null
   ingredients: RecipeIngredientDto[]
   createdAt: string
   updatedAt: string
@@ -146,111 +147,13 @@ export interface RecipeRequest {
   durationMinutes: number
   tags: string[]
   metadata: Record<string, unknown> | null
+  instructions: string | null
 }
 
 export interface AddRecipeIngredientRequest {
   foodItemId: string
   quantity: number
   unit: string
-}
-
-export interface ComposedMealPartDto {
-  id: string
-  recipeId: string
-  quantityFactor: number
-}
-
-export interface ComposedMealDto {
-  id: string
-  name: string
-  parts: ComposedMealPartDto[]
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ComposedMealRequest {
-  name: string
-}
-
-export interface AddComposedMealPartRequest {
-  recipeId: string
-  quantityFactor: number
-}
-
-export interface WeekDto {
-  id: string
-  startsOn: string
-  status: string
-  weekMode: 'kids' | 'solo'
-  isManual: boolean
-  dayPlans: DayPlanDto[]
-  createdAt: string
-  updatedAt: string
-}
-
-export interface DayPlanDto {
-  id: string
-  date: string
-  workContext: string
-  bikeCommute: boolean
-  plannedMeals: PlannedMealDto[]
-}
-
-export interface PlannedMealDto {
-  id: string
-  mealType: string
-  status: string
-  composedMealId: string | null
-  recipeId: string | null
-  parts: PlannedMealPartDto[]
-  createdAt: string
-  updatedAt: string
-}
-
-export interface PlannedMealPartDto {
-  id: string
-  memberProfileId: string
-  portionMultiplier: number
-}
-
-/**
- * One dimension of the compromise. `score` is null when the household data does not allow
- * computing it: the dimension is then excluded from the composite score and the reason is
- * listed in `limitations`.
- */
-export interface BalancedPlanDimension {
-  key: 'nutrition' | 'cost' | 'diversity' | 'reuse'
-  score: number | null
-  weight: number
-  dataCoverage: number
-  summary: string
-  metrics: Record<string, number>
-}
-
-export interface BalancedPlanExplanation {
-  method: string
-  overallScore: number | null
-  nutritionConstraintMet: boolean
-  dimensions: BalancedPlanDimension[]
-  tradeoffs: string[]
-  limitations: string[]
-  textExplanation: string
-}
-
-/** A persisted plan: its explanation is returned as raw JSON. */
-export interface BalancedPlanDto {
-  id: string
-  weekId: string
-  method: string
-  explanation: string
-  applied: boolean
-  createdAt: string
-  updatedAt: string
-}
-
-/** A freshly computed plan: its explanation is returned structured. */
-export interface ComputedBalancedPlanDto extends Omit<BalancedPlanDto, 'explanation'> {
-  explanation: BalancedPlanExplanation
 }
 
 export interface ActivityDto {
@@ -323,49 +226,36 @@ export interface DailyNutritionTargetDto {
   targetFatsG: number
 }
 
-export interface PlanningRuleTarget {
-  kind: string
-  [key: string]: string
-}
-
-export interface PlanningRuleDto {
+export interface MemberProfileDto {
   id: string
-  weekday: string
-  mealType: string
-  target: PlanningRuleTarget
-  weekMode?: 'kids' | 'solo' | null
+  displayName: string
+  portionCoefficient: number
+  createdAt: string
+  updatedAt: string
 }
 
-export interface PlanningRuleRequest {
-  weekday: string
-  mealType: string
-  target: PlanningRuleTarget
-  weekMode?: 'kids' | 'solo' | 'all'
-}
-
-export interface FrequencyRuleDto {
+export interface HouseholdGroupDto {
   id: string
-  target: Record<string, string>
-  targetCountPerWeek: number
-  weekMode?: 'kids' | 'solo' | null
+  name: string
 }
 
-export interface FrequencyRuleRequest {
-  target: Record<string, string>
-  targetCountPerWeek: number
-  weekMode?: 'kids' | 'solo' | 'all'
+export interface ReviewDto {
+  id: string
+  foodItemId: string | null
+  recipeId: string | null
+  plannedRecipeLineId: string | null
+  memberProfileId: string | null
+  householdGroupId: string | null
+  targetName: string | null
+  score: number | null
+  comment: string | null
+  createdByUserId: string
+  updatedAt: string
 }
 
-export interface WeekContextDto {
-  id?: string
-  householdId?: string
-  referenceWeekStartDate?: string
-  referenceWeekMode?: string
-  weekModeOverrides?: Array<{ weekStartDate: string; mode: string }>
-  days?: Record<string, { workLocation?: string; bikeCommute?: boolean }>
-  templates?: Record<
-    'kids' | 'solo',
-    Record<string, { workLocation?: string; bikeCommute?: boolean }>
-  >
-  [key: string]: unknown
+export interface SaveReviewRequest {
+  memberProfileId: string | null
+  householdGroupId: string | null
+  score: number | null
+  comment: string | null
 }
