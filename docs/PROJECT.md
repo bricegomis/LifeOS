@@ -25,20 +25,48 @@ alimentaire restent non liés. Stock/courses et catalogues alimentaires parallè
 retirés des parcours/API/DI ; tables historiques non mappées. Vue et OFF actifs supprimés.
 Voir [ADR 0006](architecture/decisions/0006-foods-products-receipts.md).
 
-Le semainier alimentation/sport, Aujourd'hui, nutrition personnelle et préparation
-enfants restent inchangés hors références alimentaires. Les règles/contextes/auth
-historiques restent conservés. Le calcul équilibré historique utilise la réutilisation
-d'aliments sans stock et un coût non calculable sans choix commercial explicite.
+### Modèle actif — recettes, repas et avis
 
-Tests PostgreSQL éphémère (vierge/upgrade/rollback/reprise/isolation/concurrence)
-et Angular ; inspection desktop/mobile avec auth Testing, pas auth réelle de production.
-Sauvegarder PostgreSQL avant refresh des containers et migration au démarrage API.
-Publication/merge autorisés après contrôles ; le refresh appartient à l'utilisateur.
+[ADR 0007](architecture/decisions/0007-recipes-meal-lines-and-household-reviews.md)
+remplace le modèle culinaire à repas composés. La bibliothèque contient des
+recettes de toute taille ; chaque repas manuel peut combiner plusieurs recettes
+et des préparations ponctuelles persistées. Les portions et leur répartition
+sont propres à chaque ligne. Des avis privés au foyer portent séparément sur
+les aliments, recettes et groupes de profils. Les écrans Angular et l'API
+utilisent le modèle aliments/recettes/lignes de repas, sans conversion ni
+compatibilité avec les anciens payloads culinaires.
+
+Cette cible ne change pas le modèle générique aliments/produits/tickets de l'ADR
+0006. La migration `FlexibleRecipeMealLinesAndReviews` supprime les anciennes
+recettes, lignes de repas, repas composés et règles/scénarios concernés, tout en
+préservant les comptes, foyers, profils, aliments, produits, magasins, prix et
+données sportives. Elle ne modifie aucune migration historique. Elle n'a pas
+été appliquée à une base de production ; son application à un environnement
+existant nécessite sauvegarde et autorisation explicite.
+
+Le semainier est manuel : création de semaines vides, repas multi-lignes,
+préparations ponctuelles, portions fractionnaires par ligne, duplication et
+nutrition calculée avec inconnues explicites. Les quantités requises sont
+affichées par ingrédient dans le détail du repas. Aucun agrégateur ni parcours
+actif de liste de courses, aucune règle ni génération automatique de semaine
+n'est actuellement exposé ; les anciens scénarios ne sont pas convertis.
+
+Le sport, les profils existants, les foyers, l'authentification, les aliments,
+produits, magasins, prix et tickets restent hors du nettoyage. Supabase conserve
+uniquement l'authentification ; l'API/PostgreSQL est la source métier. Une
+bibliothèque ou semaine vide reste vide et utile, sans fallback de démonstration.
+
+Les tests utilisent PostgreSQL éphémère et couvrent le nouveau contrat, les
+références croisées de foyer et la migration ; les contrôles Angular couvrent
+type-check, tests, lint et build. Ne pas lancer ces migrations sur une base
+partagée sans sauvegarde et autorisation explicite.
 
 **Le texte ci-dessous conserve la mémoire historique** de Vue/local-first et
 des parcours de génération ; il ne décrit plus la cible active. Les décisions
-de génération/alternance/menu équilibré sont remplacées pour le MVP, leurs données
-restent conservées. Les détails d'authentification et d'isolation restent valides.
+de génération/alternance/menu équilibré sont retirées du produit actif. Les
+anciennes données culinaires/planning concernées sont supprimées par la migration
+EF décrite ci-dessus ; seul ce texte historique reste dans la documentation.
+Les détails d'authentification et d'isolation restent valides.
 
 LifeOS is a personal planning app built to reduce daily decision fatigue around food and weekly activity. The current implementation is intentionally not a broad “all-of-life” dashboard. It is a narrow, practical tool focused on meals, planned eating, and the weekly rhythm that supports them.
 

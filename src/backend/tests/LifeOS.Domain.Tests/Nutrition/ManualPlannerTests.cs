@@ -1,4 +1,3 @@
-using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.WeekPlanning;
 
 namespace LifeOS.Domain.Tests.Nutrition;
@@ -6,33 +5,30 @@ namespace LifeOS.Domain.Tests.Nutrition;
 public sealed class ManualPlannerTests
 {
     [Fact]
-    public void Children_only_increase_preparation()
+    public void Planned_recipe_line_uses_explicit_total_or_profile_portions()
     {
-        var meal = PlannedMeal.CreateManual(Guid.NewGuid());
-        meal.Schedule(meal.DayPlanId, 990, 1005, 1, 2);
-        var line = MealFoodLine.Snapshot(meal.Id, null, "Riz", 100, "g", "100g", new(150, 3, 30, 1));
-        Assert.Equal(2, meal.PreparationFactor);
-        Assert.Equal(1d, line.NutritionFactor());
-        meal.Schedule(meal.DayPlanId, 990, 1005, 2, 0);
-        Assert.Equal(1, meal.PreparationFactor);
-    }
+        var mealId = Guid.NewGuid();
+        var householdId = Guid.NewGuid();
+        var line = PlannedRecipeLine.Create(mealId, householdId, null, 0, null, null, 2, 1);
+        Assert.Equal(1, line.TotalServings);
 
-    [Theory]
-    [InlineData("g", "100 g", 100, 1)]
-    [InlineData("kg", "100g", 1, 10)]
-    [InlineData("ml", "100ml", 200, 2)]
-    [InlineData("piece", "1 pièce", 2, 2)]
-    public void Known_scales_only(string unit, string reference, int quantity, double expected)
-    {
-        var line = MealFoodLine.Snapshot(Guid.NewGuid(), null, "Aliment", quantity, unit, reference, null);
-        Assert.Equal(expected, line.NutritionFactor());
+        var profileId = Guid.NewGuid();
+        var portion = PlannedRecipeLinePortion.Create(line.Id, householdId, profileId, 0.5m);
+        line.SetPortions(null, [portion]);
+        Assert.Equal(0.5m, line.TotalServings);
+        Assert.Null(line.PlannedServings);
+        Assert.Throws<ArgumentException>(() => line.SetPortions(1, [portion]));
     }
 
     [Fact]
-    public void No_mass_volume_or_piece_conversion()
+    public void Planned_recipe_line_accepts_fractional_yield_and_servings()
     {
-        Assert.Null(MealFoodLine.Snapshot(Guid.NewGuid(), null, "Banane", 1, "piece", "100g", null).NutritionFactor());
-        Assert.Null(MealFoodLine.Snapshot(Guid.NewGuid(), null, "Lait", 100, "ml", "100g", null).NutritionFactor());
+        var line = PlannedRecipeLine.Create(Guid.NewGuid(), Guid.NewGuid(), null, 0,
+            "Chia-coco", null, 2, 0.5m);
+        Assert.Equal(0.5m, line.TotalServings);
+        Assert.Equal(0.25m, line.TotalServings / line.YieldServings);
+        Assert.Throws<ArgumentException>(() => PlannedRecipeLine.Create(Guid.NewGuid(), Guid.NewGuid(),
+            null, 0, null, null, 0, 1));
     }
 
     [Fact]
@@ -56,12 +52,4 @@ public sealed class ManualPlannerTests
         Assert.Throws<ArgumentException>(() => Week.CreateManual(Guid.NewGuid(), new(2026, 10, 6), "Europe/Paris"));
     }
 
-    [Fact]
-    public void Recipe_fractions_are_snapshotted_without_rejecting_repeating_decimals()
-    {
-        var line = MealFoodLine.Snapshot(Guid.NewGuid(), null, "Riz", 100m / 3, "g", "100g", new(150, 3, 30, 1));
-        Assert.Equal(33.333333333333m, line.Quantity);
-        Assert.Equal(0.33333333333333, line.NutritionFactor()!.Value, 10);
-        Assert.Throws<ArgumentException>(() => line.UpdateQuantity(0));
-    }
 }

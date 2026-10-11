@@ -13,6 +13,7 @@ public sealed class Recipe : Entity
     public string Name { get; private set; }
     public int Servings { get; private set; }
     public int DurationMinutes { get; private set; }
+    public string? Instructions { get; private set; }
     public List<string> Tags { get; private set; } = [];
     public Dictionary<string, object>? Metadata { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -35,6 +36,7 @@ public sealed class Recipe : Entity
         int durationMinutes,
         List<string> tags,
         Dictionary<string, object>? metadata,
+        string? instructions,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt)
         : base(id)
@@ -45,6 +47,7 @@ public sealed class Recipe : Entity
         DurationMinutes = durationMinutes;
         Tags = tags;
         Metadata = metadata;
+        Instructions = instructions;
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
     }
@@ -56,6 +59,7 @@ public sealed class Recipe : Entity
         int durationMinutes,
         List<string>? tags = null,
         Dictionary<string, object>? metadata = null,
+        string? instructions = null,
         DateTimeOffset? now = null)
     {
         if (householdId == Guid.Empty)
@@ -77,6 +81,8 @@ public sealed class Recipe : Entity
         {
             throw new ArgumentException("Duration cannot be negative.", nameof(durationMinutes));
         }
+        if (instructions?.Length > 10000)
+            throw new ArgumentException("Les instructions ne peuvent pas dépasser 10 000 caractères.", nameof(instructions));
 
         var timestamp = now ?? DateTimeOffset.UtcNow;
 
@@ -88,6 +94,7 @@ public sealed class Recipe : Entity
             durationMinutes,
             tags ?? [],
             metadata,
+            instructions,
             timestamp,
             timestamp);
     }
@@ -125,7 +132,8 @@ public sealed class Recipe : Entity
         int? servings = null,
         int? durationMinutes = null,
         List<string>? tags = null,
-        Dictionary<string, object>? metadata = null)
+        Dictionary<string, object>? metadata = null,
+        string? instructions = null)
     {
         if (!string.IsNullOrWhiteSpace(name))
         {
@@ -151,6 +159,10 @@ public sealed class Recipe : Entity
         {
             Metadata = metadata;
         }
+        if (instructions?.Length <= 10000)
+        {
+            Instructions = instructions;
+        }
 
         UpdatedAt = DateTimeOffset.UtcNow;
     }
@@ -166,10 +178,11 @@ public sealed class Recipe : Entity
         int durationMinutes,
         List<string> tags,
         Dictionary<string, object>? metadata,
+        string? instructions,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt)
     {
-        return new Recipe(id, householdId, name, servings, durationMinutes, tags, metadata, createdAt, updatedAt);
+        return new Recipe(id, householdId, name, servings, durationMinutes, tags, metadata, instructions, createdAt, updatedAt);
     }
 
 }

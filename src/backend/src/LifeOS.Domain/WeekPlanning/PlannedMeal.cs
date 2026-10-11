@@ -2,222 +2,40 @@ using LifeOS.Domain.Common;
 
 namespace LifeOS.Domain.WeekPlanning;
 
-/// <summary>
-/// A meal planned for a specific day (breakfast, lunch, dinner, snack).
-/// Can reference either a ComposedMeal or a Recipe directly.
-/// Invariant: exactly one of composed_meal_id / recipe_id is set.
-/// </summary>
 public sealed class PlannedMeal : Entity
 {
     public Guid DayPlanId { get; private set; }
-    public string MealType { get; private set; } // breakfast, lunch, dinner, snack
-    public string Status { get; private set; } // planned, consumed, replaced, skipped
-    public Guid? ComposedMealId { get; private set; }
-    public Guid? RecipeId { get; private set; }
+    public Guid HouseholdId { get; private set; }
     public int? StartMinute { get; private set; }
     public int? EndMinute { get; private set; }
-    public string? ContentName { get; private set; }
-    public decimal PersonalPortion { get; private set; } = 1;
-    public int ChildrenCount { get; private set; }
-    public List<MealFoodLine> FoodLines { get; private set; } = [];
-    public decimal PreparationFactor => 1 + 0.5m * ChildrenCount;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    public List<PlannedRecipeLine> RecipeLines { get; private set; } = [];
 
-    // Navigation property for EF Core
-    public List<PlannedMealPart> Parts { get; private set; } = [];
+    private PlannedMeal() { }
 
-    public static PlannedMeal CreateManual(Guid dayId)
-    {
-        var now = DateTimeOffset.UtcNow;
-        return new PlannedMeal(Guid.NewGuid(), dayId, "snack", "planned", null, null, now, now);
-    }
-
-    public void Schedule(Guid dayId, int? start, int? end, decimal personalPortion, int children)
-    {
-        if (dayId == Guid.Empty) throw new ArgumentException("Journée obligatoire.");
-        EventTime.Validate(start, end);
-        if (personalPortion < 0.0001m || personalPortion > 1000 || decimal.Round(personalPortion, 4) != personalPortion || children < 0 || children > 100)
-            throw new ArgumentException("Portion entre 0,0001 et 1000 (quatre décimales), enfants entre 0 et 100.");
-        DayPlanId = dayId;
-        StartMinute = start;
-        EndMinute = end;
-        PersonalPortion = personalPortion;
-        ChildrenCount = children;
-        UpdatedAt = DateTimeOffset.UtcNow;
-    }
-
-    public void SetContent(string name, Guid? recipeId, Guid? composedMealId, List<MealFoodLine> lines)
-    {
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 500) throw new ArgumentException("Nom obligatoire (500 caractères maximum).");
-        ContentName = name.Trim();
-        RecipeId = recipeId;
-        ComposedMealId = composedMealId;
-        FoodLines = lines;
-        UpdatedAt = DateTimeOffset.UtcNow;
-    }
-
-    private PlannedMeal(
-        Guid id,
-        Guid dayPlanId,
-        string mealType,
-        string status,
-        Guid? composedMealId,
-        Guid? recipeId,
-        DateTimeOffset createdAt,
-        DateTimeOffset updatedAt)
-        : base(id)
+    private PlannedMeal(Guid id, Guid dayPlanId, Guid householdId, DateTimeOffset now) : base(id)
     {
         DayPlanId = dayPlanId;
-        MealType = mealType;
-        Status = status;
-        ComposedMealId = composedMealId;
-        RecipeId = recipeId;
-        CreatedAt = createdAt;
-        UpdatedAt = updatedAt;
+        HouseholdId = householdId;
+        CreatedAt = now;
+        UpdatedAt = now;
     }
 
-    public static PlannedMeal Create(
-        Guid dayPlanId,
-        string mealType,
-        Guid? composedMealId = null,
-        Guid? recipeId = null,
-        string status = "planned",
-        DateTimeOffset? now = null)
+    public static PlannedMeal CreateManual(Guid dayPlanId, Guid householdId)
     {
-        if (dayPlanId == Guid.Empty)
-        {
-            throw new ArgumentException("Day plan ID is required.", nameof(dayPlanId));
-        }
-
-        if (string.IsNullOrWhiteSpace(mealType))
-        {
-            throw new ArgumentException("Meal type is required.", nameof(mealType));
-        }
-
-        // Invariant: exactly one of composed_meal_id / recipe_id must be set
-        if ((composedMealId.HasValue && composedMealId.Value != Guid.Empty && recipeId.HasValue && recipeId.Value != Guid.Empty) ||
-            (!composedMealId.HasValue && !recipeId.HasValue) ||
-            (composedMealId == Guid.Empty && recipeId == Guid.Empty))
-        {
-            throw new ArgumentException(
-                "A planned meal must reference exactly one of composed_meal_id or recipe_id.",
-                nameof(composedMealId));
-        }
-
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw new ArgumentException("Status is required.", nameof(status));
-        }
-
-        var timestamp = now ?? DateTimeOffset.UtcNow;
-
-        return new PlannedMeal(
-            Guid.NewGuid(),
-            dayPlanId,
-            mealType.ToLowerInvariant(),
-            status.ToLowerInvariant(),
-            composedMealId,
-            recipeId,
-            timestamp,
-            timestamp);
+        if (dayPlanId == Guid.Empty || householdId == Guid.Empty)
+            throw new ArgumentException("La journée et le foyer sont obligatoires.");
+        return new PlannedMeal(Guid.NewGuid(), dayPlanId, householdId, DateTimeOffset.UtcNow);
     }
 
-    /// <summary>
-    /// Updates the status of the planned meal.
-    /// </summary>
-    public void UpdateStatus(string status)
+    public void Schedule(Guid dayPlanId, int? startMinute, int? endMinute)
     {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw new ArgumentException("Status is required.", nameof(status));
-        }
-
-        Status = status.ToLowerInvariant();
+        if (dayPlanId == Guid.Empty) throw new ArgumentException("La journée est obligatoire.");
+        EventTime.Validate(startMinute, endMinute);
+        DayPlanId = dayPlanId;
+        StartMinute = startMinute;
+        EndMinute = endMinute;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
-
-    /// <summary>
-    /// Replaces the meal reference (either composed meal or recipe).
-    /// </summary>
-    public void ReplaceMeal(Guid? composedMealId = null, Guid? recipeId = null)
-    {
-        if (ContentName is not null) throw new ArgumentException("Utilisez le remplacement explicite du semainier manuel pour préserver les snapshots.");
-        if ((composedMealId.HasValue && composedMealId.Value != Guid.Empty && recipeId.HasValue && recipeId.Value != Guid.Empty) ||
-            (!composedMealId.HasValue && !recipeId.HasValue) ||
-            (composedMealId == Guid.Empty && recipeId == Guid.Empty))
-        {
-            throw new ArgumentException(
-                "A planned meal must reference exactly one of composed_meal_id or recipe_id.",
-                nameof(composedMealId));
-        }
-
-        ComposedMealId = composedMealId;
-        RecipeId = recipeId;
-        UpdatedAt = DateTimeOffset.UtcNow;
-    }
-
-    public PlannedMealPart AddPart(Guid memberProfileId, decimal portionMultiplier)
-    {
-        if (ContentName is not null) throw new ArgumentException("Utilisez la portion personnelle et le nombre d'enfants du semainier manuel.");
-        var existingPart = Parts.FirstOrDefault(part => part.MemberProfileId == memberProfileId);
-
-        if (existingPart is not null)
-        {
-            existingPart.Update(portionMultiplier);
-            UpdatedAt = DateTimeOffset.UtcNow;
-            return existingPart;
-        }
-
-        var part = PlannedMealPart.Create(Id, memberProfileId, portionMultiplier);
-        Parts.Add(part);
-        UpdatedAt = DateTimeOffset.UtcNow;
-
-        return part;
-    }
-
-    public bool UpdatePart(Guid partId, decimal portionMultiplier)
-    {
-        if (ContentName is not null) throw new ArgumentException("Utilisez la portion personnelle et le nombre d'enfants du semainier manuel.");
-        var part = Parts.FirstOrDefault(candidate => candidate.Id == partId);
-
-        if (part is null)
-        {
-            return false;
-        }
-
-        part.Update(portionMultiplier);
-        UpdatedAt = DateTimeOffset.UtcNow;
-
-        return true;
-    }
-
-    public bool RemovePart(Guid partId)
-    {
-        var removed = Parts.RemoveAll(part => part.Id == partId) > 0;
-
-        if (removed)
-        {
-            UpdatedAt = DateTimeOffset.UtcNow;
-        }
-
-        return removed;
-    }
-
-    /// <summary>
-    /// Rehydrates a <see cref="PlannedMeal"/> from persisted state.
-    /// </summary>
-    public static PlannedMeal Rehydrate(
-        Guid id,
-        Guid dayPlanId,
-        string mealType,
-        string status,
-        Guid? composedMealId,
-        Guid? recipeId,
-        DateTimeOffset createdAt,
-        DateTimeOffset updatedAt)
-    {
-        return new PlannedMeal(id, dayPlanId, mealType, status, composedMealId, recipeId, createdAt, updatedAt);
-    }
-
 }

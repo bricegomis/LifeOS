@@ -7,19 +7,37 @@ export interface PersonalNutrition {
   warnings: string[]
 }
 
-export interface MealLine {
+export interface PlannedLineIngredient {
   id: string
-  foodItemId: string | null
+  foodItemId: string
   name: string
   quantity: number
   unit: string
-  personalQuantity: number
-  preparationQuantity: number
+  requiredQuantity: number
   referenceUnit: string
   calories: number | null
   protein: number | null
   carbs: number | null
   fat: number | null
+}
+
+export interface PlannedLinePortion {
+  memberProfileId: string
+  memberName: string
+  servings: number
+}
+
+export interface PlannedRecipeLine {
+  id: string
+  recipeId: string | null
+  name: string | null
+  instructions: string | null
+  yieldServings: number
+  plannedServings: number
+  isAdHoc: boolean
+  portions: PlannedLinePortion[]
+  ingredients: PlannedLineIngredient[]
+  nutrition: PersonalNutrition
 }
 
 export interface ManualMeal {
@@ -28,12 +46,7 @@ export interface ManualMeal {
   name: string
   startMinute: number | null
   endMinute: number | null
-  recipeId: string | null
-  composedMealId: string | null
-  personalPortion: number
-  childrenCount: number
-  hasSnapshot: boolean
-  lines: MealLine[]
+  recipeLines: PlannedRecipeLine[]
   nutrition: PersonalNutrition
 }
 
@@ -70,21 +83,32 @@ export interface ManualWeek extends ManualWeekSummary {
   days: ManualDay[]
 }
 
-export interface MealLinePayload {
-  foodItemId: string | null
+export interface PlannedLineIngredientRequest {
+  foodItemId: string
   quantity: number
   unit: string
-  snapshotLineId?: string
+}
+
+export interface PlannedLinePortionRequest {
+  memberProfileId: string
+  servings: number
+}
+
+export interface PlannedRecipeLineRequest {
+  recipeId: string | null
+  name: string | null
+  instructions: string | null
+  yieldServings: number | null
+  plannedServings: number | null
+  ingredients: PlannedLineIngredientRequest[] | null
+  portions: PlannedLinePortionRequest[] | null
 }
 
 export interface MealPayload {
   dayPlanId: string
   startMinute: number | null
   endMinute: number | null
-  personalPortion: number
-  childrenCount: number
-  recipeId: string | null
-  lines: MealLinePayload[] | null
+  recipeLines: PlannedRecipeLineRequest[]
   replaceContent: boolean
 }
 

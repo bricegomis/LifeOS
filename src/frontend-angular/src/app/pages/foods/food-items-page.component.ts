@@ -2,9 +2,10 @@ import { Component, HostListener, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
-import type { FoodItemDto, FoodItemRequest, FoodPricesDto, ProductDto, ProductRequest, StoreDto } from '@/app/core/api/api.models'
+import type { FoodItemDto, FoodItemRequest, FoodPricesDto, ProductDto, ProductRequest, StoreDto, MemberProfileDto, HouseholdGroupDto } from '@/app/core/api/api.models'
 import { LifeosApiService, apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
 import { newFoodDraft, missingFoodFields } from './food-draft'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 
@@ -16,7 +17,7 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
 @Component({
   selector: 'app-food-items-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, LifeosDialogComponent],
+  imports: [FormsModule, RouterLink, LifeosDialogComponent, HouseholdReviewsComponent],
   template: `
     <section class="page-stack">
       <header class="page-hero">
@@ -62,6 +63,7 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
           <p>FODMAP : {{ fodmapLabel(food.fodmap) }} · NOVA : {{ food.nova ?? 'non renseigné' }}</p>
           @if (food.digestiveNotes) { <p>{{ food.digestiveNotes }}</p> }
           <p class="dialog-hint">Informations descriptives, sans recommandation médicale. Source historique : {{ food.source }}.</p>
+          <app-household-reviews targetType="food" [targetId]="food.id" [profiles]="profiles()" [groups]="groups()" />
           <h3>Produits et prix</h3>
           <p>Un aliment reste utilisable dans les recettes sans produit associé.</p>
           <button class="lifeos-button lifeos-button-secondary" [disabled]="busy() || food.isArchived" (click)="editProduct()">Associer un nouveau produit</button>
@@ -152,6 +154,8 @@ export class FoodItemsPageComponent {
   readonly products = signal<ProductDto[]>([])
   readonly prices = signal<FoodPricesDto[]>([])
   readonly stores = signal<StoreDto[]>([])
+  readonly profiles = signal<MemberProfileDto[]>([])
+  readonly groups = signal<HouseholdGroupDto[]>([])
   readonly selected = signal<FoodItemDto | null>(null)
   readonly currentProduct = signal<ProductDto | null>(null)
   readonly loading = signal(true)
@@ -190,11 +194,14 @@ export class FoodItemsPageComponent {
   async load(): Promise<void> {
     this.loading.set(true); this.error.set('')
     try {
-      const [foods, products, prices, stores] = await Promise.all([
+      const [foods, products, prices, stores, household, groups] = await Promise.all([
         firstValueFrom(this.api.get<FoodItemDto[]>('/foods')), firstValueFrom(this.api.get<ProductDto[]>('/products')),
         firstValueFrom(this.api.get<FoodPricesDto[]>('/foods/prices')), firstValueFrom(this.api.get<StoreDto[]>('/stores')),
+        firstValueFrom(this.api.get<{ memberProfiles: MemberProfileDto[] }>('/households/current')),
+        firstValueFrom(this.api.get<HouseholdGroupDto[]>('/household-groups')),
       ])
       this.foods.set(foods); this.products.set(products); this.prices.set(prices); this.stores.set(stores)
+      this.profiles.set(household.memberProfiles); this.groups.set(groups)
       if (this.selected()) this.selected.set(foods.find(f => f.id === this.selected()?.id) ?? null)
     } catch (e) { this.error.set(apiErrorMessage(e)) } finally { this.loading.set(false) }
   }

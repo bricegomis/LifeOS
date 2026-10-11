@@ -15,18 +15,19 @@ PostgreSQL/API est la source de vérité, avec isolation par foyer.
 | `receipts` | Document brut, SHA-256 exact unique par foyer, magasin/date, compteurs et diagnostics ; relation forte aux lignes. |
 | `receipt_lines` | Position et source, valeurs corrigibles en attente, statut pending/validated/ignored, produit choisi ; aucune santé copiée au catalogue. |
 | `purchases` | Un achat par ligne : produit/magasin/date/quantité/unité/montant total. FK composites de foyer. |
-| `recipes` / `recipe_ingredients` | Portions, durée, étapes en metadata, archivage ; ingrédients aliment + quantité/unité, FK FoodItemId → foods. |
-| `meal_food_lines` | FK aliment facultative, nom/quantité/unités/macros figés ; numeric(28,12) conservé. |
-| `weeks` / `day_plans` / `planned_meals` | Sept journées manuelles indépendantes, heures civiles nullables, portions/enfants, snapshots et références historiques. |
+| `recipes` / `recipe_ingredients` | Recettes du foyer, rendement, durée, catégories, instructions et ingrédients référencés par aliment. |
+| `weeks` / `day_plans` / `planned_meals` | Semaines et journées manuelles indépendantes ; repas horodatés avec lignes enfant. |
+| `planned_recipe_lines` | Ligne liée à une recette ou préparation ponctuelle locale au repas, avec rendement et portions explicites ou réparties par profil. |
+| `planned_recipe_line_ingredients` / `planned_recipe_line_portions` | Ingrédients alimentaires figés avec unités/macros, et portions par profil ; FK foyer-scopées. |
+| `household_groups` / `food_reviews` / `recipe_reviews` | Groupes du foyer et avis actuels aliment/recette/préparation ; auteur authentifié et profil ou groupe ciblé. |
 | `sport_templates` / `activity_sessions` | Catalogue et occurrences sportives, calories manuelles et horaires, snapshots inchangés. |
-| `stock_items` / `shopping_list_items` | Tables historiques conservées intégralement, non mappées et sans API/usage actif. |
+| `stock_items` / `shopping_list_items` | Tables historiques conservées sans API ni usage actif. |
 
-La migration `FoodsAndReceipts` suit `UnifiedProducts` sans modifier les anciennes
-migrations. Preuves alimentaires (base/nutrition, recettes/repas, corrections) :
-mapping et aliment par ID, prix/aliases/archives inchangés, aucun homonyme fusionné.
-Sans preuve : produit historique non lié, exclu des nouveaux usages alimentaires.
-Références ambiguës/inter-foyers : erreur et annulation transactionnelle.
-Sauvegarde avant mise à jour, retour arrière par restauration.
+Les migrations `FoodsAndReceipts` et `FlexibleRecipeMealLinesAndReviews`
+complètent `UnifiedProducts` sans modifier les anciennes migrations. La seconde
+abandonne les anciennes recettes, repas, règles et scénarios sans conversion,
+mais préserve les entités alimentaires, commerciales, comptes, foyers, profils
+et données sportives hors périmètre.
 
 Prix total / quantité achetée ; bases g/kg et ml/L sûres, conditionnement seulement
 confirmé, pièces comparables explicitement. Dernier relevé par produit/magasin
@@ -34,6 +35,37 @@ avant minimum par base ; pas de choix commercial pour les recettes.
 Nutrition partielle et coût non calculable explicites, aucun zéro de remplacement.
 Préparation = quantité personnelle × (1 + 0,5 × enfants), macros personnelles inchangées.
 L'édition/archivage des catalogues ne réécrit ni horaires, ni portions, ni snapshots.
+
+## Modèle actif — recettes, lignes de repas et avis
+
+[ADR 0007](decisions/0007-recipes-meal-lines-and-household-reviews.md) définit
+le remplacement du schéma culinaire/planning. La table `composed_meals` et ses
+relations ne font pas partie de la cible. Chaque `planned_meal` est un créneau
+qui peut avoir plusieurs lignes ; une ligne référence soit une recette de
+bibliothèque, soit une préparation ponctuelle rattachée explicitement à ce repas.
+Cette préparation contient ses propres ingrédients/rendement et n'est pas un
+enregistrement global de recette.
+
+Les lignes planifiées conservent le contenu utile à l'historique et leurs
+portions indépendamment. Les répartitions par profil sont par ligne ; lorsqu'une
+répartition est renseignée, son total prévaut sur le total explicite. Duplicata
+de semaine copie les données ponctuelles sans référence mutable partagée.
+Les quantités requises affichées et la nutrition consomment ces mêmes lignes
+avec le ratio quantité entière × portions planifiées / rendement ; il n'y a
+pas de génération automatique ni d'agrégateur de courses actif.
+
+Les avis sont des tables relationnelles distinctes, foyer-scopées, avec des FK
+fortes vers aliments ou recettes et vers une cible unique de type profil ou
+groupe du foyer. Score nullable entier entre 0 et 10 et commentaire nullable ;
+au moins un champ renseigné. L'auteur est l'utilisateur authentifié, distinct
+du profil évalué. Les groupes n'ajoutent aucun faux profil de consommation.
+La migration EF Core remplace les tables concernées ; elle n'altère pas les
+migrations historiques, ne convertit pas les anciennes semaines/règles et ne
+touche pas aux domaines préservés de l'ADR 0006.
+
+Les quantités à préparer sont calculées et affichées par ligne selon le ratio
+`quantité entière × portions planifiées / rendement`. Le semainier ne dispose
+pas d'agrégateur de courses ni de génération/règles automatiques actives.
 
 ## Référence conceptuelle historique — non normative pour le MVP
 
