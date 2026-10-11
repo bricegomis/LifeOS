@@ -1,0 +1,5 @@
+progress { width: 100%; height: 14px; accent-color: var(--lifeos-accent); }
+.source-line { overflow-wrap: anywhere; color: var(--lifeos-text-soft); }
+.raw-document { max-height: 400px; white-space: pre-wrap; overflow-wrap: anywhere; overflow-y: auto; font-size: .85rem; }
+details > summary { cursor: pointer; min-height: 44px; padding: 8px 0; font-weight: 650; }
+section > h2 { font-size: 1.2rem; }

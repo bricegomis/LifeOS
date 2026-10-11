@@ -84,37 +84,33 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
+                    b.Property<string>("DigestiveNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Fodmap")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid")
                         .HasColumnName("household_id");
 
                     b.Property<bool>("IsArchived")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("IsCorrectionOf")
                         .HasColumnType("uuid")
                         .HasColumnName("is_correction_of");
-
-                    b.Property<string>("LegacyPurchaseName")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("MigrationOrigin")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("name");
+
+                    b.Property<int?>("Nova")
+                        .HasColumnType("integer");
 
                     b.Property<string>("OffBarcode")
                         .HasMaxLength(50)
@@ -124,9 +120,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<string>("OffPayload")
                         .HasColumnType("jsonb")
                         .HasColumnName("off_payload");
-
-                    b.Property<bool>("PurchaseUnitConfirmed")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("ReferenceUnit")
                         .IsRequired()
@@ -140,27 +133,17 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("source");
 
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("HouseholdId")
-                        .HasDatabaseName("idx_food_items_household_id");
+                    b.HasIndex("HouseholdId");
 
-                    b.HasIndex("IsCorrectionOf")
-                        .HasDatabaseName("idx_food_items_is_correction_of");
+                    b.HasIndex("IsCorrectionOf");
 
-                    b.HasIndex("HouseholdId", "OffBarcode")
-                        .HasDatabaseName("idx_food_items_household_off_barcode");
-
-                    b.ToTable("products", (string)null);
+                    b.ToTable("foods", (string)null);
                 });
 
             modelBuilder.Entity("LifeOS.Domain.FoodItems.ProductAlias", b =>
@@ -365,6 +348,255 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("planning_rules", (string)null);
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Products.Product", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Brand")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("FoodItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("household_id");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LegacyPurchaseName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("MigrationOrigin")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("PackageConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("PackageQuantity")
+                        .HasPrecision(16, 6)
+                        .HasColumnType("numeric(16,6)");
+
+                    b.Property<string>("PackageUnit")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("PiecesComparable")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PurchaseUnit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("PurchaseUnitConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId");
+
+                    b.HasIndex("FoodItemId", "HouseholdId");
+
+                    b.ToTable("products", (string)null);
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Receipts.Purchase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(16, 6)
+                        .HasColumnType("numeric(16,6)");
+
+                    b.Property<Guid>("ReceiptLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StoreId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(16, 2)
+                        .HasColumnType("numeric(16,2)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiptLineId")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId", "HouseholdId");
+
+                    b.HasIndex("ReceiptLineId", "HouseholdId");
+
+                    b.HasIndex("StoreId", "HouseholdId");
+
+                    b.ToTable("purchases", (string)null);
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Receipts.Receipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("DeclaredLines")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DetectedLines")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Diagnostic")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DocumentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RawDocument")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("StoreId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StoreName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "DocumentHash")
+                        .IsUnique();
+
+                    b.HasIndex("StoreId", "HouseholdId");
+
+                    b.ToTable("receipts", (string)null);
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Receipts.ReceiptLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ExcludedMention")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("PriceMismatchConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Quantity")
+                        .HasPrecision(16, 6)
+                        .HasColumnType("numeric(16,6)");
+
+                    b.Property<string>("RawSource")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceDiagnostic")
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("StatedUnitPrice")
+                        .HasPrecision(16, 6)
+                        .HasColumnType("numeric(16,6)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("Total")
+                        .HasPrecision(16, 6)
+                        .HasColumnType("numeric(16,6)");
+
+                    b.Property<string>("Unit")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "HouseholdId");
+
+                    b.HasIndex("ReceiptId", "HouseholdId");
+
+                    b.HasIndex("ReceiptId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("receipt_lines", (string)null);
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Recipes.Recipe", b =>
                 {
                     b.Property<Guid>("Id")
@@ -435,88 +667,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasIndex("RecipeId");
 
                     b.ToTable("recipe_ingredients", (string)null);
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Stock.ShoppingListItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("Checked")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("GroceryItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("HouseholdId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("QuantityFromStock")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<decimal>("QuantityNeeded")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("WeekId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GroceryItemId");
-
-                    b.HasIndex("HouseholdId");
-
-                    b.HasIndex("WeekId");
-
-                    b.HasIndex("HouseholdId", "WeekId");
-
-                    b.ToTable("shopping_list_items", (string)null);
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Stock.StockItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("GroceryItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("HouseholdId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Quantity")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GroceryItemId");
-
-                    b.HasIndex("HouseholdId");
-
-                    b.HasIndex("HouseholdId", "GroceryItemId")
-                        .IsUnique();
-
-                    b.ToTable("stock_items", (string)null);
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Stores.Store", b =>
@@ -983,44 +1133,13 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasOne("LifeOS.Domain.Households.Household", null)
                         .WithMany()
                         .HasForeignKey("HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("LifeOS.Domain.FoodItems.FoodItem", null)
                         .WithMany()
                         .HasForeignKey("IsCorrectionOf")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.OwnsMany("LifeOS.Domain.Articles.GroceryPriceEntry", "PriceHistory", b1 =>
-                        {
-                            b1.Property<Guid>("Id")
-                                .HasColumnType("uuid");
-
-                            b1.Property<Guid>("ArticleId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<DateTimeOffset>("CreatedAt")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<DateTimeOffset>("ObservedAt")
-                                .HasColumnType("timestamp with time zone");
-
-                            b1.Property<decimal>("Price")
-                                .HasPrecision(10, 2)
-                                .HasColumnType("numeric(10,2)");
-
-                            b1.Property<Guid>("StoreId")
-                                .HasColumnType("uuid");
-
-                            b1.HasKey("Id");
-
-                            b1.HasIndex("ArticleId");
-
-                            b1.ToTable("article_price_entries", (string)null);
-
-                            b1.WithOwner()
-                                .HasForeignKey("ArticleId");
-                        });
 
                     b.OwnsOne("LifeOS.Domain.FoodItems.Nutrition", "Nutrition", b1 =>
                         {
@@ -1045,20 +1164,18 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                             b1.HasKey("FoodItemId");
 
-                            b1.ToTable("products");
+                            b1.ToTable("foods");
 
                             b1.WithOwner()
                                 .HasForeignKey("FoodItemId");
                         });
 
                     b.Navigation("Nutrition");
-
-                    b.Navigation("PriceHistory");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.FoodItems.ProductAlias", b =>
                 {
-                    b.HasOne("LifeOS.Domain.FoodItems.FoodItem", null)
+                    b.HasOne("LifeOS.Domain.Products.Product", null)
                         .WithMany()
                         .HasForeignKey("ProductId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
@@ -1111,6 +1228,134 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Products.Product", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.FoodItems.FoodItem", null)
+                        .WithMany()
+                        .HasForeignKey("FoodItemId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsMany("LifeOS.Domain.Articles.GroceryPriceEntry", "PriceHistory", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("ArticleId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTimeOffset>("CreatedAt")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<DateTimeOffset>("ObservedAt")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<bool>("PackageConfirmed")
+                                .HasColumnType("boolean");
+
+                            b1.Property<decimal?>("PackageQuantity")
+                                .HasPrecision(16, 6)
+                                .HasColumnType("numeric(16,6)");
+
+                            b1.Property<string>("PackageUnit")
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)");
+
+                            b1.Property<bool>("PiecesComparable")
+                                .HasColumnType("boolean");
+
+                            b1.Property<decimal>("Price")
+                                .HasPrecision(16, 6)
+                                .HasColumnType("numeric(16,6)");
+
+                            b1.Property<Guid?>("ReceiptLineId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("StoreId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Unit")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("character varying(20)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("ArticleId");
+
+                            b1.HasIndex("ReceiptLineId")
+                                .IsUnique();
+
+                            b1.ToTable("article_price_entries", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ArticleId");
+                        });
+
+                    b.Navigation("PriceHistory");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Receipts.Purchase", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Receipts.ReceiptLine", null)
+                        .WithMany()
+                        .HasForeignKey("ReceiptLineId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Stores.Store", null)
+                        .WithMany()
+                        .HasForeignKey("StoreId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Receipts.Receipt", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Stores.Store", null)
+                        .WithMany()
+                        .HasForeignKey("StoreId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Receipts.ReceiptLine", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Products.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LifeOS.Domain.Receipts.Receipt", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("ReceiptId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Recipes.Recipe", b =>
                 {
                     b.HasOne("LifeOS.Domain.Households.Household", null)
@@ -1131,41 +1376,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasOne("LifeOS.Domain.Recipes.Recipe", null)
                         .WithMany("Ingredients")
                         .HasForeignKey("RecipeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Stock.ShoppingListItem", b =>
-                {
-                    b.HasOne("LifeOS.Domain.FoodItems.FoodItem", null)
-                        .WithMany()
-                        .HasForeignKey("GroceryItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LifeOS.Domain.Households.Household", null)
-                        .WithMany()
-                        .HasForeignKey("HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LifeOS.Domain.WeekPlanning.Week", null)
-                        .WithMany()
-                        .HasForeignKey("WeekId")
-                        .OnDelete(DeleteBehavior.SetNull);
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Stock.StockItem", b =>
-                {
-                    b.HasOne("LifeOS.Domain.FoodItems.FoodItem", null)
-                        .WithMany()
-                        .HasForeignKey("GroceryItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LifeOS.Domain.Households.Household", null)
-                        .WithMany()
-                        .HasForeignKey("HouseholdId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1296,6 +1506,11 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Navigation("MemberProfiles");
 
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Receipts.Receipt", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Recipes.Recipe", b =>

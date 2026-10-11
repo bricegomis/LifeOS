@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using LifeOS.Api.Contracts;
-using LifeOS.Application.Articles;
+using LifeOS.Application.FoodItems;
 using LifeOS.Application.Stores;
 
 namespace LifeOS.Api.IntegrationTests;
@@ -54,27 +54,27 @@ public sealed class HouseholdIsolationTests(PostgresContainerFixture postgres) :
         using var clientB = _factory.CreateClient().AsUser(userB);
 
         var createResponse = await clientA.PostAsJsonAsync(
-            "/api/articles",
-            new ArticleRequest("Lait", "Lait demi-écrémé", "liter"));
+            "/api/foods",
+            new FoodRequest("Lait", "100ml", null));
 
         createResponse.EnsureSuccessStatusCode();
-        var createdArticle = await createResponse.Content.ReadFromJsonAsync<GroceryItemDto>();
+        var createdArticle = await createResponse.Content.ReadFromJsonAsync<FoodItemDto>();
 
         // Household A can read its own article back.
-        var articlesForA = await clientA.GetFromJsonAsync<List<GroceryItemDto>>("/api/articles");
+        var articlesForA = await clientA.GetFromJsonAsync<List<FoodItemDto>>("/api/foods");
         Assert.Contains(articlesForA!, a => a.Id == createdArticle!.Id);
 
         // Household B must see nothing.
-        var articlesForB = await clientB.GetFromJsonAsync<List<GroceryItemDto>>("/api/articles");
+        var articlesForB = await clientB.GetFromJsonAsync<List<FoodItemDto>>("/api/foods");
         Assert.Empty(articlesForB!);
 
         // Household B cannot fetch/update/delete household A's article directly by id either.
         var getByIdForB = await clientB.PutAsJsonAsync(
-            $"/api/articles/{createdArticle!.Id}",
-            new ArticleRequest("Hack", "Hack", "unit"));
+            $"/api/foods/{createdArticle!.Id}",
+            new FoodRequest("Hack", "", null));
         Assert.Equal(HttpStatusCode.NotFound, getByIdForB.StatusCode);
 
-        var deleteForB = await clientB.DeleteAsync($"/api/articles/{createdArticle.Id}");
+        var deleteForB = await clientB.DeleteAsync($"/api/foods/{createdArticle.Id}");
         Assert.Equal(HttpStatusCode.NotFound, deleteForB.StatusCode);
     }
 

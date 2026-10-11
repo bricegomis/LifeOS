@@ -3,10 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using LifeOS.Api.Contracts;
 using LifeOS.Api.Dtos;
-using LifeOS.Application.Articles;
 using LifeOS.Application.FoodItems;
 using LifeOS.Application.Households;
-using LifeOS.Application.Stock;
 using LifeOS.Application.Stores;
 
 namespace LifeOS.Api.IntegrationTests;
@@ -48,7 +46,7 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
 
         var dimensions = plan.Explanation.GetProperty("dimensions").EnumerateArray().ToList();
         Assert.Equal(
-            new[] { "nutrition", "cost", "diversity", "waste" },
+            new[] { "nutrition", "cost", "diversity", "reuse" },
             dimensions.Select(dimension => dimension.GetProperty("key").GetString()));
 
         Assert.False(string.IsNullOrWhiteSpace(plan.Explanation.GetProperty("textExplanation").GetString()));
@@ -100,9 +98,9 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
 
         // Nutrition, budget and waste all rest on the seeded recipes, prices and stock.
         Assert.Equal(JsonValueKind.Number, dimensions["nutrition"].GetProperty("score").ValueKind);
-        Assert.Equal(JsonValueKind.Number, dimensions["cost"].GetProperty("score").ValueKind);
+        Assert.Equal(JsonValueKind.Null, dimensions["cost"].GetProperty("score").ValueKind);
         Assert.Equal(JsonValueKind.Number, dimensions["diversity"].GetProperty("score").ValueKind);
-        Assert.Equal(JsonValueKind.Number, dimensions["waste"].GetProperty("score").ValueKind);
+        Assert.Equal(JsonValueKind.Number, dimensions["reuse"].GetProperty("score").ValueKind);
 
         // Weights of the scored dimensions are renormalised to 1.
         var totalWeight = dimensions.Values.Sum(dimension => dimension.GetProperty("weight").GetDouble());
@@ -114,15 +112,10 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
             dimensions.Where(entry => entry.Key != "nutrition"),
             entry => Assert.True(entry.Value.GetProperty("weight").GetDouble() <= nutritionWeight));
 
-        // The budget is compared to what the library actually makes reachable.
-        var costMetrics = dimensions["cost"].GetProperty("metrics");
-        Assert.True(costMetrics.GetProperty("estimatedCostEur").GetDouble() > 0);
-        Assert.True(costMetrics.GetProperty("cheapestReachableCostEur").GetDouble() > 0);
-
-        // Waste is a proxy and says so, so no "zero waste" promise is made.
-        Assert.Contains(
-            explanation.GetProperty("limitations").EnumerateArray(),
-            limitation => limitation.GetString()!.Contains("gaspillage", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(dimensions["cost"].GetProperty("metrics").EnumerateObject());
+        Assert.False(dimensions["reuse"].GetProperty("metrics").TryGetProperty("stockCoverage", out _));
+        Assert.Contains(explanation.GetProperty("limitations").EnumerateArray(),
+            l => l.GetString()!.Contains("réutilisation"));
     }
 
     [Fact]
@@ -272,11 +265,6 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
         var cheapRecipe = await CreateRecipeAsync(client, "Riz lentilles", [(rice, 1.2m), (lentils, 0.8m)]);
         var pricierRecipe = await CreateRecipeAsync(client, "Riz saumon", [(rice, 1.0m), (salmon, 0.6m)]);
 
-        var stockResponse = await client.PostAsJsonAsync(
-            "/api/stock-items",
-            new CreateStockItemRequest(rice, 1m, "kg"));
-        stockResponse.EnsureSuccessStatusCode();
-
         var weekResponse = await client.PostAsJsonAsync(
             "/api/weeks",
             new CreateWeekRequest(new DateOnly(2026, 9, 21), "draft"));
@@ -311,8 +299,8 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
         double fats)
     {
         var foodItemResponse = await client.PostAsJsonAsync(
-            "/api/products",
-            new CreateFoodItemRequest(
+            "/api/foods",
+            new FoodRequest(
                 name,
                 "kilogram",
                 new NutritionDto
@@ -321,13 +309,9 @@ public sealed class BalancedWeekPlanTests(PostgresContainerFixture postgres) : I
                     ProteinsPerUnit = proteins,
                     CarbsPerUnit = carbs,
                     FatsPerUnit = fats,
-                }) { Description = name, Unit = "kilogram" });
+                }));
         foodItemResponse.EnsureSuccessStatusCode();
         var product = (await foodItemResponse.Content.ReadFromJsonAsync<FoodItemDto>())!;
-        var priceResponse = await client.PostAsJsonAsync(
-            $"/api/products/{product.Id}/price-entries",
-            new PriceEntryRequest(storeId, price, DateTimeOffset.UtcNow));
-        priceResponse.EnsureSuccessStatusCode();
         return product.Id;
     }
 

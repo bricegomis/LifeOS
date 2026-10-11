@@ -1,0 +1,15 @@
+.catalog-toolbar, .catalog-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.catalog-toolbar { align-items: end; }
+.catalog-list { list-style: none; padding: 0; margin: 0; }
+.catalog-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--lifeos-line); }
+.catalog-row > div { min-width: 0; }
+.catalog-row h2 { margin: 0; font-size: 1.15rem; }
+.catalog-row p { margin: 8px 0 0; line-height: 1.5; overflow-wrap: anywhere; }
+.catalog-actions { flex-shrink: 0; }
+.price-note { font-size: .9rem; color: var(--lifeos-text-soft); }
+.detail-section { scroll-margin-top: 24px; }
+@media (max-width: 700px) {
+  .catalog-row { align-items: start; flex-direction: column; gap: 12px; }
+  .catalog-toolbar > label:first-child { width: 100%; }
+  .catalog-actions { width: 100%; }
+}

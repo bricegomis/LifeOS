@@ -1,61 +1,33 @@
-# LifeOS — Livraison du MVP semainier manuel
+# LifeOS — Livraison aliments et tickets
 
-Plan approuvé le 7 octobre 2026 : documentation d'abord, puis tous les lots
-séquentiellement sans nouvelle approbation intermédiaire. Les lots ci-dessous
-sont implémentés dans l'interface Angular et l'API, sans refonte Vue.
+Le semainier manuel alimentation/sport est conservé. Le lot approuvé du
+11 octobre 2026 remplace le catalogue unifié, les parcours stock/courses et
+le frontend Vue ; [périmètre](01-scope-and-versions.md), [vocabulaire](02-core-model.md).
 
-| Lot | Objectif et critère de sortie | État |
-| --- | --- | --- |
-| 0 | Cadrage, vocabulaire, UX, décisions et distinction cible/existant versionnés. | Documenté |
-| 1 | Inspection Angular/API/OpenAPI/calculs/migrations/tests ; ADR des horaires, portions, snapshots, raccord achats et migration non destructive. | Implémenté |
-| 2 | Produits et recettes persistés, CRUD/recherche/archivage, ingrédients/unités/portions/nutrition ; achats/prix préservés. | Implémenté |
-| 3 | Catalogue sportif par foyer, CRUD/recherche/archivage ; durée positive, calories non négatives, aucun import silencieux. | Implémenté |
-| 4 | API événement horaire, CRUD/déplacement, recette ou produits, occurrences sportives, préparation enfants et snapshots ; historique et isolation préservés. | Implémenté |
-| 5 | Semainier Angular desktop 6–20 et journée mobile, bibliothèques, formulaires accessibles, Aujourd'hui/résumés, hors plage/chevauchements/à positionner, erreurs explicites. | Implémenté |
-| 6 | Accueil/navigation/création manuels ; retirer génération, alternance et règles du parcours sans supprimer les données. | Implémenté |
-| 7 | Domaine/API/PostgreSQL/frontend, migration vierge et existante, redémarrage, deux foyers, inspection desktop/mobile bornée, documentation et contrôles de publication. | Validé localement ; fusion soumise à CI/review |
+| Lot | Livrable |
+| --- | --- |
+| Modèle | Aliments génériques avec complétion manuelle ; produits commerciaux explicitement liés ; migration transactionnelle additive depuis UnifiedProducts. |
+| Consommateurs | Recettes et nouvelles lignes de repas sur aliments ; snapshots inchangés ; coûts non inventés ; réutilisation sans dépendance au stock. |
+| Tickets | Source brute, lignes persistantes ordonnées, corrections et contexte magasin/date ; validation individuelle transactionnelle, achats/prix et idempotence. |
+| Angular | Aliments au premier plan ; produits/prix secondaires ; Tickets import/liste/détail reprenable ; dialogues natifs et mobile sans table horizontale. |
+| Suppressions | Routes/UI/API/DTO/ports/repositories/DI stock et courses ; catalogues alimentaires parallèles et OFF actifs ; Vue et ses dépendances propres. |
+| Livraison | Tests domaine/API PostgreSQL, migration vierge/upgrade/rollback/isolation/reprise/concurrence, contrôles Angular et inspection desktop/mobile ; workflows Angular/API. |
 
-Les critères fonctionnels sont dans [le cadrage](01-scope-and-versions.md).
-La cible est Angular/API/PostgreSQL, pas une seconde refonte Vue.
-Réutiliser semaines/journées et les domaines existants, migrations incrémentales,
-relations fortes et auth/JWT/isolation. Pas de framework spéculatif.
+## Publication et autorisations
 
-## Autorisations et limites
+Les merges automatiques sont explicitement autorisés **après** contrôles et
+traitement des revues, sans contourner les protections ou ignorer CI rouge.
+Surveiller la publication des deux images API/Angular du commit fusionné avant
+de signaler qu'elles sont disponibles. Le refresh des containers est effectué par
+l'utilisateur ; sauvegarde PostgreSQL préalable nécessaire pour la migration au
+démarrage API. Retour arrière par restauration, pas par suppression de données.
 
-L'utilisateur a ensuite explicitement autorisé **tous les merges automatiques**
-dans l'ordre des dépendances, sans attendre sa recette finale. Chaque merge
-reste conditionné aux tests/checks et protections/reviews du dépôt ; aucune
-protection contournée ni CI rouge ignorée. Corriger les conflits sans perdre
-les changements d'autrui.
-Cette autorisation ne couvre ni suppression/reset de données, ni intervention
-manuelle en production. Les workflows existants déclenchés par les merges
-restent applicables. Distinguer branche, fusion, livraison et déploiement vérifié.
+Les validations locales utilisent une authentification synthétique en environnement
+Testing et PostgreSQL éphémère. Elles ne prouvent ni OAuth réel ni fonctionnement
+du VPS après refresh. Aucune intervention manuelle en production n'est autorisée.
 
-Signaler une décision produit réellement non résolue ou un blocage de validation,
-sans inventer une règle métier ou une réussite. Les achats/stock existants sont
-préservés, pas étendus. Automatisation, semaines types, nouvelles catégories
-d'événement, fatigue et connecteurs sont reportés.
+## Hors livraison
 
-## Références techniques
-
-[Audit historique](architecture/00-technical-audit.md),
-[architecture](architecture/01-target-architecture.md),
-[modèle de données](architecture/02-data-model.md),
-[ADR](architecture/decisions/). Les anciennes roadmaps de génération sont
-remplacées par les lots ci-dessus ; leurs implémentations/données ne sont pas
-implicitement supprimées.
-
-## Validation et limites
-
-Suite backend Release sur PostgreSQL 16 via Testcontainers (38 tests domaine,
-57 intégration), 26 tests frontend, type-check/lint/build Angular et absence de
-changement EF non migré. Upgrade réel depuis `SeparateWeekTypes` avec achats,
-prix, repas composés et séances historiques préservés, sans horaire inventé.
-Parcours navigateur desktop 1440 px et mobile 390 px : rechargement, deux
-semaines, riz 100 g/200 g préparés, banane, plusieurs séances, chevauchements,
-22 h, nutrition inconnue, panne API/retry et édition/suppression mobile.
-
-Les contrôles emploient une authentification synthétique uniquement en
-environnement Testing, pas une session Supabase de production. Un navigateur
-local et un merge ne prouvent pas le déploiement VPS. Aucune base utilisateur
-n'a été effacée et aucune opération manuelle de production n'est incluse.
+OCR/IA, enrichissement santé, rapprochement par nom, choix de marque optimisé,
+stock/courses, recommandations médicales, connecteurs sportifs et refonte du
+planning restent exclus. Toute évolution future exige un besoin produit explicite.

@@ -1,5 +1,5 @@
 # LifeOS
-Ne plus avoir à réfléchir tous les jours à quoi manger / quoi faire / quoi acheter
+Planifier les repas et le sport, conserver les achats et suivre les prix sans automatisme.
 
 ## Documentation produit
 
@@ -11,16 +11,27 @@ Ne plus avoir à réfléchir tous les jours à quoi manger / quoi faire / quoi a
 - [État du projet et mémoire historique](docs/PROJECT.md)
 
 La cible active est `src/frontend-angular` + `src/backend` (PostgreSQL),
-avec Supabase pour l'authentification. `src/frontend` est l'interface Vue
-historique et n'a pas été refondu. Le MVP manuel est implémenté : calendrier
-alimentation/sport, trois bibliothèques, portions personnelles et préparation
-enfants séparées, snapshots et migration des anciens repas sans heure inventée.
+avec Supabase pour l'authentification uniquement. Angular est le seul frontend.
+La bibliothèque met les **aliments génériques** au premier plan : nutrition
+manuelle et filtre « À compléter », recettes sur aliments, produits commerciaux
+secondaires pour les prix. Les tickets JSON sont archivés puis validés ligne
+par ligne ; aucune nutrition du document n'est importée. Stock, liste de courses
+et enrichissement automatique sont retirés du MVP. Le calendrier alimentation/sport,
+les portions personnelles, la préparation enfants et les snapshots sont conservés.
 L'interface Angular emploie des contrôles natifs et les styles LifeOS, sans
 runtime PrimeNG/PrimeUI ; PrimeIcons (MIT) reste utilisé pour la navigation.
 
 Installation et contrôles : [frontend Angular](src/frontend-angular/README.md)
 et [API/PostgreSQL](src/backend/README.md). La validation locale ne constitue
 pas une vérification du déploiement en production.
+
+La migration `FoodsAndReceipts` sépare le catalogue unifié sans fusion des
+homonymes, sans perte des prix/alias/sources et sans réécriture des snapshots.
+Les produits sans preuve alimentaire restent non liés, à compléter manuellement.
+**Sauvegarder PostgreSQL avant de rafraîchir les containers** : les migrations
+s'appliquent au démarrage API (ou séparément avec `SkipDatabaseMigration=true`).
+Retour arrière par restauration, pas par migration descendante destructive.
+Voir [ADR 0006](docs/architecture/decisions/0006-foods-products-receipts.md).
 
 ## Documentation architecture
 

@@ -58,7 +58,7 @@
         <section class="recipe-section recipe-ingredients" aria-labelledby="ingredients-title">
           <div class="recipe-section-heading">
             <h3 id="ingredients-title">Ingrédients <span class="recipe-muted">{{ recipe.ingredients.length }}</span></h3>
-            @if (activeProducts().length) {
+            @if (activeFoods().length) {
               <button class="lifeos-button lifeos-button-sm" type="button" [disabled]="saving()" (click)="openIngredientDialog()">
                 <i class="pi pi-plus" aria-hidden="true"></i> Ajouter un ingrédient
               </button>
@@ -76,11 +76,11 @@
             <p class="recipe-empty">Aucun ingrédient ajouté.</p>
           }
           @if (loadingFoodItems()) {
-            <p class="recipe-empty" role="status">Chargement des produits…</p>
-          } @else if (activeProducts().length === 0) {
+            <p class="recipe-empty" role="status">Chargement des aliments…</p>
+          } @else if (activeFoods().length === 0) {
             <p class="recipe-empty">
-              Créez un produit pour l’utiliser directement dans une recette. Aucun article séparé à créer.
-              <a routerLink="/products">Ouvrir les produits</a>
+              Créez un aliment pour l’utiliser directement dans une recette. Aucune marque à choisir.
+              <a routerLink="/foods">Ouvrir les aliments</a>
             </p>
           }
         </section>
@@ -129,10 +129,10 @@
   [error]="dialogError()" (dismissed)="closeDialog()">
   <form id="ingredient-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="addIngredient()">
     <label class="dialog-field">
-      <span>Produit</span>
+      <span>Aliment</span>
       <select class="text-input" name="foodItemId" required [(ngModel)]="ingredientFoodItemIdValue">
-        <option value="" disabled>Choisir un produit</option>
-        @for (food of activeProducts(); track food.id) {
+        <option value="" disabled>Choisir un aliment</option>
+        @for (food of activeFoods(); track food.id) {
           <option [value]="food.id">{{ food.name }}</option>
         }
       </select>

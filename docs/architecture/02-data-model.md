@@ -1,42 +1,39 @@
 # LifeOS — Modèle de données
 
-## Implémentation actuelle du semainier manuel
+## Modèle actif aliments, produits et tickets
 
-PostgreSQL/API est la source de vérité, avec isolation par foyer et relations
-fortes. Le schéma réel est défini par les configurations EF et migrations ;
-voir [ADR 0004](decisions/0004-manual-planner.md).
+PostgreSQL/API est la source de vérité, avec isolation par foyer.
+[ADR 0006](decisions/0006-foods-products-receipts.md) remplace ADR 0005.
 
-| Table existante/nouvelle | Données livrées |
+| Table | Modèle actif |
 | --- | --- |
-| `weeks` | `IsManual`, `TimeZoneId` IANA ; nouvelle semaine manuelle avec sept journées vides, sans alternance/règles. |
-| `day_plans` | Date civile et FK semaine conservées ; plusieurs événements par jour. |
-| `planned_meals` | Début/fin locaux nullables, `PersonalPortion`, `ChildrenCount`, nom figé, recette ou lignes ; référence repas composé historique conservée. |
-| `meal_food_lines` | FK repas, FK produit facultative, nom, quantité/unité, unité nutritionnelle et énergie/protéines/glucides/lipides nullables figés ; quantité numeric(28,12). |
-| `activity_sessions` | Horaires nullables, nom/distance et FK catalogue facultative ; type/intensité/durée/calories copiés et modifiables par occurrence. |
-| `sport_templates` | Foyer, nom, sport, durée positive, distance optionnelle, intensité, calories manuelles totales, archivage ; aucun seed silencieux. |
-| `products` | Agrégat unique nutrition facultative + description/unité d'achat/prix ; ancien type C# `FoodItem`, archivage/OFF/corrections conservés. |
-| `product_aliases` | Ancien ID d'article → ID produit canonique ; FK composite avec foyer. |
-| `legacy_articles` | Archive complète des anciennes lignes d'achat, non mappée/non modifiée par l'application. |
-| `article_price_entries` | Observations possédées par `products` ; nom de table/FK historique conservé, IDs/dates/montants inchangés. |
-| `stock_items` / `shopping_list_items` | FK `GroceryItemId` historique → `products`, quantités/unités/cases historiques conservées. |
-| `recipes` / `recipe_ingredients` | Archivage, portions, ingrédients numeric(16,6) ; FK `FoodItemId` → `products`. |
+| `foods` | Aliment générique, foyer, nom/archivage, base et quatre macros nullable, FODMAP/NOVA nullable, notes digestives facultatives et sources historiques. |
+| `products` | Produit commercial, lien alimentaire nullable pour l'historique (obligatoire pour les créations), marque/code-barres, unité d'achat confirmée, contenance/confirmation et comparabilité des pièces. Anciens champs nutrition/OFF restent non mappés pour conservation. |
+| `food_product_mappings` | Preuve de migration explicite produit → aliment ; pas un catalogue. Identités conservées, aucune fusion de noms. |
+| `product_aliases` / `legacy_articles` | Alias d'IDs et archive historique conservés ; pas de routes concurrentes d'articles. |
+| `article_price_entries` | Prix observé possédé par produit, montant/base, magasin/date, contenance et confirmations figées, provenance ticket/manuel ; un relevé par ligne de ticket. |
+| `receipts` | Document brut, SHA-256 exact unique par foyer, magasin/date, compteurs et diagnostics ; relation forte aux lignes. |
+| `receipt_lines` | Position et source, valeurs corrigibles en attente, statut pending/validated/ignored, produit choisi ; aucune santé copiée au catalogue. |
+| `purchases` | Un achat par ligne : produit/magasin/date/quantité/unité/montant total. FK composites de foyer. |
+| `recipes` / `recipe_ingredients` | Portions, durée, étapes en metadata, archivage ; ingrédients aliment + quantité/unité, FK FoodItemId → foods. |
+| `meal_food_lines` | FK aliment facultative, nom/quantité/unités/macros figés ; numeric(28,12) conservé. |
+| `weeks` / `day_plans` / `planned_meals` | Sept journées manuelles indépendantes, heures civiles nullables, portions/enfants, snapshots et références historiques. |
+| `sport_templates` / `activity_sessions` | Catalogue et occurrences sportives, calories manuelles et horaires, snapshots inchangés. |
+| `stock_items` / `shopping_list_items` | Tables historiques conservées intégralement, non mappées et sans API/usage actif. |
 
-La migration `UnifiedProducts` remplace la séparation de l'ADR 0004 ; voir
-[ADR 0005](decisions/0005-unified-products.md). Les anciens liens explicites sont
-intégrés ; aucune fusion par nom. Les aliments sans achats et articles sans
-nutrition deviennent des produits distincts. Les unités d'achat inconnues
-restent à confirmer ; aucune conversion par conditionnement/densité implicite.
+La migration `FoodsAndReceipts` suit `UnifiedProducts` sans modifier les anciennes
+migrations. Preuves alimentaires (base/nutrition, recettes/repas, corrections) :
+mapping et aliment par ID, prix/aliases/archives inchangés, aucun homonyme fusionné.
+Sans preuve : produit historique non lié, exclu des nouveaux usages alimentaires.
+Références ambiguës/inter-foyers : erreur et annulation transactionnelle.
+Sauvegarde avant mise à jour, retour arrière par restauration.
 
-Préparation = quantité personnelle × (1 + 0,5 × enfants). Les enfants n'augmentent
-jamais la nutrition personnelle. Le sport reste séparé des apports. Aucune
-conversion masse/volume/pièces sans information sûre ; totaux incomplets explicites.
-Modifier/archiver un catalogue ne modifie pas les snapshots des événements.
-
-Les migrations ne fusionnent aucun nom, ne suppriment aucun historique d'achat
-et n'inventent aucune heure. Les anciens repas sans snapshot restent consultables
-à partir des valeurs actuelles ; leur premier placement manuel les fige avec
-avertissement. Les contextes/règles/profils historiques restent stockés mais ne
-pilotent plus le parcours MVP.
+Prix total / quantité achetée ; bases g/kg et ml/L sûres, conditionnement seulement
+confirmé, pièces comparables explicitement. Dernier relevé par produit/magasin
+avant minimum par base ; pas de choix commercial pour les recettes.
+Nutrition partielle et coût non calculable explicites, aucun zéro de remplacement.
+Préparation = quantité personnelle × (1 + 0,5 × enfants), macros personnelles inchangées.
+L'édition/archivage des catalogues ne réécrit ni horaires, ni portions, ni snapshots.
 
 ## Référence conceptuelle historique — non normative pour le MVP
 

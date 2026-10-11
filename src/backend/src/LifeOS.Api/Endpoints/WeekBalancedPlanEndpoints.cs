@@ -11,8 +11,8 @@ namespace LifeOS.Api.Endpoints;
 /// Endpoints for the balanced plan of a week.
 /// <para>
 /// The caller no longer picks a ranking objective: computing a plan takes no body, and the
-/// engine always looks for the same compromise between nutritional balance, budget, diversity
-/// over the month and waste reduction.
+/// engine reports nutritional balance, diversity and ingredient reuse without estimating stock.
+/// Cost remains unknown without explicit commercial references.
 /// </para>
 /// </summary>
 public static class WeekBalancedPlanEndpoints

@@ -1,55 +1,39 @@
 # LifeOS — Project Memory
 
-## État actuel et recentrage approuvé — 7 octobre 2026
+## État actuel — aliments et tickets manuels
 
-L'implémentation active est **`src/frontend-angular` (Angular 22, contrôles natifs
-et styles LifeOS, PrimeIcons MIT)** avec
-**`src/backend` (ASP.NET Core/EF Core/PostgreSQL)** comme source de vérité.
-Supabase est utilisé pour l'authentification/JWT uniquement ; l'API isole les
-données par `household_id`. `src/frontend` est le frontend Vue historique.
+Angular 22 (`src/frontend-angular`) est le seul frontend. API ASP.NET Core /
+EF Core / PostgreSQL (`src/backend`) source de vérité, Supabase auth/JWT seulement,
+isolation par foyer. Identité visuelle et dialogues natifs LifeOS conservés.
 
-Le nouveau [MVP approuvé](01-scope-and-versions.md) est un semainier entièrement
-manuel alimentation/sport, avec produits, recettes et catalogue sportif,
-nutrition personnelle, préparation enfants séparée et conservation historique.
-La [roadmap séquentielle](03-roadmap.md) décrit les lots implémentés et validés.
+Aliments génériques au premier plan : base/macros/FODMAP/NOVA manuels et nullable,
+notes facultatives, filtre À compléter, zéro valide. Produits commerciaux secondaires,
+plusieurs par aliment, contenance confirmée et prix observés/provenance. Recettes et
+nouvelles lignes de repas sur aliments, pas de marque choisie implicitement.
 
-Le calendrier et Aujourd'hui partagent les événements API datés/horaires, avec
-plusieurs repas/séances par jour, vue journée mobile, hors plage, chevauchements,
-déplacement par formulaire et erreurs explicites. `sport_templates` est un
-catalogue par foyer ; `meal_food_lines` préserve les quantités et valeurs
-nutritionnelles de chaque événement. Modifier/archiver un catalogue ne réécrit
-pas ces snapshots. La présence d'enfants ne change que la préparation.
+Tickets JSON fichier/texte : source brute et toutes lignes avant validation,
+contexte magasin/date explicite, pending/validated/ignored, reprise API et progression.
+Validation individuelle transactionnelle aliment/produit/achat/prix/statut,
+concurrence/idempotence, réimport identique détecté par foyer, aucune santé importée.
+Minimum des derniers relevés par produit/magasin uniquement par base comparable,
+historique et informatif, pas un produit de recette.
 
-Nutrition et achats sont réunis dans un seul produit (`products`, agrégat C#
-`FoodItem`, nutrition facultative et prix possédés). La fiche `/products` regroupe
-général, nutrition, référence nutritionnelle, unité d'achat, prix/magasins et usages.
-L'agrégat article séparé n'existe plus. Les anciennes routes sont des adaptateurs
-vers le produit canonique ; les ID d'articles sont conservés comme alias exacts.
-Recettes, stock, courses et repas référencent les produits ; les snapshots restent
-inchangés. La migration conserve les homonymes non associés séparément et signale
-les unités d'achat à préciser, sans fusion par nom. Voir
-[ADR 0005](architecture/decisions/0005-unified-products.md).
-Les nouvelles semaines sont vides et n'utilisent pas les anciens réglages ;
-le calcul équilibré reste refusé pour les semaines manuelles et la génération
-automatique de courses est refusée pour toutes les semaines. Les listes historiques
-restent consultables/cochables.
-Voir [ADR 0004](architecture/decisions/0004-manual-planner.md) pour les limites
-de migration, la précision, les heures civiles et les snapshots.
+`FoodsAndReceipts` remplace le modèle unifié : produits/IDs/prix/alias/sources
+conservés, mapping alimentaire explicite sans homonymes fusionnés, références
+rebranchées et snapshots/horaires/portions inchangés. Anciens produits sans preuve
+alimentaire restent non liés. Stock/courses et catalogues alimentaires parallèles
+retirés des parcours/API/DI ; tables historiques non mappées. Vue et OFF actifs supprimés.
+Voir [ADR 0006](architecture/decisions/0006-foods-products-receipts.md).
 
-Interface de saisie : les pages restent centrées sur la consultation
-(calendrier, listes, détails). Chaque création ou modification (événement,
-séance, produit (nutrition et achats), magasin, prix, stock, recette,
-ingrédient, repas composé et ses recettes) s'ouvre dans un dialogue partagé
-`app-lifeos-dialog` (`src/frontend-angular/src/app/shared/dialog`) : champs
-essentiels d'abord, options secondaires sous « Plus d'options », focus piégé
-puis restauré, Échap avec confirmation si la saisie est modifiée, erreurs dans
-le dialogue sans fermeture, et feuille basse sur mobile. Les achats ne nécessitent
-plus une seconde création : prix et usages se trouvent dans la même fiche produit.
+Le semainier alimentation/sport, Aujourd'hui, nutrition personnelle et préparation
+enfants restent inchangés hors références alimentaires. Les règles/contextes/auth
+historiques restent conservés. Le calcul équilibré historique utilise la réutilisation
+d'aliments sans stock et un coût non calculable sans choix commercial explicite.
 
-Validation locale : tests domaine/API sur PostgreSQL vierge et historique,
-redémarrage logique, deux foyers, contrôles Angular et parcours navigateur
-desktop/mobile. OAuth réel et déploiement en production ne sont pas vérifiés
-par ces contrôles locaux.
+Tests PostgreSQL éphémère (vierge/upgrade/rollback/reprise/isolation/concurrence)
+et Angular ; inspection desktop/mobile avec auth Testing, pas auth réelle de production.
+Sauvegarder PostgreSQL avant refresh des containers et migration au démarrage API.
+Publication/merge autorisés après contrôles ; le refresh appartient à l'utilisateur.
 
 **Le texte ci-dessous conserve la mémoire historique** de Vue/local-first et
 des parcours de génération ; il ne décrit plus la cible active. Les décisions

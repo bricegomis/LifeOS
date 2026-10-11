@@ -212,10 +212,10 @@ public static class RecipesEndpoints
 
         try
         {
-            var productId = await db.ResolveProductIdAsync(householdId, request.FoodItemId, cancellationToken);
+            var productId = request.FoodItemId;
             if (!await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(
                 db.FoodItems.Where(a => a.Id == productId && a.HouseholdId == householdId && !a.IsArchived), cancellationToken))
-                return Results.Problem("L'ingrédient doit référencer un produit actif de votre foyer.", statusCode: 400);
+                return Results.Problem("L'ingrédient doit référencer un aliment actif de votre foyer.", statusCode: 400);
             recipe.AddIngredient(productId, request.Quantity, request.Unit);
             await recipeRepository.UpdateAsync(recipe, cancellationToken);
 

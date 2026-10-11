@@ -115,12 +115,12 @@ public static class ManualPlannerEndpoints
             if (request.Lines is { } lines && meal.RecipeId is null && meal.ComposedMealId is null)
             {
                 if (lines.Count != meal.FoodLines.Count || lines.Select(l => l.SnapshotLineId).Distinct().Count() != lines.Count)
-                    throw new ArgumentException("Pour ajouter ou retirer un produit, remplacez explicitement le contenu.");
+                    throw new ArgumentException("Pour ajouter ou retirer un aliment, remplacez explicitement le contenu.");
                 foreach (var line in lines)
                 {
                     var existing = meal.FoodLines.SingleOrDefault(l => l.Id == line.SnapshotLineId);
                     if (existing is null || line.FoodItemId != existing.FoodItemId || line.Unit != existing.Unit)
-                        throw new ArgumentException("Le changement de produit ou d'unité exige un remplacement explicite.");
+                        throw new ArgumentException("Le changement de aliment ou d'unité exige un remplacement explicite.");
                     existing.UpdateQuantity(line.Quantity);
                 }
             }
@@ -135,7 +135,7 @@ public static class ManualPlannerEndpoints
     {
         if (request.RecipeId is { } recipeId)
         {
-            if (request.Lines is { Count: > 0 }) throw new ArgumentException("Choisissez une recette OU des produits.");
+            if (request.Lines is { Count: > 0 }) throw new ArgumentException("Choisissez une recette OU des aliments.");
             if (!await db.Recipes.AnyAsync(r => r.Id == recipeId && r.HouseholdId == household && !r.IsArchived, ct))
                 throw new ArgumentException("Recette indisponible dans votre bibliothèque.");
             var content = await RecipeContent(db, meal.Id, household, recipeId, null, ct);
@@ -143,12 +143,12 @@ public static class ManualPlannerEndpoints
         }
         else
         {
-            if (request.Lines is not { Count: > 0 and <= 100 }) throw new ArgumentException("Ajoutez entre 1 et 100 produits.");
+            if (request.Lines is not { Count: > 0 and <= 100 }) throw new ArgumentException("Ajoutez entre 1 et 100 aliments.");
             var lines = new List<MealFoodLine>();
             foreach (var input in request.Lines)
             {
                 var food = await db.FoodItems.SingleOrDefaultAsync(f => f.Id == input.FoodItemId && f.HouseholdId == household && !f.IsArchived, ct);
-                if (food is null) throw new ArgumentException("Produit indisponible dans votre bibliothèque.");
+                if (food is null) throw new ArgumentException("Aliment indisponible dans votre bibliothèque.");
                 lines.Add(MealFoodLine.Snapshot(meal.Id, food.Id, food.Name, input.Quantity, input.Unit, food.ReferenceUnit, food.Nutrition));
             }
             meal.SetContent(request.Name ?? string.Join(", ", lines.Select(l => l.Name)), null, null, lines);

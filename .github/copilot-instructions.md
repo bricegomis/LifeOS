@@ -1,71 +1,34 @@
 # LifeOS Copilot Instructions
 
-## What LifeOS is
-LifeOS is a personal planning app focused on nutrition and weekly meal planning. The current product scope is a V0 weekly planner: decide what to eat this week, keep meals simple, and reduce daily decision fatigue.
+LifeOS is a personal meal and sport planner, not a generic life dashboard.
+The active stack is Angular 22 / TypeScript (`src/frontend-angular`) and
+ASP.NET Core / EF Core / PostgreSQL (`src/backend`). Supabase handles auth/JWT
+only. Native HTML controls, shared LifeOS dialogues and CSS tokens preserve
+the visual identity; PrimeIcons supplies navigation icons.
 
-## Current product focus
-Do not expand the project into a generic life dashboard unless explicitly requested. The active scope is:
-- meal planning
-- meal tracking / daily “today” view
-- food library and reusable components
-- weekly scheduling logic
-- planning rules and week context configuration
+## Current model
+- **Food** (`FoodItem`, `foods`) is a generic culinary reference with manual,
+  nullable nutrition, base, FODMAP and NOVA. Partial saves and zero macros are valid.
+- **Product** (`Product`, `products`) is a commercial price reference with an
+  explicit food link. Multiple products may belong to one food.
+- Recipes and new meal lines select foods; meal snapshots remain unchanged.
+- Receipts preserve raw JSON and ordered pending lines. Only individual manual
+  validation creates an optional food/product, purchase and price in one transaction.
+- No imported health fields, automatic name matching, external enrichment,
+  stock or shopping-list functionality.
+- Compare observed prices only on safe kg/L/confirmed comparable-piece bases.
+  A package needs manually confirmed contents. Never choose a recipe product implicitly.
+- Historical non-food products and stock tables remain preserved, not active catalogues.
 
-## Stack and architecture
-The app is currently a Vue 3 + TypeScript single-page app using Vite.
-- UI: Vue 3, PrimeVue
-- State: Pinia
-- Routing: Vue Router
-- Persistence: localStorage for the main app state; optional Supabase sync for authenticated users
-- Backend: Supabase only for auth and optional remote persistence
+## Development and verification
+From `src/frontend-angular`: `npm ci`, `npm run dev`; configure
+`VITE_LIFEOS_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` using
+`.env.example`. Run `npm test`, `npm run type-check`, `npm run lint`, `npm run build`.
+From `src/backend`: `dotnet build`, `dotnet test`; PostgreSQL tests use Testcontainers/Docker.
 
-App code lives under `src/frontend`.
-- `src/frontend/src/views`: pages (`TodayView`, `WeeklyPlannerView`, `SettingsView`, `LibraryView`, `LoginView`)
-- `src/frontend/src/stores`: Pinia stores (`auth`, `weekContext`, `weekPlanner`, `planningRules`)
-- `src/frontend/src/data`: local meal library and generated week logic
-- `src/frontend/src/services/supabase`: auth and repository sync layer
-- `src/frontend/src/types.ts`: shared domain types
-
-## Run locally
-From `src/frontend`:
-- `npm install`
-- `npm run dev`
-
-Required environment variables for Supabase auth/sync:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-Use `src/frontend/.env.example` as the template.
-
-## Validation commands
-From `src/frontend`:
-- `npm run build`
-- `npm run lint`
-
-There is no dedicated automated test suite in the current repository; build and lint are the main validation checks.
-
-## Important conventions
-- Keep the scope narrow and aligned with the meal-planning product.
-- Prefer simple, maintainable solutions over generic abstractions.
-- Preserve the current architecture before introducing new patterns.
-- Respect the existing domain model: meal components, composite dishes, week context, planning rules, and generated week plans.
-- Do not rewrite working code without a clear reason.
-- When persisting data, keep compatibility with existing localStorage structures and validate unknown data carefully.
-
-## Planning domain rules
-The working model is intentionally pragmatic:
-- `MealComponent` = reusable ingredient / building block
-- `CompositeDish` = complete dish treated as one unit
-- `WeekPlan` = the weekly schedule for 7 days
-- `DayPlan` = one day with breakfast, lunch, dinner, and activity
-- `WeekContext` = work context, alternating week mode, and per-day settings
-- `PlanningRule` and `FrequencyRule` = the generation logic that drives the week
-
-## Documentation expectations
-Use the repo docs as the source of truth for product intent and current architecture.
-- `docs/PROJECT.md` is the current product memory.
-- `docs/DECISIONS.md` records important architecture and product decisions.
-- Update these documents when a significant change affects product direction, architecture, or persistence.
-
-## Keeping the docs current
-After a substantial change, update the persistent documentation rather than relying on chat history. The documentation should reflect the current state of the codebase, not a historical log of every prior conversation.
+Respect API household scope, existing planning/sport/auth behavior and precise
+quantities. Do not rewrite applied migrations or historical snapshots.
+Use `docs/PROJECT.md`, `docs/02-core-model.md` and
+`docs/architecture/decisions/0006-foods-products-receipts.md` as current product truth.
+Keep affected docs current, keep changes surgical and avoid unnecessary dependencies.
+Back up PostgreSQL before upgrading. Never deploy or reset user data without authorization.

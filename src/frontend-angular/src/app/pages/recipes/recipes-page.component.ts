@@ -59,7 +59,7 @@ export class RecipesPageComponent implements OnInit {
   visibleRecipes(): RecipeDto[] {
     return this.recipes().filter(r => !r.isArchived && r.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr')))
   }
-  activeProducts(): FoodItemDto[] { return this.foodItems().filter(f => !f.isArchived) }
+  activeFoods(): FoodItemDto[] { return this.foodItems().filter(f => !f.isArchived) }
   ingredientEdit: { id: string; foodItemId: string; quantity: number; unit: string } | null = null
   readonly dialog = signal<'recipe' | 'ingredient' | 'editIngredient' | null>(null)
   readonly dialogError = signal('')
@@ -151,7 +151,7 @@ export class RecipesPageComponent implements OnInit {
   }
 
   foodItemName(id: string): string {
-    return this.foodItems().find((food) => food.id === id)?.name ?? `Produit indisponible · ${id}`
+    return this.foodItems().find((food) => food.id === id)?.name ?? `Aliment indisponible · ${id}`
   }
 
   openRecipeDialog(recipe: RecipeDto | null): void {
@@ -284,7 +284,7 @@ export class RecipesPageComponent implements OnInit {
       this.dialogError.set('Enregistrez ou sélectionnez une recette avant d’ajouter un ingrédient.')
       return
     }
-    if (!this.activeProducts().some((food) => food.id === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
+    if (!this.activeFoods().some((food) => food.id === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
       this.dialogError.set('Choisissez un aliment du catalogue, une quantité supérieure à zéro et une unité.')
       return
     }
@@ -376,7 +376,7 @@ export class RecipesPageComponent implements OnInit {
 
   private loadFoodItems(): void {
     this.loadingFoodItems.set(true)
-    this.api.get<FoodItemDto[]>('/food-items').subscribe({
+    this.api.get<FoodItemDto[]>('/foods').subscribe({
       next: (foodItems) => {
         this.foodItems.set(foodItems)
         this.loadingFoodItems.set(false)

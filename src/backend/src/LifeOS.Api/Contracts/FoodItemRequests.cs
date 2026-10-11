@@ -3,77 +3,8 @@ using LifeOS.Application.FoodItems;
 
 namespace LifeOS.Api.Contracts;
 
-/// <summary>
-/// Request DTO for creating a food item (Jalon 3).
-/// </summary>
-public sealed class CreateFoodItemRequest
-{
-    public CreateFoodItemRequest(string name, string referenceUnit, NutritionDto? nutrition)
-    {
-        Name = name;
-        ReferenceUnit = referenceUnit;
-        Nutrition = nutrition;
-    }
-
-    [Required]
-    [StringLength(500)]
-    public string Name { get; set; }
-
-    [StringLength(50)]
-    public string ReferenceUnit { get; set; }
-
-    public NutritionDto? Nutrition { get; set; }
-    [StringLength(1000)]
-    public string Description { get; set; } = "";
-    public string? Unit { get; set; }
-}
-
-/// <summary>
-/// Request DTO for updating a food item (Jalon 3).
-/// </summary>
-public sealed class UpdateFoodItemRequest
-{
-    public UpdateFoodItemRequest(string name, string referenceUnit, NutritionDto? nutrition)
-    {
-        Name = name;
-        ReferenceUnit = referenceUnit;
-        Nutrition = nutrition;
-    }
-
-    [Required]
-    [StringLength(500)]
-    public string Name { get; set; }
-
-    [StringLength(50)]
-    public string ReferenceUnit { get; set; }
-
-    public NutritionDto? Nutrition { get; set; }
-    [StringLength(1000)]
-    public string? Description { get; set; }
-    public string? Unit { get; set; }
-}
-
-/// <summary>
-/// Request DTO for creating a correction for a food item (Jalon 3).
-/// </summary>
-public sealed class CreateCorrectionRequest
-{
-    public CreateCorrectionRequest(string name, string referenceUnit, NutritionDto? nutrition)
-    {
-        Name = name;
-        ReferenceUnit = referenceUnit;
-        Nutrition = nutrition;
-    }
-
-    [Required]
-    [StringLength(500)]
-    public string Name { get; set; }
-
-    [StringLength(50)]
-    public string ReferenceUnit { get; set; }
-
-    public NutritionDto? Nutrition { get; set; }
-    [StringLength(1000)]
-    public string? Description { get; set; }
-    public string? Unit { get; set; }
-}
+public sealed record FoodRequest(
+    [property: Required, StringLength(500)] string Name,
+    [property: StringLength(50)] string ReferenceUnit,
+    NutritionDto? Nutrition, string? Fodmap = null, int? Nova = null,
+    [property: StringLength(2000)] string? DigestiveNotes = null);

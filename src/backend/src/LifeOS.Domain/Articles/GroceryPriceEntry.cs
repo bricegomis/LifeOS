@@ -1,8 +1,7 @@
-using LifeOS.Domain.FoodItems;
 namespace LifeOS.Domain.Articles;
 
 /// <summary>
-/// A price observed for a <see cref="FoodItem"/> at a given store and date, mirroring the
+/// A price observed for a product at a given store and date, mirroring the
 /// frontend's <c>GroceryPriceEntry</c> model.
 /// </summary>
 public sealed class GroceryPriceEntry
@@ -12,6 +11,19 @@ public sealed class GroceryPriceEntry
     public decimal Price { get; private set; }
     public DateTimeOffset ObservedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+    public string Unit { get; private set; } = "unit";
+    public decimal? PackageQuantity { get; private set; }
+    public string? PackageUnit { get; private set; }
+    public bool PackageConfirmed { get; private set; }
+    public bool PiecesComparable { get; private set; }
+    public Guid? ReceiptLineId { get; private set; }
+    public string Provenance => ReceiptLineId is null ? "Relevé manuel / historique" : "Ticket validé";
+
+    public void SetBasis(string unit, decimal? quantity, string? packageUnit, bool confirmed, bool piecesComparable, Guid? receiptLineId)
+    {
+        Unit = unit; PackageQuantity = quantity; PackageUnit = packageUnit;
+        PackageConfirmed = confirmed; PiecesComparable = piecesComparable; ReceiptLineId = receiptLineId;
+    }
 
     private GroceryPriceEntry(Guid id, Guid storeId, decimal price, DateTimeOffset observedAt, DateTimeOffset createdAt)
     {
@@ -29,9 +41,9 @@ public sealed class GroceryPriceEntry
             throw new ArgumentException("A price entry must reference a store.", nameof(storeId));
         }
 
-        if (price < 0)
+        if (price < 0 || price >= 10000000000m)
         {
-            throw new ArgumentOutOfRangeException(nameof(price), "Price cannot be negative.");
+            throw new ArgumentOutOfRangeException(nameof(price), "Prix hors limites : entre zéro et dix milliards exclus.");
         }
 
         return new GroceryPriceEntry(Guid.NewGuid(), storeId, price, observedAt, now ?? DateTimeOffset.UtcNow);

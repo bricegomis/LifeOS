@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using LifeOS.Api.Contracts;
-using LifeOS.Application.Articles;
+using LifeOS.Application.FoodItems;
 
 namespace LifeOS.Api.IntegrationTests;
 
@@ -24,11 +24,11 @@ public sealed class PersistenceAcrossRestartTests(PostgresContainerFixture postg
             using var client = firstRun.CreateClient().AsUser(supabaseUserId);
 
             var createResponse = await client.PostAsJsonAsync(
-                "/api/articles",
-                new ArticleRequest("Riz", "Riz basmati", "kilogram"));
+                "/api/foods",
+                new FoodRequest("Riz", "100g", null));
 
             createResponse.EnsureSuccessStatusCode();
-            var created = await createResponse.Content.ReadFromJsonAsync<GroceryItemDto>();
+            var created = await createResponse.Content.ReadFromJsonAsync<FoodItemDto>();
             articleId = created!.Id;
         }
         // The first host (and its in-process app/DbContext pool) is now fully disposed, simulating
@@ -37,7 +37,7 @@ public sealed class PersistenceAcrossRestartTests(PostgresContainerFixture postg
         await using var secondRun = new LifeOSApiFactory(postgres.ConnectionString);
         using var reconnectedClient = secondRun.CreateClient().AsUser(supabaseUserId);
 
-        var articles = await reconnectedClient.GetFromJsonAsync<List<GroceryItemDto>>("/api/articles");
+        var articles = await reconnectedClient.GetFromJsonAsync<List<FoodItemDto>>("/api/foods");
 
         Assert.Contains(articles!, a => a.Id == articleId && a.Name == "Riz");
     }
