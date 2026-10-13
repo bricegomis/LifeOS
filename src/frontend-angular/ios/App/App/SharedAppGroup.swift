@@ -78,34 +78,94 @@ public struct SharedAppGroup {
 public struct WidgetSnapshotDTO: Codable {
     public let version: Int
     public let householdId: String
-    public let userDisplayName: String
+    public let userId: String?
+    public let userDisplayName: String?
     public let generatedAt: String
     public let timeZoneId: String
     public let events: [WidgetEventItemDTO]
+    public let cookingSession: CookingSessionDTO?
     public let activeCookingSession: CookingSessionDTO?
+
+    public var currentCookingSession: CookingSessionDTO? {
+        return cookingSession ?? activeCookingSession
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case version
+        case householdId
+        case userId
+        case userDisplayName
+        case generatedAt
+        case timeZoneId
+        case events
+        case cookingSession
+        case activeCookingSession
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        version = try container.decode(Int.self, forKey: .version)
+        householdId = try container.decode(String.self, forKey: .householdId)
+        userId = try container.decodeIfPresent(String.self, forKey: .userId)
+        userDisplayName = try container.decodeIfPresent(String.self, forKey: .userDisplayName)
+        generatedAt = try container.decode(String.self, forKey: .generatedAt)
+        timeZoneId = try container.decode(String.self, forKey: .timeZoneId)
+        events = try container.decode([WidgetEventItemDTO].self, forKey: .events)
+        cookingSession = try container.decodeIfPresent(CookingSessionDTO.self, forKey: .cookingSession)
+        activeCookingSession = try container.decodeIfPresent(CookingSessionDTO.self, forKey: .activeCookingSession)
+    }
 }
 
 public struct WidgetEventItemDTO: Codable, Identifiable {
     public let id: String
-    public let type: String // "meal" | "sport"
+    public let kind: String?
+    public let type: String?
     public let title: String
-    public let targetDate: String // YYYY-MM-DD
+    public let date: String?
+    public let targetDate: String?
     public let startMinute: Int?
     public let endMinute: Int?
+    public let startIso: String?
     public let scheduledIso: String?
     public let subtitle: String?
     public let deepLink: String
+
+    public var eventType: String {
+        return kind ?? type ?? "meal"
+    }
+
+    public var eventDate: String {
+        return date ?? targetDate ?? ""
+    }
+
+    public var isoString: String? {
+        return startIso ?? scheduledIso
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case kind
+        case type
+        case title
+        case date
+        case targetDate
+        case startMinute
+        case endMinute
+        case startIso
+        case scheduledIso
+        case subtitle
+        case deepLink
+    }
 }
 
 public struct CookingSessionDTO: Codable {
     public let sessionId: String
-    public let recipeId: String
+    public let recipeId: String?
     public let recipeTitle: String
     public let steps: [String]
     public let completedStepIndices: [Int]
     public let currentStepIndex: Int
     public let startedAtIso: String
-    public let isCompleted: boolean_wrapper? // In JSON might be isCompleted: Bool
     public let isCompletedBool: Bool
     
     enum CodingKeys: String, CodingKey {
@@ -115,6 +175,7 @@ public struct CookingSessionDTO: Codable {
         case steps
         case completedStepIndices
         case currentStepIndex
+        case startedAt
         case startedAtIso
         case isCompleted
     }
@@ -122,20 +183,21 @@ public struct CookingSessionDTO: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         sessionId = try container.decode(String.self, forKey: .sessionId)
-        recipeId = try container.decode(String.self, forKey: .recipeId)
+        recipeId = try container.decodeIfPresent(String.self, forKey: .recipeId)
         recipeTitle = try container.decode(String.self, forKey: .recipeTitle)
         steps = try container.decode([String].self, forKey: .steps)
         completedStepIndices = try container.decode([Int].self, forKey: .completedStepIndices)
         currentStepIndex = try container.decode(Int.self, forKey: .currentStepIndex)
-        startedAtIso = try container.decode(String.self, forKey: .startedAtIso)
+        startedAtIso = try container.decodeIfPresent(String.self, forKey: .startedAtIso)
+            ?? container.decodeIfPresent(String.self, forKey: .startedAt)
+            ?? ""
         isCompletedBool = try container.decodeIfPresent(Bool.self, forKey: .isCompleted) ?? false
-        isCompleted = nil
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(sessionId, forKey: .sessionId)
-        try container.encode(recipeId, forKey: .recipeId)
+        try container.encodeIfPresent(recipeId, forKey: .recipeId)
         try container.encode(recipeTitle, forKey: .recipeTitle)
         try container.encode(steps, forKey: .steps)
         try container.encode(completedStepIndices, forKey: .completedStepIndices)
@@ -146,7 +208,7 @@ public struct CookingSessionDTO: Codable {
     
     public init(
         sessionId: String,
-        recipeId: String,
+        recipeId: String?,
         recipeTitle: String,
         steps: [String],
         completedStepIndices: [Int],
@@ -162,8 +224,5 @@ public struct CookingSessionDTO: Codable {
         self.currentStepIndex = currentStepIndex
         self.startedAtIso = startedAtIso
         self.isCompletedBool = isCompleted
-        self.isCompleted = nil
     }
 }
-
-public struct boolean_wrapper: Codable {}

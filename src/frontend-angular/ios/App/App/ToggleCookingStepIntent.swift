@@ -28,13 +28,15 @@ public struct ToggleCookingStepIntent: AppIntent, LiveActivityIntent {
         if completed.contains(stepIndex) {
             completed.remove(stepIndex)
         } else {
-            completed.insert(stepIndex)
+            if session.steps.indices.contains(stepIndex) {
+                completed.insert(stepIndex)
+            }
         }
         
-        let completedArray = Array(completed).sorted()
+        let completedArray = Array(completed).filter { session.steps.indices.contains($0) }.sorted()
         let steps = session.steps
-        let nextIndex = steps.indices.first(where: { !completed.contains($0) }) ?? (steps.count - 1)
-        let isCompleted = !steps.isEmpty && completed.count == steps.count
+        let nextIndex = steps.indices.first(where: { !completed.contains($0) }) ?? max(0, steps.count - 1)
+        let isCompleted = !steps.isEmpty && completedArray.count == steps.count
         
         let updatedSession = CookingSessionDTO(
             sessionId: session.sessionId,
@@ -49,15 +51,17 @@ public struct ToggleCookingStepIntent: AppIntent, LiveActivityIntent {
         
         try? SharedAppGroup.saveCookingSession(session: updatedSession)
         
-        // Update Live Activity if running
+        // Update Live Activity if running with bounded counters
+        let completedCount = max(0, min(completedArray.count, steps.count))
+        let totalCount = steps.count
+        let progress = totalCount > 0 ? Double(completedCount) / Double(totalCount) : 1.0
         let currentStepTitle = steps.indices.contains(nextIndex) ? steps[nextIndex] : "Recette terminée !"
-        let progress = steps.isEmpty ? 1.0 : Double(completedArray.count) / Double(steps.count)
         
         let contentState = CookingActivityAttributes.ContentState(
             currentStepIndex: nextIndex,
             currentStepTitle: currentStepTitle,
-            completedCount: completedArray.count,
-            totalCount: steps.count,
+            completedCount: completedCount,
+            totalCount: totalCount,
             isCompleted: isCompleted,
             progressPercent: progress
         )

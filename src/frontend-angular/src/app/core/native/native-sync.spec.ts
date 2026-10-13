@@ -112,3 +112,45 @@ describe('local reminders hashNotificationId', () => {
     assert.ok(id1 < 2147483647)
   })
 })
+
+describe('untimed events and notifications exclusion', () => {
+  it('preserves null startMinute without inventing fake hours or ISO timestamps', () => {
+    const mealWithoutTime: ManualMeal = {
+      id: 'm-untimed', dayPlanId: 'd1', name: 'Déjeuner informel', startMinute: null, endMinute: null,
+      recipeLines: [], nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, isComplete: false, warnings: [] },
+    }
+    const day: ManualDay = {
+      id: 'd1', date: '2026-10-15', meals: [mealWithoutTime], sports: [],
+      nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, isComplete: false, warnings: [] },
+    }
+    const week: ManualWeek = {
+      id: 'w1', startsOn: '2026-10-12', timeZoneId: 'Europe/Paris', isManual: true, days: [day],
+    }
+
+    const events = projectEventsFromWeeks([week], new Date('2026-10-15T00:00:00Z'), 'Europe/Paris')
+    assert.equal(events.length, 1)
+    const event = events[0]!
+    assert.equal(event.startMinute, null)
+    assert.equal(event.startIso, null)
+    assert.equal(event.endMinute, null)
+    assert.equal(event.endIso, null)
+  })
+})
+
+describe('native URL and deep link resolution', () => {
+  it('extracts path and safe redirect from native callback URLs', () => {
+    const authUrl = new URL('lifeos://auth/callback?code=oauth123&redirect=%2Fplanning')
+    assert.equal(authUrl.searchParams.get('code'), 'oauth123')
+    assert.equal(authUrl.searchParams.get('redirect'), '/planning')
+
+    const planningDeepLink = 'lifeos:///planning?date=2026-10-15'
+    const matchPlanning = planningDeepLink.match(/^lifeos:\/\/?\/?(.*)$/)
+    assert.ok(matchPlanning)
+    assert.equal('/' + matchPlanning[1], '/planning?date=2026-10-15')
+
+    const recipesDeepLink = 'lifeos:///recipes'
+    const matchRecipes = recipesDeepLink.match(/^lifeos:\/\/?\/?(.*)$/)
+    assert.ok(matchRecipes)
+    assert.equal('/' + matchRecipes[1], '/recipes')
+  })
+})

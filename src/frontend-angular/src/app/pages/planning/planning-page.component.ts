@@ -390,6 +390,11 @@ export class PlanningPageComponent implements OnInit {
 
   private async refresh(): Promise<void> {
     const week = this.week()
-    if (week) this.setWeek(await firstValueFrom(this.api.get<ManualWeek>(`/manual-planner/weeks/${week.id}`)))
+    if (week) {
+      this.setWeek(await firstValueFrom(this.api.get<ManualWeek>(`/manual-planner/weeks/${week.id}`)))
+    } else {
+      await this.loadWeek()
+      void this.nativeSync.syncNativeState()
+    }
   }
 }

@@ -13,13 +13,21 @@ export function buildLoginRedirectPath(returnPath: string): string {
   return `/login?redirect=${encodeURIComponent(validatedReturnPath(returnPath))}`
 }
 
-export async function startGoogleSignIn(auth: AuthClient, redirectTo: string): Promise<void> {
+export async function startGoogleSignIn(
+  auth: AuthClient,
+  redirectTo: string,
+  openUrl?: (url: string) => Promise<void>,
+): Promise<void> {
+  const skipBrowserRedirect = Boolean(openUrl)
   const { data, error } = await auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo, skipBrowserRedirect: false },
+    options: { redirectTo, skipBrowserRedirect },
   })
   if (error) throw error
   if (!data.url) throw new Error('Google n’a pas fourni de page de connexion. Réessayez ou utilisez le lien par e-mail.')
+  if (openUrl) {
+    await openUrl(data.url)
+  }
 }
 
 function callbackErrorMessage(code: string | null, description: string | null): string {

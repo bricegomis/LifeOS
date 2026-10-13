@@ -16,14 +16,14 @@ LifeOS V1 pour iPhone combine le frontend Angular 22 avec le conteneur natif **C
 |   - Synchronisation planning (2 semaines glissantes)                    |
 |   - Rappels locaux (@capacitor/local-notifications)                     |
 |   - Gestionnaire de session cuisine (découpage déterministe)             |
-|   - Auth Supabase (PKCE, Universal Links / custom URL scheme)            |
+|   - Auth Supabase (PKCE, Custom URL Scheme lifeos://)                    |
 +--------------------------------------------------------------------------+
        |
        | Capacitor Plugin: LifeosNativeBridge
        v
 +--------------------------------------------------------------------------+
 |  App Group partagé (group.fr.lifeos.app)                                 |
-|   - widget_snapshot.json (atomique, zero JWT, pas de réseau widget)      |
+|   - widget_snapshot.json (atomique, zero JWT, identité foyer/user)       |
 |   - cooking_session.json (session active, progression, concurrence)      |
 +--------------------------------------------------------------------------+
        |
@@ -44,7 +44,8 @@ LifeOS V1 pour iPhone combine le frontend Angular 22 avec le conteneur natif **C
 2. **Aucun accès réseau dans l'extension** : Le widget lit uniquement les données projetées par l'application principale.
 3. **Une seule session de cuisine active** : Remplacement contrôlé avec boîte de dialogue de confirmation si une session existe déjà.
 4. **App Intents autonomes (iOS 17+)** : `ToggleCookingStepIntent` permet de cocher ou décocher une étape de cuisine directement depuis le widget ou la Live Activity, sans avoir à lancer Angular.
-5. **Rappels locaux opt-in** : Planifiés via `@capacitor/local-notifications`, calculés avec respect des fuseaux horaires (IANA) et du passage à l'heure d'été/d'hiver, plafonnés aux 50 prochaines notifications iOS.
+5. **Rappels locaux opt-in** : Planifiés via `@capacitor/local-notifications`, calculés avec respect des fuseaux horaires (IANA) et du passage à l'heure d'été/d'hiver, plafonnés aux 50 prochaines notifications iOS. Événements sans horaire exclus des rappels.
+6. **Isolation d'identité stricte** : Le snapshot est verrouillé sur l'identifiant utilisateur Supabase (`userId`) et le foyer réel (`householdId`). Toute divergence détectée ou déconnexion déclenche une purge immédiate.
 
 ---
 
@@ -59,7 +60,16 @@ LifeOS V1 pour iPhone combine le frontend Angular 22 avec le conteneur natif **C
 - **Bundle ID Application** : `fr.lifeos.app`
 - **Bundle ID Widget Extension** : `fr.lifeos.app.widget`
 - **App Group** : `group.fr.lifeos.app` (activé sur les deux cibles via `App.entitlements`)
-- **URL Scheme** : `lifeos://` (configuré dans `Info.plist` pour les deep links vers `/planning` et `/recipes`)
+- **Custom URL Scheme** : `lifeos://` (enregistré dans `Info.plist` sous `CFBundleURLSchemes`). La V1 utilise le scheme personnalisé et non les Universal Links (les Universal Links nécessitent un fichier `apple-app-site-association` hébergé sur un domaine public HTTPS avec un Team ID Apple actif).
+
+### Configuration Supabase requise
+Dans le tableau de bord Supabase du projet :
+1. Aller dans **Authentication > URL Configuration**.
+2. Dans **Redirect URLs**, ajouter :
+   ```
+   lifeos://auth/callback
+   ```
+3. L'authentification utilise le flux PKCE avec ouverture via le navigateur système (`@capacitor/browser`). Lors de la redirection vers `lifeos://auth/callback?code=...`, l'application intercepte l'URL, ferme la fenêtre du navigateur, échange le code PKCE contre la session et navigue vers l'écran cible validé.
 
 ---
 
@@ -119,10 +129,10 @@ xcodebuild -workspace ios/App/App.xcworkspace \
 4. **App Intent natif** : Tap sur la case à cocher dans le widget ou la Live Activity invoque `ToggleCookingStepIntent`, mettant à jour `cooking_session.json` de façon atomique et rafraîchissant les timelines WidgetKit sans ouvrir l'application.
 
 ### 4.2 Prochain événement (Repas / Sport)
-- Calcule les événements sur un horizon de 2 semaines glissantes.
+- Calcule les événements sur un horizon de 2 semaines glissantes sans création artificielle de semaine côté serveur.
 - Convertit les dates civiles et minutes de début en timestamps ISO avec prise en compte du fuseau horaire de la semaine (`ManualWeek.timeZoneId`).
-- Si aucun horaire n'est défini pour un événement, celui-ci est placé en fin de journée (23:59).
-- Le widget d'écran verrouillé (rectangulaire, circulaire, en ligne) et d'écran d'accueil affiche l'heure, l'icône et le nom, avec deep link vers le planning.
+- **Gestion stricte des événements sans horaire** : Aucune heure inventée (startMinute et startIso sont `null`). Ils ne génèrent aucun rappel de notification locale. Sur les widgets (écran d'accueil et écran verrouillé), ils sont affichés avec la mention explicite `"Sans horaire"` ou `"—"` et classés après les événements programmés de la journée.
+- Les widgets ouvrent l'application via des deep links directs : `lifeos:///planning` (avec paramètre de date `?date=YYYY-MM-DD` si applicable), validés pour n'autoriser que les routes internes légitimes.
 
 ### 4.3 Rappels locaux
 - Configurables dans la page **Paramètres** (`/settings`).
@@ -130,8 +140,12 @@ xcodebuild -workspace ios/App/App.xcworkspace \
 - Choix d'avance : 0 min, 5 min, 15 min, 30 min.
 - Identifiants de notifications stables générés par hachage 32-bit (`hashNotificationId`).
 - Reprogrammation idempotente à chaque modification du planning ou changement d'avance.
+- Les événements passés ou sans horaire sont systématiquement ignorés pour les rappels.
 
-### 4.4 Sécurité et Déconnexion
+### 4.4 Synchronisation et Résilience
+- Synchronisation automatique au premier affichage, lors du retour au premier plan (`appStateChange: isActive`), et après chaque mutation du planning (création, modification, suppression d'un repas ou d'une séance).
+- **Résilience hors-ligne** : Si l'API est indisponible ou le réseau inaccessible, le cache local n'est **jamais** écrasé par un snapshot vide. Le statut passe en état `stale` (ou `error`), visible dans les réglages avec la date de la dernière synchronisation réussie et le libellé de l'incident.
+- **Isolation d'identité** : Le snapshot contient l'identifiant réel de l'utilisateur (`userId`) et du foyer (`householdId` résolu via `/api/households/current`). Au démarrage et à chaque synchronisation, toute divergence d'identité entraîne une purge complète des données du foyer précédent.
 - Lors de la déconnexion (`AuthService.signOut`), `NativeSyncService.purgeAll()` est exécuté :
   - Annulation de toutes les notifications locales en attente.
   - Suppression de `widget_snapshot.json` et `cooking_session.json`.

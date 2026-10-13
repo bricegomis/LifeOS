@@ -112,6 +112,34 @@ import type { ReminderPreferences } from '@/app/core/native/native.models'
       </section>
 
       <section class="surface-card">
+        <h2>Synchronisation iPhone & Widgets</h2>
+        <p>Les widgets et la Live Activity utilisent un cache local synchronisé avec votre foyer. Si le planning est modifié sur un autre appareil, réouvrez LifeOS sur cet iPhone ou cliquez sur Synchroniser.</p>
+        <dl>
+          <dt>État de synchronisation</dt>
+          <dd>
+            @switch (nativeSync.syncStatus()) {
+              @case ('synced') { <span style="color: green; font-weight: bold;">À jour</span> }
+              @case ('syncing') { <span>Synchronisation en cours…</span> }
+              @case ('stale') { <span style="color: orange; font-weight: bold;">Données en cache (réseau indisponible)</span> }
+              @case ('error') { <span style="color: #8f2017; font-weight: bold;">Erreur de synchronisation</span> }
+              @default { <span>En attente</span> }
+            }
+          </dd>
+          @if (nativeSync.lastSyncError()) {
+            <dt>Dernier incident</dt>
+            <dd style="color: #8f2017;">{{ nativeSync.lastSyncError() }}</dd>
+          }
+          @if (nativeSync.lastSyncedAt()) {
+            <dt>Dernière synchronisation</dt>
+            <dd>{{ nativeSync.lastSyncedAt() }}</dd>
+          }
+        </dl>
+        <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy() || nativeSync.syncStatus() === 'syncing'" (click)="triggerNativeSync()">
+          Synchroniser maintenant
+        </button>
+      </section>
+
+      <section class="surface-card">
         <h2>Planifier sans configuration</h2>
         <p>Les portions se règlent séparément pour chaque ligne d’un repas. Les règles et la génération ne pilotent pas le semainier manuel.</p>
         <a class="lifeos-button" routerLink="/planning">Ouvrir le semainier</a>
@@ -136,7 +164,7 @@ export class SettingsPageComponent implements OnInit {
   private readonly api = inject(LifeosApiService)
   readonly auth = inject(AuthService)
   private readonly reminders = inject(LocalRemindersService)
-  private readonly nativeSync = inject(NativeSyncService)
+  readonly nativeSync = inject(NativeSyncService)
   readonly apiUrl = apiBaseUrl
   readonly buildInfo = buildInfo
   readonly profiles = signal<MemberProfileDto[]>([])
@@ -154,6 +182,10 @@ export class SettingsPageComponent implements OnInit {
   ngOnInit(): void {
     void this.load()
     this.reminderPrefs = this.reminders.getPreferences()
+  }
+
+  async triggerNativeSync(): Promise<void> {
+    await this.nativeSync.syncNativeState()
   }
 
   async saveReminders(): Promise<void> {

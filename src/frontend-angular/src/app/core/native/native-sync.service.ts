@@ -1,7 +1,7 @@
-import { Injectable, inject } from '@angular/core'
+import { Injectable, inject, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { App as CapApp } from '@capacitor/app'
-import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { AuthService } from '@/app/core/auth/auth.service'
 import type { ManualWeek, ManualWeekSummary } from '@/app/core/api/manual-planner.models'
 import { monday, isoDate, addDays } from '@/app/pages/planning/calendar'
@@ -11,6 +11,8 @@ import { LifeosNativeBridge } from './native-bridge'
 import { LocalRemindersService } from './local-reminders.service'
 import { CookingSessionService } from './cooking-session.service'
 
+const LAST_IDENTITY_KEY = 'lifeos.native.activeIdentity'
+
 @Injectable({ providedIn: 'root' })
 export class NativeSyncService {
   private readonly api = inject(LifeosApiService)
@@ -18,18 +20,34 @@ export class NativeSyncService {
   private readonly reminders = inject(LocalRemindersService)
   private readonly cooking = inject(CookingSessionService)
 
+  readonly syncStatus = signal<'idle' | 'syncing' | 'synced' | 'stale' | 'error'>('idle')
+  readonly lastSyncError = signal<string | null>(null)
+  readonly lastSyncedAt = signal<string | null>(null)
+
   private isSyncing = false
 
   initListeners(): void {
     try {
       CapApp.addListener('appStateChange', (state) => {
         if (state.isActive) {
+          void this.cooking.restoreSession()
           void this.syncNativeState()
         }
       })
     } catch {
       // not running in native app
     }
+  }
+
+  async resolveHouseholdId(): Promise<string> {
+    try {
+      const household = await firstValueFrom(this.api.get<{ id: string }>('/households/current'))
+      if (household?.id) return household.id
+    } catch {
+      // fallback if household query fails
+    }
+    const user = this.auth.user()
+    return user ? `user_${user.id}` : 'anonymous'
   }
 
   /**
@@ -44,11 +62,28 @@ export class NativeSyncService {
     }
 
     this.isSyncing = true
+    this.syncStatus.set('syncing')
+
     try {
+      const householdId = await this.resolveHouseholdId()
+      const identityKey = `${user.id}:${householdId}`
+
+      // Check for identity or household change
+      if (typeof localStorage !== 'undefined') {
+        const lastIdentity = localStorage.getItem(LAST_IDENTITY_KEY)
+        if (lastIdentity && lastIdentity !== identityKey) {
+          await this.purgeAll()
+        }
+        localStorage.setItem(LAST_IDENTITY_KEY, identityKey)
+      }
+
       // Fetch week summaries
       const summaries = await firstValueFrom(this.api.get<ManualWeekSummary[]>('/manual-planner/weeks'))
       if (!summaries || summaries.length === 0) {
-        await this.writeEmptySnapshot(user.id)
+        await this.writeEmptySnapshot(user.id, householdId)
+        this.syncStatus.set('synced')
+        this.lastSyncError.set(null)
+        this.lastSyncedAt.set(new Date().toISOString())
         return
       }
 
@@ -76,7 +111,7 @@ export class NativeSyncService {
 
       const snapshot: AppGroupWidgetSnapshot = {
         version: 1,
-        householdId: 'current',
+        householdId,
         userId: user.id,
         generatedAt: new Date().toISOString(),
         timeZoneId: tz,
@@ -97,14 +132,26 @@ export class NativeSyncService {
 
       // Reschedule reminders
       await this.reminders.rescheduleNotifications(events)
-    } catch {
-      // sync error
+
+      this.syncStatus.set('synced')
+      this.lastSyncError.set(null)
+      this.lastSyncedAt.set(new Date().toISOString())
+    } catch (error) {
+      this.lastSyncError.set(apiErrorMessage(error))
+      this.syncStatus.set(this.lastSyncedAt() ? 'stale' : 'error')
     } finally {
       this.isSyncing = false
     }
   }
 
   async purgeAll(): Promise<void> {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(LAST_IDENTITY_KEY)
+    }
+    this.syncStatus.set('idle')
+    this.lastSyncError.set(null)
+    this.lastSyncedAt.set(null)
+
     try {
       await LifeosNativeBridge.clearWidgetSnapshot()
       await LifeosNativeBridge.clearCookingSession()
@@ -112,14 +159,14 @@ export class NativeSyncService {
       await LifeosNativeBridge.reloadWidgetTimelines()
       await this.reminders.cancelAll()
     } catch {
-      // ignore
+      // ignore bridge errors during purge
     }
   }
 
-  private async writeEmptySnapshot(userId: string): Promise<void> {
+  private async writeEmptySnapshot(userId: string, householdId: string): Promise<void> {
     const snapshot: AppGroupWidgetSnapshot = {
       version: 1,
-      householdId: 'current',
+      householdId,
       userId,
       generatedAt: new Date().toISOString(),
       timeZoneId: 'Europe/Paris',

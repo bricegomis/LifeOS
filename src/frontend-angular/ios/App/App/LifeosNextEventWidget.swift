@@ -31,7 +31,7 @@ struct LifeosTimelineProvider: TimelineProvider {
             let fallbackFormatter = ISO8601DateFormatter()
             
             for event in events {
-                if let iso = event.scheduledIso,
+                if let iso = event.isoString,
                    let eventDate = isoFormatter.date(from: iso) ?? fallbackFormatter.date(from: iso),
                    eventDate > currentDate {
                     entries.append(LifeosWidgetEntry(date: eventDate, snapshot: snapshot, activeCooking: cooking))
@@ -65,14 +65,30 @@ struct LifeosNextEventWidgetEntryView: View {
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let fallback = ISO8601DateFormatter()
         
-        return events.first(where: { event in
-            guard let iso = event.scheduledIso,
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayStr = dateFormatter.string(from: now)
+        
+        // 1. Look for upcoming timed events (scheduledIso/startIso >= now - 15min)
+        let timedEvents = events.filter { $0.isoString != nil }
+        if let upcomingTimed = timedEvents.first(where: { event in
+            guard let iso = event.isoString,
                   let eventDate = isoFormatter.date(from: iso) ?? fallback.date(from: iso) else {
-                return true // All day event or event without time
+                return false
             }
-            // Event is upcoming or ending within 15 mins
             return eventDate >= now.addingTimeInterval(-900)
-        }) ?? events.first
+        }) {
+            return upcomingTimed
+        }
+        
+        // 2. Otherwise look for today's or future untimed events (startMinute == nil, eventDate >= todayStr)
+        let untimedEvents = events.filter { $0.startMinute == nil && $0.eventDate >= todayStr }
+        if let upcomingUntimed = untimedEvents.first {
+            return upcomingUntimed
+        }
+        
+        // 3. Fallback to first future event if any
+        return events.first(where: { $0.eventDate >= todayStr })
     }
 
     var body: some View {
@@ -149,10 +165,10 @@ struct LifeosNextEventWidgetEntryView: View {
     private func eventView(_ event: WidgetEventItemDTO) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Label(event.type == "sport" ? "Sport" : "Repas", systemImage: event.type == "sport" ? "figure.run" : "fork.knife")
+                Label(event.eventType == "sport" ? "Sport" : "Repas", systemImage: event.eventType == "sport" ? "figure.run" : "fork.knife")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundStyle(event.type == "sport" ? .blue : .green)
+                    .foregroundStyle(event.eventType == "sport" ? .blue : .green)
                 Spacer()
                 if let startMinute = event.startMinute {
                     let h = startMinute / 60
@@ -160,6 +176,10 @@ struct LifeosNextEventWidgetEntryView: View {
                     Text(String(format: "%02dh%02d", h, m))
                         .font(.caption)
                         .fontWeight(.semibold)
+                } else {
+                    Text("Sans horaire")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -176,7 +196,7 @@ struct LifeosNextEventWidgetEntryView: View {
             
             Spacer(minLength: 0)
             
-            Text(event.targetDate)
+            Text(event.eventDate)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -210,10 +230,14 @@ struct LifeosNextEventWidgetEntryView: View {
         if let event = nextEvent {
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Image(systemName: event.type == "sport" ? "figure.run" : "fork.knife")
+                    Image(systemName: event.eventType == "sport" ? "figure.run" : "fork.knife")
                     if let start = event.startMinute {
                         Text(String(format: "%02dh%02d", start / 60, start % 60))
                             .fontWeight(.bold)
+                    } else {
+                        Text("Sans horaire")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .font(.caption)
@@ -237,8 +261,12 @@ struct LifeosNextEventWidgetEntryView: View {
     @ViewBuilder
     private var lockScreenInlineView: some View {
         if let event = nextEvent {
-            let timeStr = event.startMinute != nil ? String(format: "%02dh%02d ", event.startMinute! / 60, event.startMinute! % 60) : ""
-            Text("\(timeStr)\(event.title)")
+            if let start = event.startMinute {
+                let timeStr = String(format: "%02dh%02d ", start / 60, start % 60)
+                Text("\(timeStr)\(event.title)")
+            } else {
+                Text("\(event.title) (Sans horaire)")
+            }
         } else {
             Text("LifeOS à jour")
         }
@@ -248,9 +276,12 @@ struct LifeosNextEventWidgetEntryView: View {
     private var lockScreenCircularView: some View {
         if let event = nextEvent {
             VStack(spacing: 2) {
-                Image(systemName: event.type == "sport" ? "figure.run" : "fork.knife")
+                Image(systemName: event.eventType == "sport" ? "figure.run" : "fork.knife")
                 if let start = event.startMinute {
                     Text(String(format: "%02d:%02d", start / 60, start % 60))
+                        .font(.system(size: 9))
+                } else {
+                    Text("—")
                         .font(.system(size: 9))
                 }
             }
