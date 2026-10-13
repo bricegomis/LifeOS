@@ -18,15 +18,20 @@ import {
 } from './event-draft'
 import type { EventDraft, MealLineDraft } from './event-draft'
 
+import { CookingSessionBannerComponent } from '@/app/shared/cooking/cooking-session-banner.component'
+import { CookingSessionDialogComponent } from '@/app/shared/cooking/cooking-session-dialog.component'
+import { NativeSyncService } from '@/app/core/native/native-sync.service'
+
 @Component({
   selector: 'app-planning-page',
   standalone: true,
-  imports: [FormsModule, LifeosDialogComponent, HouseholdReviewsComponent],
+  imports: [FormsModule, LifeosDialogComponent, HouseholdReviewsComponent, CookingSessionBannerComponent, CookingSessionDialogComponent],
   templateUrl: './planning-page.component.html',
   styleUrl: './planning-page.component.css',
 })
 export class PlanningPageComponent implements OnInit {
   private readonly api = inject(LifeosApiService)
+  private readonly nativeSync = inject(NativeSyncService)
   @Input() todayOnly = false
   readonly week = signal<ManualWeek | null>(null)
   readonly summaries = signal<ManualWeekSummary[]>([])
@@ -49,6 +54,17 @@ export class PlanningPageComponent implements OnInit {
   readonly time = timeLabel
   startDate = monday()
   selectedDate = isoDate()
+  cookingDialogOpen = signal(false)
+  selectedCookingLine = signal<{ title: string; recipeId: string | null; instructions: string | null } | null>(null)
+
+  startCookingLine(line: { name: string | null; recipeId: string | null; instructions: string | null }): void {
+    this.selectedCookingLine.set({
+      title: line.name || 'Recette',
+      recipeId: line.recipeId,
+      instructions: line.instructions,
+    })
+    this.cookingDialogOpen.set(true)
+  }
   timeZone = 'Europe/Paris'
   catalogSearch = ''
   destinationWeekId = ''
@@ -369,10 +385,16 @@ export class PlanningPageComponent implements OnInit {
   private setWeek(week: ManualWeek): void {
     this.week.set(week)
     this.summaries.update(items => [week, ...items.filter(item => item.id !== week.id)])
+    void this.nativeSync.syncNativeState()
   }
 
   private async refresh(): Promise<void> {
     const week = this.week()
-    if (week) this.setWeek(await firstValueFrom(this.api.get<ManualWeek>(`/manual-planner/weeks/${week.id}`)))
+    if (week) {
+      this.setWeek(await firstValueFrom(this.api.get<ManualWeek>(`/manual-planner/weeks/${week.id}`)))
+    } else {
+      await this.loadWeek()
+      void this.nativeSync.syncNativeState()
+    }
   }
 }

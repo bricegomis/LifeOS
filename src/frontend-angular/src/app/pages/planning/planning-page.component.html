@@ -1,4 +1,5 @@
 <section class="page-stack manual-planner">
+  <app-cooking-session-banner />
   <header class="page-hero">
     <div><h1>{{ todayOnly ? 'Aujourd’hui' : 'Semainier' }}</h1><p>Composez chaque repas avec des recettes et des préparations ponctuelles. Aucun menu généré.</p></div>
     @if (week()) {
@@ -97,6 +98,9 @@
                 <article class="planned-line-summary">
                   <h4>{{ line.name || 'Préparation ponctuelle' }} · {{ number(line.plannedServings) }} portion{{ line.plannedServings === 1 ? '' : 's' }}</h4>
                   @if (line.instructions) { <p>{{ line.instructions }}</p> }
+                  <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="startCookingLine(line)">
+                    <i class="pi pi-play" aria-hidden="true"></i> Cuisiner cette préparation
+                  </button>
                   <ul>
                     @for (ingredient of line.ingredients; track ingredient.id) {
                       <li>{{ ingredient.name }} : {{ number(ingredient.requiredQuantity) }} {{ ingredient.unit }} à préparer</li>
@@ -264,3 +268,14 @@
     <button dialogExtraActions class="lifeos-button lifeos-button-secondary danger" type="button" [disabled]="busy()" (click)="remove()">Supprimer</button>
   }
 </app-lifeos-dialog>
+
+@if (selectedCookingLine(); as line) {
+  <app-cooking-session-dialog
+    [open]="cookingDialogOpen()"
+    [recipeTitle]="line.title"
+    [recipeId]="line.recipeId"
+    [instructions]="line.instructions"
+    (dismissed)="cookingDialogOpen.set(false)"
+    (sessionStarted)="cookingDialogOpen.set(false)"
+  />
+}

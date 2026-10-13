@@ -1,6 +1,8 @@
 import { Component, inject } from '@angular/core'
 import { RouterOutlet } from '@angular/router'
 import { AuthService } from '@/app/core/auth/auth.service'
+import { DeepLinkService } from '@/app/core/native/deep-link.service'
+import { NativeSyncService } from '@/app/core/native/native-sync.service'
 
 @Component({
   selector: 'app-root',
@@ -10,8 +12,12 @@ import { AuthService } from '@/app/core/auth/auth.service'
 })
 export class AppComponent {
   private readonly auth = inject(AuthService)
+  private readonly deepLink = inject(DeepLinkService)
+  private readonly nativeSync = inject(NativeSyncService)
 
   constructor() {
     void this.auth.initialize()
+    this.deepLink.initListeners()
+    this.nativeSync.initListeners()
   }
 }

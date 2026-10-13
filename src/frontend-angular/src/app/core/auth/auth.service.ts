@@ -1,12 +1,15 @@
 import { computed, Injectable, signal } from '@angular/core'
 import type { Session, User } from '@supabase/supabase-js'
-import { buildLoginRedirectPath, restoreAuthSession, startGoogleSignIn } from '@/app/core/auth/auth-flow'
+import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
+import { buildLoginRedirectPath, restoreAuthSession, startGoogleSignIn, validatedReturnPath } from '@/app/core/auth/auth-flow'
 import {
   buildSupabaseRedirectUrl,
   initialMagicLinkCallback,
   isSupabaseConfigured,
   supabase,
 } from '@/app/core/auth/supabase-client'
+import { readMagicLinkCallback } from '@/app/core/auth/magic-link-callback'
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -74,7 +77,45 @@ export class AuthService {
     this.error.set(null)
     const redirectTo = buildSupabaseRedirectUrl(buildLoginRedirectPath(returnPath))
     if (!redirectTo) throw new Error('Impossible de déterminer l’URL de retour de connexion.')
-    await startGoogleSignIn(supabase.auth, redirectTo)
+
+    if (Capacitor.isNativePlatform()) {
+      await startGoogleSignIn(supabase.auth, redirectTo, async (url: string) => {
+        await Browser.open({ url, windowName: '_system' })
+      })
+    } else {
+      await startGoogleSignIn(supabase.auth, redirectTo)
+    }
+  }
+
+  async handleNativeCallback(callbackUrl: string): Promise<string> {
+    if (!supabase) throw new Error('Supabase n’est pas configuré.')
+
+    try {
+      await Browser.close()
+    } catch {
+      // browser might not be open
+    }
+
+    const callback = readMagicLinkCallback(callbackUrl)
+    let redirectPath = '/'
+    try {
+      const parsedUrl = new URL(callbackUrl)
+      const redirectParam = parsedUrl.searchParams.get('redirect')
+      if (redirectParam) {
+        redirectPath = validatedReturnPath(redirectParam)
+      }
+    } catch {
+      // fallback
+    }
+
+    try {
+      const session = await restoreAuthSession(supabase.auth, callback)
+      this.session.set(session)
+      return redirectPath
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Connexion impossible.')
+      throw error
+    }
   }
 
   async signOut(): Promise<void> {

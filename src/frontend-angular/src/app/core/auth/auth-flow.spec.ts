@@ -63,6 +63,20 @@ describe('Google OAuth launch', () => {
     }))
     await assert.rejects(startGoogleSignIn(auth, 'https://lifeos.example/'), /page de connexion/)
   })
+
+  it('uses system browser openUrl callback on native platforms with skipBrowserRedirect', async () => {
+    const auth = authClient()
+    const launch = mock.method(auth, 'signInWithOAuth')
+    let openedUrl: string | null = null
+    const openUrl = async (url: string) => { openedUrl = url }
+    const redirectTo = 'lifeos://auth/callback?redirect=%2Fplanning'
+    await startGoogleSignIn(auth, redirectTo, openUrl)
+    assert.deepEqual(launch.mock.calls[0]?.arguments, [{
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true },
+    }])
+    assert.equal(openedUrl, 'https://accounts.google.com/')
+  })
 })
 
 describe('auth callback and restoration', () => {

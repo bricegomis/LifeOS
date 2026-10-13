@@ -15,10 +15,13 @@ import {
   HouseholdGroupDto,
 } from '@/app/core/api/api.models'
 
+import { CookingSessionBannerComponent } from '@/app/shared/cooking/cooking-session-banner.component'
+import { CookingSessionDialogComponent } from '@/app/shared/cooking/cooking-session-dialog.component'
+
 @Component({
   selector: 'app-recipes-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, LifeosDialogComponent, HouseholdReviewsComponent],
+  imports: [FormsModule, RouterLink, LifeosDialogComponent, HouseholdReviewsComponent, CookingSessionBannerComponent, CookingSessionDialogComponent],
   templateUrl: './recipes-page.component.html',
   styles: [`
     .recipes-page { gap: 28px; }
@@ -87,6 +90,11 @@ export class RecipesPageComponent implements OnInit {
   readonly ingredientFoodItemId = signal('')
   readonly ingredientQuantity = signal(1)
   readonly ingredientUnit = signal('')
+  readonly cookingDialogOpen = signal(false)
+
+  startCooking(recipe: RecipeDto): void {
+    this.cookingDialogOpen.set(true)
+  }
 
   ngOnInit(): void {
     this.loadRecipes()

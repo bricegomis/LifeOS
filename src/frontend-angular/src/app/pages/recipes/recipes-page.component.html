@@ -1,4 +1,5 @@
 <section class="page-stack recipes-page">
+  <app-cooking-session-banner />
   <header class="page-hero">
     <div>
       <h1>Recettes</h1>
@@ -51,6 +52,7 @@
             @if (recipe.instructions) { <p class="recipe-empty">{{ recipe.instructions }}</p> }
           </div>
           <div class="recipe-form-actions">
+            <button class="lifeos-button" type="button" [disabled]="saving()" (click)="startCooking(recipe)"><i class="pi pi-play" aria-hidden="true"></i> Cuisiner</button>
             <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="openRecipeDialog(recipe)">Modifier</button>
             <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="deleteRecipe()">Archiver</button>
           </div>
@@ -177,3 +179,14 @@
     Retirer l’ingrédient
   </button>
 </app-lifeos-dialog>
+
+@if (selectedRecipe(); as recipe) {
+  <app-cooking-session-dialog
+    [open]="cookingDialogOpen()"
+    [recipeTitle]="recipe.name"
+    [recipeId]="recipe.id"
+    [instructions]="recipe.instructions"
+    (dismissed)="cookingDialogOpen.set(false)"
+    (sessionStarted)="cookingDialogOpen.set(false)"
+  />
+}
