@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using LifeOS.Domain.Common;
 using LifeOS.Domain.Products;
 
@@ -15,6 +16,14 @@ public sealed class Receipt : Entity
     public string StoreName { get; private set; } = "";
     public Guid? StoreId { get; private set; }
     public DateOnly? Date { get; private set; }
+    public DateTimeOffset? PurchasedAt { get; private set; }
+    public string Status { get; private set; } = "draft";
+    [JsonIgnore]
+    public string? ImagePath { get; private set; }
+    public bool HasPhoto => ImagePath is not null;
+    public string? ImageContentType { get; private set; }
+    public string? OcrText { get; private set; }
+    public string? OcrError { get; private set; }
     public int? DeclaredLines { get; private set; }
     public int? DetectedLines { get; private set; }
     public string? Diagnostic { get; private set; }
@@ -44,7 +53,10 @@ public sealed class Receipt : Entity
                 DeclaredLines = Integer(root, "nombre_lignes_ticket"), DetectedLines = Integer(root, "nombre_lignes_detectees"),
             };
             if (DateOnly.TryParseExact(Text(root, "date"), "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
                 receipt.Date = date;
+                receipt.PurchasedAt = new DateTimeOffset(date.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+            }
             var index = 0;
             foreach (var food in foods.EnumerateArray())
             {
@@ -79,12 +91,93 @@ public sealed class Receipt : Entity
         }
     }
 
+    public static Receipt CreatePhotoDraft(Guid household, string documentHash, string imagePath,
+        string imageContentType, string ocrText, string? ocrError, string storeName,
+        DateTimeOffset? purchasedAt, IReadOnlyList<ReceiptOcrCandidate> candidates)
+    {
+        if (household == Guid.Empty) throw new ArgumentException("Foyer requis.");
+        if (documentHash.Length != 64 || !documentHash.All(Uri.IsHexDigit)) throw new ArgumentException("Empreinte d'image invalide.");
+        if (string.IsNullOrWhiteSpace(imagePath) || imagePath.Length > 500) throw new ArgumentException("Chemin de photo invalide.");
+        if (imageContentType is not ("image/jpeg" or "image/png" or "image/webp")) throw new ArgumentException("Format de photo invalide.");
+        if (ocrText.Length > 100_000) throw new ArgumentException("Texte OCR trop volumineux.");
+        if (ocrError?.Length > 1000) ocrError = ocrError[..1000];
+        if (candidates.Count > 500) throw new ArgumentException("Un ticket ne peut pas contenir plus de 500 lignes OCR.");
+        if (storeName.Length > 200) storeName = storeName[..200];
+
+        var receipt = new Receipt
+        {
+            Id = Guid.NewGuid(),
+            HouseholdId = household,
+            DocumentHash = documentHash.ToUpperInvariant(),
+            RawDocument = ocrText,
+            OcrText = ocrText,
+            OcrError = ocrError,
+            ImagePath = imagePath,
+            ImageContentType = imageContentType,
+            StoreName = storeName,
+            PurchasedAt = purchasedAt?.ToUniversalTime(),
+            Date = purchasedAt is null ? null : DateOnly.FromDateTime(purchasedAt.Value.UtcDateTime),
+            CreatedAt = DateTimeOffset.UtcNow,
+            DeclaredLines = null,
+            DetectedLines = candidates.Count,
+            Diagnostic = ocrError ?? (candidates.Count == 0
+                ? "Aucune ligne détectée : ajoutez les lignes manuellement avant validation."
+                : "Les propositions OCR ne sont pas vérifiées : relisez et corrigez chaque ligne."),
+        };
+
+        for (var index = 0; index < candidates.Count; index++)
+        {
+            var candidate = candidates[index];
+            receipt.Lines.Add(ReceiptLine.Import(receipt.Id, household, index, candidate.SourceText,
+                candidate.SourceText, candidate.Label, candidate.Total, candidate.Quantity, candidate.Unit,
+                candidate.StatedUnitPrice, false, "Proposition OCR à vérifier avant validation."));
+        }
+
+        return receipt;
+    }
+
+    public void AddDraftLine(string label)
+    {
+        RequireDraft();
+        if (Lines.Count >= 500) throw new ArgumentException("Un ticket ne peut pas contenir plus de 500 lignes.");
+        var source = label?.Trim() ?? "";
+        Lines.Add(ReceiptLine.Import(Id, HouseholdId, Lines.Count, source, source, source,
+            null, null, null, null, false, "Ligne ajoutée manuellement : complétez tous les champs."));
+    }
+
     public void SetContext(Guid storeId, string date)
     {
+        RequireDraft();
         if (Lines.Any(l => l.Status == "validated")) throw new ArgumentException("Le contexte d'un ticket déjà validé est figé.");
         if (!DateOnly.TryParseExact(date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
             throw new ArgumentException("Date invalide : utilisez jj/MM/aaaa.");
         StoreId = storeId; Date = parsed;
+        PurchasedAt = new DateTimeOffset(parsed.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+    }
+
+    public void SetPhotoContext(Guid storeId, string storeName, DateTimeOffset purchasedAt)
+    {
+        RequireDraft();
+        if (Lines.Any(l => l.Status == "validated")) throw new ArgumentException("Le contexte d'un ticket déjà validé est figé.");
+        if (string.IsNullOrWhiteSpace(storeName) || storeName.Length > 200) throw new ArgumentException("Nom du magasin requis (200 caractères maximum).");
+        StoreId = storeId;
+        StoreName = storeName.Trim();
+        PurchasedAt = purchasedAt.ToUniversalTime();
+        Date = DateOnly.FromDateTime(PurchasedAt.Value.UtcDateTime);
+    }
+
+    public void Complete()
+    {
+        RequireDraft();
+        if (StoreId is null || PurchasedAt is null) throw new ArgumentException("Sélectionnez le magasin et confirmez la date du ticket.");
+        if (Lines.Count == 0 || Lines.Any(l => l.Status == "pending"))
+            throw new ArgumentException("Traitez ou ignorez chaque ligne avant de valider le ticket.");
+        Status = "validated";
+    }
+
+    private void RequireDraft()
+    {
+        if (Status != "draft") throw new ArgumentException("Ce ticket est déjà validé et ne peut plus être modifié.");
     }
 
     private static string? Text(JsonElement e, string name) =>
@@ -101,6 +194,9 @@ public sealed class Receipt : Entity
         "sachet" => "bag", "pot" => "pot", "paquet" => "pack", _ => null,
     };
 }
+
+public sealed record ReceiptOcrCandidate(string SourceText, string Label, decimal? Total,
+    decimal? Quantity, string? Unit, decimal? StatedUnitPrice);
 
 public sealed class ReceiptLine : Entity
 {

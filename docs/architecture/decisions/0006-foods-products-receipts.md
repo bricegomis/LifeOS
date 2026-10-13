@@ -79,3 +79,20 @@ de la sauvegarde, pas par reconstruction destructive. Tests sur PostgreSQL vierg
 et upgrade représentatif, rollback, isolation, reprise/concurrence et snapshots.
 La publication des images ne constitue pas un déploiement vérifié ; le refresh
 des containers appartient à l'utilisateur.
+
+## Extension — photo de ticket et OCR local
+
+Une photo est conservée comme fichier généré côté serveur sur le volume durable
+`/data/receipts`; PostgreSQL conserve sa référence, le texte OCR et les candidats
+extraits. L'accès à la photo repasse par l'API authentifiée et le filtre du foyer.
+Le conteneur inclut Tesseract avec les données `fra` et `eng`; aucun service payant ni
+appel OCR distant n'est utilisé. L'extraction française propose magasin, date/heure et
+quelques lignes, mais ne rapproche jamais automatiquement un produit. Les erreurs OCR
+restent visibles et le brouillon permet une saisie entièrement manuelle.
+
+Avant validation, la personne corrige les lignes, choisit ou crée explicitement les
+aliments/produits, puis confirme le ticket complet. Cette validation photo est
+transactionnelle et idempotente ; une erreur conserve le brouillon et n'enregistre
+aucun prix partiel. Le prix observé reste total de ligne / quantité et l'achat conserve
+le total ainsi que la quantité. Le volume d'images doit être sauvegardé avec la base ;
+une sauvegarde PostgreSQL seule ne contient pas les octets des photos.

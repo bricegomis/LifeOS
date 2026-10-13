@@ -17,8 +17,8 @@ diagnostics.
 | Foods | GET/POST /api/foods, GET/PUT/DELETE /api/foods/{id} | Generic culinary references; manual nullable base/macros/FODMAP/NOVA/notes, partial saves, archival. |
 | Products | GET/POST /api/products, GET/PUT/DELETE /api/products/{id}, POST /price-entries | Commercial food link required on creation; purchase unit/package confirmations and observed prices. |
 | Comparable prices | GET /api/foods/prices | Last price per product/store then minimum per safe base; provenance/date, no recipe product selection. |
-| Receipts | GET/POST /api/receipts, GET /{id}, PUT /{id}/context | Raw JSON document and pending ordered lines; exact duplicate detection per household. |
-| Receipt lines | PUT /{id}/lines/{lineId}, POST /ignore, POST /validate | Pending corrections; individual atomic validation, purchases/prices, locking/idempotence. |
+| Receipts | GET/POST /api/receipts, POST /photo, GET /{id}, GET /{id}/photo, PUT /{id}/context, POST /{id}/finalize | JSON or photo drafts; original image, OCR candidates and raw text; exact duplicate detection per household. |
+| Receipt lines | POST /{id}/lines, PUT /{id}/lines/{lineId}, POST /ignore, POST /validate | Pending corrections; JSON lines validate individually, photo lines finalize atomically as a batch. |
 | Stores | GET/POST /api/stores, PUT/DELETE /{id} | Household stores; required explicit choice for receipts. |
 | Recipes / composed meals | /api/recipes, /api/composed-meals | Food ingredients, portions/steps, archival and historical compositions. |
 | Manual planner / sports | /api/manual-planner, /api/sport-templates | Civil times, independent weeks, personal portions, unchanged historical snapshots. |
@@ -36,6 +36,56 @@ Receipt JSON limits: 1 MiB UTF-8, 500 lines, depth 32. Unreadable structure is r
 without partial import. Missing usable fields remain pending with diagnostics.
 Raw health fields are archival only and never reach catalogue nutrition.
 Total / quantity produces observed price; incompatible units never convert.
+
+### Receipt photos and OCR
+
+Photo tickets use the same household-scoped receipt and purchase model as JSON imports.
+`POST /api/receipts/photo` accepts multipart field `photo` (JPEG, PNG or WebP, 10 MiB
+by default; the configured limit is capped at 25 MiB). The server checks the image
+signature, stores a generated filename outside PostgreSQL, calculates a SHA-256 image
+fingerprint, and runs the local `tesseract` executable with `fra+eng` trained data.
+There is no remote OCR provider or paid API. The French parser only suggests the
+first plausible store line, a day-first date/time, and rows with a final cents amount;
+it only suggests quantity when a leading multiplier such as `2 x` is explicit. Unit,
+product association and uncertain/missing values require user correction. OCR text and
+errors remain on the draft, and an OCR failure still retains the image for manual entry.
+
+Every photo starts as `draft`. The original image is available only through the
+authenticated `GET /api/receipts/{id}/photo` endpoint after household ownership is
+checked. The client must confirm the store and receipt date/time, review or ignore all
+candidate lines, and explicitly select/create products and foods. `POST
+/api/receipts/{id}/finalize` requires the complete set of pending-line choices and
+processes them under a receipt row lock and one PostgreSQL transaction. A failure
+leaves the receipt in draft and rolls back products, foods, purchases, observations and
+line statuses. Repeating a successful finalization is idempotent. An observed unit
+price is `line total / quantity`; the purchase retains its original total and quantity.
+Photo line-by-line validation is rejected to preserve this all-or-nothing boundary.
+
+Configure `Receipts:StoragePath` (`Receipts__StoragePath` in the container) to a durable
+directory. The supplied Docker image installs Tesseract and French data, creates
+`/data/receipts`, and declares it as a volume. `docker-compose.yaml` mounts the named
+volume `lifeos_receipts` there and sets the default size limit. Back up this volume
+alongside PostgreSQL: database backups contain paths and receipt metadata, not image
+bytes. Keep the same volume mounted when replacing the API container; deleting it
+permanently deletes original photos. Local deployments can set `Receipts__StoragePath`
+to any persistent directory writable by the API process. Tesseract executable and
+language can be overridden with `Receipts__TesseractExecutable` and
+`Receipts__TesseractLanguage`. OCR has a 45-second process timeout and 100 KiB text
+limit. Receipts, images and OCR are never treated as authoritative: visual review is
+required because thermal paper, glare, layout, locale and OCR quality vary.
+
+Targeted checks:
+
+```bash
+dotnet test tests/LifeOS.Api.IntegrationTests/LifeOS.Api.IntegrationTests.csproj \
+  --filter 'FullyQualifiedName~ReceiptOcrParserTests|FullyQualifiedName~ReceiptPhotoTests'
+```
+
+The integration tests use a deterministic local OCR stub and a real PostgreSQL
+Testcontainer; they require Docker, but do not require Tesseract on the host. To check
+the production OCR runtime and packaging, build the API image with `docker build -f
+src/backend/Dockerfile src/backend` and verify `tesseract --list-langs` in the resulting
+container includes both `eng` and `fra`.
 
 Layers remain Domain / Application / Infrastructure / API. Endpoint orchestration
 uses the scoped DbContext for transactionally consistent receipt writes, as the
