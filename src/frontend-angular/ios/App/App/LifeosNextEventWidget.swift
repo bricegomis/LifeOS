@@ -67,6 +67,7 @@ struct LifeosNextEventWidgetEntryView: View {
         
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: entry.snapshot?.timeZoneId ?? "") ?? .current
         let todayStr = dateFormatter.string(from: now)
         
         // 1. Look for upcoming timed events (scheduledIso/startIso >= now - 15min)
@@ -87,8 +88,7 @@ struct LifeosNextEventWidgetEntryView: View {
             return upcomingUntimed
         }
         
-        // 3. Fallback to first future event if any
-        return events.first(where: { $0.eventDate >= todayStr })
+        return nil
     }
 
     var body: some View {

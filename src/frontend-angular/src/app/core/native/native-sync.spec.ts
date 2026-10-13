@@ -78,9 +78,9 @@ describe('event-projection and civil time', () => {
 
   it('handles DST autumn fall back ambiguous hour', () => {
     // On 2026-10-25 in Europe/Paris, clock falls back from 03:00 to 02:00.
-    // 02:30 local occurs twice. Our disambiguation produces a valid converged UTC instant.
+    // 02:30 local occurs twice; the conversion consistently chooses the second occurrence.
     const ambiguousIso = civilTimeToIso('2026-10-25', 2 * 60 + 30, 'Europe/Paris')
-    assert.ok(ambiguousIso.startsWith('2026-10-25T'))
+    assert.equal(ambiguousIso, '2026-10-25T01:30:00.000Z')
   })
 
   it('projects manual weeks into sorted event items with null startMinute at the end of the day', () => {

@@ -55,6 +55,8 @@ export class NativeSyncService {
    * If a sync is already running, coalesces incoming requests into a subsequent rerun.
    */
   async syncNativeState(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return
+
     if (this.isSyncing) {
       this.needsRerun = true
       return

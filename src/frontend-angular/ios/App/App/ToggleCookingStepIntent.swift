@@ -12,14 +12,14 @@ public struct ToggleCookingStepIntent: AppIntent, LiveActivityIntent {
     public var stepIndex: Int
     
     @Parameter(title: "ID de session attendu")
-    public var sessionId: String?
+    public var sessionId: String
     
     public init() {
         self.stepIndex = 0
-        self.sessionId = nil
+        self.sessionId = ""
     }
     
-    public init(stepIndex: Int, sessionId: String? = nil) {
+    public init(stepIndex: Int, sessionId: String) {
         self.stepIndex = stepIndex
         self.sessionId = sessionId
     }
@@ -34,7 +34,7 @@ public struct ToggleCookingStepIntent: AppIntent, LiveActivityIntent {
             }
             
             // Guard against stale actions targeting a previous session
-            if let expected = expectedId, expected != session.sessionId {
+            if expectedId.isEmpty || expectedId != session.sessionId {
                 throw NSError(domain: "ToggleCookingStepIntent", code: 409, userInfo: [NSLocalizedDescriptionKey: "Session obsolète ou remplacée"])
             }
             

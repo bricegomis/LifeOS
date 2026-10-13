@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
+import { Capacitor } from '@capacitor/core'
 import { FormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
 import { firstValueFrom, forkJoin } from 'rxjs'
@@ -193,6 +194,10 @@ export class SettingsPageComponent implements OnInit {
     this.error.set('')
     this.notice.set('')
     try {
+      if (!Capacitor.isNativePlatform()) {
+        this.error.set('Les rappels locaux sont disponibles uniquement dans l’application iPhone.')
+        return
+      }
       if (this.reminderPrefs.enabled) {
         const granted = await this.reminders.requestPermissions()
         if (!granted) {
@@ -205,6 +210,10 @@ export class SettingsPageComponent implements OnInit {
       }
       this.reminders.savePreferences(this.reminderPrefs)
       await this.nativeSync.syncNativeState()
+      if (this.nativeSync.syncStatus() !== 'synced') {
+        this.error.set(this.nativeSync.lastSyncError() ?? 'La synchronisation des rappels a échoué.')
+        return
+      }
       this.notice.set(this.reminderPrefs.enabled ? 'Rappels locaux configurés et planifiés.' : 'Rappels locaux désactivés.')
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Erreur lors de l’enregistrement des rappels.')

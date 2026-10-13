@@ -74,13 +74,14 @@ export function projectEventsFromWeeks(
   const nowMs = now.getTime()
 
   // Format today's civil date in the given timezone (YYYY-MM-DD)
-  const dtf = new Intl.DateTimeFormat('en-CA', {
+  const dtf = new Intl.DateTimeFormat('en-US', {
     timeZone: timeZoneId,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
   })
-  const todayStr = dtf.format(now) // en-CA emits YYYY-MM-DD
+  const todayParts = Object.fromEntries(dtf.formatToParts(now).map(({ type, value }) => [type, value]))
+  const todayStr = `${todayParts['year']}-${todayParts['month']}-${todayParts['day']}`
 
   for (const week of weeks) {
     const tz = week.timeZoneId || timeZoneId
