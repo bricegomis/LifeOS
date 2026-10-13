@@ -94,11 +94,16 @@ export interface ReceiptSummaryDto {
   storeName: string
   storeId: string | null
   date: string | null
+  purchasedAt: string | null
+  status: 'draft' | 'validated'
+  hasPhoto: boolean
   totalLines: number
   completedLines: number
 }
 export interface ReceiptDto extends Omit<ReceiptSummaryDto, 'totalLines'> {
   rawDocument: string
+  ocrText: string | null
+  ocrError: string | null
   declaredLines: number | null
   detectedLines: number | null
   diagnostic: string | null
@@ -118,6 +123,18 @@ export interface ReceiptLineDto {
   status: 'pending' | 'validated' | 'ignored'
   productId: string | null
   diagnostics: string[]
+}
+
+export interface ValidateReceiptLineRequest {
+  productId: string | null
+  foodItemId: string | null
+  newFoodName: string | null
+  newProductName: string | null
+  packageQuantity: number | null
+  packageUnit: string | null
+  packageConfirmed: boolean
+  piecesComparable: boolean
+  confirmPurchaseUnit: boolean
 }
 
 export interface RecipeIngredientDto {

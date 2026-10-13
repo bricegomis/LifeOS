@@ -11,10 +11,13 @@ notes facultatives, filtre À compléter, zéro valide. Produits commerciaux sec
 plusieurs par aliment, contenance confirmée et prix observés/provenance. Recettes et
 nouvelles lignes de repas sur aliments, pas de marque choisie implicitement.
 
-Tickets JSON fichier/texte : source brute et toutes lignes avant validation,
+Tickets photo ou JSON fichier/texte : source brute et toutes lignes avant validation,
 contexte magasin/date explicite, pending/validated/ignored, reprise API et progression.
-Validation individuelle transactionnelle aliment/produit/achat/prix/statut,
-concurrence/idempotence, réimport identique détecté par foyer, aucune santé importée.
+JSON : validation individuelle transactionnelle aliment/produit/achat/prix/statut.
+Photo : Tesseract local (fra+eng), propositions OCR françaises corrigées manuellement,
+validation atomique du ticket complet. Photos originales et texte OCR restent en
+brouillon; les fichiers résident sur un volume durable sauvegardé avec PostgreSQL.
+Concurrence/idempotence, réimport identique détecté par foyer, aucune santé importée.
 Minimum des derniers relevés par produit/magasin uniquement par base comparable,
 historique et informatif, pas un produit de recette.
 

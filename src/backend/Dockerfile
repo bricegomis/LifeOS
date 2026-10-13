@@ -16,6 +16,11 @@ RUN dotnet publish src/LifeOS.Api/LifeOS.Api.csproj \
     --output /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /data/receipts \
+    && chown -R app:app /data/receipts
 ARG LIFEOS_BUILD_ID=local
 ARG LIFEOS_BUILD_NUMBER
 ARG LIFEOS_RUN_ID
@@ -37,5 +42,6 @@ ENV LifeOS__Repository=${LIFEOS_BUILD_REPOSITORY}
 ENV LifeOS__ServerUrl=${LIFEOS_BUILD_SERVER_URL}
 ENV LifeOS__Workflow=${LIFEOS_BUILD_WORKFLOW}
 EXPOSE 8080
+VOLUME ["/data/receipts"]
 
 ENTRYPOINT ["dotnet", "LifeOS.Api.dll"]

@@ -1,6 +1,8 @@
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Endpoints;
 using LifeOS.Api.ErrorHandling;
+using LifeOS.Api.Receipts;
+using LifeOS.Application.Receipts;
 using LifeOS.Infrastructure;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,6 +17,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure();
+builder.Services.Configure<ReceiptPhotoStorageOptions>(builder.Configuration.GetSection("Receipts"));
+builder.Services.AddSingleton<ReceiptPhotoStorage>();
+builder.Services.AddSingleton<IReceiptOcrService, TesseractReceiptOcrService>();
 
 builder.Services
     .AddOptions<SupabaseAuthOptions>()

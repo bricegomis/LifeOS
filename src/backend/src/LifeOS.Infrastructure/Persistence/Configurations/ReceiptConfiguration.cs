@@ -17,7 +17,14 @@ public sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
         b.HasAlternateKey(r => new { r.Id, r.HouseholdId });
         b.HasIndex(r => new { r.HouseholdId, r.DocumentHash }).IsUnique();
         b.Property(r => r.DocumentHash).HasMaxLength(64);
+        b.Property(r => r.Status).HasMaxLength(20).IsRequired();
+        b.Property(r => r.ImagePath).HasMaxLength(500);
+        b.Property(r => r.ImageContentType).HasMaxLength(100);
+        b.Property(r => r.OcrText).HasColumnType("text");
+        b.Property(r => r.OcrError).HasMaxLength(1000);
+        b.Property(r => r.PurchasedAt).HasColumnType("timestamp with time zone");
         b.Ignore(r => r.CompletedLines);
+        b.Ignore(r => r.HasPhoto);
         b.HasOne<Household>().WithMany().HasForeignKey(r => r.HouseholdId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Store>().WithMany().HasForeignKey(r => new { r.StoreId, r.HouseholdId })
             .HasPrincipalKey(s => new { s.Id, s.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
