@@ -6,6 +6,7 @@ import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { parseApiBuildInfo, type BuildInfo } from '@/app/core/build-info'
 import { BuildVersionComponent } from '@/app/shared/build-version.component'
 import { apiBaseUrl, buildInfo } from '@/environments/environment'
+import { NativeSyncService } from '@/app/core/native/native-sync.service'
 
 interface NavigationItem {
   path: string
@@ -24,6 +25,7 @@ export class AppLayoutComponent implements OnInit {
   readonly auth = inject(AuthService)
   private readonly router = inject(Router)
   private readonly api = inject(LifeosApiService)
+  private readonly nativeSync = inject(NativeSyncService)
   readonly buildInfo = buildInfo
   readonly apiBuildInfo = signal<BuildInfo | null>(null)
   readonly apiBuildStatus = signal(apiBaseUrl ? 'chargement…' : 'non configurée')
@@ -50,6 +52,9 @@ export class AppLayoutComponent implements OnInit {
   )
 
   async ngOnInit(): Promise<void> {
+    this.nativeSync.initListeners()
+    void this.nativeSync.syncNativeState()
+
     if (!apiBaseUrl) return
 
     try {
@@ -65,6 +70,7 @@ export class AppLayoutComponent implements OnInit {
   async signOut(): Promise<void> {
     this.signOutError.set('')
     try {
+      await this.nativeSync.purgeAll()
       await this.auth.signOut()
       await this.router.navigateByUrl('/login')
     } catch (error) {
