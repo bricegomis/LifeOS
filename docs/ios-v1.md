@@ -125,12 +125,13 @@ xcodebuild -workspace ios/App/App.xcworkspace \
 3. **Session active** :
    - Un bandeau flottant s'affiche dans l'application avec les étapes et le compteur.
    - La Live Activity démarre avec l'île dynamique et l'écran verrouillé.
-   - Le widget d'écran d'accueil bascule automatiquement sur l'état "En cuisine".
-4. **App Intent natif** : Tap sur la case à cocher dans le widget ou la Live Activity invoque `ToggleCookingStepIntent`, mettant à jour `cooking_session.json` de façon atomique et rafraîchissant les timelines WidgetKit sans ouvrir l'application.
+   - Le widget d'écran d'accueil lit directement la progression actuelle depuis `cooking_session.json` pour basculer immédiatement en mode "En cuisine".
+4. **App Intent natif et concurrence** : Tap sur la case à cocher dans le widget ou la Live Activity invoque `ToggleCookingStepIntent`. L'opération est coordonnée via `NSFileCoordinator` sur `cooking_session.json` (transaction read-modify-write atomique inter-processus). Elle vérifie l'identifiant de session attendu (`sessionId`) pour interdire toute action résiduelle sur une session précédente, borne strictement les compteurs et met à jour/réconcilie ou termine la Live Activity sans ouvrir l'application.
 
 ### 4.2 Prochain événement (Repas / Sport)
 - Calcule les événements sur un horizon de 2 semaines glissantes sans création artificielle de semaine côté serveur.
-- Convertit les dates civiles et minutes de début en timestamps ISO avec prise en compte du fuseau horaire de la semaine (`ManualWeek.timeZoneId`).
+- Convertit les dates civiles et minutes de début en timestamps ISO avec prise en compte du fuseau horaire de la semaine (`ManualWeek.timeZoneId`), avec gestion robuste des passages d'heure d'été/d'hiver (DST gaps et chevauchements) et des changements de mois/année sans approximation.
+- Filtre dynamiquement les événements passés par rapport à l'instant présent (`now`).
 - **Gestion stricte des événements sans horaire** : Aucune heure inventée (startMinute et startIso sont `null`). Ils ne génèrent aucun rappel de notification locale. Sur les widgets (écran d'accueil et écran verrouillé), ils sont affichés avec la mention explicite `"Sans horaire"` ou `"—"` et classés après les événements programmés de la journée.
 - Les widgets ouvrent l'application via des deep links directs : `lifeos:///planning` (avec paramètre de date `?date=YYYY-MM-DD` si applicable), validés pour n'autoriser que les routes internes légitimes.
 
@@ -138,17 +139,19 @@ xcodebuild -workspace ios/App/App.xcworkspace \
 - Configurables dans la page **Paramètres** (`/settings`).
 - Opt-in désactivé par défaut ; demande d'autorisation système uniquement lors de l'activation.
 - Choix d'avance : 0 min, 5 min, 15 min, 30 min.
-- Identifiants de notifications stables générés par hachage 32-bit (`hashNotificationId`).
+- Identifiants de notifications stables et anti-collisions (`hashNotificationId` 64-bit split mix).
+- Écoute de `localNotificationActionPerformed` via `DeepLinkService` : le tap sur la notification navigue directement vers le planning du jour ciblé.
 - Reprogrammation idempotente à chaque modification du planning ou changement d'avance.
 - Les événements passés ou sans horaire sont systématiquement ignorés pour les rappels.
 
 ### 4.4 Synchronisation et Résilience
 - Synchronisation automatique au premier affichage, lors du retour au premier plan (`appStateChange: isActive`), et après chaque mutation du planning (création, modification, suppression d'un repas ou d'une séance).
+- **Protection contre la concurrence** : Les requêtes simultanées de synchronisation sont regroupées (`needsRerun` coalescing). Les plugins Capacitor sont vérifiés avec `Capacitor.isNativePlatform()` pour ne pas lever de promesses rejetées en environnement Web.
 - **Résilience hors-ligne** : Si l'API est indisponible ou le réseau inaccessible, le cache local n'est **jamais** écrasé par un snapshot vide. Le statut passe en état `stale` (ou `error`), visible dans les réglages avec la date de la dernière synchronisation réussie et le libellé de l'incident.
-- **Isolation d'identité** : Le snapshot contient l'identifiant réel de l'utilisateur (`userId`) et du foyer (`householdId` résolu via `/api/households/current`). Au démarrage et à chaque synchronisation, toute divergence d'identité entraîne une purge complète des données du foyer précédent.
+- **Isolation d'identité** : Le snapshot contient l'identifiant réel de l'utilisateur (`userId`) et du foyer (`householdId` résolu via `/api/households/current`). Au démarrage et à chaque synchronisation, toute divergence d'identité utilisateur ou foyer entraîne une purge complète des données partagées.
 - Lors de la déconnexion (`AuthService.signOut`), `NativeSyncService.purgeAll()` est exécuté :
   - Annulation de toutes les notifications locales en attente.
-  - Suppression de `widget_snapshot.json` et `cooking_session.json`.
+  - Suppression coordonnée de `widget_snapshot.json` et `cooking_session.json`.
   - Fin immédiate des Live Activities en cours.
   - Rafraîchissement des widgets (retour à l'état "Connexion requise").
 

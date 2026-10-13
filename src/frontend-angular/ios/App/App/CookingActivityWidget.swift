@@ -23,7 +23,7 @@ public struct CookingActivityWidget: Widget {
                 // Current step
                 HStack(alignment: .top, spacing: 8) {
                     if #available(iOS 17.0, *) {
-                        Button(intent: ToggleCookingStepIntent(stepIndex: context.state.currentStepIndex)) {
+                        Button(intent: ToggleCookingStepIntent(stepIndex: context.state.currentStepIndex, sessionId: context.attributes.sessionId)) {
                             Image(systemName: context.state.isCompleted ? "checkmark.circle.fill" : "circle")
                                 .font(.title2)
                                 .foregroundStyle(context.state.isCompleted ? .green : .orange)
@@ -64,7 +64,7 @@ public struct CookingActivityWidget: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack {
                         if #available(iOS 17.0, *) {
-                            Button(intent: ToggleCookingStepIntent(stepIndex: context.state.currentStepIndex)) {
+                            Button(intent: ToggleCookingStepIntent(stepIndex: context.state.currentStepIndex, sessionId: context.attributes.sessionId)) {
                                 Image(systemName: context.state.isCompleted ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(context.state.isCompleted ? .green : .orange)
                             }

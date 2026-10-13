@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core'
 import { Router } from '@angular/router'
+import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { AuthService } from '@/app/core/auth/auth.service'
 import { validatedReturnPath } from '@/app/core/auth/auth-flow'
 
@@ -14,18 +16,34 @@ export class DeepLinkService {
     if (this.isListening) return
     this.isListening = true
 
+    if (!Capacitor.isNativePlatform()) return
+
     try {
-      // Warm start: app opened from background
-      CapApp.addListener('appUrlOpen', (event) => {
+      // Warm start: app opened from background via URL scheme
+      void CapApp.addListener('appUrlOpen', (event) => {
         if (event?.url) {
           void this.handleIncomingUrl(event.url)
         }
       })
 
-      // Cold start: app launched from dead state
+      // Cold start: app launched from dead state via URL scheme
       void CapApp.getLaunchUrl().then((launch) => {
         if (launch?.url) {
           void this.handleIncomingUrl(launch.url)
+        }
+      })
+
+      // Tap on local notification action: route to planned event
+      void LocalNotifications.addListener('localNotificationActionPerformed', (notificationAction) => {
+        const extra = notificationAction?.notification?.extra as { deepLink?: string; date?: string } | undefined
+        if (extra?.deepLink) {
+          const safePath = validatedReturnPath(extra.deepLink)
+          void this.router.navigateByUrl(safePath)
+        } else if (extra?.date) {
+          const safePath = validatedReturnPath(`/planning?date=${extra.date}`)
+          void this.router.navigateByUrl(safePath)
+        } else {
+          void this.router.navigateByUrl('/planning')
         }
       })
     } catch {

@@ -37,9 +37,13 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
     
     @objc func clearWidgetSnapshot(_ call: CAPPluginCall) {
-        SharedAppGroup.clearWidgetSnapshot()
-        WidgetCenter.shared.reloadAllTimelines()
-        call.resolve()
+        do {
+            try SharedAppGroup.clearWidgetSnapshot()
+            WidgetCenter.shared.reloadAllTimelines()
+            call.resolve()
+        } catch {
+            call.reject("Failed to clear snapshot: \(error.localizedDescription)")
+        }
     }
     
     // MARK: - Cooking Session
@@ -76,9 +80,13 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     }
     
     @objc func clearCookingSession(_ call: CAPPluginCall) {
-        SharedAppGroup.clearCookingSession()
-        WidgetCenter.shared.reloadAllTimelines()
-        call.resolve()
+        do {
+            try SharedAppGroup.clearCookingSession()
+            WidgetCenter.shared.reloadAllTimelines()
+            call.resolve()
+        } catch {
+            call.reject("Failed to clear cooking session: \(error.localizedDescription)")
+        }
     }
     
     // MARK: - Live Activities

@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
+import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { AuthService } from '@/app/core/auth/auth.service'
@@ -25,10 +26,12 @@ export class NativeSyncService {
   readonly lastSyncedAt = signal<string | null>(null)
 
   private isSyncing = false
+  private needsRerun = false
 
   initListeners(): void {
+    if (!Capacitor.isNativePlatform()) return
     try {
-      CapApp.addListener('appStateChange', (state) => {
+      void CapApp.addListener('appStateChange', (state) => {
         if (state.isActive) {
           void this.cooking.restoreSession()
           void this.syncNativeState()
@@ -40,21 +43,23 @@ export class NativeSyncService {
   }
 
   async resolveHouseholdId(): Promise<string> {
-    try {
-      const household = await firstValueFrom(this.api.get<{ id: string }>('/households/current'))
-      if (household?.id) return household.id
-    } catch {
-      // fallback if household query fails
+    const household = await firstValueFrom(this.api.get<{ id: string }>('/households/current'))
+    if (!household?.id) {
+      throw new Error('Foyer courant non disponible')
     }
-    const user = this.auth.user()
-    return user ? `user_${user.id}` : 'anonymous'
+    return household.id
   }
 
   /**
    * Refreshes the widget snapshot and updates local reminders for the rolling 2-3 weeks horizon.
+   * If a sync is already running, coalesces incoming requests into a subsequent rerun.
    */
   async syncNativeState(): Promise<void> {
-    if (this.isSyncing) return
+    if (this.isSyncing) {
+      this.needsRerun = true
+      return
+    }
+
     const user = this.auth.user()
     if (!user) {
       await this.purgeAll()
@@ -65,10 +70,21 @@ export class NativeSyncService {
     this.syncStatus.set('syncing')
 
     try {
+      // 1. Identity isolation: purge prior state immediately if user changed
+      if (typeof localStorage !== 'undefined') {
+        const lastIdentity = localStorage.getItem(LAST_IDENTITY_KEY)
+        if (lastIdentity) {
+          const [lastUserId] = lastIdentity.split(':')
+          if (lastUserId && lastUserId !== user.id) {
+            await this.purgeAll()
+          }
+        }
+      }
+
+      // 2. Resolve verified household ID; if API fails, throw to keep previous snapshot intact
       const householdId = await this.resolveHouseholdId()
       const identityKey = `${user.id}:${householdId}`
 
-      // Check for identity or household change
       if (typeof localStorage !== 'undefined') {
         const lastIdentity = localStorage.getItem(LAST_IDENTITY_KEY)
         if (lastIdentity && lastIdentity !== identityKey) {
@@ -77,7 +93,7 @@ export class NativeSyncService {
         localStorage.setItem(LAST_IDENTITY_KEY, identityKey)
       }
 
-      // Fetch week summaries
+      // 3. Fetch week summaries
       const summaries = await firstValueFrom(this.api.get<ManualWeekSummary[]>('/manual-planner/weeks'))
       if (!summaries || summaries.length === 0) {
         await this.writeEmptySnapshot(user.id, householdId)
@@ -95,12 +111,8 @@ export class NativeSyncService {
       const weeks: ManualWeek[] = []
 
       for (const summary of targetSummaries) {
-        try {
-          const detail = await firstValueFrom(this.api.get<ManualWeek>(`/manual-planner/weeks/${summary.id}`))
-          weeks.push(detail)
-        } catch {
-          // ignore single week load failure
-        }
+        const detail = await firstValueFrom(this.api.get<ManualWeek>(`/manual-planner/weeks/${summary.id}`))
+        weeks.push(detail)
       }
 
       const tz = weeks[0]?.timeZoneId || 'Europe/Paris'
@@ -137,10 +149,16 @@ export class NativeSyncService {
       this.lastSyncError.set(null)
       this.lastSyncedAt.set(new Date().toISOString())
     } catch (error) {
-      this.lastSyncError.set(apiErrorMessage(error))
+      const msg = apiErrorMessage(error)
+      this.lastSyncError.set(msg)
+      // Never wipe valid local snapshot on network failure: mark stale or error
       this.syncStatus.set(this.lastSyncedAt() ? 'stale' : 'error')
     } finally {
       this.isSyncing = false
+      if (this.needsRerun) {
+        this.needsRerun = false
+        void this.syncNativeState()
+      }
     }
   }
 
@@ -152,14 +170,35 @@ export class NativeSyncService {
     this.lastSyncError.set(null)
     this.lastSyncedAt.set(null)
 
+    const errors: unknown[] = []
     try {
       await LifeosNativeBridge.clearWidgetSnapshot()
+    } catch (e) {
+      errors.push(e)
+    }
+    try {
       await LifeosNativeBridge.clearCookingSession()
+    } catch (e) {
+      errors.push(e)
+    }
+    try {
       await LifeosNativeBridge.endLiveActivity()
+    } catch (e) {
+      errors.push(e)
+    }
+    try {
       await LifeosNativeBridge.reloadWidgetTimelines()
+    } catch (e) {
+      errors.push(e)
+    }
+    try {
       await this.reminders.cancelAll()
-    } catch {
-      // ignore bridge errors during purge
+    } catch (e) {
+      errors.push(e)
+    }
+
+    if (errors.length > 0) {
+      this.lastSyncError.set(`Purge partielle: ${(errors[0] as Error)?.message ?? 'erreur pont natif'}`)
     }
   }
 

@@ -9,6 +9,44 @@ public struct SharedAppGroup {
         return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
     }
     
+    // MARK: - Inter-Process File Coordination Helpers
+    
+    private static func withFileCoordination<T>(url: URL, writing: Bool, block: (URL) throws -> T) throws -> T {
+        let coordinator = NSFileCoordinator(filePresenter: nil)
+        var error: NSError?
+        var result: T?
+        var thrownError: Error?
+        
+        if writing {
+            coordinator.coordinate(writingItemAt: url, options: [], error: &error) { writeURL in
+                do {
+                    result = try block(writeURL)
+                } catch {
+                    thrownError = error
+                }
+            }
+        } else {
+            coordinator.coordinate(readingItemAt: url, options: [], error: &error) { readURL in
+                do {
+                    result = try block(readURL)
+                } catch {
+                    thrownError = error
+                }
+            }
+        }
+        
+        if let err = error {
+            throw err
+        }
+        if let err = thrownError {
+            throw err
+        }
+        guard let res = result else {
+            throw NSError(domain: "SharedAppGroup", code: 2, userInfo: [NSLocalizedDescriptionKey: "Coordination failed with empty result"])
+        }
+        return res
+    }
+    
     // MARK: - Snapshot
     public static func loadWidgetSnapshot() -> WidgetSnapshotDTO? {
         guard let url = containerURL?.appendingPathComponent(widgetSnapshotFileName),
@@ -16,9 +54,11 @@ public struct SharedAppGroup {
             return nil
         }
         do {
-            let data = try Data(contentsOf: url)
-            let decoder = JSONDecoder()
-            return try decoder.decode(WidgetSnapshotDTO.self, from: data)
+            return try withFileCoordination(url: url, writing: false) { readURL in
+                let data = try Data(contentsOf: readURL)
+                let decoder = JSONDecoder()
+                return try decoder.decode(WidgetSnapshotDTO.self, from: data)
+            }
         } catch {
             NSLog("SharedAppGroup: Failed to load widget snapshot: %@", error.localizedDescription)
             return nil
@@ -29,12 +69,18 @@ public struct SharedAppGroup {
         guard let url = containerURL?.appendingPathComponent(widgetSnapshotFileName) else {
             throw NSError(domain: "SharedAppGroup", code: 1, userInfo: [NSLocalizedDescriptionKey: "App Group container not available"])
         }
-        try data.write(to: url, options: [.atomic])
+        try withFileCoordination(url: url, writing: true) { writeURL in
+            try data.write(to: writeURL, options: [.atomic])
+        }
     }
     
-    public static func clearWidgetSnapshot() {
+    public static func clearWidgetSnapshot() throws {
         guard let url = containerURL?.appendingPathComponent(widgetSnapshotFileName) else { return }
-        try? FileManager.default.removeItem(at: url)
+        if FileManager.default.fileExists(atPath: url.path) {
+            try withFileCoordination(url: url, writing: true) { writeURL in
+                try FileManager.default.removeItem(at: writeURL)
+            }
+        }
     }
     
     // MARK: - Cooking Session
@@ -44,9 +90,11 @@ public struct SharedAppGroup {
             return nil
         }
         do {
-            let data = try Data(contentsOf: url)
-            let decoder = JSONDecoder()
-            return try decoder.decode(CookingSessionDTO.self, from: data)
+            return try withFileCoordination(url: url, writing: false) { readURL in
+                let data = try Data(contentsOf: readURL)
+                let decoder = JSONDecoder()
+                return try decoder.decode(CookingSessionDTO.self, from: data)
+            }
         } catch {
             NSLog("SharedAppGroup: Failed to load cooking session: %@", error.localizedDescription)
             return nil
@@ -57,7 +105,9 @@ public struct SharedAppGroup {
         guard let url = containerURL?.appendingPathComponent(cookingSessionFileName) else {
             throw NSError(domain: "SharedAppGroup", code: 1, userInfo: [NSLocalizedDescriptionKey: "App Group container not available"])
         }
-        try data.write(to: url, options: [.atomic])
+        try withFileCoordination(url: url, writing: true) { writeURL in
+            try data.write(to: writeURL, options: [.atomic])
+        }
     }
     
     public static func saveCookingSession(session: CookingSessionDTO) throws {
@@ -67,9 +117,46 @@ public struct SharedAppGroup {
         try saveCookingSession(data: data)
     }
     
-    public static func clearCookingSession() {
+    public static func clearCookingSession() throws {
         guard let url = containerURL?.appendingPathComponent(cookingSessionFileName) else { return }
-        try? FileManager.default.removeItem(at: url)
+        if FileManager.default.fileExists(atPath: url.path) {
+            try withFileCoordination(url: url, writing: true) { writeURL in
+                try FileManager.default.removeItem(at: writeURL)
+            }
+        }
+    }
+    
+    /**
+     * Atomically coordinates read-modify-write on cooking_session.json under NSFileCoordinator.
+     * Prevents race conditions between the application and AppIntents running in widget/background processes.
+     */
+    public static func modifyCookingSession(modify: (CookingSessionDTO?) throws -> CookingSessionDTO?) throws -> CookingSessionDTO? {
+        guard let url = containerURL?.appendingPathComponent(cookingSessionFileName) else {
+            throw NSError(domain: "SharedAppGroup", code: 1, userInfo: [NSLocalizedDescriptionKey: "App Group container not available"])
+        }
+        
+        return try withFileCoordination(url: url, writing: true) { targetURL in
+            var currentSession: CookingSessionDTO? = nil
+            if FileManager.default.fileExists(atPath: targetURL.path) {
+                if let data = try? Data(contentsOf: targetURL) {
+                    currentSession = try? JSONDecoder().decode(CookingSessionDTO.self, from: data)
+                }
+            }
+            
+            let updated = try modify(currentSession)
+            
+            if let newSession = updated {
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                let data = try encoder.encode(newSession)
+                try data.write(to: targetURL, options: [.atomic])
+            } else {
+                if FileManager.default.fileExists(atPath: targetURL.path) {
+                    try? FileManager.default.removeItem(at: targetURL)
+                }
+            }
+            return updated
+        }
     }
 }
 

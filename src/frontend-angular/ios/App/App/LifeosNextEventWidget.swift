@@ -140,7 +140,7 @@ struct LifeosNextEventWidgetEntryView: View {
                 let stepText = session.steps[session.currentStepIndex]
                 HStack(alignment: .top, spacing: 8) {
                     if #available(iOS 17.0, *) {
-                        Button(intent: ToggleCookingStepIntent(stepIndex: session.currentStepIndex)) {
+                        Button(intent: ToggleCookingStepIntent(stepIndex: session.currentStepIndex, sessionId: session.sessionId)) {
                             Image(systemName: session.completedStepIndices.contains(session.currentStepIndex) ? "checkmark.circle.fill" : "circle")
                                 .font(.title3)
                                 .foregroundStyle(session.completedStepIndices.contains(session.currentStepIndex) ? .green : .primary)

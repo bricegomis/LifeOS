@@ -2,17 +2,18 @@ import type { ManualDay, ManualWeek } from '../api/manual-planner.models.ts'
 import type { AppGroupEventItem } from './native.models.ts'
 
 /**
- * Projects a local civil date and minute of day (0..1439) into an ISO string
- * formatted for that specific date in the given IANA timeZoneId, handling standard vs DST offsets.
+ * Projects a local civil date (YYYY-MM-DD) and minute of day (0..1439) into an ISO-8601 UTC string.
+ * Disambiguates DST transitions (skips and overlaps) and handles month/year civil boundaries accurately
+ * without day-number modulo or single-iteration offset approximations.
  */
 export function civilTimeToIso(dateStr: string, minute: number, timeZoneId: string): string {
   const [year, month, day] = dateStr.split('-').map(Number)
   const hour = Math.floor(minute / 60)
   const min = minute % 60
 
-  // Format candidate UTC time and determine actual offset at that local time
-  // Using Intl.DateTimeFormat to compute the civil offset for that specific instant
-  const approxUtc = new Date(Date.UTC(year!, month! - 1, day!, hour, min))
+  const targetUtcMs = Date.UTC(year!, month! - 1, day!, hour, min, 0)
+  let candidateMs = targetUtcMs
+
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timeZoneId,
     year: 'numeric',
@@ -24,31 +25,45 @@ export function civilTimeToIso(dateStr: string, minute: number, timeZoneId: stri
     hour12: false,
   })
 
-  // Format parts to see civil time represented by approxUtc in the target timezone
-  const parts = formatter.formatToParts(approxUtc)
-  const getPart = (type: string) => Number(parts.find(p => p.type === type)?.value ?? 0)
+  const getCivilTime = (ms: number) => {
+    const parts = formatter.formatToParts(new Date(ms))
+    const p: Record<string, number> = {}
+    for (const part of parts) {
+      if (part.type !== 'literal') p[part.type] = Number(part.value)
+    }
+    if (p['hour'] === 24) p['hour'] = 0
+    return {
+      year: p['year'] ?? year!,
+      month: p['month'] ?? month!,
+      day: p['day'] ?? day!,
+      hour: p['hour'] ?? 0,
+      minute: p['minute'] ?? 0,
+      second: p['second'] ?? 0,
+    }
+  }
 
-  const civilYear = getPart('year')
-  const civilMonth = getPart('month')
-  const civilDay = getPart('day')
-  let civilHour = getPart('hour')
-  if (civilHour === 24) civilHour = 0
-  const civilMinute = getPart('minute')
+  let lastDiffMs = 0
+  for (let iter = 0; iter < 5; iter++) {
+    const civil = getCivilTime(candidateMs)
+    const civilUtcCandidate = Date.UTC(civil.year, civil.month - 1, civil.day, civil.hour, civil.minute, civil.second)
+    const diffMs = targetUtcMs - civilUtcCandidate
+    if (diffMs === 0) break
+    // In DST gap (missing hour during spring forward), alternating oscillations occur.
+    // Detect oscillation and stop at the valid converted instant.
+    if (iter > 0 && Math.abs(diffMs) === Math.abs(lastDiffMs) && diffMs !== lastDiffMs) {
+      break
+    }
+    lastDiffMs = diffMs
+    candidateMs += diffMs
+  }
 
-  // Calculate the difference between target civil time and what approxUtc evaluates to in that timezone
-  const targetMinutes = (day! * 1440) + (hour * 60) + min
-  const resultMinutes = (civilDay * 1440) + (civilHour * 60) + civilMinute
-  const diffMinutes = targetMinutes - resultMinutes
-
-  // Adjust approxUtc by the difference
-  const exactInstant = new Date(approxUtc.getTime() + diffMinutes * 60 * 1000)
-
-  return exactInstant.toISOString()
+  return new Date(candidateMs).toISOString()
 }
 
 /**
  * Extracts and sorts all future/upcoming and current events from manual weeks across a rolling horizon.
- * Events without startMinute are included with startIso = null.
+ * Filters out events whose end time (or start time) is in the past relative to `now`.
+ * Events without startMinute are retained for today and future days with startIso = null.
  */
 export function projectEventsFromWeeks(
   weeks: ManualWeek[],
@@ -56,6 +71,16 @@ export function projectEventsFromWeeks(
   timeZoneId: string,
 ): AppGroupEventItem[] {
   const allEvents: AppGroupEventItem[] = []
+  const nowMs = now.getTime()
+
+  // Format today's civil date in the given timezone (YYYY-MM-DD)
+  const dtf = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timeZoneId,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+  const todayStr = dtf.format(now) // en-CA emits YYYY-MM-DD
 
   for (const week of weeks) {
     const tz = week.timeZoneId || timeZoneId
@@ -63,6 +88,16 @@ export function projectEventsFromWeeks(
       for (const meal of day.meals) {
         const startIso = meal.startMinute !== null ? civilTimeToIso(day.date, meal.startMinute, tz) : null
         const endIso = meal.endMinute !== null ? civilTimeToIso(day.date, meal.endMinute, tz) : null
+
+        // If timed, drop events that ended in the past (using endIso or startIso + 45min default)
+        if (startIso !== null) {
+          const effectiveEndMs = endIso !== null ? new Date(endIso).getTime() : new Date(startIso).getTime() + 45 * 60 * 1000
+          if (effectiveEndMs < nowMs) continue
+        } else {
+          // If untimed, drop events from days strictly before today
+          if (day.date < todayStr) continue
+        }
+
         allEvents.push({
           id: `meal-${meal.id}`,
           kind: 'meal',
@@ -82,6 +117,16 @@ export function projectEventsFromWeeks(
       for (const sport of day.sports) {
         const startIso = sport.startMinute !== null ? civilTimeToIso(day.date, sport.startMinute, tz) : null
         const endIso = sport.endMinute !== null ? civilTimeToIso(day.date, sport.endMinute, tz) : null
+
+        if (startIso !== null) {
+          const effectiveEndMs = endIso !== null
+            ? new Date(endIso).getTime()
+            : new Date(startIso).getTime() + (sport.durationMinutes || 45) * 60 * 1000
+          if (effectiveEndMs < nowMs) continue
+        } else {
+          if (day.date < todayStr) continue
+        }
+
         allEvents.push({
           id: `sport-${sport.id}`,
           kind: 'sport',

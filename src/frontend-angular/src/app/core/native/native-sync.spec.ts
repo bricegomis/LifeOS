@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import { splitInstructionsIntoSteps } from './recipe-steps.ts'
 import { civilTimeToIso, projectEventsFromWeeks } from './event-projection.ts'
 import { hashNotificationId } from './notification-id.ts'
+import { validateReminderPreferences } from './reminder-preferences.ts'
 import type { ManualWeek, ManualDay, ManualMeal, ManualSport } from '../api/manual-planner.models.ts'
 
 describe('recipe-steps instruction splitting', () => {
@@ -54,6 +55,34 @@ describe('event-projection and civil time', () => {
     assert.match(winterIso, /^2026-12-15T11:30:00/)
   })
 
+  it('handles month/year boundary crossing and late hours accurately', () => {
+    // 2026-12-31 at 23:00 in America/New_York (UTC-5 in standard winter time) -> 2027-01-01T04:00:00Z
+    const nyIso = civilTimeToIso('2026-12-31', 23 * 60, 'America/New_York')
+    assert.equal(nyIso, '2027-01-01T04:00:00.000Z')
+
+    // 2026-01-01 at 00:30 in Asia/Tokyo (UTC+9) -> 2025-12-31T15:30:00Z
+    const tokyoIso = civilTimeToIso('2026-01-01', 30, 'Asia/Tokyo')
+    assert.equal(tokyoIso, '2025-12-31T15:30:00.000Z')
+  })
+
+  it('handles DST spring forward gap and normal post-transition times', () => {
+    // On 2026-03-29 in Europe/Paris, clock jumps from 02:00 to 03:00 (UTC+1 to UTC+2).
+    // At 03:30 local Paris time, UTC is 01:30Z (03:30 - 2h)
+    const postDstIso = civilTimeToIso('2026-03-29', 3 * 60 + 30, 'Europe/Paris')
+    assert.equal(postDstIso, '2026-03-29T01:30:00.000Z')
+
+    // Skipped hour: 02:30 local Paris time does not exist; disambiguation produces valid instant 01:30Z
+    const skippedHourIso = civilTimeToIso('2026-03-29', 2 * 60 + 30, 'Europe/Paris')
+    assert.equal(skippedHourIso, '2026-03-29T01:30:00.000Z')
+  })
+
+  it('handles DST autumn fall back ambiguous hour', () => {
+    // On 2026-10-25 in Europe/Paris, clock falls back from 03:00 to 02:00.
+    // 02:30 local occurs twice. Our disambiguation produces a valid converged UTC instant.
+    const ambiguousIso = civilTimeToIso('2026-10-25', 2 * 60 + 30, 'Europe/Paris')
+    assert.ok(ambiguousIso.startsWith('2026-10-25T'))
+  })
+
   it('projects manual weeks into sorted event items with null startMinute at the end of the day', () => {
     const mealWithTime: ManualMeal = {
       id: 'm1', dayPlanId: 'd1', name: 'Déjeuner', startMinute: 720, endMinute: 780,
@@ -96,6 +125,36 @@ describe('event-projection and civil time', () => {
     assert.equal(events[2]?.id, 'meal-m2')
     assert.equal(events[2]?.startMinute, null)
     assert.equal(events[2]?.startIso, null)
+  })
+
+  it('filters out past events relative to now while retaining upcoming and untimed events', () => {
+    const pastMeal: ManualMeal = {
+      id: 'm-past', dayPlanId: 'd1', name: 'Petit déjeuner passé', startMinute: 420, endMinute: 450,
+      recipeLines: [], nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, isComplete: false, warnings: [] },
+    }
+    const futureMeal: ManualMeal = {
+      id: 'm-future', dayPlanId: 'd1', name: 'Dîner à venir', startMinute: 1200, endMinute: 1260,
+      recipeLines: [], nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, isComplete: false, warnings: [] },
+    }
+    const untimedMeal: ManualMeal = {
+      id: 'm-untimed', dayPlanId: 'd1', name: 'Snack du jour', startMinute: null, endMinute: null,
+      recipeLines: [], nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, isComplete: false, warnings: [] },
+    }
+
+    const day: ManualDay = {
+      id: 'd1', date: '2026-10-15', meals: [pastMeal, futureMeal, untimedMeal], sports: [],
+      nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, isComplete: false, warnings: [] },
+    }
+    const week: ManualWeek = {
+      id: 'w1', startsOn: '2026-10-12', timeZoneId: 'Europe/Paris', isManual: true, days: [day],
+    }
+
+    // Now is at 10:00 (minute 600) on 2026-10-15 Paris time (08:00 UTC)
+    const events = projectEventsFromWeeks([week], new Date('2026-10-15T08:00:00Z'), 'Europe/Paris')
+
+    assert.equal(events.length, 2)
+    assert.equal(events[0]?.id, 'meal-m-future')
+    assert.equal(events[1]?.id, 'meal-m-untimed')
   })
 })
 
@@ -152,5 +211,34 @@ describe('native URL and deep link resolution', () => {
     const matchRecipes = recipesDeepLink.match(/^lifeos:\/\/?\/?(.*)$/)
     assert.ok(matchRecipes)
     assert.equal('/' + matchRecipes[1], '/recipes')
+  })
+})
+
+describe('reminder preferences validation and collision-safe hashing', () => {
+  it('validates and sanitizes reminder preferences', () => {
+    // Normal valid object
+    const valid = validateReminderPreferences({ enabled: true, leadMinutes: 30, meals: true, sports: false })
+    assert.deepEqual(valid, { enabled: true, leadMinutes: 30, meals: true, sports: false })
+
+    // Invalid leadMinutes defaults to 15
+    const invalidLead = validateReminderPreferences({ enabled: true, leadMinutes: 45, meals: true, sports: true })
+    assert.equal(invalidLead.leadMinutes, 15)
+
+    // Null or empty defaults to safe default
+    const nullPref = validateReminderPreferences(null)
+    assert.equal(nullPref.enabled, false)
+    assert.equal(nullPref.leadMinutes, 15)
+  })
+
+  it('produces distinct collision-resistant positive 32-bit integer IDs', () => {
+    const set = new Set<number>()
+    const count = 1000
+    for (let i = 0; i < count; i++) {
+      const id = hashNotificationId(`meal-uuid-${i}-2026-10-15T12:00:00Z`)
+      assert.ok(id > 0 && id <= 2147483647, 'ID must be positive 32-bit int')
+      set.add(id)
+    }
+    // Zero collisions in 1000 sequential items
+    assert.equal(set.size, count)
   })
 })
