@@ -36,6 +36,10 @@ struct LifeosTimelineProvider: TimelineProvider {
                    eventDate > currentDate {
                     entries.append(LifeosWidgetEntry(date: eventDate, snapshot: snapshot, activeCooking: cooking))
                 }
+                if let cooking = cooking, cooking.expiresAt > currentDate {
+                    entries.append(LifeosWidgetEntry(date: cooking.expiresAt, snapshot: snapshot, activeCooking: nil))
+                }
+                entries.sort { $0.date < $1.date }
             }
         }
         
@@ -66,6 +70,9 @@ struct LifeosNextEventWidgetEntryView: View {
         let fallback = ISO8601DateFormatter()
         
         let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.timeZone = TimeZone(identifier: entry.snapshot?.timeZoneId ?? "Europe/Paris")
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let todayStr = dateFormatter.string(from: now)
         
@@ -87,8 +94,7 @@ struct LifeosNextEventWidgetEntryView: View {
             return upcomingUntimed
         }
         
-        // 3. Fallback to first future event if any
-        return events.first(where: { $0.eventDate >= todayStr })
+        return nil
     }
 
     var body: some View {
@@ -107,14 +113,14 @@ struct LifeosNextEventWidgetEntryView: View {
     // MARK: - Home Screen View
     @ViewBuilder
     private var homeScreenView: some View {
-        if let cooking = entry.activeCooking, !cooking.isCompletedBool {
+        if let cooking = entry.activeCooking, !cooking.isCompletedBool, !cooking.isExpired(at: entry.date) {
             cookingProgressView(cooking)
         } else if let event = nextEvent {
             eventView(event)
         } else if entry.snapshot == nil {
             emptyStateView(title: "Connexion requise", subtitle: "Ouvrez LifeOS pour synchroniser")
         } else {
-            emptyStateView(title: "Aucun événement", subtitle: "Planning à jour pour la période")
+            emptyStateView(title: "Aucun événement", subtitle: "Ouvrez LifeOS pour actualiser")
         }
     }
     
@@ -268,7 +274,7 @@ struct LifeosNextEventWidgetEntryView: View {
                 Text("\(event.title) (Sans horaire)")
             }
         } else {
-            Text("LifeOS à jour")
+            Text("Ouvrez LifeOS")
         }
     }
     

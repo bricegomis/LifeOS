@@ -27,16 +27,17 @@ export class LocalRemindersService {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(REMINDERS_PREFS_KEY, JSON.stringify(validated))
     }
+
+  }
+
+  clearPreferences(): void {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(REMINDERS_PREFS_KEY)
   }
 
   async checkPermissions(): Promise<boolean> {
     if (!Capacitor.isNativePlatform()) return false
-    try {
-      const status = await LocalNotifications.checkPermissions()
-      return status.display === 'granted'
-    } catch {
-      return false
-    }
+    const status = await LocalNotifications.checkPermissions()
+    return status.display === 'granted'
   }
 
   async requestPermissions(): Promise<boolean> {

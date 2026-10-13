@@ -1,164 +1,250 @@
-# Architecture et Guide iPhone LifeOS V1
+# LifeOS iPhone — installation personnelle gratuite et widgets
 
-Ce document détaille l'implémentation de la version mobile iPhone V1 de LifeOS.
+LifeOS utilise Angular 22 dans une WebView Capacitor 7, avec une vraie extension
+SwiftUI/WidgetKit, des App Intents et une Live Activity ActivityKit. Cible :
+**iOS 17 minimum**. Les widgets sont conservés ; ni raccourci, ni endpoint public
+ne remplace le partage local. Supabase gère uniquement l'authentification ; les
+données de foyer restent dans LifeOS API/PostgreSQL.
 
----
+## Gratuit, mais pas permanent sans maintenance
 
-## 1. Vue d'ensemble de l'architecture
+L'installation visée est **Xcode → iPhone personnel**, avec un compte Apple gratuit
+et sa **Personal Team**, sans App Store, TestFlight ni abonnement Apple Developer.
+La [table Apple des capacités](https://developer.apple.com/help/account/reference/supported-capabilities-ios)
+actuelle indique **oui pour App groups et Keychain sharing dans les trois
+colonnes**, y compris « Apple Developer » gratuit (HTML `icon-checksolid`,
+`alt="yes"`, vérifié le 13 octobre 2026). Certaines conversions Markdown omettent
+ces icônes ; ne pas conclure à une capacité payante à partir de cette conversion.
+LifeOS ne demande pas Keychain sharing et ne partage aucun JWT avec l'extension.
 
-LifeOS V1 pour iPhone combine le frontend Angular 22 avec le conteneur natif **Capacitor 7** et des extensions natives **SwiftUI / WidgetKit / ActivityKit / App Intents** (cible iOS 17.0+).
+La table ne remplace pas une preuve de provisioning : **la signature réelle des
+deux cibles avec la Personal Team et le fonctionnement sur iPhone restent à
+vérifier**. Aucun compte, certificat ni profil personnel n'a été consulté ou
+exporté pendant ce lot.
 
+Apple documente dans
+[About your developer account](https://developer.apple.com/help/account/basics/about-your-developer-account)
+un maximum de 10 App IDs, 3 appareils et 3 apps par appareil pour ce mode.
+Les profils expirent **7 jours après émission** : reconstruire et réinstaller
+depuis Xcode, avec l'iPhone disponible, chaque semaine. Les App IDs/appareils
+enregistrés sont également soumis à l'expiration indiquée par Apple. L'app et
+son extension ont des identifiants distincts ; vérifier les quotas affichés par
+Xcode. Ne pas promettre une installation gratuite permanente.
+
+## Prérequis et configuration publique
+
+Travailler dans un checkout isolé contenant la dernière `main`, jamais dans
+un ancien checkout partagé. Outils validés localement : Node **24.15.0**,
+npm **11.12.1**, CocoaPods **1.17.0**, Xcode **27.0 (27A266a)**.
+Le manifeste exige Node `^22.22.3 || ^24.15.0 || >=26.0.0` ; Node 20 est insuffisant.
+Xcode doit disposer d'un SDK iOS compatible et de composants système à jour ;
+les compilations CI utilisent le Xcode du runner macOS, sans compte Apple.
+
+Depuis `src/frontend-angular`, copier `.env.example` vers `.env.local` (non suivi)
+et renseigner :
+
+```dotenv
+VITE_LIFEOS_API_URL=https://votre-api.example
+VITE_SUPABASE_URL=https://votre-projet.supabase.co
+VITE_SUPABASE_ANON_KEY=cle-publique-anon-ou-publishable
 ```
-+--------------------------------------------------------------------------+
-|                            iPhone LifeOS V1                              |
-+--------------------------------------------------------------------------+
-|  Frontend Angular 22 (Capacitor WebView)                                  |
-|   - Synchronisation planning (2 semaines glissantes)                    |
-|   - Rappels locaux (@capacitor/local-notifications)                     |
-|   - Gestionnaire de session cuisine (découpage déterministe)             |
-|   - Auth Supabase (PKCE, Custom URL Scheme lifeos://)                    |
-+--------------------------------------------------------------------------+
-       |
-       | Capacitor Plugin: LifeosNativeBridge
-       v
-+--------------------------------------------------------------------------+
-|  App Group partagé (group.fr.lifeos.app)                                 |
-|   - widget_snapshot.json (atomique, zero JWT, identité foyer/user)       |
-|   - cooking_session.json (session active, progression, concurrence)      |
-+--------------------------------------------------------------------------+
-       |
-       +-------------------------------+
-       |                               |
-       v                               v
-+------------------------------+ +-----------------------------------------+
-|  WidgetKit Extension         | |  ActivityKit Live Activity              |
-|   - Prochain repas / sport   | |   - Dynamic Island (compact / expanded) |
-|   - Lock screen & Home screen| |   - Bannière écran verrouillé           |
-|   - Progression de cuisine   | |   - App Intents (cocher sans Angular)   |
-|   - ToggleCookingStepIntent  | |   - Expiration 8h max                   |
-+------------------------------+ +-----------------------------------------+
+
+L'URL API **ne contient pas `/api`** : le client l'ajoute. Ne mettre ni clé
+`service_role`, ni `sb_secret_`, ni mot de passe, ni chaîne PostgreSQL dans le
+frontend. Ces trois valeurs sont publiques et embarquées dans `config.js`, pas
+chargées depuis les variables d'un serveur Docker une fois l'app installée.
+Changer `.env.local` impose build, synchronisation et réinstallation.
+
+`npm run cap:sync` vérifie le **`config.js` du bundle produit** : HTTPS, URL API
+sans double `/api`, clé Supabase anon/publishable uniquement. Cela ne prouve pas
+la disponibilité réelle des services. Ne pas désactiver ATS pour contourner HTTP.
+
+Actions externes à réaliser par l'utilisateur/administrateur, sans les modifier
+dans ce lot :
+
+- API : autoriser exactement l'origine **`capacitor://localhost`** dans
+  `Cors:AllowedOrigins` pour la configuration Capacitor par défaut ; garder les
+  origines web nécessaires. Ne pas remplacer par `AllowAnyOrigin`, ni retirer
+  JWT/isolation foyer. Certificat HTTPS valide et API accessible depuis l'iPhone.
+- Supabase Auth → URL Configuration : autoriser
+  `lifeos://auth/callback` **avec les paramètres de retour utilisés**. Vérifier
+  également `lifeos://auth/callback?redirect=%2Fplanning` ; au besoin utiliser
+  `lifeos://auth/callback**` dans la liste de redirections du projet de confiance.
+  Activer/configurer Google et la connexion e-mail selon [le guide OAuth](google-oauth.md).
+- Un lien PKCE doit revenir sur **cet iPhone qui l'a demandé**, où réside le
+  vérificateur. Les erreurs d'expiration/refus/vérificateur sont affichées sur
+  Login ; ne pas copier le code vers un autre appareil. Les callbacks froids et
+  chauds passent par la même validation, avec échange dédupliqué en mémoire.
+
+## Identifiants personnalisables, sans Team personnelle dans Git
+
+Base : `src/frontend-angular/ios/App/Config/LifeOS.xcconfig`.
+Les configurations App Debug/Release incluent aussi les réglages CocoaPods.
+Créer facultativement **`Config/Local.xcconfig`** (ignoré par Git), par exemple :
+
+```xcconfig
+LIFEOS_APP_BUNDLE_ID = fr.votreidentifiant.lifeos
+LIFEOS_WIDGET_BUNDLE_ID = fr.votreidentifiant.lifeos.widget
+LIFEOS_APP_GROUP = group.fr.votreidentifiant.lifeos
 ```
 
-### Principes directeurs
-1. **Zéro fuite de jeton** : Le snapshot partagé dans l'App Group ne contient aucun token JWT ni identifiant sensible.
-2. **Aucun accès réseau dans l'extension** : Le widget lit uniquement les données projetées par l'application principale.
-3. **Une seule session de cuisine active** : Remplacement contrôlé avec boîte de dialogue de confirmation si une session existe déjà.
-4. **App Intents autonomes (iOS 17+)** : `ToggleCookingStepIntent` permet de cocher ou décocher une étape de cuisine directement depuis le widget ou la Live Activity, sans avoir à lancer Angular.
-5. **Rappels locaux opt-in** : Planifiés via `@capacitor/local-notifications`, calculés avec respect des fuseaux horaires (IANA) et du passage à l'heure d'été/d'hiver, plafonnés aux 50 prochaines notifications iOS. Événements sans horaire exclus des rappels.
-6. **Isolation d'identité stricte** : Le snapshot est verrouillé sur l'identifiant utilisateur Supabase (`userId`) et le foyer réel (`householdId`). Toute divergence détectée ou déconnexion déclenche une purge immédiate.
+Les valeurs de démonstration du dépôt sont `fr.lifeos.app`,
+`fr.lifeos.app.widget`, `group.fr.lifeos.app`. Utiliser des identifiants personnels
+uniques si Xcode signale qu'ils sont déjà utilisés. Les deux cibles doivent avoir
+**le même App Group** : leurs entitlements et Info.plist utilisent
+`$(LIFEOS_APP_GROUP)`, et Swift lit `LifeosAppGroupIdentifier` dans son bundle.
+Foundation est référencé via `SDKROOT`, sans version de SDK figée.
 
----
+**Actions humaines Apple nécessaires** :
 
-## 2. Configuration et Prérequis de Compilation
+1. Dans Xcode → Settings → Accounts, se connecter soi-même au compte Apple gratuit.
+   Aucun certificat/credential ne doit être transmis à l'agent.
+2. Ouvrir **`ios/App/App.xcworkspace`**, pas seulement `.xcodeproj`. Dans Signing &
+   Capabilities, sélectionner **la même Personal Team** et la signature automatique
+   pour **App et LifeosWidgetExtension** ; conserver App Groups sur les deux.
+   Si le choix écrit un `DEVELOPMENT_TEAM` personnel dans le projet, ne pas le
+   committer : un override `DEVELOPMENT_TEAM = ...` peut rester uniquement dans
+   `Config/Local.xcconfig`.
+3. Brancher/déverrouiller l'iPhone, accepter « Faire confiance », l'associer à
+   Xcode et activer **Réglages → Confidentialité et sécurité → Mode développeur**,
+   avec redémarrage/confirmation si demandés.
+4. Choisir le scheme partagé **App** et l'iPhone réel comme destination, puis
+   **Run**. Accepter si nécessaire le développeur dans Réglages → Général →
+   VPN et gestion de l'appareil. Vérifier que l'extension est bien embarquée.
 
-### Environnement requis
-- macOS avec Xcode 15+ ou 16+ (iOS SDK 17.0+)
-- Node.js 20+ ou 24+
-- CocoaPods (`pod 1.17+`)
+**Si le provisioning refuse effectivement l'App Group**, conserver le message
+exact de Xcode, les noms des capacités et les cibles concernées (sans certificat,
+token ni profil exporté). Vérifier correspondance Team/IDs/Group et composants
+Xcode. Ne pas annoncer les widgets opérationnels avant signature et test réels.
+Ne pas acheter d'abonnement, supprimer les widgets, publier des données ou
+refondre le serveur comme « contournement » sans nouvelle décision.
 
-### Identifiants et signature
-- **Bundle ID Application** : `fr.lifeos.app`
-- **Bundle ID Widget Extension** : `fr.lifeos.app.widget`
-- **App Group** : `group.fr.lifeos.app` (activé sur les deux cibles via `App.entitlements`)
-- **Custom URL Scheme** : `lifeos://` (enregistré dans `Info.plist` sous `CFBundleURLSchemes`). La V1 utilise le scheme personnalisé et non les Universal Links (les Universal Links nécessitent un fichier `apple-app-site-association` hébergé sur un domaine public HTTPS avec un Team ID Apple actif).
+## Commandes reproductibles
 
-### Configuration Supabase requise
-Dans le tableau de bord Supabase du projet :
-1. Aller dans **Authentication > URL Configuration**.
-2. Dans **Redirect URLs**, ajouter :
-   ```
-   lifeos://auth/callback
-   ```
-3. L'authentification utilise le flux PKCE avec ouverture via le navigateur système (`@capacitor/browser`). Lors de la redirection vers `lifeos://auth/callback?code=...`, l'application intercepte l'URL, ferme la fenêtre du navigateur, échange le code PKCE contre la session et navigue vers l'écran cible validé.
+Depuis `src/frontend-angular` :
 
----
-
-## 3. Commandes de Développement et de Compilation
-
-Toutes les commandes s'exécutent depuis le dossier `src/frontend-angular` :
-
-### 1. Installation des dépendances
 ```bash
-cd src/frontend-angular
 npm ci
-```
-
-### 2. Validation TypeScript, Lint et Tests unitaires
-```bash
 npm test
-npm run type-check
 npm run lint
-```
-
-### 3. Build Angular et synchronisation vers iOS
-```bash
-npm run build
-npx cap copy ios
-# ou directement
+npm run type-check
 npm run cap:sync
+open ios/App/App.xcworkspace
 ```
 
-### 4. Compilation native Xcode via ligne de commande
+Depuis la racine du dépôt, le test Swift sans compte Apple :
+
 ```bash
-# Compilation de la Widget Extension
-xcodebuild -workspace ios/App/App.xcworkspace \
-  -scheme LifeosWidgetExtension \
-  -destination 'generic/platform=iOS' \
-  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO clean build
-
-# Compilation de l'Application principale
-xcodebuild -workspace ios/App/App.xcworkspace \
-  -scheme App \
-  -destination 'generic/platform=iOS' \
-  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO clean build
+bash scripts/test-ios-contract.sh
 ```
 
----
+Il compile les DTO et l'IO coordonnée avec `swiftc`, échange réellement du JSON
+TypeScript/Swift et lance des mutations concurrentes dans des processus distincts.
+Le test ne prouve pas les entitlements sur appareil.
 
-## 4. Fonctionnalités et Flux Utilisateur
+Compilation **sans signature** depuis `src/frontend-angular` :
 
-### 4.1 Mode Cuisine et Live Activity
-1. **Lancement** :
-   - Depuis la page **Recettes** (`/recipes`) : bouton "Cuisiner".
-   - Depuis le **Planning** (`/planning`) : bouton "Préparer" sur les cartes de repas ayant une recette associée.
-2. **Découpage déterministe** : Les instructions texte libre sont analysées et segmentées en étapes numérotées sans IA, avec prévisualisation et édition possible dans la boîte de dialogue avant démarrage.
-3. **Session active** :
-   - Un bandeau flottant s'affiche dans l'application avec les étapes et le compteur.
-   - La Live Activity démarre avec l'île dynamique et l'écran verrouillé.
-   - Le widget d'écran d'accueil lit directement la progression actuelle depuis `cooking_session.json` pour basculer immédiatement en mode "En cuisine".
-4. **App Intent natif et concurrence** : Tap sur la case à cocher dans le widget ou la Live Activity invoque `ToggleCookingStepIntent`. L'opération est coordonnée via `NSFileCoordinator` sur `cooking_session.json` (transaction read-modify-write atomique inter-processus). Elle vérifie l'identifiant de session attendu (`sessionId`) pour interdire toute action résiduelle sur une session précédente, borne strictement les compteurs et met à jour/réconcilie ou termine la Live Activity sans ouvrir l'application.
+```bash
+xcodebuild -workspace ios/App/App.xcworkspace -scheme App \
+  -configuration Debug -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath ios/DerivedData/validation-simulator \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
 
-### 4.2 Prochain événement (Repas / Sport)
-- Calcule les événements sur un horizon de 2 semaines glissantes sans création artificielle de semaine côté serveur.
-- Convertit les dates civiles et minutes de début en timestamps ISO avec prise en compte du fuseau horaire de la semaine (`ManualWeek.timeZoneId`), avec gestion robuste des passages d'heure d'été/d'hiver (DST gaps et chevauchements) et des changements de mois/année sans approximation.
-- Filtre dynamiquement les événements passés par rapport à l'instant présent (`now`).
-- **Gestion stricte des événements sans horaire** : Aucune heure inventée (startMinute et startIso sont `null`). Ils ne génèrent aucun rappel de notification locale. Sur les widgets (écran d'accueil et écran verrouillé), ils sont affichés avec la mention explicite `"Sans horaire"` ou `"—"` et classés après les événements programmés de la journée.
-- Les widgets ouvrent l'application via des deep links directs : `lifeos:///planning` (avec paramètre de date `?date=YYYY-MM-DD` si applicable), validés pour n'autoriser que les routes internes légitimes.
+xcodebuild -workspace ios/App/App.xcworkspace -scheme App \
+  -configuration Release -destination 'generic/platform=iOS' \
+  -derivedDataPath ios/DerivedData/validation-device \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+```
 
-### 4.3 Rappels locaux
-- Configurables dans la page **Paramètres** (`/settings`).
-- Opt-in désactivé par défaut ; demande d'autorisation système uniquement lors de l'activation.
-- Choix d'avance : 0 min, 5 min, 15 min, 30 min.
-- Identifiants de notifications stables et anti-collisions (`hashNotificationId` 64-bit split mix).
-- Écoute de `localNotificationActionPerformed` via `DeepLinkService` : le tap sur la notification navigue directement vers le planning du jour ciblé.
-- Reprogrammation idempotente à chaque modification du planning ou changement d'avance.
-- Les événements passés ou sans horaire sont systématiquement ignorés pour les rappels.
+Le scheme App construit et embarque **LifeosWidgetExtension**. Un scheme partagé
+de l'extension permet aussi sa compilation séparée. La CI
+`.github/workflows/ios-validation.yml` exécute contrôles Angular, contrat Swift,
+sync Capacitor et builds natifs sans secret Apple ; sa configuration réseau
+`.example` est synthétique et **ne permet pas une vraie connexion**.
 
-### 4.4 Synchronisation et Résilience
-- Synchronisation automatique au premier affichage, lors du retour au premier plan (`appStateChange: isActive`), et après chaque mutation du planning (création, modification, suppression d'un repas ou d'une séance).
-- **Protection contre la concurrence** : Les requêtes simultanées de synchronisation sont regroupées (`needsRerun` coalescing). Les plugins Capacitor sont vérifiés avec `Capacitor.isNativePlatform()` pour ne pas lever de promesses rejetées en environnement Web.
-- **Résilience hors-ligne** : Si l'API est indisponible ou le réseau inaccessible, le cache local n'est **jamais** écrasé par un snapshot vide. Le statut passe en état `stale` (ou `error`), visible dans les réglages avec la date de la dernière synchronisation réussie et le libellé de l'incident.
-- **Isolation d'identité** : Le snapshot contient l'identifiant réel de l'utilisateur (`userId`) et du foyer (`householdId` résolu via `/api/households/current`). Au démarrage et à chaque synchronisation, toute divergence d'identité utilisateur ou foyer entraîne une purge complète des données partagées.
-- Lors de la déconnexion (`AuthService.signOut`), `NativeSyncService.purgeAll()` est exécuté :
-  - Annulation de toutes les notifications locales en attente.
-  - Suppression coordonnée de `widget_snapshot.json` et `cooking_session.json`.
-  - Fin immédiate des Live Activities en cours.
-  - Rafraîchissement des widgets (retour à l'état "Connexion requise").
+## Fonctionnement et corrections de fiabilité
 
----
+Le plugin local Swift `CAPBridgedPlugin` est enregistré explicitement via
+`LifeosBridgeViewController.capacitorDidLoad()` (storyboard App).
+L'ancienne macro Objective-C `CAP_PLUGIN` seule ne découvrait pas ce plugin local
+avec Capacitor 7. Réglages distingue navigateur web, pont disponible et plugin
+non enregistré ; les promesses des listeners sont attendues et les incidents
+d'ouverture de lien remontent sans rejet silencieux.
 
-## 5. Limites V1 et Perspectives V2
+Le snapshot `widget_snapshot.json` contient utilisateur/foyer, date de génération,
+fuseau et événements repas/sport des deux semaines glissantes. Il ne contient
+**aucun JWT** et l'extension ne fait aucun accès réseau. Les dates civiles utilisent
+le fuseau IANA de la semaine, y compris DST ; les événements sans heure restent
+sans heure et ne génèrent pas de rappel. Le widget ne réaffiche pas un événement
+passé par simple fallback. Une mutation du planning et le retour au premier plan
+demandent une synchronisation. Une panne réseau garde le dernier snapshot de
+**la même identité**, avec incident dans Réglages.
 
-1. **Pas de synchronisation multi-appareils temps réel** : La V1 est locale à cet iPhone. Toute modification effectuée sur un autre appareil nécessite la réouverture de l'application sur l'iPhone pour actualiser le cache et les rappels locaux.
-2. **Pas de push notifications distantes APNs** : Les rappels sont exclusivement locaux (`UNUserNotificationCenter`).
-3. **Session de cuisine unique** : Une seule recette peut être cuisinée à la fois (session active maximale de 8h).
+La cuisine a **un fichier autoritatif unique** `cooking_session.json`, sans copie
+dupliquée dans le snapshot planning :
+
+- Contrat v2 : `startedAt`, `updatedAt`, `revision`, indices bornés/uniques ;
+  migration en lecture des anciens payloads TS et Swift (`startedAtIso`).
+  L'étape courante et l'état terminé sont dérivés, pas exigés au décodage.
+- App et App Intent envoient des **mutations ciblées** de session sous
+  `NSFileCoordinator`, pas un état complet Angular périmé. Chaque mutation
+  incrémente la révision ; une action visant une ancienne session est refusée.
+- Une session expire **8 h après `startedAt`**, sans prolongation à chaque case.
+  Restauration, widget et mutation refusent l'état expiré/futur. La Live Activity
+  utilise cette même échéance et masque ses actions lorsqu'elle devient stale ;
+  restauration/déconnexion la termine. `staleDate` n'est pas un minuteur qui
+  exécute du code et termine automatiquement l'activité au moment exact.
+- La purge efface mémoire et ancien cache JS cuisine, fichiers partagés,
+  notifications et Live Activities, et réinitialise l'opt-in rappels.
+  Une barrière invalide les opérations en vol ; toute écriture déjà admise finit
+  **avant** la purge. Elle ne peut pas republier après celle-ci. Aucune
+  restauration native ne retombe sur une vieille copie `localStorage`.
+- Les erreurs de lecture/mutation sont explicites. Live Activities peuvent être
+  désactivées par iOS : la checklist reste utilisable, avec statut distinct.
+
+Les rappels restent **locaux et opt-in**, plafonnés aux 50 prochains rappels.
+Le refus d'autorisation est signalé ; désactivation/refus annulent les rappels
+restants. Le tap ouvre la route planning validée. Les permissions ne sont jamais
+demandées silencieusement au lancement.
+
+## Preuves du lot et vérification à faire sur iPhone
+
+Au 13 octobre 2026 : dernière `origin/main` vérifiée (`dd5beea`), tests Node,
+lint, type-check, build et `cap:sync` exécutés ; roundtrips Swift/TS, bornes,
+expiration, purge/isolation, callbacks et concurrence multiprocessus exécutés.
+App **et extension** compilées sans signature pour simulateur et appareil
+générique avec Xcode 27. Le bundle de validation utilise exclusivement des valeurs
+publiques synthétiques ; **connexion aux services réels non testée**.
+
+Sur ce Mac, Xcode avertit d'un symbole CoreDevice manquant
+`DetailedOperation.metrics` et de CoreSimulator **1051.55.0 < 1171.7.0**.
+Les compilations génériques ont réussi malgré ces avertissements ; lancement
+du simulateur et gestion d'un iPhone ne sont pas prouvés. Faire mettre à jour /
+réparer Xcode et ses composants système par l'utilisateur avant le test appareil ;
+ne pas contourner la panne par des suppressions de frameworks.
+
+Après signature personnelle et configuration réelle, vérifier manuellement :
+
+| Parcours | Résultat attendu |
+| --- | --- |
+| Connexion Google + lien e-mail, app fermée puis ouverte | Session sur cet iPhone, destination conservée ; refus/lien expiré expliqués, pas de double échange PKCE. |
+| Modifier repas/sport, revenir au premier plan | Snapshot et widget réels actualisés ; jour/heure conformes au fuseau de la semaine. |
+| Ajouter widget accueil et écran verrouillé | Appui long → ajouter LifeOS ; aucun placeholder permanent ni donnée d'un autre compte. |
+| Cuisine depuis recette/planning, app et widget alternativement | Cases conservées des deux côtés, pas de mise à jour perdue ; Live Activity si autorisée. |
+| Terminer, remplacer, attendre expiration | Anciennes actions refusées ; aucun état expiré restauré, activité terminée à la reprise. |
+| Refuser puis autoriser rappels ; tap d'un rappel | Incident compréhensible, pas d'opt-in automatique, navigation au bon jour. |
+| Mode avion, fermeture forcée, redémarrage | Snapshot widget conservé pour la même identité ; aucune prétention de planning Angular hors ligne. |
+| Déconnexion/changement de compte pendant sync | Widgets sans anciennes données, cuisine/rappels effacés ; pas de réécriture tardive. |
+| Après 7 jours | Reconstruction/réinstallation Xcode réussie ; recontrôler widget et permissions. |
+
+**Non validés tant que ces actions n'ont pas été faites** : provisioning Personal
+Team, installation et exécution réelles iPhone, OAuth/config CORS réelle,
+rafraîchissement WidgetKit/ActivityKit par iOS, livraison/tap des notifications.
+Les cadences WidgetKit sont décidées par iOS ; `reloadAllTimelines` est une demande,
+pas une garantie d'actualisation immédiate.
+
+Le cache du widget n'est **pas** un cache de consultation Angular : le planning
+dans l'app dépend encore de l'API. Hors ligne, pas de planning de démonstration,
+pas d'écriture silencieuse. Les améliorations fonctionnelles sont inscrites dans
+[la roadmap](03-roadmap.md), pas implémentées ici. Pas de push APNs, HealthKit,
+scan caméra, stock ou courses ; aucune publication ni intervention production.

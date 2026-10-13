@@ -12,6 +12,6 @@ export default tseslint.config(
     extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
   },
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'node_modules/**', 'ios/DerivedData/**', 'ios/App/Pods/**', 'ios/App/App/public/**'],
   },
 )

@@ -22,7 +22,7 @@ public struct CookingActivityWidget: Widget {
                 
                 // Current step
                 HStack(alignment: .top, spacing: 8) {
-                    if #available(iOS 17.0, *) {
+                    if !context.isStale, !context.state.isCompleted {
                         Button(intent: ToggleCookingStepIntent(stepIndex: context.state.currentStepIndex, sessionId: context.attributes.sessionId)) {
                             Image(systemName: context.state.isCompleted ? "checkmark.circle.fill" : "circle")
                                 .font(.title2)
@@ -32,11 +32,11 @@ public struct CookingActivityWidget: Widget {
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(context.state.isCompleted ? "Terminé !" : "Étape \(context.state.currentStepIndex + 1)")
+                        Text(context.isStale ? "Session expirée" : context.state.isCompleted ? "Terminé !" : "Étape \(context.state.currentStepIndex + 1)")
                             .font(.caption)
                             .fontWeight(.bold)
                             .foregroundStyle(.secondary)
-                        Text(context.state.currentStepTitle)
+                        Text(context.isStale ? "Ouvrez LifeOS pour démarrer une nouvelle session." : context.state.currentStepTitle)
                             .font(.body)
                             .lineLimit(2)
                     }
@@ -63,14 +63,14 @@ public struct CookingActivityWidget: Widget {
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack {
-                        if #available(iOS 17.0, *) {
+                        if !context.isStale, !context.state.isCompleted {
                             Button(intent: ToggleCookingStepIntent(stepIndex: context.state.currentStepIndex, sessionId: context.attributes.sessionId)) {
                                 Image(systemName: context.state.isCompleted ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(context.state.isCompleted ? .green : .orange)
                             }
                             .buttonStyle(.plain)
                         }
-                        Text(context.state.currentStepTitle)
+                        Text(context.isStale ? "Session expirée" : context.state.currentStepTitle)
                             .font(.caption)
                             .lineLimit(1)
                     }
@@ -79,7 +79,7 @@ public struct CookingActivityWidget: Widget {
                 Image(systemName: "fork.knife")
                     .foregroundStyle(.orange)
             } compactTrailing: {
-                Text("\(context.state.completedCount)/\(context.state.totalCount)")
+                Text(context.isStale ? "Expirée" : "\(context.state.completedCount)/\(context.state.totalCount)")
                     .font(.caption2)
             } minimal: {
                 Image(systemName: "fork.knife")

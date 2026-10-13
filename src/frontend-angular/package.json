@@ -13,7 +13,7 @@
     "lint": "eslint . --max-warnings=0",
     "test": "node --test \"src/**/*.spec.ts\"",
     "format": "prettier --write \"src/**/*.{ts,html,css}\"",
-    "cap:sync": "npm run build && npx cap sync ios",
+    "cap:sync": "npm run build && node scripts/validate-ios-config.mjs && npx cap sync ios",
     "cap:open": "npx cap open ios"
   },
   "dependencies": {

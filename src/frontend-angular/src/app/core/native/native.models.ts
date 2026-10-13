@@ -22,16 +22,8 @@ export interface AppGroupWidgetSnapshot {
 }
 
 export interface AppGroupCookingSession {
-  sessionId: string
-  recipeId: string | null
-  recipeTitle: string
-  startedAt: string
-  steps: string[]
-  completedStepIndices: number[]
-  isCompleted: boolean
-}
-
-export interface CookingSessionState {
+  version: 2
+  revision: number
   sessionId: string
   recipeId: string | null
   recipeTitle: string
@@ -41,6 +33,8 @@ export interface CookingSessionState {
   isCompleted: boolean
   updatedAt: string
 }
+
+export type CookingSessionState = AppGroupCookingSession
 
 export interface ReminderPreferences {
   enabled: boolean

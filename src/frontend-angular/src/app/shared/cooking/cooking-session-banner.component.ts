@@ -5,6 +5,12 @@ import { CookingSessionService } from '@/app/core/native/cooking-session.service
   selector: 'app-cooking-session-banner',
   standalone: true,
   template: `
+    @if (cooking.lastError()) {
+      <p role="alert">{{ cooking.lastError() }}</p>
+    }
+    @if (cooking.liveActivityStatus() === 'disabled') {
+      <p>Live Activities désactivées sur cet iPhone. La checklist reste disponible.</p>
+    }
     @if (cooking.currentSession(); as session) {
       <aside class="cooking-banner" aria-label="Session cuisine en cours">
         <div class="cooking-banner-content">
@@ -22,7 +28,7 @@ import { CookingSessionService } from '@/app/core/native/cooking-session.service
                 <input
                   type="checkbox"
                   [checked]="session.completedStepIndices.includes($index)"
-                  (change)="cooking.toggleStep($index)"
+                  (change)="runAction(cooking.toggleStep($index))"
                 />
                 <span [class.step-checked]="session.completedStepIndices.includes($index)">{{ step }}</span>
               </label>
@@ -32,11 +38,11 @@ import { CookingSessionService } from '@/app/core/native/cooking-session.service
 
         <div class="cooking-banner-actions">
           @if (!session.isCompleted) {
-            <button type="button" class="lifeos-button lifeos-button-sm" (click)="cooking.completeSession()">
+            <button type="button" class="lifeos-button lifeos-button-sm" (click)="runAction(cooking.completeSession())">
               Terminer
             </button>
           }
-          <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="cooking.cancelSession()">
+          <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="runAction(cooking.cancelSession())">
             {{ session.isCompleted ? 'Fermer' : 'Annuler' }}
           </button>
         </div>
@@ -66,4 +72,10 @@ import { CookingSessionService } from '@/app/core/native/cooking-session.service
 })
 export class CookingSessionBannerComponent {
   readonly cooking = inject(CookingSessionService)
+
+  async runAction(action: Promise<void>): Promise<void> {
+    try { await action } catch (error) {
+      this.cooking.lastError.set(error instanceof Error ? error.message : 'Action cuisine impossible')
+    }
+  }
 }
