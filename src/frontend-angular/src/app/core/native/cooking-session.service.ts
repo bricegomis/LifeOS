@@ -39,7 +39,7 @@ export class CookingSessionService {
     if (!steps.length) throw new Error('Ajoutez au moins une étape de cuisine')
     const session: CookingSessionState = {
       version: 2, revision: 0,
-      sessionId: `cook-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      sessionId: `cook-${crypto.randomUUID()}`,
       recipeId, recipeTitle: recipeTitle.trim() || 'Recette',
       startedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       steps, completedStepIndices: [], isCompleted: false,
