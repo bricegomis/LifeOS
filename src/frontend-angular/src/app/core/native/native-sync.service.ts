@@ -24,7 +24,7 @@ export class NativeSyncService {
   readonly syncStatus = signal<'idle' | 'syncing' | 'synced' | 'stale' | 'error'>('idle')
   readonly lastSyncError = signal<string | null>(null)
   readonly lastSyncedAt = signal<string | null>(null)
-  private isSyncing = false
+  private syncPromise: Promise<void> | null = null
   private needsRerun = false
   private listening = false
   private observedUser: string | null | undefined
@@ -73,11 +73,24 @@ export class NativeSyncService {
   async syncNativeState(): Promise<void> {
     const user = this.auth.user()
     if (!this.auth.ready() || !user || this.authorizedUser !== user.id) return
-    if (this.isSyncing) {
+    if (this.syncPromise) {
       this.needsRerun = true
-      return
+      return this.syncPromise
     }
-    this.isSyncing = true
+    this.syncPromise = this.runSyncLoop()
+    try { await this.syncPromise } finally { this.syncPromise = null }
+  }
+
+  private async runSyncLoop(): Promise<void> {
+    do {
+      this.needsRerun = false
+      await this.syncOnce()
+    } while (this.needsRerun)
+  }
+
+  private async syncOnce(): Promise<void> {
+    const user = this.auth.user()
+    if (!this.auth.ready() || !user || this.authorizedUser !== user.id) return
     this.syncStatus.set('syncing')
     let token = nativeStateCoordinator.token()
     const assertCurrent = () => {
@@ -99,6 +112,8 @@ export class NativeSyncService {
       }
       assertCurrent()
       if (typeof localStorage !== 'undefined') localStorage.setItem(LAST_IDENTITY_KEY, identityKey)
+      await this.cooking.restoreSession()
+      assertCurrent()
       const summaries = await firstValueFrom(this.api.get<ManualWeekSummary[]>('/manual-planner/weeks'))
       assertCurrent()
       const currentMonday = monday(isoDate())
@@ -110,8 +125,6 @@ export class NativeSyncService {
       }
       const tz = weeks[0]?.timeZoneId || 'Europe/Paris'
       const events = projectEventsFromWeeks(weeks, new Date(), tz)
-      await this.cooking.restoreSession()
-      assertCurrent()
       const snapshot: AppGroupWidgetSnapshot = {
         version: 1, householdId, userId: user.id, generatedAt: new Date().toISOString(),
         timeZoneId: tz, events,
@@ -131,12 +144,6 @@ export class NativeSyncService {
       this.lastSyncedAt.set(snapshot.generatedAt)
     } catch (error) {
       if (!(error instanceof SupersededNativeOperation) && nativeStateCoordinator.isCurrent(token)) this.reportError(error)
-    } finally {
-      this.isSyncing = false
-      if (this.needsRerun) {
-        this.needsRerun = false
-        void this.syncNativeState()
-      }
     }
   }
 

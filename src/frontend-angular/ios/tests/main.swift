@@ -1,7 +1,15 @@
 import Foundation
 
 do {
-    if CommandLine.arguments.count == 3 && CommandLine.arguments[1] == "--read" {
+    if CommandLine.arguments.count == 2 && CommandLine.arguments[1] == "--timeline-test" {
+        let now = Date(timeIntervalSince1970: 100)
+        let expiry = now.addingTimeInterval(8 * 3600)
+        precondition(cookingTimelineDates(now: now, eventDates: [], expiresAt: expiry) == [now, expiry])
+        precondition(cookingTimelineDates(now: now, eventDates: [expiry, expiry, now], expiresAt: expiry) == [now, expiry])
+        let event = expiry.addingTimeInterval(10)
+        precondition(cookingTimelineDates(now: now, eventDates: [event, event], expiresAt: expiry) == [now, expiry, event])
+        precondition(cookingTimelineDates(now: expiry, eventDates: [], expiresAt: expiry) == [expiry])
+    } else if CommandLine.arguments.count == 3 && CommandLine.arguments[1] == "--read" {
         let session = try SharedAppGroup.readCookingSession(at: URL(fileURLWithPath: CommandLine.arguments[2]))
         FileHandle.standardOutput.write(try JSONEncoder().encode(session))
     } else if CommandLine.arguments.count == 4 && CommandLine.arguments[1] == "--toggle" {

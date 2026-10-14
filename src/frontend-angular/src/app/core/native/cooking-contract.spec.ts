@@ -94,6 +94,10 @@ describe('native URLs', () => {
 
 const binary = process.env['LIFEOS_SWIFT_CONTRACT_EXECUTABLE']
 describe('real Swift ↔ TS contract', { skip: !binary }, () => {
+  it('adds exactly one expiry entry without planning events and deduplicates equal timeline dates', () => {
+    const result = spawnSync(binary!, ['--timeline-test'], { encoding: 'utf8' })
+    assert.equal(result.status, 0, result.stderr)
+  })
   it('decodes actual TS JSON and re-encodes canonical names, dates and revision', () => {
     const { startedAt, updatedAt: _updatedAt, ...oldSwift } = legacy
     for (const payload of [legacy, { ...oldSwift, startedAtIso: startedAt }, readCookingSession(legacy, now)]) {

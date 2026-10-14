@@ -170,6 +170,8 @@ L'ancienne macro Objective-C `CAP_PLUGIN` seule ne découvrait pas ce plugin loc
 avec Capacitor 7. Réglages distingue navigateur web, pont disponible et plugin
 non enregistré ; les promesses des listeners sont attendues et les incidents
 d'ouverture de lien remontent sans rejet silencieux.
+Les registrations URL et notifications sont indépendantes et retentables :
+un refus du listener notifications ne bloque pas le callback de lancement à froid.
 
 Le snapshot `widget_snapshot.json` contient utilisateur/foyer, date de génération,
 fuseau et événements repas/sport des deux semaines glissantes. Il ne contient
@@ -179,6 +181,10 @@ sans heure et ne génèrent pas de rappel. Le widget ne réaffiche pas un évén
 passé par simple fallback. Une mutation du planning et le retour au premier plan
 demandent une synchronisation. Une panne réseau garde le dernier snapshot de
 **la même identité**, avec incident dans Réglages.
+Les demandes concurrentes attendent aussi leur resynchronisation regroupée avant
+de déclarer les rappels prêts. Une fois l'identité du foyer vérifiée, la cuisine
+est restaurée avant les requêtes planning : leur échec ne bloque pas cette lecture
+locale. Si le foyer ne peut pas être vérifié, cette restauration reste bloquée.
 
 La cuisine a **un fichier autoritatif unique** `cooking_session.json`, sans copie
 dupliquée dans le snapshot planning :

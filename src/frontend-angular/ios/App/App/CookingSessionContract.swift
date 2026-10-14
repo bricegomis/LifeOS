@@ -109,5 +109,13 @@ public enum CookingContractError: LocalizedError {
         case .invalidIndex: return "Index cuisine invalide"
         case .invalidOperation: return "Mutation cuisine invalide"
         }
+
     }
+}
+
+public func cookingTimelineDates(now: Date, eventDates: [Date], expiresAt: Date?) -> [Date] {
+    var dates = Set(eventDates.filter { $0 > now })
+    dates.insert(now)
+    if let expiry = expiresAt, expiry > now { dates.insert(expiry) }
+    return dates.sorted()
 }

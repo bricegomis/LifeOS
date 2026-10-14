@@ -21,8 +21,7 @@ struct LifeosTimelineProvider: TimelineProvider {
         let cooking = SharedAppGroup.loadCookingSession()
         let currentDate = Date()
         
-        var entries: [LifeosWidgetEntry] = []
-        entries.append(LifeosWidgetEntry(date: currentDate, snapshot: snapshot, activeCooking: cooking))
+        var eventDates: [Date] = []
         
         // Schedule future updates at the start time of upcoming events
         if let events = snapshot?.events {
@@ -34,13 +33,13 @@ struct LifeosTimelineProvider: TimelineProvider {
                 if let iso = event.isoString,
                    let eventDate = isoFormatter.date(from: iso) ?? fallbackFormatter.date(from: iso),
                    eventDate > currentDate {
-                    entries.append(LifeosWidgetEntry(date: eventDate, snapshot: snapshot, activeCooking: cooking))
+                    eventDates.append(eventDate)
                 }
-                if let cooking = cooking, cooking.expiresAt > currentDate {
-                    entries.append(LifeosWidgetEntry(date: cooking.expiresAt, snapshot: snapshot, activeCooking: nil))
-                }
-                entries.sort { $0.date < $1.date }
             }
+        }
+        let entries = cookingTimelineDates(now: currentDate, eventDates: eventDates, expiresAt: cooking?.expiresAt).map { date in
+            LifeosWidgetEntry(date: date, snapshot: snapshot,
+                              activeCooking: cooking.flatMap { $0.isExpired(at: date) ? nil : $0 })
         }
         
         // Refresh every 30 minutes minimum

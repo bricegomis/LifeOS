@@ -56,7 +56,7 @@ function harness() {
   providers.set(apiToken, api)
   providers.set(reminderToken, reminders)
   providers.set(routerToken, router)
-  const capApp = { addListener: async (_name: string, _callback: unknown) => {}, getLaunchUrl: async () => undefined }
+  const capApp = { addListener: async (_name: string, _callback: unknown) => {}, getLaunchUrl: async (): Promise<{ url: string } | undefined> => undefined }
   const notifications = {
     addListener: async () => {},
     checkPermissions: async () => ({ display: 'denied' }),
@@ -227,6 +227,61 @@ describe('production native services through deterministic ports', () => {
     await h.links.initListeners()
     assert.equal(h.sync.lastSyncError(), 'native listener failed')
     assert.equal(h.links.lastError(), 'native listener failed')
+  })
+  it('handles the cold auth callback despite notification registration failure and retries only the failed listener', async () => {
+    const h = harness()
+    let urlRegistrations = 0
+    let notificationRegistrations = 0
+    let exchanges = 0
+    h.capApp.addListener = async () => { urlRegistrations++ }
+    h.notifications.addListener = async () => { notificationRegistrations++; throw new Error('notifications unavailable') }
+    h.capApp.getLaunchUrl = async () => ({ url: 'lifeos://auth/callback?code=cold' })
+    h.auth.handleNativeCallback = async () => { exchanges++; return '/planning' }
+    await h.links.initListeners()
+    assert.ok(h.writes.includes('/planning'))
+    assert.equal(exchanges, 1)
+    h.notifications.addListener = async () => { notificationRegistrations++ }
+    await h.links.initListeners()
+    assert.equal(urlRegistrations, 1)
+    assert.equal(notificationRegistrations, 2)
+    assert.equal(exchanges, 1)
+  })
+  it('restores cuisine after verified household identity even when planner fetch fails', async () => {
+    const h = harness()
+    await h.init()
+    await h.cooking.startSession('Soupe', null, 'Couper')
+    const session = h.cooking.currentSession()
+    h.cooking.currentSession.set(null)
+    h.setGet(async path => {
+      if (path === '/households/current') return { id: 'house-a' }
+      throw new Error('planner offline')
+    })
+    await h.sync.syncNativeState()
+    assert.deepEqual(h.cooking.currentSession(), readCookingSession(session))
+    assert.equal(h.sync.syncStatus(), 'stale')
+    assert.equal(h.sync.lastSyncError(), 'planner offline')
+  })
+  it('awaits the coalesced rerun before reporting reminder synchronization complete', async () => {
+    const h = harness()
+    await h.init()
+    let finish!: (value: unknown) => void
+    const gate = new Promise(resolve => { finish = resolve })
+    let requests = 0
+    h.setGet(async path => {
+      if (path !== '/households/current') return []
+      requests++
+      return requests === 1 ? gate : { id: 'house-a' }
+    })
+    const first = h.sync.syncNativeState()
+    let completed = false
+    const coalesced = h.sync.syncNativeState().then(() => { completed = true })
+    await Promise.resolve()
+    assert.equal(completed, false)
+    finish({ id: 'house-a' })
+    await Promise.all([first, coalesced])
+    assert.equal(requests, 2)
+    assert.equal(h.sync.syncStatus(), 'synced')
+    assert.equal(completed, true)
   })
   it('deduplicates a cold/warm callback and reports auth failures before returning to login', async () => {
     const h = harness()
