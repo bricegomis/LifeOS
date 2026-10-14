@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { describe, it } from 'node:test'
@@ -93,7 +94,7 @@ function harness() {
     runInNewContext(js, {
       exports, require: (id: string) => { assert.ok(id in imports, `Missing port ${id}`); return imports[id] },
       localStorage: { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) },
-      Error, Date, Math, JSON, Set, Promise, console,
+      Error, Date, Math, JSON, Set, Promise, console, crypto: { randomUUID },
     })
     return exports
   }
@@ -141,6 +142,7 @@ describe('production native services through deterministic ports', () => {
     await h.init()
     await h.cooking.startSession('Soupe', null, 'Couper\nCuire')
     assert.ok(h.cooking.currentSession())
+    assert.match(h.cooking.currentSession()!.sessionId, /^cook-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
     await h.sync.purgeAll()
     assert.equal(h.cooking.currentSession(), null)
     assert.equal(h.storage.has('lifeos.native.cookingSession'), false)
