@@ -6,7 +6,7 @@ import {
   removeMagicLinkParams,
   type MagicLinkCallback,
 } from '@/app/core/auth/magic-link-callback'
-import { validatedReturnPath } from '@/app/core/auth/auth-flow'
+import { nativeAuthReturnPath } from '@/app/core/native/native-url'
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 export const NATIVE_AUTH_CALLBACK_URL = 'lifeos://auth/callback'
@@ -34,7 +34,7 @@ export const supabase = isSupabaseConfigured
   : null
 
 export function buildNativeSupabaseRedirectUrl(path = '/login'): string {
-  const safePath = validatedReturnPath(path)
+  const safePath = nativeAuthReturnPath(path)
   return `${NATIVE_AUTH_CALLBACK_URL}?redirect=${encodeURIComponent(safePath)}`
 }
 

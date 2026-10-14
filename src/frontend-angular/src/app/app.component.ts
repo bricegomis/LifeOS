@@ -17,7 +17,7 @@ export class AppComponent {
 
   constructor() {
     void this.auth.initialize()
-    this.deepLink.initListeners()
-    this.nativeSync.initListeners()
+    void this.deepLink.initListeners()
+    void this.nativeSync.initListeners()
   }
 }

@@ -27,5 +27,7 @@
 	</dict>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>LifeosAppGroupIdentifier</key>
+	<string>$(LIFEOS_APP_GROUP)</string>
 </dict>
 </plist>

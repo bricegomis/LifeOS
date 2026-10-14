@@ -21,8 +21,7 @@ struct LifeosTimelineProvider: TimelineProvider {
         let cooking = SharedAppGroup.loadCookingSession()
         let currentDate = Date()
         
-        var entries: [LifeosWidgetEntry] = []
-        entries.append(LifeosWidgetEntry(date: currentDate, snapshot: snapshot, activeCooking: cooking))
+        var eventDates: [Date] = []
         
         // Schedule future updates at the start time of upcoming events
         if let events = snapshot?.events {
@@ -34,9 +33,13 @@ struct LifeosTimelineProvider: TimelineProvider {
                 if let iso = event.isoString,
                    let eventDate = isoFormatter.date(from: iso) ?? fallbackFormatter.date(from: iso),
                    eventDate > currentDate {
-                    entries.append(LifeosWidgetEntry(date: eventDate, snapshot: snapshot, activeCooking: cooking))
+                    eventDates.append(eventDate)
                 }
             }
+        }
+        let entries = cookingTimelineDates(now: currentDate, eventDates: eventDates, expiresAt: cooking?.expiresAt).map { date in
+            LifeosWidgetEntry(date: date, snapshot: snapshot,
+                              activeCooking: cooking.flatMap { $0.isExpired(at: date) ? nil : $0 })
         }
         
         // Refresh every 30 minutes minimum
@@ -66,6 +69,9 @@ struct LifeosNextEventWidgetEntryView: View {
         let fallback = ISO8601DateFormatter()
         
         let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.timeZone = TimeZone(identifier: entry.snapshot?.timeZoneId ?? "Europe/Paris")
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let todayStr = dateFormatter.string(from: now)
         
@@ -87,8 +93,7 @@ struct LifeosNextEventWidgetEntryView: View {
             return upcomingUntimed
         }
         
-        // 3. Fallback to first future event if any
-        return events.first(where: { $0.eventDate >= todayStr })
+        return nil
     }
 
     var body: some View {
@@ -107,14 +112,14 @@ struct LifeosNextEventWidgetEntryView: View {
     // MARK: - Home Screen View
     @ViewBuilder
     private var homeScreenView: some View {
-        if let cooking = entry.activeCooking, !cooking.isCompletedBool {
+        if let cooking = entry.activeCooking, !cooking.isCompletedBool, !cooking.isExpired(at: entry.date) {
             cookingProgressView(cooking)
         } else if let event = nextEvent {
             eventView(event)
         } else if entry.snapshot == nil {
             emptyStateView(title: "Connexion requise", subtitle: "Ouvrez LifeOS pour synchroniser")
         } else {
-            emptyStateView(title: "Aucun événement", subtitle: "Planning à jour pour la période")
+            emptyStateView(title: "Aucun événement", subtitle: "Ouvrez LifeOS pour actualiser")
         }
     }
     
@@ -268,7 +273,7 @@ struct LifeosNextEventWidgetEntryView: View {
                 Text("\(event.title) (Sans horaire)")
             }
         } else {
-            Text("LifeOS à jour")
+            Text("Ouvrez LifeOS")
         }
     }
     

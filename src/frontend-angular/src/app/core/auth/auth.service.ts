@@ -75,7 +75,9 @@ export class AuthService {
   async signInWithGoogle(returnPath = '/'): Promise<void> {
     if (!supabase) throw new Error('Supabase n’est pas configuré.')
     this.error.set(null)
-    const redirectTo = buildSupabaseRedirectUrl(buildLoginRedirectPath(returnPath))
+    const redirectTo = buildSupabaseRedirectUrl(
+      Capacitor.isNativePlatform() ? validatedReturnPath(returnPath) : buildLoginRedirectPath(returnPath),
+    )
     if (!redirectTo) throw new Error('Impossible de déterminer l’URL de retour de connexion.')
 
     if (Capacitor.isNativePlatform()) {
@@ -92,11 +94,16 @@ export class AuthService {
 
     try {
       await Browser.close()
-    } catch {
-      // browser might not be open
+    } catch (error) {
+      console.warn('LifeOS : fermeture du navigateur natif indisponible', error instanceof Error ? error.message : 'erreur native')
     }
 
     const callback = readMagicLinkCallback(callbackUrl)
+    if (callback.kind === 'none') {
+      const error = new Error('Paramètres de retour de connexion manquants.')
+      this.error.set(error.message)
+      throw error
+    }
     let redirectPath = '/'
     try {
       const parsedUrl = new URL(callbackUrl)
@@ -105,7 +112,7 @@ export class AuthService {
         redirectPath = validatedReturnPath(redirectParam)
       }
     } catch {
-      // fallback
+      throw new Error('URL de retour de connexion invalide.')
     }
 
     try {

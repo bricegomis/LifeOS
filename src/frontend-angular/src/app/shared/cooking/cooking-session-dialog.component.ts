@@ -137,8 +137,12 @@ export class CookingSessionDialogComponent {
 
   async confirmReplace(): Promise<void> {
     this.showReplaceConfirm.set(false)
-    await this.cooking.cancelSession()
-    await this.doStart()
+    try {
+      await this.cooking.cancelSession()
+      await this.doStart()
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Remplacement cuisine impossible')
+    }
   }
 
   async start(): Promise<void> {

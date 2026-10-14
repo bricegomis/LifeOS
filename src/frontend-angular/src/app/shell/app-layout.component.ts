@@ -52,7 +52,7 @@ export class AppLayoutComponent implements OnInit {
   )
 
   async ngOnInit(): Promise<void> {
-    this.nativeSync.initListeners()
+    void this.nativeSync.initListeners()
     void this.nativeSync.syncNativeState()
 
     if (!apiBaseUrl) return
@@ -69,10 +69,12 @@ export class AppLayoutComponent implements OnInit {
 
   async signOut(): Promise<void> {
     this.signOutError.set('')
+    let purgeError: unknown
     try {
-      await this.nativeSync.purgeAll()
+      try { await this.nativeSync.purgeAll() } catch (error) { purgeError = error }
       await this.auth.signOut()
       await this.router.navigateByUrl('/login')
+      if (purgeError) throw purgeError
     } catch (error) {
       this.signOutError.set(
         error instanceof Error ? error.message : 'Impossible de terminer la déconnexion.',

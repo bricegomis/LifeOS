@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		0C0D008DDDB6AD07CE9A2E00 /* LifeosNativeBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0177972E50D15641A07F25A6 /* LifeosNativeBridgePlugin.swift */; };
+		6C11FCBFF23A4370AA8C0006 /* CookingSessionContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C11FCBFF23A4370AA8C0005 /* CookingSessionContract.swift */; };
+		6C11FCBFF23A4370AA8C0007 /* CookingSessionContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C11FCBFF23A4370AA8C0005 /* CookingSessionContract.swift */; };
 		2353998EF1717632A8E53734 /* SharedAppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = F31523DCD96344270AC2F2CE /* SharedAppGroup.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		315397A0A2A486D3172010FD /* LifeosWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D63A7A57047AC25608229F04 /* LifeosWidgetExtension.appex */; };
@@ -21,7 +23,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		57AD698219E0BCDA89EEA191 /* LifeosWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EB8B8BF070521F7D7ADD2D9 /* LifeosWidgetBundle.swift */; };
 		70C97BAE321DCCE8A987BF3C /* ToggleCookingStepIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BBE734184E768B0E69B3AEC /* ToggleCookingStepIntent.swift */; };
-		792AD50EC94280D11A01E0F6 /* LifeosNativeBridgePlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = 5414216006357654CA03D4D0 /* LifeosNativeBridgePlugin.m */; };
+		792AD50EC94280D11A01E0F6 /* LifeosBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5414216006357654CA03D4D0 /* LifeosBridgeViewController.swift */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
 		ACB5C03434E48AA13562C41F /* LifeosNextEventWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 350D8ABEEDFBACB0A2FFFF83 /* LifeosNextEventWidget.swift */; };
 		D2532A92F82D75551EAF4AB4 /* CookingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49FA02F17F2AEDEEB47F165 /* CookingActivityAttributes.swift */; };
@@ -60,7 +62,7 @@
 		2EB8B8BF070521F7D7ADD2D9 /* LifeosWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeosWidgetBundle.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		350D8ABEEDFBACB0A2FFFF83 /* LifeosNextEventWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeosNextEventWidget.swift; sourceTree = "<group>"; };
-		41ADDAEF70CD017AB58DE6AF /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		41ADDAEF70CD017AB58DE6AF /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -69,7 +71,11 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
-		5414216006357654CA03D4D0 /* LifeosNativeBridgePlugin.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = LifeosNativeBridgePlugin.m; sourceTree = "<group>"; };
+		5414216006357654CA03D4D0 /* LifeosBridgeViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LifeosBridgeViewController.swift; sourceTree = "<group>"; };
+		6C11FCBFF23A4370AA8C0001 /* LifeOS.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = LifeOS.xcconfig; sourceTree = "<group>"; };
+		6C11FCBFF23A4370AA8C0002 /* App.Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.Debug.xcconfig; sourceTree = "<group>"; };
+		6C11FCBFF23A4370AA8C0003 /* App.Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.Release.xcconfig; sourceTree = "<group>"; };
+		6C11FCBFF23A4370AA8C0005 /* CookingSessionContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CookingSessionContract.swift; sourceTree = "<group>"; };
 		5885F1298ADDF481EFAE66AA /* CookingActivityWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CookingActivityWidget.swift; sourceTree = "<group>"; };
 		AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
@@ -120,6 +126,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3061FED79650016851F /* App */,
+				6C11FCBFF23A4370AA8C0004 /* Config */,
 				504EC3051FED79650016851F /* Products */,
 				7F8756D8B27F46E3366F6CEA /* Pods */,
 				27E2DDA53C4D2A4D1A88CE4A /* Frameworks */,
@@ -147,15 +154,26 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				F31523DCD96344270AC2F2CE /* SharedAppGroup.swift */,
+				6C11FCBFF23A4370AA8C0005 /* CookingSessionContract.swift */,
 				D49FA02F17F2AEDEEB47F165 /* CookingActivityAttributes.swift */,
 				2BBE734184E768B0E69B3AEC /* ToggleCookingStepIntent.swift */,
 				0177972E50D15641A07F25A6 /* LifeosNativeBridgePlugin.swift */,
-				5414216006357654CA03D4D0 /* LifeosNativeBridgePlugin.m */,
+				5414216006357654CA03D4D0 /* LifeosBridgeViewController.swift */,
 				350D8ABEEDFBACB0A2FFFF83 /* LifeosNextEventWidget.swift */,
 				5885F1298ADDF481EFAE66AA /* CookingActivityWidget.swift */,
 				2EB8B8BF070521F7D7ADD2D9 /* LifeosWidgetBundle.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		6C11FCBFF23A4370AA8C0004 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				6C11FCBFF23A4370AA8C0001 /* LifeOS.xcconfig */,
+				6C11FCBFF23A4370AA8C0002 /* App.Debug.xcconfig */,
+				6C11FCBFF23A4370AA8C0003 /* App.Release.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		7F8756D8B27F46E3366F6CEA /* Pods */ = {
@@ -309,10 +327,11 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				2353998EF1717632A8E53734 /* SharedAppGroup.swift in Sources */,
+				6C11FCBFF23A4370AA8C0006 /* CookingSessionContract.swift in Sources */,
 				FD5E117A887AC9A8F3861C30 /* CookingActivityAttributes.swift in Sources */,
 				4509D64148018CAA7375DDB2 /* ToggleCookingStepIntent.swift in Sources */,
 				0C0D008DDDB6AD07CE9A2E00 /* LifeosNativeBridgePlugin.swift in Sources */,
-				792AD50EC94280D11A01E0F6 /* LifeosNativeBridgePlugin.m in Sources */,
+				792AD50EC94280D11A01E0F6 /* LifeosBridgeViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -321,6 +340,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F32A1D6F53F24FBD120D979C /* SharedAppGroup.swift in Sources */,
+				6C11FCBFF23A4370AA8C0007 /* CookingSessionContract.swift in Sources */,
 				D2532A92F82D75551EAF4AB4 /* CookingActivityAttributes.swift in Sources */,
 				70C97BAE321DCCE8A987BF3C /* ToggleCookingStepIntent.swift in Sources */,
 				ACB5C03434E48AA13562C41F /* LifeosNextEventWidget.swift in Sources */,
@@ -362,36 +382,42 @@
 /* Begin XCBuildConfiguration section */
 		0FF61817C83F581EB853CC30 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6C11FCBFF23A4370AA8C0001 /* LifeOS.xcconfig */;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "App/LifeosWidgetExtension-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = fr.lifeos.app.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(LIFEOS_WIDGET_BUNDLE_ID)";
 				PRODUCT_NAME = LifeosWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
 		420E17A0C4D4870513691F57 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6C11FCBFF23A4370AA8C0001 /* LifeOS.xcconfig */;
 			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
 				CLANG_ENABLE_OBJC_WEAK = NO;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "App/LifeosWidgetExtension-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = fr.lifeos.app.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(LIFEOS_WIDGET_BUNDLE_ID)";
 				PRODUCT_NAME = LifeosWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -504,18 +530,16 @@
 		};
 		504EC3171FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */;
+			baseConfigurationReference = 6C11FCBFF23A4370AA8C0002 /* App.Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
-				PRODUCT_BUNDLE_IDENTIFIER = fr.lifeos.app;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(LIFEOS_APP_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
@@ -525,17 +549,15 @@
 		};
 		504EC3181FED79650016851F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */;
+			baseConfigurationReference = 6C11FCBFF23A4370AA8C0003 /* App.Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fr.lifeos.app;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(LIFEOS_APP_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;

@@ -12,6 +12,7 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "clearWidgetSnapshot", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "getCookingSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveCookingSession", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "mutateCookingSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearCookingSession", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "startLiveActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateLiveActivity", returnType: CAPPluginReturnPromise),
@@ -48,19 +49,41 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     
     // MARK: - Cooking Session
     @objc func getCookingSession(_ call: CAPPluginCall) {
-        if let session = SharedAppGroup.loadCookingSession() {
-            do {
+        do {
+            if let session = try SharedAppGroup.readCookingSession() {
                 let encoder = JSONEncoder()
                 let data = try encoder.encode(session)
-                if let dict = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                    call.resolve(["session": dict])
-                    return
+                guard let dict = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] else {
+                    throw NSError(domain: "LifeosNativeBridge", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid cooking encoding"])
                 }
-            } catch {
-                NSLog("Failed to encode cooking session: %@", error.localizedDescription)
+                call.resolve(["session": dict])
+                return
             }
+            call.resolve(["session": NSNull()])
+        } catch {
+            call.reject("Failed to read cooking session: \(error.localizedDescription)")
         }
-        call.resolve(["session": NSNull()])
+    }
+
+    @objc func mutateCookingSession(_ call: CAPPluginCall) {
+        guard let sessionId = call.getString("sessionId"),
+              let operation = call.getString("operation") else {
+            call.reject("Missing cooking mutation parameters")
+            return
+        }
+        do {
+            let session = try SharedAppGroup.mutateCookingSession(
+                sessionId: sessionId, operation: operation, stepIndex: call.getInt("stepIndex")
+            )
+            let data = try JSONEncoder().encode(session)
+            guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw NSError(domain: "LifeosNativeBridge", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid cooking encoding"])
+            }
+            WidgetCenter.shared.reloadAllTimelines()
+            call.resolve(["session": dict])
+        } catch {
+            call.reject("Failed cooking mutation: \(error.localizedDescription)")
+        }
     }
     
     @objc func saveCookingSession(_ call: CAPPluginCall) {
@@ -81,7 +104,7 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     
     @objc func clearCookingSession(_ call: CAPPluginCall) {
         do {
-            try SharedAppGroup.clearCookingSession()
+            try SharedAppGroup.clearCookingSession(sessionId: call.getString("sessionId"))
             WidgetCenter.shared.reloadAllTimelines()
             call.resolve()
         } catch {
@@ -96,15 +119,18 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         
-        guard let sessionId = call.getString("sessionId"),
-              let recipeTitle = call.getString("recipeTitle"),
-              let steps = call.getArray("steps", String.self) else {
-            call.reject("Missing parameters for startLiveActivity")
+        let session: CookingSessionDTO
+        do {
+            guard let current = try SharedAppGroup.readCookingSession(),
+                  current.sessionId == call.getString("sessionId") else { throw CookingContractError.expired }
+            session = current
+        } catch {
+            call.reject(error.localizedDescription)
             return
         }
-        
-        let completedIndices = call.getArray("completedStepIndices", Int.self) ?? []
-        let currentStepIndex = steps.indices.first(where: { !completedIndices.contains($0) }) ?? (steps.count - 1)
+        let steps = session.steps
+        let completedIndices = session.completedStepIndices
+        let currentStepIndex = session.currentStepIndex
         let currentStepTitle = steps.indices.contains(currentStepIndex) ? steps[currentStepIndex] : "Terminé"
         let isCompleted = completedIndices.count == steps.count && !steps.isEmpty
         let progress = steps.isEmpty ? 1.0 : Double(completedIndices.count) / Double(steps.count)
@@ -116,9 +142,9 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             }
             
             let attributes = CookingActivityAttributes(
-                sessionId: sessionId,
-                recipeTitle: recipeTitle,
-                startedAt: Date()
+                sessionId: session.sessionId,
+                recipeTitle: session.recipeTitle,
+                startedAt: CookingSessionDTO.date(session.startedAt)!
             )
             
             let state = CookingActivityAttributes.ContentState(
@@ -133,7 +159,7 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             do {
                 let activity = try Activity<CookingActivityAttributes>.request(
                     attributes: attributes,
-                    content: .init(state: state, staleDate: Calendar.current.date(byAdding: .hour, value: 8, to: Date())),
+                    content: .init(state: state, staleDate: session.expiresAt),
                     pushType: nil
                 )
                 call.resolve(["activityId": activity.id])
@@ -149,14 +175,16 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         
-        let completedIndices = call.getArray("completedStepIndices", Int.self) ?? []
-        let isCompleted = call.getBool("isCompleted") ?? false
-        
-        guard let currentSession = SharedAppGroup.loadCookingSession() else {
-            call.resolve()
+        let currentSession: CookingSessionDTO
+        do {
+            guard let current = try SharedAppGroup.readCookingSession() else { throw CookingContractError.expired }
+            currentSession = current
+        } catch {
+            call.reject(error.localizedDescription)
             return
         }
-        
+        let completedIndices = currentSession.completedStepIndices
+        let isCompleted = currentSession.isCompletedBool
         let steps = currentSession.steps
         let currentStepIndex = steps.indices.first(where: { !completedIndices.contains($0) }) ?? (steps.count - 1)
         let currentStepTitle = steps.indices.contains(currentStepIndex) ? steps[currentStepIndex] : "Recette terminée !"
@@ -173,7 +201,11 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         
         Task {
             for activity in Activity<CookingActivityAttributes>.activities {
-                await activity.update(.init(state: updatedState, staleDate: Calendar.current.date(byAdding: .hour, value: 8, to: Date())))
+                if activity.attributes.sessionId == currentSession.sessionId && !isCompleted {
+                    await activity.update(.init(state: updatedState, staleDate: currentSession.expiresAt))
+                } else {
+                    await activity.end(nil, dismissalPolicy: .immediate)
+                }
             }
             call.resolve()
         }

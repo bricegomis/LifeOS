@@ -40,3 +40,8 @@ Voir [ADR 0006](docs/architecture/decisions/0006-foods-products-receipts.md).
 - [Modèle de données](docs/architecture/02-data-model.md)
 - [Décisions d'architecture (ADR)](docs/architecture/decisions/)
 - [Configuration Google OAuth / Supabase Auth](docs/google-oauth.md)
+- [iPhone : installation Xcode gratuite, widgets et renouvellement à 7 jours](docs/ios-v1.md)
+
+Les builds iOS sans signature ne prouvent pas une installation sur iPhone.
+La signature Personal Team de l'app et du widget, les permissions et les parcours
+réels sont à valider manuellement ; aucune publication App Store/TestFlight requise.

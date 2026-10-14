@@ -10,6 +10,8 @@ import { BuildVersionComponent } from '@/app/shared/build-version.component'
 
 import { LocalRemindersService } from '@/app/core/native/local-reminders.service'
 import { NativeSyncService } from '@/app/core/native/native-sync.service'
+import { DeepLinkService } from '@/app/core/native/deep-link.service'
+import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
 import type { ReminderPreferences } from '@/app/core/native/native.models'
 
 @Component({
@@ -29,6 +31,11 @@ import type { ReminderPreferences } from '@/app/core/native/native.models'
         <p>Les comptes connectés et les profils de personnes sont distincts. Un profil peut représenter un enfant sans compte.</p>
         <p>Les données du foyer sont sauvegardées par LifeOS API. Supabase assure uniquement la connexion.</p>
         <dl>
+          <dt>Pont natif</dt>
+          <dd>{{ bridgeStatus() === 'web' ? 'Navigateur web : widgets et rappels iOS non disponibles' : bridgeStatus() === 'available' ? 'Disponible' : 'Non enregistré : reconstruire dans Xcode' }}</dd>
+          @if (deepLink.lastError()) {
+            <dt>Incident ouverture de lien</dt><dd role="alert">{{ deepLink.lastError() }}</dd>
+          }
           <dt>Version interface</dt><dd><app-build-version component="UI" [info]="buildInfo" /></dd>
           <dt>API</dt><dd>{{ apiUrl || 'Non configurée' }}</dd>
         </dl>
@@ -165,6 +172,8 @@ export class SettingsPageComponent implements OnInit {
   readonly auth = inject(AuthService)
   private readonly reminders = inject(LocalRemindersService)
   readonly nativeSync = inject(NativeSyncService)
+  readonly deepLink = inject(DeepLinkService)
+  readonly bridgeStatus = nativeBridgeStatus
   readonly apiUrl = apiBaseUrl
   readonly buildInfo = buildInfo
   readonly profiles = signal<MemberProfileDto[]>([])
@@ -199,12 +208,17 @@ export class SettingsPageComponent implements OnInit {
           this.error.set('La permission de notifications a été refusée dans iOS. Activez-la dans Réglages > LifeOS.')
           this.reminderPrefs.enabled = false
           this.reminders.savePreferences(this.reminderPrefs)
+          await this.reminders.cancelAll()
           this.busy.set(false)
           return
         }
       }
       this.reminders.savePreferences(this.reminderPrefs)
+      if (!this.reminderPrefs.enabled) await this.reminders.cancelAll()
       await this.nativeSync.syncNativeState()
+      if (this.reminderPrefs.enabled && this.nativeSync.syncStatus() !== 'synced') {
+        throw new Error(this.nativeSync.lastSyncError() ?? 'Rappels enregistrés ; synchronisation encore en attente.')
+      }
       this.notice.set(this.reminderPrefs.enabled ? 'Rappels locaux configurés et planifiés.' : 'Rappels locaux désactivés.')
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Erreur lors de l’enregistrement des rappels.')

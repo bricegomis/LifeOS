@@ -1,161 +1,119 @@
 import { Injectable, signal, computed } from '@angular/core'
+import { Capacitor } from '@capacitor/core'
 import type { CookingSessionState } from './native.models'
-import { LifeosNativeBridge } from './native-bridge'
+import { LifeosNativeBridge, requireNativeBridge } from './native-bridge'
 import { splitInstructionsIntoSteps } from './recipe-steps'
-
-const LOCAL_STORAGE_KEY = 'lifeos.native.cookingSession'
+import { COOKING_STORAGE_KEY, readCookingSession } from './cooking-contract'
+import { nativeStateCoordinator, SupersededNativeOperation } from './native-state-coordinator'
 
 @Injectable({ providedIn: 'root' })
 export class CookingSessionService {
   readonly currentSession = signal<CookingSessionState | null>(null)
-  readonly hasActiveSession = computed(() => {
-    const s = this.currentSession()
-    return Boolean(s && !s.isCompleted)
-  })
+  readonly lastError = signal<string | null>(null)
+  readonly liveActivityStatus = signal<'web' | 'available' | 'disabled' | 'error'>(
+    Capacitor.isNativePlatform() ? 'available' : 'web',
+  )
+  readonly hasActiveSession = computed(() => Boolean(this.currentSession() && !this.currentSession()?.isCompleted))
 
-  constructor() {
-    void this.restoreSession()
+  clearLocalState(): void {
+    this.currentSession.set(null)
+    this.lastError.set(null)
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(COOKING_STORAGE_KEY)
   }
 
   async restoreSession(): Promise<CookingSessionState | null> {
-    try {
+    return this.perform(async () => {
       const res = await LifeosNativeBridge.getCookingSession()
-      if (res.session) {
-        this.currentSession.set(res.session)
-        return res.session
+      const session = readCookingSession(res.session)
+      // The native file is authoritative: never resurrect a separate JS cache.
+      if (!session && res.session) {
+        await LifeosNativeBridge.clearCookingSession({ sessionId: res.session.sessionId })
       }
-    } catch {
-      // Fallback to localStorage if bridge failed
-    }
-
-    if (typeof localStorage !== 'undefined') {
-      const raw = localStorage.getItem(LOCAL_STORAGE_KEY)
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw) as CookingSessionState
-          this.currentSession.set(parsed)
-          return parsed
-        } catch {
-          // ignore parsing error
-        }
-      }
-    }
-
-    this.currentSession.set(null)
-    return null
+      if (!session) await LifeosNativeBridge.endLiveActivity()
+      return session
+    })
   }
 
   async startSession(recipeTitle: string, recipeId: string | null, rawInstructions: string | null): Promise<CookingSessionState> {
     const steps = splitInstructionsIntoSteps(rawInstructions)
+    if (!steps.length) throw new Error('Ajoutez au moins une étape de cuisine')
     const session: CookingSessionState = {
+      version: 2, revision: 0,
       sessionId: `cook-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      recipeId,
-      recipeTitle: recipeTitle.trim() || 'Recette',
-      startedAt: new Date().toISOString(),
-      steps,
-      completedStepIndices: [],
-      isCompleted: false,
-      updatedAt: new Date().toISOString(),
+      recipeId, recipeTitle: recipeTitle.trim() || 'Recette',
+      startedAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      steps, completedStepIndices: [], isCompleted: false,
     }
-
-    this.currentSession.set(session)
-    await this.persistAndSync(session)
-
-    try {
-      await LifeosNativeBridge.startLiveActivity({
-        sessionId: session.sessionId,
-        recipeTitle: session.recipeTitle,
-        steps: session.steps,
-        completedStepIndices: session.completedStepIndices,
-      })
-    } catch {
-      // Live activity might not be supported or allowed
-    }
-
+    await this.perform(async () => {
+      await LifeosNativeBridge.saveCookingSession({ session })
+      await this.syncLiveActivity(session, true)
+      await LifeosNativeBridge.reloadWidgetTimelines()
+      return session
+    })
     return session
   }
 
   async toggleStep(stepIndex: number): Promise<void> {
-    const current = this.currentSession()
-    if (!current) return
-
-    const completed = new Set(current.completedStepIndices)
-    if (completed.has(stepIndex)) {
-      completed.delete(stepIndex)
-    } else {
-      completed.add(stepIndex)
-    }
-
-    const updatedIndices = Array.from(completed).sort((a, b) => a - b)
-    const allCompleted = current.steps.length > 0 && updatedIndices.length === current.steps.length
-
-    const updatedSession: CookingSessionState = {
-      ...current,
-      completedStepIndices: updatedIndices,
-      isCompleted: allCompleted,
-      updatedAt: new Date().toISOString(),
-    }
-
-    this.currentSession.set(updatedSession)
-    await this.persistAndSync(updatedSession)
-
-    try {
-      await LifeosNativeBridge.updateLiveActivity({
-        completedStepIndices: updatedSession.completedStepIndices,
-        isCompleted: updatedSession.isCompleted,
-      })
-      if (allCompleted) {
-        await LifeosNativeBridge.endLiveActivity()
-      }
-    } catch {
-      // ignore bridge errors
-    }
+    await this.mutate('toggle', stepIndex)
   }
 
   async completeSession(): Promise<void> {
-    const current = this.currentSession()
-    if (!current) return
-
-    const updatedSession: CookingSessionState = {
-      ...current,
-      completedStepIndices: current.steps.map((_, i) => i),
-      isCompleted: true,
-      updatedAt: new Date().toISOString(),
-    }
-
-    this.currentSession.set(updatedSession)
-    await this.persistAndSync(updatedSession)
-
-    try {
-      await LifeosNativeBridge.endLiveActivity()
-    } catch {
-      // ignore
-    }
+    await this.mutate('complete')
   }
 
   async cancelSession(): Promise<void> {
-    this.currentSession.set(null)
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(LOCAL_STORAGE_KEY)
-    }
-    try {
-      await LifeosNativeBridge.clearCookingSession()
+    const sessionId = this.currentSession()?.sessionId
+    await this.perform(async () => {
+      await LifeosNativeBridge.clearCookingSession({ sessionId })
       await LifeosNativeBridge.endLiveActivity()
       await LifeosNativeBridge.reloadWidgetTimelines()
-    } catch {
-      // ignore
+      return null
+    })
+  }
+
+  private async mutate(operation: 'toggle' | 'complete', stepIndex?: number): Promise<void> {
+    const sessionId = this.currentSession()?.sessionId
+    if (!sessionId) throw new Error('Aucune session cuisine active')
+    await this.perform(async () => {
+      const { session } = await LifeosNativeBridge.mutateCookingSession({ sessionId, operation, stepIndex })
+      await this.syncLiveActivity(session)
+      await LifeosNativeBridge.reloadWidgetTimelines()
+      return session
+    })
+  }
+
+  private async syncLiveActivity(session: CookingSessionState, start = false): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return
+    try {
+      if (start) {
+        const result = await LifeosNativeBridge.startLiveActivity(session)
+        this.liveActivityStatus.set(result.disabled ? 'disabled' : 'available')
+      } else if (session.isCompleted) {
+        await LifeosNativeBridge.endLiveActivity()
+      } else {
+        await LifeosNativeBridge.updateLiveActivity(session)
+      }
+    } catch (error) {
+      this.liveActivityStatus.set('error')
+      this.lastError.set(`Live Activity indisponible : ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
-  private async persistAndSync(session: CookingSessionState): Promise<void> {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(session))
-    }
+  private async perform(operation: () => Promise<CookingSessionState | null>): Promise<CookingSessionState | null> {
+    const token = nativeStateCoordinator.token()
+    this.lastError.set(null)
     try {
-      await LifeosNativeBridge.saveCookingSession({ session })
-      await LifeosNativeBridge.reloadWidgetTimelines()
-    } catch {
-      // ignore
+      const session = await nativeStateCoordinator.run(token, async () => {
+        requireNativeBridge()
+        return operation()
+      })
+      this.currentSession.set(session)
+      return session
+    } catch (error) {
+      if (!(error instanceof SupersededNativeOperation)) {
+        this.lastError.set(error instanceof Error ? error.message : 'Erreur du pont cuisine')
+      }
+      throw error
     }
   }
 }
