@@ -2,12 +2,13 @@ import { Component, HostListener, inject, signal, viewChild } from '@angular/cor
 import { FormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
-import type { FoodItemDto, FoodItemRequest, FoodPricesDto, ProductDto, ProductRequest, StoreDto, MemberProfileDto, HouseholdGroupDto } from '@/app/core/api/api.models'
+import type { FoodItemDto, FoodPricesDto, ProductDto, ProductRequest, StoreDto, MemberProfileDto, HouseholdGroupDto, ReviewDto } from '@/app/core/api/api.models'
 import { LifeosApiService, apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
 import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
 import { newFoodDraft, missingFoodFields } from './food-draft'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
+import { summarizeFoodReviews, type FoodReviewSummary } from './food-review-summary'
 
 export const newProductDraft = (foodItemId = ''): ProductRequest => ({
   foodItemId, name: '', description: '', purchaseUnit: 'unit', brand: null, barcode: null,
@@ -34,21 +35,39 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
       </div>
       @if (loading()) { <p role="status">Chargement des aliments et des prix…</p> }
       @else if (!visibleFoods().length) { <p>Aucun aliment dans cette sélection. Créez votre première référence ou modifiez les filtres.</p> }
-      <ul class="catalog-list">
+      <ul class="food-grid">
         @for (food of visibleFoods(); track food.id) {
-          <li class="catalog-row">
-            <div><h2>{{ food.name }}</h2>
-              @if (food.isArchived) { <p>Archivé — historique conservé</p> }
+          <li class="food-card" [class.food-card-archived]="food.isArchived">
+            <div class="food-card-heading">
+              <h2><button type="button" class="food-card-open" [disabled]="busy()" aria-haspopup="dialog"
+                [attr.aria-label]="'Fiche aliment : ' + food.name" (click)="select(food, $event)">{{ food.name }}</button></h2>
+              <i class="pi pi-arrow-up-right food-card-arrow" aria-hidden="true"></i>
+            </div>
+            <div class="food-card-meta">
+              <span class="food-card-status">{{ food.isArchived ? 'Archivé' : missing(food).length ? 'À compléter' : 'Informations renseignées' }}</span>
+              @if (reviewSummaries()[food.id]; as summary) {
+                @if (summary.average !== null) {
+                  <span class="food-card-rating" role="img" [attr.aria-label]="'Note moyenne du foyer : ' + rating(summary.average) + ' sur 10, sur ' + summary.scoredCount + ' avis notés'">
+                    <i class="pi pi-star-fill" aria-hidden="true"></i>
+                    <strong>{{ rating(summary.average) }}<span> / 10</span></strong>
+                    <span>({{ summary.scoredCount }} avis)</span>
+                  </span>
+                } @else if (summary.count) { <span class="food-card-review-count">{{ summary.count }} avis · sans note</span> }
+              }
+            </div>
+            <div class="food-card-info">
+              @if (food.isArchived) { <p>Historique conservé</p> }
               @if (missing(food).length) { <p>À compléter : {{ missing(food).join(', ') }}</p> }
-              @else { <p>Informations renseignées · base {{ food.referenceUnit }}</p> }
+              <p>Base nutritionnelle : {{ food.referenceUnit || 'à renseigner' }}</p>
+            </div>
+            <div class="food-card-prices">
               @for (price of pricesFor(food.id); track price.unit) {
-                <p class="price-note">{{ number(price.price) }} € / {{ unitLabel(price.unit) }} · {{ price.productName }} · {{ storeName(price.storeId) }} · {{ date(price.observedAt) }} · {{ price.provenance }}</p>
+                <div class="food-card-price">
+                  <p><strong>{{ number(price.price) }} €</strong><span> / {{ unitLabel(price.unit) }}</span></p>
+                  <p class="price-note">{{ price.productName }} · {{ storeName(price.storeId) }} · {{ date(price.observedAt) }} · {{ price.provenance }}</p>
+                </div>
               }
               @if (!pricesFor(food.id).length) { <p class="price-note">Prix à renseigner ou non comparable</p> }
-            </div>
-            <div class="catalog-actions">
-              <button class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="select(food, $event)">Ouvrir la fiche</button>
-              @if (!food.isArchived) { <button class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="archive(food)">Archiver</button> }
             </div>
           </li>
         }
@@ -70,7 +89,8 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
           <p>FODMAP : {{ fodmapLabel(food.fodmap) }} · NOVA : {{ food.nova ?? 'non renseigné' }}</p>
           @if (food.digestiveNotes) { <p>{{ food.digestiveNotes }}</p> }
           <p class="dialog-hint">Informations descriptives, sans recommandation médicale. Source historique : {{ food.source }}.</p>
-          <app-household-reviews #householdReviews targetType="food" [targetId]="food.id" [profiles]="profiles()" [groups]="groups()" />
+          <app-household-reviews #householdReviews targetType="food" [targetId]="food.id" [profiles]="profiles()" [groups]="groups()"
+            (reviewsLoaded)="updateReviewSummary(food.id, $event)" />
           <h3>Produits et prix</h3>
           <p>Un aliment reste utilisable dans les recettes sans produit associé.</p>
           <button class="lifeos-button lifeos-button-secondary" [disabled]="detailBusy() || food.isArchived" (click)="editProduct()">Associer un nouveau produit</button>
@@ -81,6 +101,9 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
               </li>
             }
           </ul>
+          @if (!food.isArchived) {
+            <div><button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="detailBusy()" (click)="archive(food)">Archiver cet aliment</button></div>
+          }
         </section>
       </app-lifeos-dialog>
     }
@@ -166,6 +189,7 @@ export class FoodItemsPageComponent {
   readonly stores = signal<StoreDto[]>([])
   readonly profiles = signal<MemberProfileDto[]>([])
   readonly groups = signal<HouseholdGroupDto[]>([])
+  readonly reviewSummaries = signal<Record<string, FoodReviewSummary>>({})
   readonly selected = signal<FoodItemDto | null>(null)
   readonly currentProduct = signal<ProductDto | null>(null)
   readonly loading = signal(true)
@@ -186,15 +210,20 @@ export class FoodItemsPageComponent {
   private editingFoodId = ''
   private initial = ''
   private initialPrice = ''
+  private loadVersion = 0
   readonly units = purchaseUnits
   readonly missing = missingFoodFields
   readonly number = formatNumber
   readonly date = formatDate
   readonly unitLabel = unitLabel
+  readonly rating = (value: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value)
   constructor() { void this.load() }
   visibleFoods(): FoodItemDto[] { return this.foods().filter(f => f.isArchived === this.archivedOnly && (!this.incompleteOnly || this.missing(f).length) && f.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr'))) }
   incompleteCount(): number { return this.foods().filter(f => !f.isArchived && this.missing(f).length).length }
   pricesFor(id: string) { return this.prices().find(p => p.foodItemId === id)?.prices ?? [] }
+  updateReviewSummary(id: string, reviews: ReviewDto[]): void {
+    this.reviewSummaries.set({ ...this.reviewSummaries(), [id]: summarizeFoodReviews(reviews) })
+  }
   productsFor(id: string) { return this.products().filter(p => p.foodItemId === id) }
   storeName(id: string): string { return this.stores().find(s => s.id === id)?.name ?? 'Magasin historique' }
   fodmapLabel(value: string | null): string { return value === 'low' ? 'bas' : value === 'moderate' ? 'modéré' : value === 'high' ? 'élevé' : 'non renseigné' }
@@ -216,6 +245,7 @@ export class FoodItemsPageComponent {
   @HostListener('window:beforeunload', ['$event'])
   beforeUnload(event: BeforeUnloadEvent): void { if (this.detailBusy() || this.dirty() || this.reviews()?.dirty()) { event.preventDefault(); event.returnValue = '' } }
   async load(): Promise<void> {
+    const version = ++this.loadVersion
     this.loading.set(true); this.error.set('')
     try {
       const [foods, products, prices, stores, household, groups] = await Promise.all([
@@ -224,10 +254,24 @@ export class FoodItemsPageComponent {
         firstValueFrom(this.api.get<{ memberProfiles: MemberProfileDto[] }>('/households/current')),
         firstValueFrom(this.api.get<HouseholdGroupDto[]>('/household-groups')),
       ])
+      if (version !== this.loadVersion) return
       this.foods.set(foods); this.products.set(products); this.prices.set(prices); this.stores.set(stores)
       this.profiles.set(household.memberProfiles); this.groups.set(groups)
       if (this.selected()) this.selected.set(foods.find(f => f.id === this.selected()?.id) ?? null)
-    } catch (e) { this.error.set(apiErrorMessage(e)) } finally { this.loading.set(false) }
+      this.reviewSummaries.set({})
+      // Bound requests because the existing reviews API is scoped to one food.
+      for (let start = 0; start < foods.length; start += 4) {
+        await Promise.all(foods.slice(start, start + 4).map(async food => {
+          const reviews = await firstValueFrom(this.api.get<ReviewDto[]>(`/reviews/foods/${encodeURIComponent(food.id)}`))
+          if (version === this.loadVersion) this.updateReviewSummary(food.id, reviews)
+        }))
+        if (version !== this.loadVersion) return
+      }
+    } catch (e) {
+      if (version === this.loadVersion) this.error.set(apiErrorMessage(e))
+    } finally {
+      if (version === this.loadVersion) this.loading.set(false)
+    }
   }
   editFood(food?: FoodItemDto, event?: Event): void {
     if (this.detailBusy()) return
@@ -260,6 +304,7 @@ export class FoodItemsPageComponent {
     }, true)
   }
   async archive(food: FoodItemDto): Promise<void> {
+    if (!this.canLeave()) return
     if (!window.confirm(`Archiver « ${food.name} » ? Les recettes et événements historiques sont conservés.`)) return
     await this.action(async () => { await firstValueFrom(this.api.delete(`/foods/${food.id}`)); await this.load() })
   }

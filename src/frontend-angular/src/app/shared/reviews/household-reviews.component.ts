@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, Input, OnChanges, SimpleChanges, inject, signal } from '@angular/core'
+import { Component, DestroyRef, HostListener, Input, OnChanges, SimpleChanges, inject, output, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
 import type { HouseholdGroupDto, MemberProfileDto, ReviewDto, SaveReviewRequest } from '@/app/core/api/api.models'
@@ -96,6 +96,7 @@ export class HouseholdReviewsComponent implements OnChanges {
   @Input() groups: HouseholdGroupDto[] = []
   private readonly api = inject(LifeosApiService)
   readonly reviews = signal<ReviewDto[]>([])
+  readonly reviewsLoaded = output<ReviewDto[]>()
   readonly loading = signal(false)
   readonly busy = signal(false)
   readonly error = signal('')
@@ -134,7 +135,10 @@ export class HouseholdReviewsComponent implements OnChanges {
     this.error.set('')
     try {
       const reviews = await firstValueFrom(this.api.get<ReviewDto[]>(this.path()))
-      if (version === this.loadVersion) this.reviews.set(reviews)
+      if (version === this.loadVersion) {
+        this.reviews.set(reviews)
+        this.reviewsLoaded.emit(reviews)
+      }
     } catch (error) {
       if (version === this.loadVersion) this.error.set(apiErrorMessage(error))
     } finally {
