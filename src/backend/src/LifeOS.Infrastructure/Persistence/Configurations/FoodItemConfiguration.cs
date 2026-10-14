@@ -24,7 +24,10 @@ public sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
         b.Property(f => f.UpdatedAt).HasColumnName("updated_at");
         b.Property(f => f.Fodmap).HasMaxLength(20);
         b.Property(f => f.DigestiveNotes).HasMaxLength(2000);
+        b.Property(f => f.ImagePath).HasMaxLength(500);
+        b.Property(f => f.ImageContentType).HasMaxLength(100);
         b.Ignore(f => f.MissingFields);
+        b.Ignore(f => f.HasImage);
         b.OwnsOne(f => f.Nutrition, n =>
         {
             n.Property(v => v.CaloriesPerUnit).HasColumnName("calories_per_unit");

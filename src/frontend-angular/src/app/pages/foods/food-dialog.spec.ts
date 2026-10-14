@@ -20,12 +20,13 @@ function signal<T>(initial: T) {
 function harness() {
   let foods: FoodItemDto[] = [{
     ...newFoodDraft(), id: 'food-1', name: 'Carotte', householdId: 'house-1',
-    isArchived: false, missingFields: [], source: 'manual', createdAt: '', updatedAt: '',
+    isArchived: false, hasImage: false, missingFields: [], source: 'manual', createdAt: '', updatedAt: '',
   }]
   let products: ProductDto[] = []
   let failure = ''
   let reviewFailure = ''
   let reviewRows: ReviewDto[] = []
+  const imagePaths: string[] = []
   let confirm = true
   const api = {
     get: async (path: string) => {
@@ -36,8 +37,16 @@ function harness() {
       }
       return path === '/foods' ? foods : path === '/products' ? products : path === '/households/current' ? { memberProfiles: [] } : []
     },
+    getBlob: async (path: string) => {
+      imagePaths.push(path)
+      return new Blob(['food-image'], { type: 'image/png' })
+    },
     put: async (path: string, body: object) => {
       if (failure) throw new Error(failure)
+      if (path.endsWith('/image')) {
+        foods = [{ ...foods[0]!, hasImage: true }]
+        return foods[0]
+      }
       if (path.startsWith('/products/')) {
         products = [{ ...products[0]!, ...body }]
         return products[0]
@@ -58,7 +67,11 @@ function harness() {
       products = [product]
       return product
     },
-    delete: async () => { foods = foods.map(food => ({ ...food, isArchived: true })) },
+    delete: async (path: string) => {
+      foods = path.endsWith('/image')
+        ? foods.map(food => ({ ...food, hasImage: false }))
+        : foods.map(food => ({ ...food, isArchived: true }))
+    },
   }
   let reviews: HouseholdReviewsComponent | undefined
   const noopDecorator = () => () => {}
@@ -87,13 +100,13 @@ function harness() {
     const exports: Record<string, new () => T> = {}
     runInNewContext(js, {
       exports, require: (id: string) => { assert.ok(id in imports, `Missing port ${id}`); return imports[id] },
-      window: { confirm: () => confirm }, HTMLElement: class {}, console,
+      window: { confirm: () => confirm }, HTMLElement: class {}, FormData, URL, console,
     })
     return new exports[name]!()
   }
   reviews = load<HouseholdReviewsComponent>('../../shared/reviews/household-reviews.component.ts', 'HouseholdReviewsComponent')
   const page = load<FoodItemsPageComponent>('./food-items-page.component.ts', 'FoodItemsPageComponent')
-  return { page, reviews, food: foods[0]!, fail: (message: string) => { failure = message }, confirm: (answer: boolean) => { confirm = answer },
+  return { page, reviews, food: foods[0]!, imagePaths, currentFoods: () => foods, fail: (message: string) => { failure = message }, confirm: (answer: boolean) => { confirm = answer },
     reviewRows: (rows: ReviewDto[]) => { reviewRows = rows }, failReviews: (message: string) => { reviewFailure = message } }
 }
 
@@ -141,6 +154,27 @@ describe('food popup transitions', () => {
     await page.saveFood()
     assert.equal(page.dialog(), 'detail')
     assert.equal(page.selected()?.id, 'created')
+  })
+
+  it('uploads an optional image, reloads it through the API and supports removal', async () => {
+    const { page, food, imagePaths, currentFoods } = harness()
+    await page.load()
+    page.select(food)
+    page.editFood(food)
+    page.foodImageFile.set(new File(['food-image'], 'carotte.png', { type: 'image/png' }))
+    assert.equal(page.dirty(), true)
+    await page.saveFood()
+    assert.equal(currentFoods()[0]?.hasImage, true, page.dialogError())
+    assert.equal(page.selected()?.hasImage, true)
+    assert.ok(page.foodImageUrls()[food.id])
+    assert.deepEqual(imagePaths, [`/foods/${food.id}/image`])
+
+    page.editFood(page.selected()!)
+    page.removeFoodImage()
+    assert.equal(page.dirty(), true)
+    assert.equal(page.foodImageRemoving(), true)
+    await page.saveFood()
+    assert.equal(page.selected()?.hasImage, false)
   })
 
   it('returns saved products to detail unless a price draft still needs saving', async () => {

@@ -37,6 +37,7 @@ Base nutritionnelle, calories/protéines/glucides/lipides, FODMAP bas/modéré/�
 NOVA 1..4 sont nullable. L'aliment reste **À compléter** si l'un de ces sept champs
 manque ; zéro macro est valide. Notes digestives facultatives, sauvegarde partielle
 possible, pas de recommandation médicale ni de santé importée depuis un ticket.
+Une image descriptive est facultative et n'entre pas dans le calcul de complétion.
 L'archive peut conserver des sources antérieures, sans enrichissement automatique.
 
 ## Ticket et prix

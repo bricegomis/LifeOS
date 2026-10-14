@@ -1,4 +1,5 @@
 import { Component, HostListener, inject, signal, viewChild } from '@angular/core'
+import type { OnDestroy } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
@@ -38,6 +39,13 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
       <ul class="food-grid">
         @for (food of visibleFoods(); track food.id) {
           <li class="food-card" [class.food-card-archived]="food.isArchived">
+            @if (foodImageUrls()[food.id]; as imageUrl) {
+              <img class="food-card-image" [src]="imageUrl" alt="" />
+            } @else if (food.hasImage) {
+              <div class="food-card-image food-card-image-empty" role="status">
+                {{ foodImageErrors()[food.id] ? 'Image indisponible' : 'Chargement de l’image…' }}
+              </div>
+            }
             <div class="food-card-heading">
               <h2><button type="button" class="food-card-open" [disabled]="busy()" aria-haspopup="dialog"
                 [attr.aria-label]="'Fiche aliment : ' + food.name" (click)="select(food, $event)">{{ food.name }}</button></h2>
@@ -56,6 +64,7 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
               }
             </div>
             <div class="food-card-info">
+              @if (foodImageErrors()[food.id]) { <p class="lifeos-dialog-error" role="alert">Image : {{ foodImageErrors()[food.id] }}</p> }
               @if (food.isArchived) { <p>Historique conservé</p> }
               @if (missing(food).length) { <p>À compléter : {{ missing(food).join(', ') }}</p> }
               <p>Base nutritionnelle : {{ food.referenceUnit || 'à renseigner' }}</p>
@@ -85,6 +94,9 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
           </div>
             <button class="lifeos-button" [disabled]="detailBusy()" (click)="editFood(food)">Modifier les informations</button>
           </header>
+          @if (foodImageUrls()[food.id]; as imageUrl) {
+            <img class="food-detail-image" [src]="imageUrl" [alt]="'Image de ' + food.name" />
+          }
           <p>Calories : {{ number(food.nutrition?.caloriesPerUnit) }} kcal · Protéines : {{ number(food.nutrition?.proteinsPerUnit) }} g · Glucides : {{ number(food.nutrition?.carbsPerUnit) }} g · Lipides : {{ number(food.nutrition?.fatsPerUnit) }} g</p>
           <p>FODMAP : {{ fodmapLabel(food.fodmap) }} · NOVA : {{ food.nova ?? 'non renseigné' }}</p>
           @if (food.digestiveNotes) { <p>{{ food.digestiveNotes }}</p> }
@@ -113,6 +125,18 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
       <form id="food-form" class="dialog-form" ngNativeValidate (ngSubmit)="saveFood()">
         <label class="dialog-field"><span>Nom générique</span><input class="text-input" name="name" required maxlength="500" [(ngModel)]="foodDraft.name" /></label>
         <label class="dialog-field"><span>Base nutritionnelle</span><input class="text-input" name="base" maxlength="50" placeholder="100 g, 100 ml, 1 pièce" [(ngModel)]="foodDraft.referenceUnit" /></label>
+        <label class="dialog-field">
+          <span>Image de l’aliment (facultatif, JPEG, PNG ou WebP · 10 Mo maximum)</span>
+          @if (foodImagePreview(); as imageUrl) {
+            <img class="food-image-preview" [src]="imageUrl" [alt]="'Aperçu de ' + foodDraft.name" />
+          }
+          <input class="text-input" type="file" accept="image/jpeg,image/png,image/webp" (change)="selectFoodImage($event)" />
+          @if (!editingFoodId) { <p class="dialog-hint">L’aliment sera d’abord enregistré, puis son image.</p> }
+        </label>
+        @if (foodImageFile() || (editingFoodId && selected()?.hasImage)) {
+          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()"
+            (click)="removeFoodImage()">{{ foodImageRemoving() ? 'Annuler la suppression de l’image' : 'Supprimer l’image' }}</button>
+        }
         @if (foodDraft.nutrition; as nutrition) {
           <div class="dialog-row">
             <label class="dialog-field"><span>Calories (kcal)</span><input class="text-input" name="kcal" type="number" min="0" step="any" [(ngModel)]="nutrition.caloriesPerUnit" /></label>
@@ -181,7 +205,7 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
   `,
   styleUrl: './catalog.css',
 })
-export class FoodItemsPageComponent {
+export class FoodItemsPageComponent implements OnDestroy {
   private readonly api = inject(LifeosApiService)
   readonly foods = signal<FoodItemDto[]>([])
   readonly products = signal<ProductDto[]>([])
@@ -190,6 +214,10 @@ export class FoodItemsPageComponent {
   readonly profiles = signal<MemberProfileDto[]>([])
   readonly groups = signal<HouseholdGroupDto[]>([])
   readonly reviewSummaries = signal<Record<string, FoodReviewSummary>>({})
+  readonly foodImageUrls = signal<Record<string, string>>({})
+  readonly foodImageErrors = signal<Record<string, string>>({})
+  readonly foodImageFile = signal<File | null>(null)
+  readonly foodImagePreviewUrl = signal<string | null>(null)
   readonly selected = signal<FoodItemDto | null>(null)
   readonly currentProduct = signal<ProductDto | null>(null)
   readonly loading = signal(true)
@@ -211,6 +239,9 @@ export class FoodItemsPageComponent {
   private initial = ''
   private initialPrice = ''
   private loadVersion = 0
+  private removeFoodImageOnSave = false
+  private foodImageObjectUrls: string[] = []
+  private foodImagePreviewObjectUrl: string | null = null
   readonly units = purchaseUnits
   readonly missing = missingFoodFields
   readonly number = formatNumber
@@ -218,6 +249,11 @@ export class FoodItemsPageComponent {
   readonly unitLabel = unitLabel
   readonly rating = (value: number) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value)
   constructor() { void this.load() }
+  ngOnDestroy(): void {
+    this.loadVersion++
+    this.clearFoodImageUrls()
+    this.clearFoodImagePreview()
+  }
   visibleFoods(): FoodItemDto[] { return this.foods().filter(f => f.isArchived === this.archivedOnly && (!this.incompleteOnly || this.missing(f).length) && f.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr'))) }
   incompleteCount(): number { return this.foods().filter(f => !f.isArchived && this.missing(f).length).length }
   pricesFor(id: string) { return this.prices().find(p => p.foodItemId === id)?.prices ?? [] }
@@ -233,13 +269,91 @@ export class FoodItemsPageComponent {
   }
   detailBusy(): boolean { return this.busy() || !!this.reviews()?.busy() }
   closeDetail(): void { this.reviews()?.cancelEdit(); this.dialog.set(null) }
-  closeEditor(): void { this.dialogError.set(''); this.dialog.set(this.returnToDetail && this.selected() ? 'detail' : null) }
+  closeEditor(): void {
+    this.clearFoodImagePreview()
+    this.foodImageFile.set(null)
+    this.removeFoodImageOnSave = false
+    this.dialogError.set('')
+    this.dialog.set(this.returnToDetail && this.selected() ? 'detail' : null)
+  }
   productDirty(): boolean { return hasChanges(this.initial, this.productDraft) }
   priceDirty(): boolean { return hasChanges(this.initialPrice, this.priceDraft) }
+  foodDirty(): boolean {
+    return hasChanges(this.initial, this.foodDraft) || this.foodImageFile() !== null || this.removeFoodImageOnSave
+  }
   dirty(): boolean {
-    if (this.dialog() === 'food') return hasChanges(this.initial, this.foodDraft)
+    if (this.dialog() === 'food') return this.foodDirty()
     if (this.dialog() === 'product') return this.productDirty() || this.priceDirty()
     return false
+  }
+  foodImageRemoving(): boolean { return this.removeFoodImageOnSave }
+  foodImagePreview(): string | null {
+    if (this.foodImageFile()) return this.foodImagePreviewUrl()
+    if (this.removeFoodImageOnSave || !this.editingFoodId) return null
+    return this.foodImageUrls()[this.editingFoodId] ?? null
+  }
+  selectFoodImage(event: Event): void {
+    const input = event.target as HTMLInputElement
+    const file = input.files?.[0]
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      this.dialogError.set('Choisissez une image JPEG, PNG ou WebP.')
+      input.value = ''
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      this.dialogError.set('Image trop volumineuse : 10 Mo maximum.')
+      input.value = ''
+      return
+    }
+    this.clearFoodImagePreview()
+    this.foodImageFile.set(file)
+    this.removeFoodImageOnSave = false
+    this.foodImagePreviewObjectUrl = URL.createObjectURL(file)
+    this.foodImagePreviewUrl.set(this.foodImagePreviewObjectUrl)
+    this.dialogError.set('')
+  }
+  removeFoodImage(): void {
+    if (this.removeFoodImageOnSave) {
+      this.removeFoodImageOnSave = false
+      return
+    }
+    this.clearFoodImagePreview()
+    this.foodImageFile.set(null)
+    this.removeFoodImageOnSave = !!this.editingFoodId && !!this.selected()?.hasImage
+  }
+  private clearFoodImagePreview(): void {
+    if (this.foodImagePreviewObjectUrl) URL.revokeObjectURL(this.foodImagePreviewObjectUrl)
+    this.foodImagePreviewObjectUrl = null
+    this.foodImagePreviewUrl.set(null)
+  }
+  private clearFoodImageUrls(): void {
+    for (const url of this.foodImageObjectUrls) URL.revokeObjectURL(url)
+    this.foodImageObjectUrls = []
+    this.foodImageUrls.set({})
+  }
+  private async loadFoodImages(foods: FoodItemDto[], version: number): Promise<void> {
+    this.clearFoodImageUrls()
+    this.foodImageErrors.set({})
+    for (let start = 0; start < foods.length; start += 4) {
+      await Promise.all(foods.slice(start, start + 4).filter(food => food.hasImage).map(async food => {
+        try {
+          const blob = await firstValueFrom(this.api.getBlob(`/foods/${encodeURIComponent(food.id)}/image`))
+          const url = URL.createObjectURL(blob)
+          if (version !== this.loadVersion) {
+            URL.revokeObjectURL(url)
+            return
+          }
+          this.foodImageObjectUrls.push(url)
+          this.foodImageUrls.set({ ...this.foodImageUrls(), [food.id]: url })
+        } catch (error) {
+          if (version === this.loadVersion) {
+            this.foodImageErrors.set({ ...this.foodImageErrors(), [food.id]: apiErrorMessage(error) })
+          }
+        }
+      }))
+      if (version !== this.loadVersion) return
+    }
   }
   canLeave(): boolean { return !this.detailBusy() && (!(this.dirty() || this.reviews()?.dirty()) || window.confirm('Abandonner les informations non enregistrées ?')) }
   @HostListener('window:beforeunload', ['$event'])
@@ -256,6 +370,7 @@ export class FoodItemsPageComponent {
       ])
       if (version !== this.loadVersion) return
       this.foods.set(foods); this.products.set(products); this.prices.set(prices); this.stores.set(stores)
+      void this.loadFoodImages(foods, version)
       this.profiles.set(household.memberProfiles); this.groups.set(groups)
       if (this.selected()) this.selected.set(foods.find(f => f.id === this.selected()?.id) ?? null)
       this.reviewSummaries.set({})
@@ -275,6 +390,9 @@ export class FoodItemsPageComponent {
   }
   editFood(food?: FoodItemDto, event?: Event): void {
     if (this.detailBusy()) return
+    this.clearFoodImagePreview()
+    this.foodImageFile.set(null)
+    this.removeFoodImageOnSave = false
     this.returnToDetail = this.dialog() === 'detail'
     if (!food) this.detailTrigger = event?.currentTarget instanceof HTMLElement ? event.currentTarget : null
     this.editingFoodId = food?.id ?? ''
@@ -292,7 +410,20 @@ export class FoodItemsPageComponent {
   }
   async saveFood(): Promise<void> {
     await this.action(async () => {
-      const food = await firstValueFrom(this.editingFoodId ? this.api.put<FoodItemDto>(`/foods/${this.editingFoodId}`, this.foodDraft) : this.api.post<FoodItemDto>('/foods', this.foodDraft))
+      let food = await firstValueFrom(this.editingFoodId ? this.api.put<FoodItemDto>(`/foods/${this.editingFoodId}`, this.foodDraft) : this.api.post<FoodItemDto>('/foods', this.foodDraft))
+      this.editingFoodId = food.id
+      const imageFile = this.foodImageFile()
+      if (imageFile) {
+        const form = new FormData()
+        form.append('image', imageFile, imageFile.name)
+        food = await firstValueFrom(this.api.put<FoodItemDto>(`/foods/${food.id}/image`, form))
+      } else if (this.removeFoodImageOnSave) {
+        await firstValueFrom(this.api.delete(`/foods/${food.id}/image`))
+        food = { ...food, hasImage: false }
+      }
+      this.foodImageFile.set(null)
+      this.removeFoodImageOnSave = false
+      this.clearFoodImagePreview()
       this.selected.set(food); this.returnToDetail = true; await this.load(); this.closeEditor()
     }, true)
   }

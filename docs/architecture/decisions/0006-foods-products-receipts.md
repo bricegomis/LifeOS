@@ -96,3 +96,13 @@ transactionnelle et idempotente ; une erreur conserve le brouillon et n'enregist
 aucun prix partiel. Le prix observé reste total de ligne / quantité et l'achat conserve
 le total ainsi que la quantité. Le volume d'images doit être sauvegardé avec la base ;
 une sauvegarde PostgreSQL seule ne contient pas les octets des photos.
+
+## Extension — images facultatives des aliments
+
+Une image descriptive peut être ajoutée manuellement à un aliment. La référence et le
+type MIME sont stockés sur `foods` ; les octets sont conservés dans le volume durable
+`/data/foods`, séparé des photos de tickets. L'envoi, le remplacement, la suppression
+et la lecture passent par des routes API authentifiées et limitées au foyer. Formats
+JPEG, PNG et WebP uniquement, 10 Mo maximum. L'image reste facultative, n'affecte pas
+la complétion nutritionnelle et ne provoque aucun enrichissement automatique.
+Le volume `food_images` doit être sauvegardé avec PostgreSQL.

@@ -21,6 +21,7 @@ public sealed class LifeOSApiFactory(
     bool enableOpenApiUi = true,
     string buildId = "local",
     string? receiptStoragePath = null,
+    string? foodImageStoragePath = null,
     IReceiptOcrService? receiptOcrService = null)
     : WebApplicationFactory<Program>
 {
@@ -37,6 +38,7 @@ public sealed class LifeOSApiFactory(
                 ["Api:EnableOpenApiUi"] = enableOpenApiUi.ToString(),
                 ["LifeOS:BuildId"] = buildId,
                 ["Receipts:StoragePath"] = receiptStoragePath ?? Path.Combine(Path.GetTempPath(), $"lifeos-api-tests-{Guid.NewGuid():N}"),
+                ["FoodImages:StoragePath"] = foodImageStoragePath ?? Path.Combine(Path.GetTempPath(), $"lifeos-food-images-{Guid.NewGuid():N}"),
             });
         });
 

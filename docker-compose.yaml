@@ -17,6 +17,9 @@ services:
       # Durable storage for original receipt photos
       Receipts__StoragePath: /data/receipts
       Receipts__MaxFileBytes: 10485760
+      # Durable storage for optional generic food images
+      FoodImages__StoragePath: /data/foods
+      FoodImages__MaxFileBytes: 10485760
       # Public frontend URL
       Cors__AllowedOrigins__0: ${FRONTEND_URL}
       Cors__AllowedOrigins__1: ${GITHUB_PAGES_URL:-}
@@ -28,6 +31,7 @@ services:
       - com.centurylinklabs.watchtower.enable=true
     volumes:
       - receipts_data:/data/receipts
+      - food_images:/data/foods
   web:
     image: ghcr.io/bricegomis/lifeos-web:latest
     container_name: lifeos-web
@@ -48,3 +52,5 @@ networks:
 volumes:
   receipts_data:
     name: lifeos_receipts
+  food_images:
+    name: lifeos_food_images
