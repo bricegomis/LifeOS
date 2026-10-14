@@ -3,20 +3,25 @@ import { FormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import {
   AddRecipeIngredientRequest,
   FoodItemDto,
   RecipeDto,
   RecipeRequest,
-  ArticleDto,
   RecipeIngredientDto,
+  MemberProfileDto,
+  HouseholdGroupDto,
 } from '@/app/core/api/api.models'
+
+import { CookingSessionBannerComponent } from '@/app/shared/cooking/cooking-session-banner.component'
+import { CookingSessionDialogComponent } from '@/app/shared/cooking/cooking-session-dialog.component'
 
 @Component({
   selector: 'app-recipes-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, LifeosDialogComponent],
+  imports: [FormsModule, RouterLink, LifeosDialogComponent, HouseholdReviewsComponent, CookingSessionBannerComponent, CookingSessionDialogComponent],
   templateUrl: './recipes-page.component.html',
   styles: [`
     .recipes-page { gap: 28px; }
@@ -56,12 +61,13 @@ export class RecipesPageComponent implements OnInit {
 
   readonly recipes = signal<RecipeDto[]>([])
   readonly foodItems = signal<FoodItemDto[]>([])
-  readonly articles = signal<ArticleDto[]>([])
+  readonly profiles = signal<MemberProfileDto[]>([])
+  readonly groups = signal<HouseholdGroupDto[]>([])
   search = ''
   visibleRecipes(): RecipeDto[] {
     return this.recipes().filter(r => !r.isArchived && r.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr')))
   }
-  linkedFoods(): FoodItemDto[] { return this.foodItems().filter(f => !f.isArchived && f.articleId) }
+  activeFoods(): FoodItemDto[] { return this.foodItems().filter(f => !f.isArchived) }
   ingredientEdit: { id: string; foodItemId: string; quantity: number; unit: string } | null = null
   readonly dialog = signal<'recipe' | 'ingredient' | 'editIngredient' | null>(null)
   readonly dialogError = signal('')
@@ -79,17 +85,21 @@ export class RecipesPageComponent implements OnInit {
   readonly durationMinutes = signal(30)
   readonly tagsText = signal('')
   readonly metadataText = signal('')
+  readonly instructionsText = signal('')
+  readonly ingredientReviewFoodId = signal('')
   readonly ingredientFoodItemId = signal('')
   readonly ingredientQuantity = signal(1)
   readonly ingredientUnit = signal('')
+  readonly cookingDialogOpen = signal(false)
+
+  startCooking(recipe: RecipeDto): void {
+    this.cookingDialogOpen.set(true)
+  }
 
   ngOnInit(): void {
     this.loadRecipes()
     this.loadFoodItems()
-    this.api.get<ArticleDto[]>('/articles').subscribe({
-      next: items => this.articles.set(items),
-      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
-    })
+    this.loadHouseholdTargets()
   }
 
   get recipeNameValue(): string {
@@ -132,6 +142,9 @@ export class RecipesPageComponent implements OnInit {
     this.metadataText.set(value)
   }
 
+  get instructionsValue(): string { return this.instructionsText() }
+  set instructionsValue(value: string) { this.instructionsText.set(value) }
+
   get ingredientFoodItemIdValue(): string {
     return this.ingredientFoodItemId()
   }
@@ -157,8 +170,7 @@ export class RecipesPageComponent implements OnInit {
   }
 
   foodItemName(id: string): string {
-    return this.foodItems().find((food) => food.articleId === id)?.name
-      ?? this.articles().find(a => a.id === id)?.name ?? `Article indisponible · ${id}`
+    return this.foodItems().find((food) => food.id === id)?.name ?? `Aliment indisponible · ${id}`
   }
 
   openRecipeDialog(recipe: RecipeDto | null): void {
@@ -168,12 +180,14 @@ export class RecipesPageComponent implements OnInit {
     this.durationMinutes.set(recipe?.durationMinutes ?? 30)
     this.tagsText.set(recipe?.tags.join(', ') ?? '')
     this.metadataText.set(recipe?.metadata ? JSON.stringify(recipe.metadata, null, 2) : '')
+    this.instructionsText.set(recipe?.instructions ?? '')
     this.showMore = !!(this.tagsText() || this.metadataText())
     this.openDialog('recipe')
   }
 
   openIngredientDialog(): void {
     this.ingredientFoodItemId.set('')
+    this.ingredientReviewFoodId.set('')
     this.ingredientQuantity.set(1)
     this.ingredientUnit.set('')
     this.openDialog('ingredient')
@@ -200,7 +214,7 @@ export class RecipesPageComponent implements OnInit {
   private dialogValues(): unknown {
     switch (this.dialog()) {
       case 'recipe':
-        return [this.recipeName(), this.servings(), this.durationMinutes(), this.tagsText(), this.metadataText()]
+        return [this.recipeName(), this.servings(), this.durationMinutes(), this.tagsText(), this.instructionsText()]
       case 'ingredient':
         return [this.ingredientFoodItemId(), this.ingredientQuantity(), this.ingredientUnit()]
       case 'editIngredient':
@@ -236,30 +250,13 @@ export class RecipesPageComponent implements OnInit {
       return
     }
 
-    let metadata: Record<string, unknown> | null = null
-    const metadataText = this.metadataText().trim()
-    if (metadataText) {
-      try {
-        const parsed: unknown = JSON.parse(metadataText)
-        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-          this.showMore = true
-          this.dialogError.set('Les métadonnées doivent être un objet JSON.')
-          return
-        }
-        metadata = parsed as Record<string, unknown>
-      } catch {
-        this.showMore = true
-        this.dialogError.set('Les métadonnées contiennent un JSON invalide.')
-        return
-      }
-    }
-
     const request: RecipeRequest = {
       name,
       servings,
       durationMinutes,
       tags: this.tagsText().split(',').map((tag) => tag.trim()).filter(Boolean),
-      metadata,
+      metadata: null,
+      instructions: this.instructionsText().trim() || null,
     }
     const id = this.editingId()
     this.saving.set(true)
@@ -291,7 +288,7 @@ export class RecipesPageComponent implements OnInit {
       this.dialogError.set('Enregistrez ou sélectionnez une recette avant d’ajouter un ingrédient.')
       return
     }
-    if (!this.linkedFoods().some((food) => food.articleId === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
+    if (!this.activeFoods().some((food) => food.id === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
       this.dialogError.set('Choisissez un aliment du catalogue, une quantité supérieure à zéro et une unité.')
       return
     }
@@ -383,7 +380,7 @@ export class RecipesPageComponent implements OnInit {
 
   private loadFoodItems(): void {
     this.loadingFoodItems.set(true)
-    this.api.get<FoodItemDto[]>('/food-items').subscribe({
+    this.api.get<FoodItemDto[]>('/foods').subscribe({
       next: (foodItems) => {
         this.foodItems.set(foodItems)
         this.loadingFoodItems.set(false)
@@ -392,6 +389,17 @@ export class RecipesPageComponent implements OnInit {
         this.error.set(apiErrorMessage(error))
         this.loadingFoodItems.set(false)
       },
+    })
+  }
+
+  private loadHouseholdTargets(): void {
+    this.api.get<{ memberProfiles: MemberProfileDto[] }>('/households/current').subscribe({
+      next: household => this.profiles.set(household.memberProfiles),
+      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
+    })
+    this.api.get<HouseholdGroupDto[]>('/household-groups').subscribe({
+      next: groups => this.groups.set(groups),
+      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
     })
   }
 }

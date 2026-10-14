@@ -14,6 +14,9 @@ services:
       Supabase__Audience: authenticated
       # PostgreSQL
       ConnectionStrings__Postgres: ${POSTGRES_CONNECTION_STRING}
+      # Durable storage for original receipt photos
+      Receipts__StoragePath: /data/receipts
+      Receipts__MaxFileBytes: 10485760
       # Public frontend URL
       Cors__AllowedOrigins__0: ${FRONTEND_URL}
       Cors__AllowedOrigins__1: ${GITHUB_PAGES_URL:-}
@@ -23,6 +26,8 @@ services:
       SkipDatabaseMigration: "false"
     labels:
       - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - receipts_data:/data/receipts
   web:
     image: ghcr.io/bricegomis/lifeos-web:latest
     container_name: lifeos-web
@@ -40,3 +45,6 @@ networks:
     external: true
   backend_db:
     external: true
+volumes:
+  receipts_data:
+    name: lifeos_receipts

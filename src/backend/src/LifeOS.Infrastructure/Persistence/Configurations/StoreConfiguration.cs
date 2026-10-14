@@ -11,6 +11,7 @@ internal sealed class StoreConfiguration : IEntityTypeConfiguration<Store>
         builder.ToTable("stores");
 
         builder.HasKey(store => store.Id);
+        builder.HasAlternateKey(store => new { store.Id, store.HouseholdId });
         builder.Property(store => store.Id).ValueGeneratedNever();
 
         builder.Property(store => store.HouseholdId).IsRequired();

@@ -22,6 +22,11 @@ semaine. Les anciens endpoints/données restent disponibles hors parcours.
 
 ## Produits et achats
 
+**Remplacé par [ADR 0005](0005-unified-products.md), 9 octobre 2026 :**
+produit canonique unique nutrition/achats, FK unifiées et migration des anciens
+liens explicites. Le paragraphe suivant décrit la décision initiale, non le
+modèle actif.
+
 Conserver les FK historiques `recipe_ingredients.FoodItemId → articles`.
 Ajouter un raccord explicite optionnel `food_items.ArticleId → articles`,
 unique lorsqu'il est renseigné, contrôlé dans le même foyer. Aucune fusion par

@@ -1,8 +1,11 @@
 using LifeOS.Infrastructure.Persistence;
+using LifeOS.Application.Receipts;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace LifeOS.Api.IntegrationTests;
 
@@ -16,7 +19,9 @@ namespace LifeOS.Api.IntegrationTests;
 public sealed class LifeOSApiFactory(
     string connectionString,
     bool enableOpenApiUi = true,
-    string buildId = "local")
+    string buildId = "local",
+    string? receiptStoragePath = null,
+    IReceiptOcrService? receiptOcrService = null)
     : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -31,8 +36,18 @@ public sealed class LifeOSApiFactory(
                 ["Supabase:Url"] = "https://test.supabase.co",
                 ["Api:EnableOpenApiUi"] = enableOpenApiUi.ToString(),
                 ["LifeOS:BuildId"] = buildId,
+                ["Receipts:StoragePath"] = receiptStoragePath ?? Path.Combine(Path.GetTempPath(), $"lifeos-api-tests-{Guid.NewGuid():N}"),
             });
         });
+
+        if (receiptOcrService is not null)
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IReceiptOcrService>();
+                services.AddSingleton(receiptOcrService);
+            });
+        }
     }
 
     /// <summary>

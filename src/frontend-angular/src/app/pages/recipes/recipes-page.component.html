@@ -1,4 +1,5 @@
 <section class="page-stack recipes-page">
+  <app-cooking-session-banner />
   <header class="page-hero">
     <div>
       <h1>Recettes</h1>
@@ -48,8 +49,10 @@
               {{ recipe.servings }} portion{{ recipe.servings === 1 ? '' : 's' }} · {{ recipe.durationMinutes }} min
               @if (recipe.tags.length) { · {{ recipe.tags.join(', ') }} }
             </p>
+            @if (recipe.instructions) { <p class="recipe-empty">{{ recipe.instructions }}</p> }
           </div>
           <div class="recipe-form-actions">
+            <button class="lifeos-button" type="button" [disabled]="saving()" (click)="startCooking(recipe)"><i class="pi pi-play" aria-hidden="true"></i> Cuisiner</button>
             <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="openRecipeDialog(recipe)">Modifier</button>
             <button class="lifeos-button lifeos-button-secondary" type="button" [disabled]="saving()" (click)="deleteRecipe()">Archiver</button>
           </div>
@@ -58,7 +61,7 @@
         <section class="recipe-section recipe-ingredients" aria-labelledby="ingredients-title">
           <div class="recipe-section-heading">
             <h3 id="ingredients-title">Ingrédients <span class="recipe-muted">{{ recipe.ingredients.length }}</span></h3>
-            @if (linkedFoods().length) {
+            @if (activeFoods().length) {
               <button class="lifeos-button lifeos-button-sm" type="button" [disabled]="saving()" (click)="openIngredientDialog()">
                 <i class="pi pi-plus" aria-hidden="true"></i> Ajouter un ingrédient
               </button>
@@ -76,13 +79,16 @@
             <p class="recipe-empty">Aucun ingrédient ajouté.</p>
           }
           @if (loadingFoodItems()) {
-            <p class="recipe-empty" role="status">Chargement du catalogue d’aliments…</p>
-          } @else if (linkedFoods().length === 0) {
+            <p class="recipe-empty" role="status">Chargement des aliments…</p>
+          } @else if (activeFoods().length === 0) {
             <p class="recipe-empty">
-              Ajoutez un produit et reliez-le explicitement à un article d’achat pour l’utiliser dans une recette.
-              <a routerLink="/foods">Ouvrir le catalogue d’aliments</a>
+              Créez un aliment pour l’utiliser directement dans une recette. Aucune marque à choisir.
+              <a routerLink="/foods">Ouvrir les aliments</a>
             </p>
           }
+        </section>
+        <section class="recipe-section">
+          <app-household-reviews targetType="recipe" [targetId]="recipe.id" [profiles]="profiles()" [groups]="groups()" />
         </section>
       } @else {
         <h2 id="recipe-detail-title" class="sr-only">Détail de la recette</h2>
@@ -110,17 +116,14 @@
         <input class="text-input" name="durationMinutes" type="number" min="0" step="any" required [(ngModel)]="durationValue" />
       </label>
     </div>
-    <details class="dialog-more" [open]="showMore">
-      <summary>Plus d’options</summary>
-      <label class="dialog-field">
-        <span>Étiquettes, séparées par des virgules</span>
-        <input class="text-input" name="tags" type="text" placeholder="rapide, végétarien" [(ngModel)]="tagsValue" />
-      </label>
-      <label class="dialog-field">
-        <span>Métadonnées (objet JSON, facultatif)</span>
-        <textarea class="text-input" name="metadata" rows="3" placeholder='{"source":"maison"}' [(ngModel)]="metadataValue"></textarea>
-      </label>
-    </details>
+    <label class="dialog-field">
+      <span>Catégories, séparées par des virgules (facultatif)</span>
+      <input class="text-input" name="tags" type="text" placeholder="rapide, dessert, légumes" [(ngModel)]="tagsValue" />
+    </label>
+    <label class="dialog-field">
+      <span>Instructions (facultatif)</span>
+      <textarea class="text-input" name="instructions" rows="4" maxlength="10000" [(ngModel)]="instructionsValue"></textarea>
+    </label>
   </form>
 </app-lifeos-dialog>
 
@@ -130,10 +133,11 @@
   <form id="ingredient-dialog-form" class="dialog-form" ngNativeValidate (ngSubmit)="addIngredient()">
     <label class="dialog-field">
       <span>Aliment</span>
-      <select class="text-input" name="foodItemId" required [(ngModel)]="ingredientFoodItemIdValue">
+      <select class="text-input" name="foodItemId" required [ngModel]="ingredientFoodItemIdValue"
+        (ngModelChange)="ingredientFoodItemIdValue = $event; ingredientReviewFoodId.set($event)">
         <option value="" disabled>Choisir un aliment</option>
-        @for (food of linkedFoods(); track food.id) {
-          <option [value]="food.articleId">{{ food.name }}</option>
+        @for (food of activeFoods(); track food.id) {
+          <option [value]="food.id">{{ food.name }}</option>
         }
       </select>
     </label>
@@ -147,6 +151,9 @@
         <input class="text-input" name="ingredientUnit" type="text" required [(ngModel)]="ingredientUnitValue" />
       </label>
     </div>
+    @if (ingredientReviewFoodId(); as foodId) {
+      <app-household-reviews targetType="food" [targetId]="foodId" [profiles]="profiles()" [groups]="groups()" />
+    }
   </form>
 </app-lifeos-dialog>
 
@@ -172,3 +179,14 @@
     Retirer l’ingrédient
   </button>
 </app-lifeos-dialog>
+
+@if (selectedRecipe(); as recipe) {
+  <app-cooking-session-dialog
+    [open]="cookingDialogOpen()"
+    [recipeTitle]="recipe.name"
+    [recipeId]="recipe.id"
+    [instructions]="recipe.instructions"
+    (dismissed)="cookingDialogOpen.set(false)"
+    (sessionStarted)="cookingDialogOpen.set(false)"
+  />
+}

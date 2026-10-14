@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: src/frontend
+        working-directory: src/frontend-angular
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,16 +29,22 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: src/frontend/package-lock.json
+          cache-dependency-path: src/frontend-angular/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build app
-        run: npm run build
+        run: npm run build -- --base-href /LifeOS/
         env:
           GITHUB_ACTIONS: true
-          VITE_LIFEOS_BUILD_ID: ${{ github.sha }}
+          LIFEOS_BUILD_ID: ${{ github.sha }}
+          LIFEOS_BUILD_NUMBER: ${{ github.run_number }}
+          LIFEOS_RUN_ID: ${{ github.run_id }}
+          LIFEOS_RUN_ATTEMPT: ${{ github.run_attempt }}
+          LIFEOS_BUILD_REPOSITORY: ${{ github.repository }}
+          LIFEOS_BUILD_SERVER_URL: ${{ github.server_url }}
+          LIFEOS_BUILD_WORKFLOW: ${{ github.workflow }}
           VITE_LIFEOS_API_URL: ${{ vars.VITE_LIFEOS_API_URL }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
@@ -46,7 +52,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: src/frontend/dist
+          path: src/frontend-angular/dist/browser
 
   deploy:
     environment:

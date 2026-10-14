@@ -1,0 +1,70 @@
+name: iOS native validation
+
+on:
+  pull_request:
+    paths:
+      - 'src/frontend-angular/**'
+      - 'scripts/test-ios-contract.sh'
+      - '.github/workflows/ios-validation.yml'
+  push:
+    paths:
+      - 'src/frontend-angular/**'
+      - 'scripts/test-ios-contract.sh'
+      - '.github/workflows/ios-validation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: src/frontend-angular
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/frontend-angular/package-lock.json
+      - name: Show native toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+          pod --version
+      - run: npm ci
+      - run: npm test
+      # cap:sync includes the production Angular build before copying web assets.
+      - run: npm run cap:sync
+        env:
+          VITE_LIFEOS_API_URL: https://api.lifeos.example
+          VITE_SUPABASE_URL: https://supabase.lifeos.example
+          VITE_SUPABASE_ANON_KEY: sb_publishable_lifeos_ci_placeholder
+      - name: Test Swift data contracts
+        working-directory: .
+        run: bash scripts/test-ios-contract.sh
+      - name: Build app and widget for generic simulator and device (unsigned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for platform in simulator device; do
+            if [[ "$platform" == simulator ]]; then
+              sdk=iphonesimulator
+              destination='generic/platform=iOS Simulator'
+              configuration=Debug
+            else
+              sdk=iphoneos
+              destination='generic/platform=iOS'
+              configuration=Release
+            fi
+            for scheme in App LifeosWidgetExtension; do
+              xcodebuild -workspace ios/App/App.xcworkspace \
+                -scheme "$scheme" -configuration "$configuration" \
+                -sdk "$sdk" -destination "$destination" \
+                -derivedDataPath "ios/DerivedData/$platform" \
+                CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+                CODE_SIGN_IDENTITY= build
+            done
+          done

@@ -1538,11 +1538,6 @@ a {
   line-height: 1.3;
 }
 
-.sidebar-build code {
-  color: var(--lifeos-text);
-  font-size: 0.72rem;
-}
-
 .sidebar-user {
   color: var(--lifeos-text-soft);
   font-size: 0.85rem;

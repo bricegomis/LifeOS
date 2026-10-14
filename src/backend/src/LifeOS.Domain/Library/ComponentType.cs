@@ -1,7 +1,7 @@
 namespace LifeOS.Domain.Library;
 
 /// <summary>
-/// Category of a <see cref="MealComponent"/>, mirroring the frontend's <c>ComponentType</c>.
+/// Historical component category retained for persisted planning rule contracts.
 /// </summary>
 public enum ComponentType
 {

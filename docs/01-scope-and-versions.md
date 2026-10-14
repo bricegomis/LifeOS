@@ -1,87 +1,65 @@
-# LifeOS — MVP semainier manuel
+# LifeOS — MVP alimentation, semainier et tickets manuels
 
-## Décision validée et état de livraison
+## Périmètre actuel
 
-Le cadrage du 7 octobre 2026 remplace le MVP centré sur la génération et le
-menu équilibré. Ce périmètre est maintenant **implémenté et validé localement**.
-Voir [roadmap](03-roadmap.md) pour les lots et les limites de validation.
-La réalisation concerne Angular / contrôles natifs LifeOS et l'API ASP.NET Core / PostgreSQL ;
-le frontend Vue historique n'est pas refondu.
+Angular est le seul frontend ; API ASP.NET Core/PostgreSQL, auth Supabase/JWT et
+isolation par foyer. [ADR 0006](architecture/decisions/0006-foods-products-receipts.md)
+remplace le catalogue unifié de l'ADR 0005.
 
-## Périmètre
+- Bibliothèque **Aliments** génériques au premier plan, recherche, archives et
+  filtre « À compléter » avec champs manquants. Nutrition générique manuelle :
+  base, calories/protéines/glucides/lipides, FODMAP bas/modéré/élevé et NOVA 1..4 nullable.
+  Notes digestives facultatives ; zéro valide, sauvegarde partielle possible.
+- Produits commerciaux secondaires, zéro à plusieurs par aliment, depuis sa fiche
+  ou un ticket. Prix historiques par magasin avec unités et provenance. Minimum
+  par base comparable parmi les derniers prix de chaque couple produit/magasin.
+  Contenance manuellement confirmée pour les paquets ; pièces comparables seulement
+  avec confirmation. Aucun choix automatique de produit pour une recette.
+- Recettes : lignes d'aliments/quantités/unités, étapes, portions et durée.
+  Un composant est une préparation réutilisable, pas un catalogue parallèle.
+- Import ticket JSON fichier/texte, archive brute et lignes avant tout traitement.
+  Date jj/MM/aaaa, sélection/création explicite magasin, lignes en attente/validées/
+  ignorées, correction et progression persistantes. Validation individuelle et
+  transactionnelle : achat et prix, éventuelle création aliment/produit choisi.
+  Répétitions distinctes, idempotence, reprise, réimport identique signalé par foyer.
+  Mentions non alimentaires conservées puis ignorables, sans valeurs inventées.
+- Semainier manuel alimentation/sport, sept journées indépendantes, plusieurs
+  événements, desktop 6–20 et journée mobile, chevauchements et hors plage accessibles.
+  Recette ou lignes d'aliments, portion personnelle et préparation enfants séparées.
+- Sport : catalogue et occurrences, calories totales manuelles, durée/intensité/
+  distance optionnelle, sans recalcul automatique des calories.
 
-- Planifier manuellement sept jours, avec plusieurs prises alimentaires et
-  séances sportives par jour. Aucun événement libre, travail ou garde d'enfants.
-- Calendrier desktop initial de 6 h à 20 h ; journée navigable sur mobile.
-  Cette plage limite l'affichage, jamais le stockage ou l'accès aux événements.
-- Ajouter, éditer, déplacer et supprimer par formulaire et clavier, sans
-  dépendre du glisser-déposer. Chevauchements autorisés et lisibles.
-- Trois bibliothèques administrables et persistées : produits alimentaires,
-  recettes et séances sportives, isolées par foyer.
-- Un repas est une recette avec portion personnelle, **ou** une liste de
-  produits avec quantités et unités. Une banane est un produit, pas une recette.
-  Les anciens repas composés restent lisibles et migrables sans perte.
-- Séance catalogue : nom, sport, durée habituelle positive, distance optionnelle,
-  intensité explicite et calories totales manuelles non négatives. L'occurrence
-  reprend ces valeurs et peut les modifier sans modifier le modèle.
-  Changer durée/distance ne redimensionne pas les calories.
+## Conservation et calculs
 
-## Nutrition personnelle et préparation
+Quantités préparées = quantités personnelles × (1 + 0,5 × enfants).
+Les enfants n'augmentent pas la nutrition personnelle. Snapshots, horaires,
+portions et historiques conservés lors des éditions/archives et migrations.
+Les anciens événements sans heure restent à positionner, jamais horaires inventés.
+Nutrition inconnue : totaux incomplets explicites. Pas de conversion masse/volume/
+pièce sans information sûre. Coût non calculable sans produit de référence
+explicitement choisi ; le minimum observé n'est pas ce choix.
 
-Suivre énergie, protéines, glucides et lipides de l'utilisateur seulement.
-Chaque repas porte un nombre d'enfants présents, zéro compris.
-Chaque enfant mange une demi-portion personnelle :
+Migration additive depuis `UnifiedProducts`, mapping par preuve alimentaire et
+identité, aucun rapprochement de noms. Anciens produits non alimentaires conservés
+sans générer d'aliments. Stock/courses restent en tables historiques non mappées.
+Sauvegarde avant migration en production ; retour arrière par restauration.
 
-`quantités à préparer = quantités personnelles × (1 + 0,5 × nombre d'enfants)`
+## Exclusions
 
-100 g personnels avec deux enfants donnent 200 g à préparer, mais la nutrition
-reste celle des 100 g. Aucun suivi individuel enfant ni automatisation de présence.
-Séparer apports alimentaires, préparation et dépense sportive ; apports moins
-sport n'est pas une dépense quotidienne complète. Nutrition inconnue : afficher
-un total incomplet, jamais un zéro inventé. Pas de conversion g/ml/pièces sans
-information sûre.
+Stock et liste de courses **entièrement retirés** des interfaces/API/calculs du MVP.
+Pas d'OCR/IA, scan caméra, santé importée, enrichissement OFF automatique, nutrition
+par marque, conseils médicaux, conversion inventée ou optimisation commerciale.
+Semaines types, alternance, génération/récurrence/règles sont hors parcours manuel ;
+leurs données/API historiques sont conservées sans influencer les nouvelles semaines.
+Pas de refonte visuelle indépendante ni de frontend Vue.
 
-## Conservation
+## Critères d'acceptation
 
-API et PostgreSQL restent la source de vérité. Les semaines sont indépendantes.
-Les valeurs utilisées par les événements sont préservées : éditer ou archiver
-le catalogue ne réécrit pas l'historique. Remplacer le contenu est une action
-explicite. Préférer l'archivage des éléments référencés.
-Raccorder articles d'achat et produits nutritionnels explicitement, sans fusion
-par nom, sans perdre prix ou achats. Les anciennes semaines sans horaires
-restent « à positionner » jusqu'à placement manuel, sans heure inventée.
-Conserver auth Supabase/JWT et isolation `household_id`.
-
-## Reporté / exclu
-
-Semaines types avec/sans enfant, alternance, récurrence, règles de fréquence,
-génération, menu équilibré et optimisation sont hors parcours MVP. Les données
-historiques sont conservées ; les anciens réglages ne doivent pas influencer
-silencieusement les nouvelles semaines.
-Pas de fatigue, calories sportives automatiques, connecteurs sportifs, suivi
-nutritionnel enfant, nouveaux types d'événement, stock/tickets/courses automatiques,
-ni refonte Vue. Une automatisation future sera guidée par l'usage réel.
-
-## Acceptation
-
-- Deux semaines indépendantes ; recette petit-déjeuner, banane à 16 h 30 et
-  course à 17 h retrouvées après navigation et rechargement.
-- Deux vélos et une autre séance le même jour.
-- 100 g + deux enfants = 200 g préparés, nutrition personnelle des 100 g ;
-  modifier portions/enfants ne touche que le repas concerné, zéro enfant fonctionne.
-- Déplacement, édition et suppression accessibles par formulaire/clavier.
-- Modification/archivage de catalogue sans perte ni réécriture historique.
-- Anciennes semaines accessibles sans horaire arbitraire ; événements hors plage
-  et chevauchements lisibles ; nutrition manquante et erreurs API explicites.
-- Aucun recalcul automatique des repas après ajout de sport ; aucun succès
-  affiché avant sauvegarde effective.
-
-  ## Limites livrées
-
-  Les événements restent dans une seule date civile (pas de traversée de minuit).
-  Les historiques non figés utilisent leurs valeurs catalogue actuelles lors du
-  premier placement, annoncé explicitement ; leur nutrition passée n'est pas
-  reconstruite. Pas de drag-and-drop nécessaire : déplacement par formulaire,
-  y compris entre deux semaines existantes. Aucun import sportif automatique.
-  Le stockage accepte une fin à 24 h ; le champ horaire natif saisit jusqu'à
-  23 h 59. Les horaires comme 22 h restent disponibles hors plage.
+Exemple 21 lignes alimentaires + deux mentions conservées, zéro catalogue/prix
+créé à l'import ; validation existant/nouveau/liaison, lignes répétées distinctes,
+unités oranges/avocats/paquets/boîtes, correction explicite des écarts.
+Reprise, rollback, isolation foyers, concurrence/idempotence/réimport vérifiés.
+Complétion null/zéro/base/macros/FODMAP/NOVA et notes facultatives.
+Migrations vierge et historique, alias/homonymes/sources/prix/snapshots inchangés.
+Interfaces desktop/mobile lisibles ; stocks/courses/Vue/enrichissement absents.
+La publication des images ne vaut pas déploiement ou recette Supabase réelle.

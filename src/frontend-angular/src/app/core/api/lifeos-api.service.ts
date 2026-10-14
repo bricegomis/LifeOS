@@ -14,6 +14,14 @@ export class LifeosApiService {
     return this.request<T>('GET', path, undefined, query)
   }
 
+  getBlob(path: string): Observable<Blob> {
+    if (!apiBaseUrl) {
+      return throwError(() => new Error('Configurez VITE_LIFEOS_API_URL pour connecter l’application à LifeOS API.'))
+    }
+    const cleanPath = path.startsWith('/') ? path : `/${path}`
+    return this.http.get(`${apiBaseUrl}/api${cleanPath}`, { responseType: 'blob' })
+  }
+
   post<T>(path: string, body?: unknown): Observable<T> {
     return this.request<T>('POST', path, body)
   }

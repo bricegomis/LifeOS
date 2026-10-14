@@ -1,5 +1,4 @@
 using LifeOS.Domain.Common;
-using LifeOS.Domain.WeekContexts;
 
 namespace LifeOS.Domain.WeekPlanning;
 
@@ -11,8 +10,6 @@ public sealed class Week : Entity
 {
     public Guid HouseholdId { get; private set; }
     public DateOnly StartsOn { get; private set; }
-    public string Status { get; private set; } // draft, active, past
-    public WeekMode WeekMode { get; private set; }
     public bool IsManual { get; private set; }
     public string TimeZoneId { get; private set; } = "Europe/Paris";
     public DateTimeOffset CreatedAt { get; private set; }
@@ -20,93 +17,27 @@ public sealed class Week : Entity
 
     // Navigation property for EF Core
     public ICollection<DayPlan> DayPlans { get; set; } = [];
-    public ICollection<BalancedWeekPlan> BalancedPlans { get; set; } = [];
 
+    private Week() { }
     public static Week CreateManual(Guid householdId, DateOnly startsOn, string timeZoneId)
     {
         if (startsOn.DayOfWeek != DayOfWeek.Monday) throw new ArgumentException("La semaine commence un lundi.");
         if (timeZoneId.Length > 100 || !TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out _))
             throw new ArgumentException("Fuseau horaire inconnu.");
-        var week = Create(householdId, startsOn);
-        week.IsManual = true;
+        if (householdId == Guid.Empty) throw new ArgumentException("Le foyer est obligatoire.");
+        var week = new Week(Guid.NewGuid(), householdId, startsOn, DateTimeOffset.UtcNow);
         week.TimeZoneId = timeZoneId;
         for (var i = 0; i < 7; i++) week.DayPlans.Add(DayPlan.Create(week.Id, startsOn.AddDays(i), "home", false));
         return week;
     }
 
-    private Week(
-        Guid id,
-        Guid householdId,
-        DateOnly startsOn,
-        string status,
-        DateTimeOffset createdAt,
-        DateTimeOffset updatedAt,
-        WeekMode weekMode)
+    private Week(Guid id, Guid householdId, DateOnly startsOn, DateTimeOffset now)
         : base(id)
     {
         HouseholdId = householdId;
         StartsOn = startsOn;
-        Status = status;
-        WeekMode = weekMode;
-        CreatedAt = createdAt;
-        UpdatedAt = updatedAt;
-    }
-
-    public static Week Create(
-        Guid householdId,
-        DateOnly startsOn,
-        string status = "draft",
-        DateTimeOffset? now = null,
-        WeekMode weekMode = WeekMode.Solo)
-    {
-        if (householdId == Guid.Empty)
-        {
-            throw new ArgumentException("A week must belong to a household.", nameof(householdId));
-        }
-
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw new ArgumentException("Status is required.", nameof(status));
-        }
-
-        var timestamp = now ?? DateTimeOffset.UtcNow;
-
-        return new Week(
-            Guid.NewGuid(),
-            householdId,
-            startsOn,
-            status.ToLowerInvariant(),
-            timestamp,
-            timestamp,
-            weekMode);
-    }
-
-    /// <summary>
-    /// Updates the status of the week.
-    /// </summary>
-    public void UpdateStatus(string status)
-    {
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            throw new ArgumentException("Status is required.", nameof(status));
-        }
-
-        Status = status.ToLowerInvariant();
-        UpdatedAt = DateTimeOffset.UtcNow;
-    }
-
-    /// <summary>
-    /// Rehydrates a <see cref="Week"/> from persisted state.
-    /// </summary>
-    public static Week Rehydrate(
-        Guid id,
-        Guid householdId,
-        DateOnly startsOn,
-        string status,
-        DateTimeOffset createdAt,
-        DateTimeOffset updatedAt,
-        WeekMode weekMode = WeekMode.Solo)
-    {
-        return new Week(id, householdId, startsOn, status, createdAt, updatedAt, weekMode);
+        IsManual = true;
+        CreatedAt = now;
+        UpdatedAt = now;
     }
 }

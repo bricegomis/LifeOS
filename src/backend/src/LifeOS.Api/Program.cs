@@ -1,6 +1,8 @@
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Endpoints;
 using LifeOS.Api.ErrorHandling;
+using LifeOS.Api.Receipts;
+using LifeOS.Application.Receipts;
 using LifeOS.Infrastructure;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,6 +17,9 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure();
+builder.Services.Configure<ReceiptPhotoStorageOptions>(builder.Configuration.GetSection("Receipts"));
+builder.Services.AddSingleton<ReceiptPhotoStorage>();
+builder.Services.AddSingleton<IReceiptOcrService, TesseractReceiptOcrService>();
 
 builder.Services
     .AddOptions<SupabaseAuthOptions>()
@@ -99,11 +104,20 @@ if (enableOpenApiUi)
 
 app.MapGet("/api/version", (HttpContext context, IConfiguration configuration) =>
 {
+    string? ReadBuildValue(string key) =>
+        configuration[$"LifeOS:{key}"]?.Trim() is { Length: > 0 } value ? value : null;
+
     context.Response.Headers.CacheControl = "no-store";
     return Results.Ok(new
     {
         component = "api",
-        buildId = configuration["LifeOS:BuildId"] ?? "local",
+        buildId = ReadBuildValue("BuildId") ?? "local",
+        buildNumber = ReadBuildValue("BuildNumber"),
+        runId = ReadBuildValue("RunId"),
+        runAttempt = ReadBuildValue("RunAttempt"),
+        repository = ReadBuildValue("Repository"),
+        serverUrl = ReadBuildValue("ServerUrl"),
+        workflow = ReadBuildValue("Workflow"),
     });
 }).AllowAnonymous();
 
@@ -115,21 +129,16 @@ app.UseAuthorization();
 
 app.MapStoresEndpoints();
 app.MapHouseholdEndpoints();
-app.MapArticlesEndpoints();
+app.MapProductsEndpoints();
+app.MapReceiptsEndpoints();
 app.MapRecipesEndpoints();
+app.MapHouseholdSocialEndpoints();
+app.MapReviewEndpoints();
 app.MapCatalogManagementEndpoints();
 app.MapSportTemplatesEndpoints();
 app.MapManualPlannerEndpoints();
-app.MapComposedMealsEndpoints();
-app.MapWeekPlanningEndpoints();
-app.MapWeekBalancedPlanEndpoints();
-app.MapLibraryEndpoints();
-app.MapPlanningEndpoints();
-app.MapWeekContextEndpoints();
 app.MapFoodItemsEndpoints();
 app.MapNutritionEndpoints();
-app.MapStockEndpoints();
-app.MapShoppingListEndpoints();
 
 app.Run();
 

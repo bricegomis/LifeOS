@@ -1,63 +1,63 @@
 using LifeOS.Domain.Articles;
-using LifeOS.Domain.ComposedMeals;
 using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Households;
-using LifeOS.Domain.Planning;
 using LifeOS.Domain.Recipes;
-using LifeOS.Domain.Stock;
+using LifeOS.Domain.Products;
+using LifeOS.Domain.Receipts;
 using LifeOS.Domain.Stores;
-using LifeOS.Domain.WeekContexts;
 using LifeOS.Domain.WeekPlanning;
 using Microsoft.EntityFrameworkCore;
 
 namespace LifeOS.Infrastructure.Persistence;
 
 /// <summary>
-/// EF Core / Npgsql database context backing the PostgreSQL business database (ADR 0001).
-/// Includes Jalon 1 (households, stores, articles), Jalon 2 (recipes, composed meals, week planning),
-/// Jalon 3 (food items, Open Food Facts integration), Jalon 4 (nutrition/sports context),
-/// and Jalon 6 (stock and shopping list).
+/// EF Core / Npgsql database context for active household, food, product, receipt,
+/// recipe, manual-planning and sport data.
 /// </summary>
 public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) : DbContext(options)
 {
-    // Jalon 1: Households and Articles
+    // Households and household reviews
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
+    public DbSet<HouseholdGroup> HouseholdGroups => Set<HouseholdGroup>();
+    public DbSet<FoodReview> FoodReviews => Set<FoodReview>();
+    public DbSet<RecipeReview> RecipeReviews => Set<RecipeReview>();
     public DbSet<Store> Stores => Set<Store>();
-    public DbSet<GroceryItem> GroceryItems => Set<GroceryItem>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<Receipt> Receipts => Set<Receipt>();
+    public DbSet<ReceiptLine> ReceiptLines => Set<ReceiptLine>();
+    public DbSet<Purchase> Purchases => Set<Purchase>();
 
-    // Jalon 2: Recipes and Meals
+    // Recipes and planned meals
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<RecipeIngredient> RecipeIngredients => Set<RecipeIngredient>();
-    public DbSet<ComposedMeal> ComposedMeals => Set<ComposedMeal>();
-    public DbSet<ComposedMealPart> ComposedMealParts => Set<ComposedMealPart>();
 
-    // Jalon 2: Week Planning
+    // Manual week planning
     public DbSet<Week> Weeks => Set<Week>();
     public DbSet<DayPlan> DayPlans => Set<DayPlan>();
     public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
-    public DbSet<MealFoodLine> MealFoodLines => Set<MealFoodLine>();
-    public DbSet<PlannedMealPart> PlannedMealParts => Set<PlannedMealPart>();
-    public DbSet<BalancedWeekPlan> BalancedWeekPlans => Set<BalancedWeekPlan>();
+    public DbSet<PlannedRecipeLine> PlannedRecipeLines => Set<PlannedRecipeLine>();
+    public DbSet<PlannedRecipeLineIngredient> PlannedRecipeLineIngredients => Set<PlannedRecipeLineIngredient>();
+    public DbSet<PlannedRecipeLinePortion> PlannedRecipeLinePortions => Set<PlannedRecipeLinePortion>();
 
-    // Jalon 3: Food Items
+    // Foods and product aliases
     public DbSet<FoodItem> FoodItems => Set<FoodItem>();
+    public DbSet<ProductAlias> ProductAliases => Set<ProductAlias>();
 
-    // Jalon 4: Nutrition and Sports Context
+    public async Task<Guid> ResolveProductIdAsync(Guid householdId, Guid id, CancellationToken ct)
+    {
+        // Exact identities only. No name-based matching.
+        return await ProductAliases.Where(a => a.ArticleId == id && a.HouseholdId == householdId)
+            .Select(a => (Guid?)a.ProductId).SingleOrDefaultAsync(ct) ?? id;
+    }
+
+    // Nutrition configuration and sport
     public DbSet<UserConfiguration> UserConfigurations => Set<UserConfiguration>();
     public DbSet<ActivitySession> ActivitySessions => Set<ActivitySession>();
     public DbSet<SportTemplate> SportTemplates => Set<SportTemplate>();
 
     // Planning configuration
-    public DbSet<PlanningRule> PlanningRules => Set<PlanningRule>();
-    public DbSet<FrequencyRule> FrequencyRules => Set<FrequencyRule>();
-    public DbSet<WeekContext> WeekContexts => Set<WeekContext>();
-
-    // Jalon 6: Stock and Shopping List
-    public DbSet<StockItem> StockItems => Set<StockItem>();
-    public DbSet<ShoppingListItem> ShoppingListItems => Set<ShoppingListItem>();
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(LifeOSDbContext).Assembly);

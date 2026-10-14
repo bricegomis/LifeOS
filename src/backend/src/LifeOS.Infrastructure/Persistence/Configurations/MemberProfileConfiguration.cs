@@ -14,6 +14,7 @@ internal sealed class MemberProfileConfiguration : IEntityTypeConfiguration<Memb
         builder.Property(profile => profile.Id).ValueGeneratedNever();
 
         builder.Property(profile => profile.HouseholdId).IsRequired();
+        builder.HasAlternateKey(profile => new { profile.Id, profile.HouseholdId });
 
         builder.Property(profile => profile.DisplayName)
             .IsRequired()

@@ -14,6 +14,7 @@ internal sealed class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
         builder.Property(recipe => recipe.Id).ValueGeneratedNever();
 
         builder.Property(recipe => recipe.HouseholdId).IsRequired();
+        builder.HasAlternateKey(recipe => new { recipe.Id, recipe.HouseholdId });
 
         builder.Property(recipe => recipe.Name)
             .IsRequired()
@@ -21,6 +22,7 @@ internal sealed class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
 
         builder.Property(recipe => recipe.Servings).IsRequired();
         builder.Property(recipe => recipe.DurationMinutes).IsRequired();
+        builder.Property(recipe => recipe.Instructions).HasMaxLength(10000);
 
         builder.Property(recipe => recipe.Tags)
             .HasConversion(

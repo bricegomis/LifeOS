@@ -5,89 +5,92 @@ Clean Architecture / DDD layout as recommended by Microsoft's current guidance
 (minimal APIs, layered separation of concerns, dependencies pointing inwards).
 
 API data endpoints are protected by Supabase-issued JWT authentication — the same identity
-provider already used by the frontend — and, except for the shared meal library, are
+provider already used by the frontend — and are
 scoped to the authenticated user (resolved from the JWT `sub` claim). The public
-`GET /api/version` endpoint exposes only the API component name and build ID for deployment
+`GET /api/version` endpoint exposes only the API component name and build provenance for deployment
 diagnostics.
 
-## Endpoints
+## Endpoints and model
 
-| Area | Endpoints | Notes |
+| Area | API | Notes |
 | --- | --- | --- |
-| Build diagnostics | `GET /api/version` | Public; returns the API component name and configured build ID. |
-| Manual planner | `GET/POST /api/manual-planner/weeks`, `GET /api/manual-planner/weeks/{id}`, `POST /api/manual-planner/meals`, `PUT/DELETE /api/manual-planner/meals/{id}`, equivalent `/sports` commands | Household-scoped civil times, independent empty weeks, meals/food snapshots and sports occurrence overrides. |
-| Sport catalog | `GET/POST /api/sport-templates`, `PUT/DELETE /api/sport-templates/{id}` | Household-scoped persisted templates; DELETE archives; calories are a manual total. No silent seed. |
-| Stores | `GET /api/stores` | Read-only, scoped to the caller's household. PostgreSQL-backed (EF Core). |
-| Articles | `GET/POST /api/articles`, `PUT/DELETE /api/articles/{id}`, `POST /api/articles/{id}/price-entries`, `DELETE /api/articles/{id}/price-entries/{priceEntryId}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); mirrors the frontend's `GroceryItem` (name, description, unit, price history). |
-| Library | `GET /api/meal-components`, `GET /api/composite-dishes`, `GET /api/activities` | Read-only, shared across users; still served from an **in-memory** seed catalog (mirrors `src/frontend/src/data/localLibrary.ts`), not yet migrated to PostgreSQL. |
-| Planning rules | `GET/POST /api/planning-rules`, `PUT/DELETE /api/planning-rules/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); pins a meal component or dish to a weekday/meal slot for all weeks or one week type. |
-| Frequency rules | `GET/POST /api/frequency-rules`, `PUT/DELETE /api/frequency-rules/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core); constrains how many times per week a component/dish/category should appear for all weeks or one week type. |
-| Week context | `GET/PUT /api/week-context` | Per-household singleton with alternating weeks, overrides, and separate day-context templates for both week types. PostgreSQL-backed (EF Core). |
-| Recipes | `GET/POST /api/recipes`, `PUT/DELETE /api/recipes/{id}`, ingredient sub-resource | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core). |
-| Composed meals | `GET/POST /api/composed-meals`, `PUT/DELETE /api/composed-meals/{id}` | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core). |
-| Food items | `GET/POST /api/food-items`, `PUT/DELETE /api/food-items/{id}`, `POST /api/food-items/{id}/correction`, Open Food Facts search | Full CRUD, scoped to the caller's household. PostgreSQL-backed (EF Core), with an Open Food Facts HTTP integration for lookups/caching. |
-| Nutrition | `GET/POST /api/nutrition/configuration`, `GET/POST/PUT/DELETE /api/activity-sessions/*`, `GET /api/nutrition/calculations/day/{dayPlanId}` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
-| Week planning | `GET/POST/DELETE /api/weeks/*`, `/api/day-plans/*`, `/api/planned-meals/*`, `/api/weeks/{id}/balanced-plan/*` | Full week/day-plan/planned-meal CRUD plus the single balanced-plan computation, scoped to the caller's household. Week creation accepts an optional `weekMode`; when omitted, the API uses the configured alternation/override and initializes each day from that mode's template. PostgreSQL-backed (EF Core). |
-| Stock & shopping list | `GET/POST/PUT/DELETE /api/stock-items/*`, `/api/shopping-list/*` | Scoped to the caller's household. PostgreSQL-backed (EF Core). |
+| Foods | GET/POST /api/foods, GET/PUT/DELETE /api/foods/{id} | Generic culinary references; manual nullable base/macros/FODMAP/NOVA/notes, partial saves, archival. |
+| Products | GET/POST /api/products, GET/PUT/DELETE /api/products/{id}, POST /price-entries | Commercial food link required on creation; purchase unit/package confirmations and observed prices. |
+| Comparable prices | GET /api/foods/prices | Last price per product/store then minimum per safe base; provenance/date, no recipe product selection. |
+| Receipts | GET/POST /api/receipts, POST /photo, GET /{id}, GET /{id}/photo, PUT /{id}/context, POST /{id}/finalize | JSON or photo drafts; original image, OCR candidates and raw text; exact duplicate detection per household. |
+| Receipt lines | POST /{id}/lines, PUT /{id}/lines/{lineId}, POST /ignore, POST /validate | Pending corrections; JSON lines validate individually, photo lines finalize atomically as a batch. |
+| Stores | GET/POST /api/stores, PUT/DELETE /{id} | Household stores; required explicit choice for receipts. |
+| Recipes / composed meals | /api/recipes, /api/composed-meals | Food ingredients, portions/steps, archival and historical compositions. |
+| Manual planner / sports | /api/manual-planner, /api/sport-templates | Civil times, independent weeks, personal portions, unchanged historical snapshots. |
+| Historical configuration | /api/planning-rules, /api/frequency-rules, /api/week-context | Preserved but not used by the manual planner. |
+| Nutrition / version | /api/nutrition/*, /api/version | Existing totals/configuration; public no-store build provenance. |
 
-**The Angular MVP uses the manual planner**, not historical week generation or
-the shared in-memory library. Balanced-plan computation/application and automatic
-shopping generation reject manual weeks. Historical configuration remains stored.
-Food-item and recipe DELETE now archive rather than erase. Archived entries are
-returned for historical consultation but cannot be selected for new events.
-`PUT /api/food-items/{id}/article` explicitly links an existing purchase article;
-ingredient POST/PUT/DELETE operates below `/api/recipes/{id}/ingredients`.
-Recipe ingredient `FoodItemId` still references an **article**, not a FoodItem;
-the optional unique `FoodItem.ArticleId` provides the nutrition connection without
-name-based merging or price-history changes.
+All new data is household-scoped. Stock/shopping APIs, article compatibility
+catalogue, parallel food seed catalogues and OFF search are removed. Historical
+stock/shopping tables and product legacy nutrition/source columns remain non-mapped.
+Recipes and new meal lines refer to generic foods; commercial products only carry
+prices. The historical balanced engine has no stock dependency, measures ingredient
+reuse and returns costs as non-calculable without explicit commercial references.
 
-Manual meals store relational snapshots, personal portion and children count.
-Preparation = personal quantity × (1 + 0.5 × children), never additional personal
-nutrition. Unknown values or incompatible units return null totals and warnings.
-Start/end minutes use the week's IANA timezone as civil intentions, with same-day
-end > start; legacy null times stay unpositioned. First placement of a legacy meal
-captures current values explicitly, without claiming to reconstruct past nutrition.
-See [ADR 0004](../../docs/architecture/decisions/0004-manual-planner.md).
+Receipt JSON limits: 1 MiB UTF-8, 500 lines, depth 32. Unreadable structure is rejected
+without partial import. Missing usable fields remain pending with diagnostics.
+Raw health fields are archival only and never reach catalogue nutrition.
+Total / quantity produces observed price; incompatible units never convert.
 
-Only the shared meal library (`MealComponent`, `CompositeDish`, `Activity`) still lives in
-in-memory repositories; every household-scoped bounded context above is persisted in
-PostgreSQL via EF Core. The backend also exposes its own balanced week-plan
-computation (`/api/weeks/{weekId}/balanced-plan`, `BalancedPlanEngine`) on top of the persisted
-week/day-plan/planned-meal model: a single deterministic computation that scores nutrition,
-cost, monthly diversity and waste at once, with no objective chosen by the user; the frontend's own `src/frontend/src/data/weekGenerator.ts`
-is a separate, still-local implementation and the two are not yet unified.
-Existing planning and frequency rules without a `weekMode` remain shared by both week types;
-new rules can be scoped to `kids` or `solo`. The week-type migration backfills both templates
-from existing day settings and preserves each stored week's alternating mode where available.
+### Receipt photos and OCR
 
-## Layers
+Photo tickets use the same household-scoped receipt and purchase model as JSON imports.
+`POST /api/receipts/photo` accepts multipart field `photo` (JPEG, PNG or WebP, 10 MiB
+by default; the configured limit is capped at 25 MiB). The server checks the image
+signature, stores a generated filename outside PostgreSQL, calculates a SHA-256 image
+fingerprint, and runs the local `tesseract` executable with `fra+eng` trained data.
+There is no remote OCR provider or paid API. The French parser only suggests the
+first plausible store line, a day-first date/time, and rows with a final cents amount;
+it only suggests quantity when a leading multiplier such as `2 x` is explicit. Unit,
+product association and uncertain/missing values require user correction. OCR text and
+errors remain on the draft, and an OCR failure still retains the image for manual entry.
 
+Every photo starts as `draft`. The original image is available only through the
+authenticated `GET /api/receipts/{id}/photo` endpoint after household ownership is
+checked. The client must confirm the store and receipt date/time, review or ignore all
+candidate lines, and explicitly select/create products and foods. `POST
+/api/receipts/{id}/finalize` requires the complete set of pending-line choices and
+processes them under a receipt row lock and one PostgreSQL transaction. A failure
+leaves the receipt in draft and rolls back products, foods, purchases, observations and
+line statuses. Repeating a successful finalization is idempotent. An observed unit
+price is `line total / quantity`; the purchase retains its original total and quantity.
+Photo line-by-line validation is rejected to preserve this all-or-nothing boundary.
+
+Configure `Receipts:StoragePath` (`Receipts__StoragePath` in the container) to a durable
+directory. The supplied Docker image installs Tesseract and French data, creates
+`/data/receipts`, and declares it as a volume. `docker-compose.yaml` mounts the named
+volume `lifeos_receipts` there and sets the default size limit. Back up this volume
+alongside PostgreSQL: database backups contain paths and receipt metadata, not image
+bytes. Keep the same volume mounted when replacing the API container; deleting it
+permanently deletes original photos. Local deployments can set `Receipts__StoragePath`
+to any persistent directory writable by the API process. Tesseract executable and
+language can be overridden with `Receipts__TesseractExecutable` and
+`Receipts__TesseractLanguage`. OCR has a 45-second process timeout and 100 KiB text
+limit. Receipts, images and OCR are never treated as authoritative: visual review is
+required because thermal paper, glare, layout, locale and OCR quality vary.
+
+Targeted checks:
+
+```bash
+dotnet test tests/LifeOS.Api.IntegrationTests/LifeOS.Api.IntegrationTests.csproj \
+  --filter 'FullyQualifiedName~ReceiptOcrParserTests|FullyQualifiedName~ReceiptPhotoTests'
 ```
-src/
-  LifeOS.Domain          Entities and business rules. No dependency on any other layer.
-  LifeOS.Application     Use cases (queries/commands) and ports (interfaces) consumed
-                          by the API. Depends only on Domain.
-  LifeOS.Infrastructure   Concrete implementations of Application ports (repositories,
-                          external services). Depends on Application.
-  LifeOS.Api              ASP.NET Core minimal API host: authentication, endpoint
-                          mapping, composition root. Depends on Application and
-                          Infrastructure.
-```
 
-Each bounded context (`Stores`, `Articles`, `Library`, `Planning`, `WeekContexts`,
-`Households`, `Recipes`, `ComposedMeals`, `WeekPlanning`, `FoodItems`, `Stock`) follows the
-same shape in every layer: a `Domain` aggregate/entity mirroring the equivalent frontend
-model in `src/frontend/src/types.ts` (where applicable), an `Application` query/command
-backed by a repository port (`Application/Common/Interfaces`), and an `Infrastructure`
-implementation. `Households`, `Stores`, `Articles`, `Recipes`, `ComposedMeals`,
-`WeekPlanning`, `FoodItems`, `Planning`, `WeekContexts`, and `Stock` are persisted in
-PostgreSQL via EF Core; only `Library` still runs on temporary in-memory repositories,
-pending a future migration to a shared, queryable catalog. The `Library` context is also
-the only one that is not scoped per household: it is shared, read-only seed data
-equivalent to `src/frontend/src/data/localLibrary.ts`.
-`LifeOS.Api/Endpoints/*.cs` maps each context's HTTP routes, requiring authorization and,
-for household-scoped contexts, resolving the caller's household id (see "Households and
-isolation" below).
+The integration tests use a deterministic local OCR stub and a real PostgreSQL
+Testcontainer; they require Docker, but do not require Tesseract on the host. To check
+the production OCR runtime and packaging, build the API image with `docker build -f
+src/backend/Dockerfile src/backend` and verify `tesseract --list-langs` in the resulting
+container includes both `eng` and `fra`.
+
+Layers remain Domain / Application / Infrastructure / API. Endpoint orchestration
+uses the scoped DbContext for transactionally consistent receipt writes, as the
+existing manual planner does. Domain parsing/invariants remain independent of EF.
+See [ADR 0006](../../docs/architecture/decisions/0006-foods-products-receipts.md).
 
 ## Households and isolation
 
@@ -154,7 +157,7 @@ dotnet test
 ```
 
 - `tests/LifeOS.Domain.Tests` — unit tests for domain entities (invariants, no I/O),
-  currently covering `Households`, `Stores`, `Articles`, and `Nutrition`.
+  covering households, stores, foods/products/prices, receipts and nutrition.
 - `tests/LifeOS.Api.IntegrationTests` — API-level integration tests using
   `Microsoft.AspNetCore.Mvc.Testing` against a real PostgreSQL instance spun up with
   [Testcontainers](https://dotnet.testcontainers.org/) (`Testcontainers.PostgreSql`);
@@ -166,7 +169,7 @@ dotnet test
     `WebApplicationFactory` instance is read back by an independent instance against the
     same database),
   - strict cross-household isolation across every persisted bounded context (stores,
-    articles, recipes, composed meals, week planning, food items, stock/shopping list,
+    foods, products, receipts, recipes, composed meals, week planning,
     planning rules, week context), and
   - schema-level integrity constraints that don't depend on application-layer checks
     (e.g. `FoodItemSchemaConstraintsTests` proves the `food_items` → `households` foreign
@@ -176,7 +179,7 @@ dotnet test
 ## Authentication
 
 The API validates the same JWT access tokens issued by Supabase Auth for the frontend
-(`src/frontend/src/services/supabase`). No separate login flow is implemented in the
+(`src/frontend-angular/src/app/core/auth`). No separate login flow is implemented in the
 backend: the frontend keeps using Supabase for sign-in and simply forwards the access
 token as a `Bearer` token to the API.
 
@@ -201,7 +204,7 @@ keys are resolved automatically from Supabase's OIDC metadata, so no secret is s
 in this repository.
 
 Allowed CORS origins for the frontend dev server / deployed app are configured under
-`Cors:AllowedOrigins`. For the Vue GitHub Pages deployment, set `GITHUB_PAGES_URL` in the
+`Cors:AllowedOrigins`. For the Angular GitHub Pages deployment, set `GITHUB_PAGES_URL` in the
 deployment environment and set the GitHub repository variable `VITE_LIFEOS_API_URL` to the
 API origin so its sidebar can read `/api/version`.
 
@@ -265,6 +268,26 @@ The `.github/workflows/build-push-docker-images.yml` workflow builds this image 
 the frontend web image) and pushes it to the GitHub Container Registry
 (`ghcr.io/bricegomis/lifeos-api`, tagged `latest`) on every push to `main`. No extra
 secrets are needed: it authenticates with the automatically provided `GITHUB_TOKEN`.
-Both images receive the same full Git commit SHA as `LIFEOS_BUILD_ID`; this value is
-served by the API and embedded in the Angular web image, so their displayed IDs match
-when they were built from the same commit. Local runs default to `local`.
+Both images receive the producing workflow's `github.run_number`, `github.run_id`,
+`github.run_attempt`, repository, server URL and workflow name, alongside the full
+commit SHA. Docker build arguments are `LIFEOS_BUILD_ID` (commit),
+`LIFEOS_BUILD_NUMBER`, `LIFEOS_RUN_ID`, `LIFEOS_RUN_ATTEMPT`,
+`LIFEOS_BUILD_REPOSITORY`, `LIFEOS_BUILD_SERVER_URL`, and `LIFEOS_BUILD_WORKFLOW`.
+The API image retains these under the corresponding `LifeOS__BuildId`,
+`LifeOS__BuildNumber`, `LifeOS__RunId`, `LifeOS__RunAttempt`, `LifeOS__Repository`,
+`LifeOS__ServerUrl`, and `LifeOS__Workflow` configuration keys. Do not replace
+them with deployment-time values or the latest run: they identify the built image.
+
+The UI displays `UI Build #123` and `API Build #123` separately, linking each to
+its exact run and attempt. A rerun displays `Build #123 · tentative 2`.
+Workflow name, run ID, attempt and full commit remain available in expandable
+details. Run numbers are scoped to a workflow, not globally unique. API and Angular
+are built together in this Docker workflow, but independently updated `latest`
+containers may temporarily differ. Angular Pages is built in a separate workflow;
+its number need not match the API even when the commits match.
+
+`GET /api/version` keeps the existing `component` and `buildId` fields and adds
+nullable string fields `buildNumber`, `runId`, `runAttempt`, `repository`,
+`serverUrl`, and `workflow`. Local builds default to `local`, with no CI number.
+An older API returning only a commit is displayed as `Build non identifié`, with
+its commit in details. Missing API configuration and request failures remain explicit.

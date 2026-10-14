@@ -1,52 +1,75 @@
 # LifeOS — Project Memory
 
-## État actuel et recentrage approuvé — 7 octobre 2026
+## État actuel — aliments et tickets manuels
 
-L'implémentation active est **`src/frontend-angular` (Angular 22, contrôles natifs
-et styles LifeOS, PrimeIcons MIT)** avec
-**`src/backend` (ASP.NET Core/EF Core/PostgreSQL)** comme source de vérité.
-Supabase est utilisé pour l'authentification/JWT uniquement ; l'API isole les
-données par `household_id`. `src/frontend` est le frontend Vue historique.
+Angular 22 (`src/frontend-angular`) est le seul frontend. API ASP.NET Core /
+EF Core / PostgreSQL (`src/backend`) source de vérité, Supabase auth/JWT seulement,
+isolation par foyer. Identité visuelle et dialogues natifs LifeOS conservés.
 
-Le nouveau [MVP approuvé](01-scope-and-versions.md) est un semainier entièrement
-manuel alimentation/sport, avec produits, recettes et catalogue sportif,
-nutrition personnelle, préparation enfants séparée et conservation historique.
-La [roadmap séquentielle](03-roadmap.md) décrit les lots implémentés et validés.
+Aliments génériques au premier plan : base/macros/FODMAP/NOVA manuels et nullable,
+notes facultatives, filtre À compléter, zéro valide. Produits commerciaux secondaires,
+plusieurs par aliment, contenance confirmée et prix observés/provenance. Recettes et
+nouvelles lignes de repas sur aliments, pas de marque choisie implicitement.
 
-Le calendrier et Aujourd'hui partagent les événements API datés/horaires, avec
-plusieurs repas/séances par jour, vue journée mobile, hors plage, chevauchements,
-déplacement par formulaire et erreurs explicites. `sport_templates` est un
-catalogue par foyer ; `meal_food_lines` préserve les quantités et valeurs
-nutritionnelles de chaque événement. Modifier/archiver un catalogue ne réécrit
-pas ces snapshots. La présence d'enfants ne change que la préparation.
+Tickets photo ou JSON fichier/texte : source brute et toutes lignes avant validation,
+contexte magasin/date explicite, pending/validated/ignored, reprise API et progression.
+JSON : validation individuelle transactionnelle aliment/produit/achat/prix/statut.
+Photo : Tesseract local (fra+eng), propositions OCR françaises corrigées manuellement,
+validation atomique du ticket complet. Photos originales et texte OCR restent en
+brouillon; les fichiers résident sur un volume durable sauvegardé avec PostgreSQL.
+Concurrence/idempotence, réimport identique détecté par foyer, aucune santé importée.
+Minimum des derniers relevés par produit/magasin uniquement par base comparable,
+historique et informatif, pas un produit de recette.
 
-Articles et FoodItems restent distincts, liés explicitement par `ArticleId` ;
-les ingrédients gardent leur FK historique vers les articles. Prix/achats et
-anciens repas composés sont conservés. Les nouvelles semaines sont vides et
-n'utilisent pas les anciens réglages ; calcul équilibré et génération de courses
-sont refusés pour les semaines manuelles. L'API historique reste disponible.
-Voir [ADR 0004](architecture/decisions/0004-manual-planner.md) pour les limites
-de migration, la précision, les heures civiles et les snapshots.
+`FoodsAndReceipts` remplace le modèle unifié : produits/IDs/prix/alias/sources
+conservés, mapping alimentaire explicite sans homonymes fusionnés, références
+rebranchées et snapshots/horaires/portions inchangés. Anciens produits sans preuve
+alimentaire restent non liés. Stock/courses et catalogues alimentaires parallèles
+retirés des parcours/API/DI ; tables historiques non mappées. Vue et OFF actifs supprimés.
+Voir [ADR 0006](architecture/decisions/0006-foods-products-receipts.md).
 
-Interface de saisie : les pages restent centrées sur la consultation
-(calendrier, listes, détails). Chaque création ou modification (événement,
-séance, aliment, achats d'un aliment, magasin, article, prix, stock, recette,
-ingrédient, repas composé et ses recettes) s'ouvre dans un dialogue partagé
-`app-lifeos-dialog` (`src/frontend-angular/src/app/shared/dialog`) : champs
-essentiels d'abord, options secondaires sous « Plus d'options », focus piégé
-puis restauré, Échap avec confirmation si la saisie est modifiée, erreurs dans
-le dialogue sans fermeture, et feuille basse sur mobile. Les contrats API sont
-inchangés.
+### Modèle actif — recettes, repas et avis
 
-Validation locale : tests domaine/API sur PostgreSQL vierge et historique,
-redémarrage logique, deux foyers, contrôles Angular et parcours navigateur
-desktop/mobile. OAuth réel et déploiement en production ne sont pas vérifiés
-par ces contrôles locaux.
+[ADR 0007](architecture/decisions/0007-recipes-meal-lines-and-household-reviews.md)
+remplace le modèle culinaire à repas composés. La bibliothèque contient des
+recettes de toute taille ; chaque repas manuel peut combiner plusieurs recettes
+et des préparations ponctuelles persistées. Les portions et leur répartition
+sont propres à chaque ligne. Des avis privés au foyer portent séparément sur
+les aliments, recettes et groupes de profils. Les écrans Angular et l'API
+utilisent le modèle aliments/recettes/lignes de repas, sans conversion ni
+compatibilité avec les anciens payloads culinaires.
+
+Cette cible ne change pas le modèle générique aliments/produits/tickets de l'ADR
+0006. La migration `FlexibleRecipeMealLinesAndReviews` supprime les anciennes
+recettes, lignes de repas, repas composés et règles/scénarios concernés, tout en
+préservant les comptes, foyers, profils, aliments, produits, magasins, prix et
+données sportives. Elle ne modifie aucune migration historique. Elle n'a pas
+été appliquée à une base de production ; son application à un environnement
+existant nécessite sauvegarde et autorisation explicite.
+
+Le semainier est manuel : création de semaines vides, repas multi-lignes,
+préparations ponctuelles, portions fractionnaires par ligne, duplication et
+nutrition calculée avec inconnues explicites. Les quantités requises sont
+affichées par ingrédient dans le détail du repas. Aucun agrégateur ni parcours
+actif de liste de courses, aucune règle ni génération automatique de semaine
+n'est actuellement exposé ; les anciens scénarios ne sont pas convertis.
+
+Le sport, les profils existants, les foyers, l'authentification, les aliments,
+produits, magasins, prix et tickets restent hors du nettoyage. Supabase conserve
+uniquement l'authentification ; l'API/PostgreSQL est la source métier. Une
+bibliothèque ou semaine vide reste vide et utile, sans fallback de démonstration.
+
+Les tests utilisent PostgreSQL éphémère et couvrent le nouveau contrat, les
+références croisées de foyer et la migration ; les contrôles Angular couvrent
+type-check, tests, lint et build. Ne pas lancer ces migrations sur une base
+partagée sans sauvegarde et autorisation explicite.
 
 **Le texte ci-dessous conserve la mémoire historique** de Vue/local-first et
 des parcours de génération ; il ne décrit plus la cible active. Les décisions
-de génération/alternance/menu équilibré sont remplacées pour le MVP, leurs données
-restent conservées. Les détails d'authentification et d'isolation restent valides.
+de génération/alternance/menu équilibré sont retirées du produit actif. Les
+anciennes données culinaires/planning concernées sont supprimées par la migration
+EF décrite ci-dessus ; seul ce texte historique reste dans la documentation.
+Les détails d'authentification et d'isolation restent valides.
 
 LifeOS is a personal planning app built to reduce daily decision fatigue around food and weekly activity. The current implementation is intentionally not a broad “all-of-life” dashboard. It is a narrow, practical tool focused on meals, planned eating, and the weekly rhythm that supports them.
 

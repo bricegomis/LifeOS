@@ -3,7 +3,7 @@ import type { MagicLinkCallback } from './magic-link-callback'
 
 type AuthClient = Pick<SupabaseClient['auth'], 'getSession' | 'exchangeCodeForSession' | 'verifyOtp' | 'signInWithOAuth'>
 
-const INTERNAL_ROUTE = /^\/(?:planning|recipes|meals|foods|sports|stores|articles|stock|library|settings|today|planner)?(?:\?[^#\\\s]*)?$/
+const INTERNAL_ROUTE = /^\/(?:planning|recipes|meals|products|foods|sports|stores|articles|tickets|library|settings|today|planner)?(?:\?[^#\\\s]*)?$/
 
 export function validatedReturnPath(value: string | null): string {
   return value && INTERNAL_ROUTE.test(value) ? value : '/'
@@ -13,13 +13,21 @@ export function buildLoginRedirectPath(returnPath: string): string {
   return `/login?redirect=${encodeURIComponent(validatedReturnPath(returnPath))}`
 }
 
-export async function startGoogleSignIn(auth: AuthClient, redirectTo: string): Promise<void> {
+export async function startGoogleSignIn(
+  auth: AuthClient,
+  redirectTo: string,
+  openUrl?: (url: string) => Promise<void>,
+): Promise<void> {
+  const skipBrowserRedirect = Boolean(openUrl)
   const { data, error } = await auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo, skipBrowserRedirect: false },
+    options: { redirectTo, skipBrowserRedirect },
   })
   if (error) throw error
   if (!data.url) throw new Error('Google n’a pas fourni de page de connexion. Réessayez ou utilisez le lien par e-mail.')
+  if (openUrl) {
+    await openUrl(data.url)
+  }
 }
 
 function callbackErrorMessage(code: string | null, description: string | null): string {

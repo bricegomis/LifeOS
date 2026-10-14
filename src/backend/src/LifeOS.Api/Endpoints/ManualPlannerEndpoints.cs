@@ -2,6 +2,9 @@ using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Dtos;
 using LifeOS.Application.Households;
+using LifeOS.Domain.FoodItems;
+using LifeOS.Domain.Households;
+using LifeOS.Domain.Recipes;
 using LifeOS.Domain.WeekPlanning;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +18,7 @@ public static class ManualPlannerEndpoints
         var group = app.MapGroup("/api/manual-planner").RequireAuthorization().WithTags("Manual planner");
         group.MapGet("/weeks", ListWeeksAsync).Produces<List<ManualWeekSummary>>();
         group.MapPost("/weeks", CreateWeekAsync).Produces<ManualWeekDto>(201);
+        group.MapPost("/weeks/{id:guid}/duplicate", DuplicateWeekAsync).Produces<ManualWeekDto>(201);
         group.MapGet("/weeks/{id:guid}", GetWeekAsync).Produces<ManualWeekDto>();
         group.MapPost("/meals", CreateMealAsync).Produces<ManualMealDto>(201);
         group.MapPut("/meals/{id:guid}", UpdateMealAsync).Produces<ManualMealDto>();
@@ -36,7 +40,7 @@ public static class ManualPlannerEndpoints
     {
         var household = await Household(user, households, ct);
         if (household is null) return Results.Unauthorized();
-        return Results.Ok(await db.Weeks.Where(w => w.HouseholdId == household)
+        return Results.Ok(await db.Weeks.Where(w => w.HouseholdId == household && w.IsManual)
             .OrderByDescending(w => w.StartsOn).ThenByDescending(w => w.IsManual)
             .Select(w => new ManualWeekSummary(w.Id, w.StartsOn, w.TimeZoneId, w.IsManual)).ToListAsync(ct));
     }
@@ -54,13 +58,88 @@ public static class ManualPlannerEndpoints
         return Results.Created($"/api/manual-planner/weeks/{week.Id}", await WeekDto(db, week, ct));
     }
 
+    private static async Task<IResult> DuplicateWeekAsync(Guid id, ManualWeekRequest request, ClaimsPrincipal user,
+        ResolveHouseholdForUserQuery households, LifeOSDbContext db, CancellationToken ct)
+    {
+        var household = await Household(user, households, ct);
+        if (household is null) return Results.Unauthorized();
+        var source = await db.Weeks
+            .Include(w => w.DayPlans).ThenInclude(d => d.PlannedMeals).ThenInclude(m => m.RecipeLines).ThenInclude(l => l.Ingredients)
+            .Include(w => w.DayPlans).ThenInclude(d => d.PlannedMeals).ThenInclude(m => m.RecipeLines).ThenInclude(l => l.Portions)
+            .SingleOrDefaultAsync(w => w.Id == id && w.HouseholdId == household && w.IsManual, ct);
+        if (source is null) return Results.NotFound();
+        if (request.StartsOn.DayOfWeek != DayOfWeek.Monday)
+            return Results.Problem("La semaine copiée doit commencer un lundi.", statusCode: 400);
+        if (await db.Weeks.AnyAsync(w => w.HouseholdId == household && w.StartsOn == request.StartsOn && w.IsManual, ct))
+            return Results.Problem("Une semaine existe déjà à cette date. Choisissez une autre semaine.", statusCode: 409);
+
+        var copy = Week.CreateManual(household.Value, request.StartsOn, request.TimeZoneId);
+        db.Weeks.Add(copy);
+        var sourceDayIds = source.DayPlans.Select(d => d.Id).ToList();
+        var sports = await db.ActivitySessions.Where(s => sourceDayIds.Contains(s.DayPlanId)).ToListAsync(ct);
+        var sourceLineIds = source.DayPlans.SelectMany(d => d.PlannedMeals).SelectMany(m => m.RecipeLines)
+            .Select(l => l.Id).ToHashSet();
+        var lineReviews = await db.RecipeReviews.Where(r => r.HouseholdId == household
+            && r.PlannedRecipeLineId != null && sourceLineIds.Contains(r.PlannedRecipeLineId.Value)).ToListAsync(ct);
+        var copiedLines = new Dictionary<Guid, Guid>();
+
+        foreach (var sourceDay in source.DayPlans)
+        {
+            var targetDay = copy.DayPlans.Single(d => d.Date == request.StartsOn.AddDays(sourceDay.Date.DayNumber - source.StartsOn.DayNumber));
+            foreach (var sourceMeal in sourceDay.PlannedMeals)
+            {
+                var meal = PlannedMeal.CreateManual(targetDay.Id, household.Value);
+                meal.Schedule(targetDay.Id, sourceMeal.StartMinute, sourceMeal.EndMinute);
+                foreach (var sourceLine in sourceMeal.RecipeLines.OrderBy(l => l.Position))
+                {
+                    var planned = sourceLine.Portions.Count > 0 ? null : sourceLine.PlannedServings;
+                    var line = PlannedRecipeLine.Create(meal.Id, household.Value, sourceLine.RecipeId,
+                        sourceLine.Position, sourceLine.Name, sourceLine.Instructions, sourceLine.YieldServings, planned);
+                    line.SetPortions(planned, sourceLine.Portions.Select(p => PlannedRecipeLinePortion.Create(
+                        line.Id, household.Value, p.MemberProfileId, p.Servings)).ToList());
+                    foreach (var ingredient in sourceLine.Ingredients)
+                        line.Ingredients.Add(PlannedRecipeLineIngredient.Snapshot(line.Id, household.Value,
+                            ingredient.FoodItemId, ingredient.Name, ingredient.Quantity, ingredient.Unit,
+                            ingredient.ReferenceUnit, new Nutrition(ingredient.Calories, ingredient.Protein,
+                                ingredient.Carbs, ingredient.Fat)));
+                    meal.RecipeLines.Add(line);
+                    copiedLines[sourceLine.Id] = line.Id;
+                }
+                targetDay.PlannedMeals.Add(meal);
+            }
+
+            foreach (var sport in sports.Where(s => s.DayPlanId == sourceDay.Id))
+            {
+                var clone = ActivitySession.Create(targetDay.Id, sport.Type, sport.Intensity,
+                    sport.DurationMinutes, sport.EstimatedEnergyKcal);
+                clone.Schedule(targetDay.Id, sport.StartMinute, sport.EndMinute, sport.Name ?? sport.Type,
+                    sport.Type, sport.Intensity, sport.DurationMinutes, sport.DistanceKm,
+                    sport.EstimatedEnergyKcal, sport.SportTemplateId);
+                db.ActivitySessions.Add(clone);
+            }
+        }
+        foreach (var review in lineReviews)
+        {
+            if (review.PlannedRecipeLineId is { } lineId && copiedLines.TryGetValue(lineId, out var copiedLineId))
+                db.RecipeReviews.Add(RecipeReview.Create(household.Value, null, copiedLineId, review.MemberProfileId,
+                    review.HouseholdGroupId, review.Score, review.Comment, review.CreatedByUserId));
+        }
+        await db.SaveChangesAsync(ct);
+        var result = await db.Weeks.Include(w => w.DayPlans).ThenInclude(d => d.PlannedMeals)
+            .SingleAsync(w => w.Id == copy.Id, ct);
+        return Results.Created($"/api/manual-planner/weeks/{copy.Id}", await WeekDto(db, result, ct));
+    }
+
     private static async Task<IResult> GetWeekAsync(Guid id, ClaimsPrincipal user,
         ResolveHouseholdForUserQuery households, LifeOSDbContext db, CancellationToken ct)
     {
         var household = await Household(user, households, ct);
         if (household is null) return Results.Unauthorized();
-        var week = await db.Weeks.Include(w => w.DayPlans).ThenInclude(d => d.PlannedMeals).ThenInclude(m => m.FoodLines)
-            .SingleOrDefaultAsync(w => w.Id == id && w.HouseholdId == household, ct);
+        var week = await db.Weeks.Include(w => w.DayPlans).ThenInclude(d => d.PlannedMeals).ThenInclude(m => m.RecipeLines)
+                .ThenInclude(l => l.Ingredients)
+            .Include(w => w.DayPlans).ThenInclude(d => d.PlannedMeals).ThenInclude(m => m.RecipeLines)
+                .ThenInclude(l => l.Portions)
+            .SingleOrDefaultAsync(w => w.Id == id && w.HouseholdId == household && w.IsManual, ct);
         return week is null ? Results.NotFound() : Results.Ok(await WeekDto(db, week, ct));
     }
 
@@ -72,7 +151,7 @@ public static class ManualPlannerEndpoints
         foreach (var day in week.DayPlans.OrderBy(d => d.Date))
         {
             var meals = new List<ManualMealDto>();
-            foreach (var meal in day.PlannedMeals.Where(m => m.Status != "skipped"))
+            foreach (var meal in day.PlannedMeals)
                 meals.Add(await MealDto(db, meal, week.HouseholdId, ct));
             days.Add(new(day.Id, day.Date, meals, sessions.Where(s => s.DayPlanId == day.Id).Select(SportDto).ToList(),
                 SumNutrition(meals.Select(m => m.Nutrition).ToList())));
@@ -87,9 +166,9 @@ public static class ManualPlannerEndpoints
         if (household is null) return Results.Unauthorized();
         if (!await OwnsDay(db, household.Value, request.DayPlanId, ct)) return Results.NotFound();
         if (request.StartMinute is null) throw new ArgumentException("Placez le nouvel événement dans un créneau.");
-        var meal = PlannedMeal.CreateManual(request.DayPlanId);
-        meal.Schedule(request.DayPlanId, request.StartMinute, request.EndMinute, request.PersonalPortion, request.ChildrenCount);
-        await ReplaceContent(db, meal, household.Value, request, ct);
+        var meal = PlannedMeal.CreateManual(request.DayPlanId, household.Value);
+        meal.Schedule(request.DayPlanId, request.StartMinute, request.EndMinute);
+        await SetRecipeLines(db, meal, household.Value, request.RecipeLines, ct);
         db.PlannedMeals.Add(meal);
         await db.SaveChangesAsync(ct);
         return Results.Created($"/api/manual-planner/meals/{meal.Id}", await MealDto(db, meal, household.Value, ct));
@@ -100,109 +179,107 @@ public static class ManualPlannerEndpoints
     {
         var household = await Household(user, households, ct);
         if (household is null) return Results.Unauthorized();
-        var meal = await db.PlannedMeals.Include(m => m.FoodLines).SingleOrDefaultAsync(m => m.Id == id, ct);
+        var meal = await db.PlannedMeals.Include(m => m.RecipeLines).ThenInclude(l => l.Ingredients)
+            .Include(m => m.RecipeLines).ThenInclude(l => l.Portions).SingleOrDefaultAsync(m => m.Id == id, ct);
         if (meal is null || !await OwnsDay(db, household.Value, meal.DayPlanId, ct)
             || !await OwnsDay(db, household.Value, request.DayPlanId, ct)) return Results.NotFound();
-        if (request.ReplaceContent) await ReplaceContent(db, meal, household.Value, request, ct);
-        else if (meal.ContentName is null)
+        meal.Schedule(request.DayPlanId, request.StartMinute, request.EndMinute);
+        if (request.ReplaceContent)
         {
-            var content = await RecipeContent(db, meal.Id, household.Value, meal.RecipeId, meal.ComposedMealId, ct);
-            meal.SetContent(content.Name, meal.RecipeId, meal.ComposedMealId, content.Lines);
+            db.PlannedRecipeLines.RemoveRange(meal.RecipeLines);
+            await SetRecipeLines(db, meal, household.Value, request.RecipeLines, ct);
         }
-        else
+        else if (request.RecipeLines.Count != 0)
         {
-            if (request.RecipeId != meal.RecipeId) throw new ArgumentException("Le changement de contenu exige un remplacement explicite.");
-            if (request.Lines is { } lines && meal.RecipeId is null && meal.ComposedMealId is null)
-            {
-                if (lines.Count != meal.FoodLines.Count || lines.Select(l => l.SnapshotLineId).Distinct().Count() != lines.Count)
-                    throw new ArgumentException("Pour ajouter ou retirer un produit, remplacez explicitement le contenu.");
-                foreach (var line in lines)
-                {
-                    var existing = meal.FoodLines.SingleOrDefault(l => l.Id == line.SnapshotLineId);
-                    if (existing is null || line.FoodItemId != existing.FoodItemId || line.Unit != existing.Unit)
-                        throw new ArgumentException("Le changement de produit ou d'unité exige un remplacement explicite.");
-                    existing.UpdateQuantity(line.Quantity);
-                }
-            }
+            return Results.Problem("Les lignes ne peuvent être envoyées sans demander explicitement leur remplacement.", statusCode: 400);
         }
-        meal.Schedule(request.DayPlanId, request.StartMinute, request.EndMinute, request.PersonalPortion, request.ChildrenCount);
         await db.SaveChangesAsync(ct);
         return Results.Ok(await MealDto(db, meal, household.Value, ct));
     }
 
-    private static async Task ReplaceContent(LifeOSDbContext db, PlannedMeal meal, Guid household,
-        ManualMealRequest request, CancellationToken ct)
+    private static async Task SetRecipeLines(LifeOSDbContext db, PlannedMeal meal, Guid household,
+        IReadOnlyList<PlannedRecipeLineRequest> requests, CancellationToken ct)
     {
-        if (request.RecipeId is { } recipeId)
+        if (requests is null || requests.Count is < 1 or > 50)
+            throw new ArgumentException("Ajoutez entre 1 et 50 recettes ou préparations à ce repas.");
+        for (var position = 0; position < requests.Count; position++)
         {
-            if (request.Lines is { Count: > 0 }) throw new ArgumentException("Choisissez une recette OU des produits.");
-            if (!await db.Recipes.AnyAsync(r => r.Id == recipeId && r.HouseholdId == household && !r.IsArchived, ct))
-                throw new ArgumentException("Recette indisponible dans votre bibliothèque.");
-            var content = await RecipeContent(db, meal.Id, household, recipeId, null, ct);
-            meal.SetContent(content.Name, recipeId, null, content.Lines);
-        }
-        else
-        {
-            if (request.Lines is not { Count: > 0 and <= 100 }) throw new ArgumentException("Ajoutez entre 1 et 100 produits.");
-            var lines = new List<MealFoodLine>();
-            foreach (var input in request.Lines)
+            var input = requests[position];
+            Recipe? recipe = null;
+            if (input.RecipeId is { } recipeId)
             {
-                var food = await db.FoodItems.SingleOrDefaultAsync(f => f.Id == input.FoodItemId && f.HouseholdId == household && !f.IsArchived, ct);
-                if (food is null) throw new ArgumentException("Produit indisponible dans votre bibliothèque.");
-                lines.Add(MealFoodLine.Snapshot(meal.Id, food.Id, food.Name, input.Quantity, input.Unit, food.ReferenceUnit, food.Nutrition));
+                recipe = await db.Recipes.Include(r => r.Ingredients)
+                    .SingleOrDefaultAsync(r => r.Id == recipeId && r.HouseholdId == household && !r.IsArchived, ct);
+                if (recipe is null) throw new ArgumentException("Recette indisponible dans votre bibliothèque.");
+                if (input.Ingredients is { Count: > 0 } || input.YieldServings is not null || input.Name is not null)
+                    throw new ArgumentException("Une ligne de recette utilise les ingrédients et le rendement de la bibliothèque.");
             }
-            meal.SetContent(request.Name ?? string.Join(", ", lines.Select(l => l.Name)), null, null, lines);
-        }
-    }
+            else if (input.Ingredients is not { Count: > 0 and <= 100 })
+            {
+                throw new ArgumentException("Une préparation ponctuelle exige entre 1 et 100 ingrédients.");
+            }
 
-    private static async Task<(string Name, List<MealFoodLine> Lines)> RecipeContent(LifeOSDbContext db,
-        Guid mealId, Guid household, Guid? recipeId, Guid? composedId, CancellationToken ct)
-    {
-        var recipes = new List<(Guid Id, decimal Factor)>();
-        var name = "Ancien repas — référence indisponible";
-        if (recipeId is { } recipe) recipes.Add((recipe, 1));
-        if (composedId is { } composed)
-        {
-            var source = await db.ComposedMeals.Include(c => c.Parts).SingleOrDefaultAsync(c => c.Id == composed && c.HouseholdId == household, ct);
-            if (source is not null)
+            var portions = input.Portions ?? [];
+            if (portions.Count > 0 && input.PlannedServings is not null)
+                throw new ArgumentException("Indiquez un total explicite ou une répartition, pas les deux.");
+            if (portions.Select(p => p.MemberProfileId).Distinct().Count() != portions.Count)
+                throw new ArgumentException("Un profil ne peut apparaître qu'une fois dans la répartition.");
+            var plannedServings = portions.Count > 0 ? null : input.PlannedServings;
+            var yieldServings = recipe is null ? input.YieldServings : recipe.Servings;
+            if (yieldServings is null)
+                throw new ArgumentException("Indiquez le rendement de la préparation.");
+            var name = recipe?.Name ?? input.Name;
+            var instructions = recipe is null ? input.Instructions : null;
+            var line = PlannedRecipeLine.Create(meal.Id, household, recipe?.Id, position, name,
+                instructions, yieldServings.Value, plannedServings);
+            foreach (var portion in portions)
             {
-                name = source.Name;
-                recipes.AddRange(source.Parts.Select(p => (p.RecipeId, p.QuantityFactor)));
+                var profile = await db.MemberProfiles.AnyAsync(p => p.Id == portion.MemberProfileId && p.HouseholdId == household, ct);
+                if (!profile) throw new ArgumentException("La répartition doit utiliser un profil de votre foyer.");
+                line.Portions.Add(PlannedRecipeLinePortion.Create(line.Id, household, portion.MemberProfileId, portion.Servings));
             }
-        }
-        var lines = new List<MealFoodLine>();
-        foreach (var (id, factor) in recipes)
-        {
-            var source = await db.Recipes.Include(r => r.Ingredients).SingleOrDefaultAsync(r => r.Id == id && r.HouseholdId == household, ct);
-            if (source is null) continue;
-            if (composedId is null) name = source.Name;
-            foreach (var ingredient in source.Ingredients)
+            line.SetPortions(plannedServings, line.Portions.ToList());
+
+            var ingredients = recipe is null
+                ? input.Ingredients!.Select(i => (i.FoodItemId, i.Quantity, i.Unit)).ToList()
+                : recipe.Ingredients.Select(i => (i.FoodItemId, i.Quantity, i.Unit)).ToList();
+            foreach (var ingredient in ingredients)
             {
-                var article = await db.GroceryItems.SingleOrDefaultAsync(a => a.Id == ingredient.FoodItemId && a.HouseholdId == household, ct);
-                var food = await db.FoodItems.SingleOrDefaultAsync(f => f.ArticleId == ingredient.FoodItemId && f.HouseholdId == household, ct);
-                lines.Add(MealFoodLine.Snapshot(mealId, food?.Id, food?.Name ?? article?.Name ?? "Ingrédient indisponible",
-                    ingredient.Quantity * factor / source.Servings, ingredient.Unit, food?.ReferenceUnit ?? "", food?.Nutrition));
+                var food = await db.FoodItems.SingleOrDefaultAsync(f => f.Id == ingredient.FoodItemId
+                    && f.HouseholdId == household && !f.IsArchived, ct);
+                if (food is null) throw new ArgumentException("Chaque ingrédient doit référencer un aliment actif du foyer.");
+                line.Ingredients.Add(PlannedRecipeLineIngredient.Snapshot(line.Id, household, food.Id, food.Name,
+                    ingredient.Quantity, ingredient.Unit, food.ReferenceUnit, food.Nutrition));
             }
+            meal.RecipeLines.Add(line);
         }
-        return (name, lines);
     }
 
     private static async Task<ManualMealDto> MealDto(LifeOSDbContext db, PlannedMeal meal, Guid household, CancellationToken ct)
     {
-        var snapshot = meal.ContentName is not null;
-        var content = snapshot ? (Name: meal.ContentName!, Lines: meal.FoodLines)
-            : await RecipeContent(db, meal.Id, household, meal.RecipeId, meal.ComposedMealId, ct);
+        var lines = await db.PlannedRecipeLines.Where(l => l.PlannedMealId == meal.Id && l.HouseholdId == household)
+            .Include(l => l.Ingredients).Include(l => l.Portions).OrderBy(l => l.Position).ToListAsync(ct);
+        var profileNames = await db.MemberProfiles.Where(p => p.HouseholdId == household)
+            .ToDictionaryAsync(p => p.Id, p => p.DisplayName, ct);
+        var lineDtos = lines.Select(line => LineDto(line, profileNames)).ToList();
+        var name = string.Join(" · ", lineDtos.Select(l => l.Name ?? "Préparation sans nom"));
+        return new(meal.Id, meal.DayPlanId, name, meal.StartMinute, meal.EndMinute,
+            lineDtos, SumNutrition(lineDtos.Select(l => l.Nutrition).ToList()));
+    }
+
+    private static PlannedRecipeLineDto LineDto(PlannedRecipeLine line, IReadOnlyDictionary<Guid, string> profileNames)
+    {
+        var totalServings = line.TotalServings;
+        var ratio = totalServings / line.YieldServings;
         var warnings = new List<string>();
-        if (!snapshot) warnings.Add("Repas historique : valeurs actuelles non figées. Le placement manuel les enregistrera.");
-        if (content.Lines.Count == 0) warnings.Add("Aucun ingrédient nutritionnel disponible.");
-        double? Total(Func<MealFoodLine, double?> select, string label)
+        double? Total(Func<PlannedRecipeLineIngredient, double?> select, string label)
         {
-            var values = content.Lines.Select(l =>
+            var values = line.Ingredients.Select(i =>
             {
-                var value = select(l);
-                var factor = l.NutritionFactor();
-                if (value is null || factor is null) warnings.Add($"{l.Name} : {label} inconnu ou unité incompatible.");
-                return value * factor * (double)meal.PersonalPortion;
+                var value = select(i);
+                var factor = i.NutritionFactor();
+                if (value is null || factor is null) warnings.Add($"{i.Name} : {label} inconnu ou unité incompatible.");
+                return value * factor * (double)ratio;
             }).ToList();
             return values.Count > 0 && values.All(v => v is not null) ? values.Sum(v => v!.Value) : null;
         }
@@ -210,16 +287,21 @@ public static class ManualPlannerEndpoints
         var protein = Total(l => l.Protein, "protéines");
         var carbs = Total(l => l.Carbs, "glucides");
         var fat = Total(l => l.Fat, "lipides");
-        var nutrition = new PersonalNutritionDto(calories, protein, carbs, fat, warnings.Count == 0, warnings.Distinct().ToList());
-        return new(meal.Id, meal.DayPlanId, content.Name, meal.StartMinute, meal.EndMinute, meal.RecipeId,
-            meal.ComposedMealId, meal.PersonalPortion, meal.ChildrenCount, snapshot,
-            content.Lines.Select(l => new MealLineDto(l.Id, l.FoodItemId, l.Name, l.Quantity, l.Unit,
-                l.Quantity * meal.PersonalPortion, l.Quantity * meal.PersonalPortion * meal.PreparationFactor,
-                l.ReferenceUnit, l.Calories, l.Protein, l.Carbs, l.Fat)).ToList(), nutrition);
+        var nutrition = new PersonalNutritionDto(calories, protein, carbs, fat,
+            warnings.Count == 0 && line.Ingredients.Count > 0, warnings.Distinct().ToList());
+        var portions = line.Portions.Select(p => new PlannedLinePortionDto(p.MemberProfileId,
+            profileNames.GetValueOrDefault(p.MemberProfileId) ?? "Profil indisponible", p.Servings)).ToList();
+        var ingredients = line.Ingredients.Select(i => new PlannedLineIngredientDto(i.Id, i.FoodItemId,
+            i.Name, i.Quantity, i.Unit, i.Quantity * ratio, i.ReferenceUnit, i.Calories,
+            i.Protein, i.Carbs, i.Fat)).ToList();
+        return new(line.Id, line.RecipeId, line.Name, line.Instructions, line.YieldServings,
+            totalServings, line.IsAdHoc, portions, ingredients, nutrition);
     }
 
     private static PersonalNutritionDto SumNutrition(List<PersonalNutritionDto> meals)
     {
+        if (meals.Count == 0)
+            return new(null, null, null, null, false, ["Aucun repas planifié."]);
         double? Sum(Func<PersonalNutritionDto, double?> select) =>
             meals.All(m => select(m) is not null) ? meals.Sum(m => select(m)!.Value) : null;
         return new(Sum(m => m.Calories), Sum(m => m.Protein), Sum(m => m.Carbs), Sum(m => m.Fat),
