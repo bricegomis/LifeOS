@@ -7,7 +7,8 @@
 .catalog-row p { margin: 8px 0 0; line-height: 1.5; overflow-wrap: anywhere; }
 .catalog-actions { flex-shrink: 0; }
 .price-note { font-size: .9rem; color: var(--lifeos-text-soft); }
-.detail-section { scroll-margin-top: 24px; }
+.food-detail { display: grid; gap: 16px; min-width: 0; overflow-wrap: anywhere; }
+.food-detail > p, .food-detail > h3 { margin: 0; }
 @media (max-width: 700px) {
   .catalog-row { align-items: start; flex-direction: column; gap: 12px; }
   .catalog-toolbar > label:first-child { width: 100%; }

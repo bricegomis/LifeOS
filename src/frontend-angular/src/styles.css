@@ -1899,6 +1899,11 @@ a {
   width: min(760px, calc(100vw - 32px));
 }
 
+.lifeos-dialog-centered .lifeos-dialog-header > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .lifeos-dialog::backdrop {
   background: rgb(36 37 31 / 42%);
 }
@@ -2087,6 +2092,17 @@ a {
 
   .lifeos-dialog-spacer {
     display: none;
+  }
+
+  .lifeos-dialog.lifeos-dialog-centered {
+    width: min(560px, calc(100vw - 32px));
+    max-height: min(860px, calc(100dvh - 48px));
+    margin: auto;
+    border-radius: 20px;
+  }
+
+  .lifeos-dialog.lifeos-dialog-centered.lifeos-dialog-wide {
+    width: min(760px, calc(100vw - 32px));
   }
 }
 

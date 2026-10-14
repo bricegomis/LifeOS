@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
 import type { HouseholdGroupDto, MemberProfileDto, ReviewDto, SaveReviewRequest } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 
 type ReviewTarget = 'food' | 'recipe' | 'planned-line'
 
@@ -95,6 +96,9 @@ export class HouseholdReviewsComponent implements OnChanges {
   target = ''
   score: number | null = null
   comment = ''
+  private initial = formSnapshot({ target: '', score: null, comment: '' })
+
+  dirty(): boolean { return hasChanges(this.initial, { target: this.target, score: this.score, comment: this.comment }) }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['targetId'] || changes['targetType']) {
@@ -121,6 +125,7 @@ export class HouseholdReviewsComponent implements OnChanges {
     this.target = review.memberProfileId ? `profile:${review.memberProfileId}` : `group:${review.householdGroupId}`
     this.score = review.score
     this.comment = review.comment ?? ''
+    this.initial = formSnapshot({ target: this.target, score: this.score, comment: this.comment })
     this.error.set('')
   }
 
@@ -129,6 +134,7 @@ export class HouseholdReviewsComponent implements OnChanges {
     this.target = ''
     this.score = null
     this.comment = ''
+    this.initial = formSnapshot({ target: this.target, score: this.score, comment: this.comment })
   }
 
   async save(): Promise<void> {

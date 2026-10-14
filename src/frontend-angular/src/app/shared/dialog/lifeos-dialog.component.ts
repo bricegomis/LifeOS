@@ -4,7 +4,7 @@ import { dismissDecision, focusableFieldSelector } from './dialog-guard'
 let nextDialogId = 0
 
 /**
- * Shared creation/edition dialog built on the native modal <dialog>:
+ * Shared detail/creation/edition dialog built on the native modal <dialog>:
  * the page behind becomes inert, focus stays inside and returns to the trigger on close.
  * The page owns the projected <form id="..."> and closes the dialog only after a successful save.
  */
@@ -12,7 +12,7 @@ let nextDialogId = 0
   selector: 'app-lifeos-dialog',
   standalone: true,
   template: `
-    <dialog #dialog class="lifeos-dialog" [class.lifeos-dialog-wide]="wide()"
+    <dialog #dialog class="lifeos-dialog" [class.lifeos-dialog-wide]="wide()" [class.lifeos-dialog-centered]="centered()"
       [attr.aria-labelledby]="headingId" [attr.aria-describedby]="description() ? descriptionId : null"
       [attr.aria-busy]="busy() || null" (cancel)="onCancel($event)" (close)="onNativeClose()">
       <header class="lifeos-dialog-header">
@@ -54,6 +54,9 @@ export class LifeosDialogComponent {
   readonly submitDisabled = input(false)
   readonly error = input('')
   readonly wide = input(false)
+  readonly centered = input(false)
+  readonly focusFields = input(true)
+  readonly restoreFocusTo = input<HTMLElement | null>(null)
   readonly dismissed = output<void>()
 
   readonly headingId = `lifeos-dialog-title-${++nextDialogId}`
@@ -67,7 +70,7 @@ export class LifeosDialogComponent {
       const shouldOpen = this.open()
       if (shouldOpen && !element.open) {
         const active = document.activeElement
-        this.returnFocus = active instanceof HTMLElement ? active : null
+        this.returnFocus = this.restoreFocusTo() ?? (active instanceof HTMLElement ? active : null)
         element.showModal()
         this.focusFirstField(element)
       } else if (!shouldOpen && element.open) {
@@ -92,17 +95,17 @@ export class LifeosDialogComponent {
     const element = this.dialog().nativeElement
     // The browser may force-close on repeated Escape; keep the dialog consistent with the page state.
     if (this.open()) {
-      element.showModal()
+      if (!element.open) element.showModal()
       return
     }
     const target = this.returnFocus
     this.returnFocus = null
-    if (target?.isConnected) target.focus()
+    if (target?.isConnected && !document.querySelector('dialog[open]')) target.focus({ preventScroll: true })
   }
 
   private focusFirstField(element: HTMLDialogElement): void {
     const body = element.querySelector('.lifeos-dialog-body')
-    const field = body?.querySelector<HTMLElement>(focusableFieldSelector)
+    const field = this.focusFields() ? body?.querySelector<HTMLElement>(focusableFieldSelector) : null
     ;(field ?? element.querySelector<HTMLElement>('.lifeos-dialog-close'))?.focus()
   }
 }
