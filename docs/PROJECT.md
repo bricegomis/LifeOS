@@ -10,6 +10,9 @@ Aliments génériques au premier plan : base/macros/FODMAP/NOVA manuels et nulla
 notes facultatives, filtre À compléter, zéro valide. Produits commerciaux secondaires,
 plusieurs par aliment, contenance confirmée et prix observés/provenance. Recettes et
 nouvelles lignes de repas sur aliments, pas de marque choisie implicitement.
+Les fiches aliments s'ouvrent dans une popup centrée, avec marges et défilement
+interne sur mobile comme sur ordinateur. L'édition revient à la fiche et conserve
+les avis en cours ; fermer une saisie modifiée demande confirmation.
 
 Tickets photo ou JSON fichier/texte : source brute et toutes lignes avant validation,
 contexte magasin/date explicite, pending/validated/ignored, reprise API et progression.
