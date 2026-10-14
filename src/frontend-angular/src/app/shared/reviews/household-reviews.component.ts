@@ -1,21 +1,24 @@
-import { Component, Input, OnChanges, SimpleChanges, inject, signal } from '@angular/core'
+import { Component, DestroyRef, HostListener, Input, OnChanges, SimpleChanges, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
 import type { HouseholdGroupDto, MemberProfileDto, ReviewDto, SaveReviewRequest } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
+import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { ReviewDraftsService } from './review-drafts.service'
 
 type ReviewTarget = 'food' | 'recipe' | 'planned-line'
+let nextReviewFormId = 0
 
 @Component({
   selector: 'app-household-reviews',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, LifeosDialogComponent],
   template: `
     <section class="household-reviews" aria-label="Avis du foyer">
       <h3>Avis du foyer</h3>
       @if (loading()) { <p role="status">Chargement des avis…</p> }
-      @if (error()) { <p class="review-error" role="alert">{{ error() }}</p> }
+      @if (error() && !editorOpen()) { <p class="review-error" role="alert">{{ error() }}</p> }
       @if (reviews().length) {
         <ul class="review-list">
           @for (review of reviews(); track review.id) {
@@ -27,7 +30,7 @@ type ReviewTarget = 'food' | 'recipe' | 'planned-line'
                 <small>Saisi par le compte {{ review.createdByUserId }}</small>
               </div>
               <div class="review-actions">
-                <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="edit(review)">Modifier</button>
+                <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="edit(review, $event)">Modifier</button>
                 <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="remove(review)">Supprimer</button>
               </div>
             </li>
@@ -38,10 +41,21 @@ type ReviewTarget = 'food' | 'recipe' | 'planned-line'
       }
 
       @if (profiles.length || groups.length) {
-        <form class="review-form" (ngSubmit)="save()">
+        <div class="review-actions">
+          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="add($event)">Ajouter un avis</button>
+        </div>
+      } @else {
+        <p>Ajoutez d’abord une personne ou un groupe dans Réglages pour saisir un avis.</p>
+      }
+    </section>
+    <app-lifeos-dialog [open]="editorOpen()" [heading]="editingId() ? 'Modifier l’avis' : 'Ajouter un avis'"
+      [centered]="true" [formId]="formId" submitLabel="Enregistrer l’avis"
+      [busy]="busy()" [dirty]="dirty()" [error]="error()" [restoreFocusTo]="editorTrigger" (dismissed)="cancelEdit()">
+      <form [id]="formId" class="review-form" ngNativeValidate (ngSubmit)="save()" (submit)="$event.stopPropagation()">
+        <fieldset class="review-fields" [disabled]="busy()">
           <label class="dialog-field">
             <span>Personne ou groupe</span>
-            <select class="text-input" name="target" required [(ngModel)]="target">
+            <select class="text-input" name="target" required [disabled]="!!editingId()" [(ngModel)]="target">
               <option value="">Choisir</option>
               @for (profile of profiles; track profile.id) { <option [value]="'profile:' + profile.id">{{ profile.displayName }}</option> }
               @for (group of groups; track group.id) { <option [value]="'group:' + group.id">{{ group.name }} · groupe</option> }
@@ -57,17 +71,9 @@ type ReviewTarget = 'food' | 'recipe' | 'planned-line'
               <textarea class="text-input" name="comment" maxlength="2000" rows="2" [(ngModel)]="comment"></textarea>
             </label>
           </div>
-          <div class="review-actions">
-            <button class="lifeos-button lifeos-button-secondary" type="submit" [disabled]="busy()">
-              {{ busy() ? 'Enregistrement…' : editingId() ? 'Enregistrer l’avis' : 'Ajouter un avis' }}
-            </button>
-            @if (editingId()) { <button class="lifeos-button lifeos-button-text" type="button" [disabled]="busy()" (click)="cancelEdit()">Annuler</button> }
-          </div>
-        </form>
-      } @else {
-        <p>Ajoutez d’abord une personne ou un groupe dans Réglages pour saisir un avis.</p>
-      }
-    </section>
+        </fieldset>
+      </form>
+    </app-lifeos-dialog>
   `,
   styles: [`
     .household-reviews { display: grid; gap: 12px; }
@@ -76,7 +82,8 @@ type ReviewTarget = 'food' | 'recipe' | 'planned-line'
     .review-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
     .review-list li { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 10px; padding: 12px; border-radius: 10px; background: var(--lifeos-surface-soft); }
     .review-list span { margin-left: 10px; color: var(--lifeos-accent-strong); font-weight: 750; }
-    .review-form { display: grid; gap: 12px; }
+    .review-form, .review-fields { display: grid; gap: 12px; min-width: 0; }
+    .review-fields { margin: 0; padding: 0; border: 0; }
     .review-actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .review-error { color: #8f2017 !important; }
     @media (max-width: 560px) { .review-form .dialog-row { grid-template-columns: minmax(0, 1fr); } }
@@ -93,12 +100,25 @@ export class HouseholdReviewsComponent implements OnChanges {
   readonly busy = signal(false)
   readonly error = signal('')
   readonly editingId = signal('')
+  readonly editorOpen = signal(false)
+  readonly formId = `household-review-form-${++nextReviewFormId}`
+  editorTrigger: HTMLElement | null = null
   target = ''
   score: number | null = null
   comment = ''
   private initial = formSnapshot({ target: '', score: null, comment: '' })
+  private loadVersion = 0
+
+  constructor() {
+    inject(DestroyRef).onDestroy(inject(ReviewDraftsService).register(this))
+  }
 
   dirty(): boolean { return hasChanges(this.initial, { target: this.target, score: this.score, comment: this.comment }) }
+
+  @HostListener('window:beforeunload', ['$event'])
+  beforeUnload(event: BeforeUnloadEvent): void {
+    if (this.busy() || this.dirty()) { event.preventDefault(); event.returnValue = '' }
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['targetId'] || changes['targetType']) {
@@ -108,28 +128,45 @@ export class HouseholdReviewsComponent implements OnChanges {
   }
 
   async load(): Promise<void> {
-    if (!this.targetId) { this.reviews.set([]); return }
+    const version = ++this.loadVersion
+    if (!this.targetId) { this.reviews.set([]); this.loading.set(false); return }
     this.loading.set(true)
     this.error.set('')
     try {
-      this.reviews.set(await firstValueFrom(this.api.get<ReviewDto[]>(this.path())))
+      const reviews = await firstValueFrom(this.api.get<ReviewDto[]>(this.path()))
+      if (version === this.loadVersion) this.reviews.set(reviews)
     } catch (error) {
-      this.error.set(apiErrorMessage(error))
+      if (version === this.loadVersion) this.error.set(apiErrorMessage(error))
     } finally {
-      this.loading.set(false)
+      if (version === this.loadVersion) this.loading.set(false)
     }
   }
 
-  edit(review: ReviewDto): void {
+  add(event?: Event): void {
+    if (this.busy() || this.editorOpen()) return
+    this.cancelEdit()
+    this.openEditor(event)
+  }
+
+  edit(review: ReviewDto, event?: Event): void {
+    if (this.busy() || this.editorOpen()) return
     this.editingId.set(review.id)
     this.target = review.memberProfileId ? `profile:${review.memberProfileId}` : `group:${review.householdGroupId}`
     this.score = review.score
     this.comment = review.comment ?? ''
     this.initial = formSnapshot({ target: this.target, score: this.score, comment: this.comment })
+    this.openEditor(event)
+  }
+
+  private openEditor(event?: Event): void {
+    this.editorTrigger = event?.currentTarget instanceof HTMLElement ? event.currentTarget : null
     this.error.set('')
+    this.editorOpen.set(true)
   }
 
   cancelEdit(): void {
+    this.editorOpen.set(false)
+    this.error.set('')
     this.editingId.set('')
     this.target = ''
     this.score = null
@@ -138,7 +175,7 @@ export class HouseholdReviewsComponent implements OnChanges {
   }
 
   async save(): Promise<void> {
-    if (this.busy()) return
+    if (this.busy() || !this.editorOpen()) return
     const [kind, id] = this.target.split(':')
     const text = this.comment.trim()
     if (!id || (kind !== 'profile' && kind !== 'group') || (this.score === null && !text)
@@ -159,8 +196,10 @@ export class HouseholdReviewsComponent implements OnChanges {
       const path = this.path()
       if (reviewId) await firstValueFrom(this.api.put(`${path}/${reviewId}`, { score: body.score, comment: body.comment }))
       else await firstValueFrom(this.api.post(path, body))
-      this.cancelEdit()
       await this.load()
+      const refreshError = this.error()
+      this.cancelEdit()
+      this.error.set(refreshError)
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {

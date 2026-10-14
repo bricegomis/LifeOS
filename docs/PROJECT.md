@@ -13,6 +13,11 @@ nouvelles lignes de repas sur aliments, pas de marque choisie implicitement.
 Les fiches aliments s'ouvrent dans une popup centrée, avec marges et défilement
 interne sur mobile comme sur ordinateur. L'édition revient à la fiche et conserve
 les avis en cours ; fermer une saisie modifiée demande confirmation.
+Les avis existants restent dans les fiches et sélecteurs. Ajouter ou modifier un
+avis ouvre une popup centrée avec marges, au-dessus de la fiche éventuelle :
+annulation/enregistrement revient au déclencheur, sans fermer la fiche ni son
+brouillon. Une saisie modifiée demande confirmation ; une requête en cours
+empêche la fermeture et les erreurs restent visibles.
 
 Tickets photo ou JSON fichier/texte : source brute et toutes lignes avant validation,
 contexte magasin/date explicite, pending/validated/ignored, reprise API et progression.
