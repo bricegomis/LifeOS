@@ -3,11 +3,12 @@ import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { describe, it } from 'node:test'
 import ts from 'typescript'
-import type { FoodItemDto, ProductDto } from '../../core/api/api.models.ts'
+import type { FoodItemDto, ProductDto, ReviewDto } from '../../core/api/api.models.ts'
 import type { FoodItemsPageComponent } from './food-items-page.component.ts'
 import type { HouseholdReviewsComponent } from '../../shared/reviews/household-reviews.component.ts'
 import { newFoodDraft, missingFoodFields } from './food-draft.ts'
 import { formSnapshot, hasChanges } from '../../shared/dialog/dialog-guard.ts'
+import { summarizeFoodReviews } from './food-review-summary.ts'
 
 function signal<T>(initial: T) {
   let value = initial
@@ -23,10 +24,16 @@ function harness() {
   }]
   let products: ProductDto[] = []
   let failure = ''
+  let reviewFailure = ''
+  let reviewRows: ReviewDto[] = []
   let confirm = true
   const api = {
     get: async (path: string) => {
       if (failure) throw new Error(failure)
+      if (path.startsWith('/reviews/foods/')) {
+        if (reviewFailure) throw new Error(reviewFailure)
+        return reviewRows
+      }
       return path === '/foods' ? foods : path === '/products' ? products : path === '/households/current' ? { memberProfiles: [] } : []
     },
     put: async (path: string, body: object) => {
@@ -51,7 +58,7 @@ function harness() {
       products = [product]
       return product
     },
-    delete: async () => {},
+    delete: async () => { foods = foods.map(food => ({ ...food, isArchived: true })) },
   }
   let reviews: HouseholdReviewsComponent | undefined
   const noopDecorator = () => () => {}
@@ -61,7 +68,7 @@ function harness() {
     '@angular/core': {
       Component: noopDecorator, HostListener: noopDecorator, Input: noopDecorator,
       DestroyRef: destroyRef, inject: (token: unknown) => token === destroyRef ? destroyRef : token === reviewDrafts ? reviewDrafts : api,
-      signal, viewChild: () => () => reviews,
+      signal, viewChild: () => () => reviews, output: () => ({ emit: () => {} }),
     },
     '@angular/forms': { FormsModule: {} },
     '@angular/router': { RouterLink: {} },
@@ -71,6 +78,7 @@ function harness() {
     '@/app/shared/reviews/household-reviews.component': { HouseholdReviewsComponent: {} },
     '@/app/shared/dialog/dialog-guard': { formSnapshot, hasChanges },
     './food-draft': { newFoodDraft, missingFoodFields },
+    './food-review-summary': { summarizeFoodReviews },
     './review-drafts.service': { ReviewDraftsService: reviewDrafts },
   }
   function load<T>(path: string, name: string): T {
@@ -85,7 +93,8 @@ function harness() {
   }
   reviews = load<HouseholdReviewsComponent>('../../shared/reviews/household-reviews.component.ts', 'HouseholdReviewsComponent')
   const page = load<FoodItemsPageComponent>('./food-items-page.component.ts', 'FoodItemsPageComponent')
-  return { page, reviews, food: foods[0]!, fail: (message: string) => { failure = message }, confirm: (answer: boolean) => { confirm = answer } }
+  return { page, reviews, food: foods[0]!, fail: (message: string) => { failure = message }, confirm: (answer: boolean) => { confirm = answer },
+    reviewRows: (rows: ReviewDto[]) => { reviewRows = rows }, failReviews: (message: string) => { reviewFailure = message } }
 }
 
 describe('food popup transitions', () => {
@@ -185,5 +194,64 @@ describe('food popup transitions', () => {
     reviews.busy.set(false)
     confirm(true)
     assert.equal(page.canLeave(), true)
+  })
+
+  it('loads real review summaries and updates them after detail review changes', async () => {
+    const { page, food, reviewRows } = harness()
+    reviewRows([{ score: 0 }, { score: 8 }, { score: null }] as ReviewDto[])
+    await page.load()
+    assert.deepEqual(JSON.parse(JSON.stringify(page.reviewSummaries()[food.id])), { count: 3, scoredCount: 2, average: 4 })
+    page.updateReviewSummary(food.id, [{ score: 10 }] as ReviewDto[])
+    assert.equal(page.reviewSummaries()[food.id]?.average, 10)
+    page.updateReviewSummary(food.id, [])
+    assert.equal(page.reviewSummaries()[food.id]?.average, null)
+    assert.equal(page.reviewSummaries()[food.id]?.count, 0)
+  })
+
+  it('archives only after protecting review drafts and keeps the archived detail', async () => {
+    const { page, reviews, food, confirm } = harness()
+    await page.load()
+    page.select(food)
+    reviews.comment = 'À garder'
+    confirm(false)
+    await page.archive(food)
+    assert.equal(page.selected()?.isArchived, false)
+    confirm(true)
+    await page.archive(food)
+    assert.equal(page.dialog(), 'detail')
+    assert.equal(page.selected()?.isArchived, true)
+    assert.equal(page.visibleFoods().length, 0)
+    page.archivedOnly = true
+    assert.equal(page.visibleFoods()[0]?.id, food.id)
+  })
+
+  it('reports review retrieval failures without inventing a score', async () => {
+    const { page, food, failReviews } = harness()
+    await page.load()
+    assert.equal(page.reviewSummaries()[food.id]?.average, null)
+    failReviews('Avis indisponibles')
+    await page.load()
+    assert.equal(page.error(), 'Avis indisponibles')
+    assert.equal(page.loading(), false)
+    assert.equal(page.reviewSummaries()[food.id], undefined)
+    assert.equal(page.visibleFoods()[0]?.id, food.id)
+  })
+})
+
+describe('food card contract', () => {
+  it('uses one native dialog trigger for the whole card and leaves archive in the detail only', () => {
+    const source = readFileSync(new URL('./food-items-page.component.ts', import.meta.url), 'utf8')
+    const list = source.split('<ul class="food-grid">')[1]!.split('</ul>')[0]!
+    assert.match(list, /<button type="button" class="food-card-open"/)
+    assert.match(list, /aria-haspopup="dialog"/)
+    assert.match(list, /\(click\)="select\(food, \$event\)"/)
+    assert.equal((list.match(/<button/g) ?? []).length, 1)
+    assert.doesNotMatch(list, /Ouvrir|archive\(food\)/)
+    assert.match(source, /Archiver cet aliment/)
+    assert.match(list, /summary.average !== null/)
+    const css = readFileSync(new URL('./catalog.css', import.meta.url), 'utf8')
+    assert.match(css, /\.food-card-open::after \{[^}]*inset: 0/)
+    assert.match(css, /\.food-card-open:focus-visible::after \{[^}]*outline: 3px/)
+    assert.match(css, /minmax\(min\(100%, 300px\), 1fr\)/)
   })
 })

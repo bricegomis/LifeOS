@@ -13,6 +13,11 @@ nouvelles lignes de repas sur aliments, pas de marque choisie implicitement.
 Les fiches aliments s'ouvrent dans une popup centrée, avec marges et défilement
 interne sur mobile comme sur ordinateur. L'édition revient à la fiche et conserve
 les avis en cours ; fermer une saisie modifiée demande confirmation.
+La liste des aliments utilise des cartes entièrement cliquables et accessibles au
+clavier, sans bouton Ouvrir ni action d'archivage. L'archivage reste dans la fiche.
+Les cartes affichent la moyenne des avis notés du foyer sur 10 (zéro compris) et
+leur nombre ; les avis uniquement commentés n'inventent aucune note. Les filtres
+et les prix observés avec leur provenance restent disponibles.
 Les avis existants restent dans les fiches et sélecteurs. Ajouter ou modifier un
 avis ouvre une popup centrée avec marges, au-dessus de la fiche éventuelle :
 annulation/enregistrement revient au déclencheur, sans fermer la fiche ni son

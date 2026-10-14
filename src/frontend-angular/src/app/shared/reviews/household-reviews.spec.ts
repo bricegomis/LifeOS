@@ -33,6 +33,7 @@ function harness() {
   let confirmAnswer = true
   let confirmations = 0
   let dismissed = 0
+  const loadedReviews: ReviewDto[][] = []
   let focused = 0
   const onDestroy: (() => void)[] = []
   const modal = { open: false, showModal() { this.open = true } }
@@ -58,7 +59,7 @@ function harness() {
     '@angular/core': {
       Component: noopDecorator, Injectable: noopDecorator, Input: noopDecorator, HostListener: noopDecorator,
       DestroyRef: destroyRef, signal, input,
-      output: () => ({ emit: () => { dismissed++ } }),
+      output: () => ({ emit: (reviews?: ReviewDto[]) => { if (reviews) loadedReviews.push(reviews); else dismissed++ } }),
       viewChild: { required: () => () => ({ nativeElement: modal }) },
       afterRenderEffect: () => {},
       inject: (token: unknown) => token === destroyRef ? destroyRef : token === reviewDraftsToken ? drafts : api,
@@ -90,7 +91,7 @@ function harness() {
   const dialog = load<LifeosDialogComponent>('../dialog/lifeos-dialog.component.ts', 'LifeosDialogComponent')
   component.targetId = 'target/1'
   return {
-    component, dialog, drafts, review, calls, modal, target,
+    component, dialog, drafts, review, calls, modal, target, loadedReviews,
     fail: (message: string) => { failure = message },
     hold: (promise: Promise<unknown> | null) => { hold = promise },
     confirm: (answer: boolean) => { confirmAnswer = answer },
@@ -124,7 +125,7 @@ describe('shared household review popup', () => {
 
   for (const [targetType, segment] of [['food', 'foods'], ['recipe', 'recipes'], ['planned-line', 'planned-lines']] as const) {
     it(`saves and refreshes ${targetType} reviews in the original encoded scope, including zero and groups`, async () => {
-      const { component, calls } = harness()
+      const { component, calls, loadedReviews } = harness()
       component.targetType = targetType
       component.add()
       component.target = 'group:group-1'
@@ -136,6 +137,9 @@ describe('shared household review popup', () => {
       }))
       assert.equal(calls[1]?.method, 'get')
       assert.equal(component.reviews().length, 2)
+      assert.equal(loadedReviews.length, 1)
+      assert.equal(loadedReviews[0]?.length, 2)
+      assert.equal(loadedReviews[0]?.[1]?.score, 0)
       assert.equal(component.editorOpen(), false)
       assert.equal(component.dirty(), false)
     })
