@@ -100,7 +100,10 @@ export class LifeosDialogComponent {
     }
     const target = this.returnFocus
     this.returnFocus = null
-    if (target?.isConnected && !document.querySelector('dialog[open]')) target.focus({ preventScroll: true })
+    // A stacked editor returns to its trigger in the still-open parent, never behind another modal.
+    if (target?.isConnected && Array.from(document.querySelectorAll('dialog[open]')).every(dialog => dialog.contains(target))) {
+      target.focus({ preventScroll: true })
+    }
   }
 
   private focusFirstField(element: HTMLDialogElement): void {

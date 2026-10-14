@@ -55,8 +55,14 @@ function harness() {
   }
   let reviews: HouseholdReviewsComponent | undefined
   const noopDecorator = () => () => {}
+  const destroyRef = { onDestroy: () => {} }
+  const reviewDrafts = { register: () => () => {} }
   const imports: Record<string, unknown> = {
-    '@angular/core': { Component: noopDecorator, HostListener: noopDecorator, Input: noopDecorator, inject: () => api, signal, viewChild: () => () => reviews },
+    '@angular/core': {
+      Component: noopDecorator, HostListener: noopDecorator, Input: noopDecorator,
+      DestroyRef: destroyRef, inject: (token: unknown) => token === destroyRef ? destroyRef : token === reviewDrafts ? reviewDrafts : api,
+      signal, viewChild: () => () => reviews,
+    },
     '@angular/forms': { FormsModule: {} },
     '@angular/router': { RouterLink: {} },
     'rxjs': { firstValueFrom: (value: unknown) => Promise.resolve(value) },
@@ -65,6 +71,7 @@ function harness() {
     '@/app/shared/reviews/household-reviews.component': { HouseholdReviewsComponent: {} },
     '@/app/shared/dialog/dialog-guard': { formSnapshot, hasChanges },
     './food-draft': { newFoodDraft, missingFoodFields },
+    './review-drafts.service': { ReviewDraftsService: reviewDrafts },
   }
   function load<T>(path: string, name: string): T {
     const source = readFileSync(new URL(path, import.meta.url), 'utf8')
