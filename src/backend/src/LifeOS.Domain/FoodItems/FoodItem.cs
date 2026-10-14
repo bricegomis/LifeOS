@@ -11,6 +11,9 @@ public sealed class FoodItem : Entity
     public string? Fodmap { get; private set; }
     public int? Nova { get; private set; }
     public string? DigestiveNotes { get; private set; }
+    public string? ImagePath { get; private set; }
+    public string? ImageContentType { get; private set; }
+    public bool HasImage => ImagePath is not null;
     public bool IsArchived { get; private set; }
     public FoodItemSource Source { get; private set; } = FoodItemSource.Manual;
     public string? OffBarcode { get; private set; }
@@ -60,6 +63,24 @@ public sealed class FoodItem : Entity
         Fodmap = fodmap;
         Nova = nova;
         DigestiveNotes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void SetImage(string imagePath, string imageContentType)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath) || imagePath.Length > 500)
+            throw new ArgumentException("Référence d'image invalide.");
+        if (imageContentType is not ("image/jpeg" or "image/png" or "image/webp"))
+            throw new ArgumentException("Format d'image invalide.");
+        ImagePath = imagePath;
+        ImageContentType = imageContentType;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void RemoveImage()
+    {
+        ImagePath = null;
+        ImageContentType = null;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 

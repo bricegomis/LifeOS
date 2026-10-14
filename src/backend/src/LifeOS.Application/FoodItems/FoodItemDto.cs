@@ -10,4 +10,4 @@ public sealed class NutritionDto
 
 public sealed record FoodItemDto(Guid Id, Guid HouseholdId, string Name, bool IsArchived,
     string ReferenceUnit, NutritionDto? Nutrition, string? Fodmap, int? Nova, string? DigestiveNotes,
-    IReadOnlyList<string> MissingFields, string Source, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    bool HasImage, IReadOnlyList<string> MissingFields, string Source, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);

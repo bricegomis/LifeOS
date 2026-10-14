@@ -19,8 +19,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 RUN apt-get update \
     && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra \
     && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /data/receipts \
-    && chown -R app:app /data/receipts
+    && mkdir -p /data/receipts /data/foods \
+    && chown -R app:app /data/receipts /data/foods
 ARG LIFEOS_BUILD_ID=local
 ARG LIFEOS_BUILD_NUMBER
 ARG LIFEOS_RUN_ID
@@ -42,6 +42,6 @@ ENV LifeOS__Repository=${LIFEOS_BUILD_REPOSITORY}
 ENV LifeOS__ServerUrl=${LIFEOS_BUILD_SERVER_URL}
 ENV LifeOS__Workflow=${LIFEOS_BUILD_WORKFLOW}
 EXPOSE 8080
-VOLUME ["/data/receipts"]
+VOLUME ["/data/receipts", "/data/foods"]
 
 ENTRYPOINT ["dotnet", "LifeOS.Api.dll"]

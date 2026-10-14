@@ -9,7 +9,7 @@ public static class FoodItemMapper
         {
             CaloriesPerUnit = f.Nutrition.CaloriesPerUnit, ProteinsPerUnit = f.Nutrition.ProteinsPerUnit,
             CarbsPerUnit = f.Nutrition.CarbsPerUnit, FatsPerUnit = f.Nutrition.FatsPerUnit,
-        }, f.Fodmap, f.Nova, f.DigestiveNotes, f.MissingFields, f.Source.ToString(), f.CreatedAt, f.UpdatedAt);
+        }, f.Fodmap, f.Nova, f.DigestiveNotes, f.HasImage, f.MissingFields, f.Source.ToString(), f.CreatedAt, f.UpdatedAt);
 
     public static Nutrition? NutritionFromDto(NutritionDto? dto) => dto is null ? null
         : new Nutrition(dto.CaloriesPerUnit, dto.ProteinsPerUnit, dto.CarbsPerUnit, dto.FatsPerUnit);

@@ -1,6 +1,7 @@
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Endpoints;
 using LifeOS.Api.ErrorHandling;
+using LifeOS.Api.FoodItems;
 using LifeOS.Api.Receipts;
 using LifeOS.Application.Receipts;
 using LifeOS.Infrastructure;
@@ -19,6 +20,8 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure();
 builder.Services.Configure<ReceiptPhotoStorageOptions>(builder.Configuration.GetSection("Receipts"));
 builder.Services.AddSingleton<ReceiptPhotoStorage>();
+builder.Services.Configure<FoodImageStorageOptions>(builder.Configuration.GetSection("FoodImages"));
+builder.Services.AddSingleton<FoodImageStorage>();
 builder.Services.AddSingleton<IReceiptOcrService, TesseractReceiptOcrService>();
 
 builder.Services

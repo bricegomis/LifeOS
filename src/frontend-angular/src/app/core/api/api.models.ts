@@ -41,6 +41,7 @@ export interface FoodItemDto extends FoodItemRequest {
   isArchived: boolean
   missingFields: string[]
   source: string
+  hasImage: boolean
   createdAt: string
   updatedAt: string
 }

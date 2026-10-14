@@ -23,6 +23,8 @@ avis ouvre une popup centrée avec marges, au-dessus de la fiche éventuelle :
 annulation/enregistrement revient au déclencheur, sans fermer la fiche ni son
 brouillon. Une saisie modifiée demande confirmation ; une requête en cours
 empêche la fermeture et les erreurs restent visibles.
+Les aliments peuvent avoir une image facultative ; son fichier est conservé sur un
+volume durable et servi par l'API authentifiée, comme les photos de ticket.
 
 Tickets photo ou JSON fichier/texte : source brute et toutes lignes avant validation,
 contexte magasin/date explicite, pending/validated/ignored, reprise API et progression.
