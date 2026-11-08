@@ -79,6 +79,8 @@ références croisées de foyer et la migration ; les contrôles Angular couvren
 type-check, tests, lint et build. Ne pas lancer ces migrations sur une base
 partagée sans sauvegarde et autorisation explicite.
 
+## Mémoire historique (ne décrit plus le produit actif)
+
 **Le texte ci-dessous conserve la mémoire historique** de Vue/local-first et
 des parcours de génération ; il ne décrit plus la cible active. Les décisions
 de génération/alternance/menu équilibré sont retirées du produit actif. Les
