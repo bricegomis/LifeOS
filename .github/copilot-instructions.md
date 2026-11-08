@@ -12,6 +12,11 @@ the visual identity; PrimeIcons supplies navigation icons.
 - **Product** (`Product`, `products`) is a commercial price reference with an
   explicit food link. Multiple products may belong to one food.
 - Recipes and new meal lines select foods; meal snapshots remain unchanged.
+  A planned meal holds several recipe or one-off preparation lines, each with its
+  own portions/profile split; quantities and nutrition use
+  `quantity × planned portions / yield` (ADR 0007).
+- Household reviews: optional integer 0..10 and/or comment per food or recipe,
+  per profile or named group; 0 is a real score, distinct from "not rated".
 - Receipts preserve raw JSON and ordered pending lines. Only individual manual
   validation creates an optional food/product, purchase and price in one transaction.
 - No imported health fields, automatic name matching, external enrichment,
@@ -28,7 +33,12 @@ From `src/backend`: `dotnet build`, `dotnet test`; PostgreSQL tests use Testcont
 
 Respect API household scope, existing planning/sport/auth behavior and precise
 quantities. Do not rewrite applied migrations or historical snapshots.
-Use `docs/PROJECT.md`, `docs/02-core-model.md` and
-`docs/architecture/decisions/0006-foods-products-receipts.md` as current product truth.
+The iPhone app wraps Angular with Capacitor 7 plus SwiftUI widgets
+(`src/frontend-angular/ios`, see `docs/ios-v1.md`); its Swift checks need macOS/Xcode.
+
+Use `docs/PROJECT.md` (current section only), `docs/02-core-model.md`,
+`docs/architecture/decisions/0006-foods-products-receipts.md` and
+`docs/architecture/decisions/0007-recipes-meal-lines-and-household-reviews.md`
+as current product truth.
 Keep affected docs current, keep changes surgical and avoid unnecessary dependencies.
 Back up PostgreSQL before upgrading. Never deploy or reset user data without authorization.

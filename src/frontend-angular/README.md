@@ -3,9 +3,9 @@
 The frontend is a standalone Angular 22 + TypeScript single-page application,
 built with the Angular CLI and styled with native HTML controls and the existing
 LifeOS CSS tokens. Unused PrimeNG/PrimeUI providers and dependencies were removed;
-PrimeIcons (MIT) remains in use for navigation. It is an API-backed implementation alongside the
-existing Vue frontend. It is the frontend published by the Docker delivery
-workflow for VPS deployments.
+PrimeIcons (MIT) remains in use for navigation. It is the only, API-backed
+frontend, published by the Docker delivery workflow for VPS deployments and
+packaged for iPhone with Capacitor (see [docs/ios-v1.md](../../docs/ios-v1.md)).
 
 ## Manual weekly planner
 
@@ -50,8 +50,6 @@ Google OAuth is the primary sign-in method; email magic links remain available.
 Follow [the Google/Supabase setup guide](../../docs/google-oauth.md) for provider
 activation, callback/redirect allow-lists, existing-account linking limitations,
 and the final private-Firefox check. No Google secret belongs in frontend config.
-Open Food Facts search currently persists or caches matches through the backend,
-so searching is a write-capable action rather than a side-effect-free preview.
 
 The predev/prebuild scripts generate an ignored `public/config.js` from those
 environment variables for local development and builds. The Supabase
