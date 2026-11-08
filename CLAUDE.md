@@ -49,7 +49,7 @@ code, identifiers and code comments are English.
 
 ## Verification
 - Frontend (from `src/frontend-angular`): `npm run type-check`, `npm test`,
-  `npm run lint`, `npm run build`. CI does not run `type-check` yet, so run it locally.
+  `npm run lint`, `npm run build` (CI runs all four).
 - Backend (from `src/backend`): `dotnet build` and `dotnet test`. Integration tests
   need a running Docker daemon (Testcontainers PostgreSQL); if Docker is unavailable,
   say so instead of claiming the tests pass.
