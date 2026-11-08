@@ -52,8 +52,7 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
             .Select(a => (Guid?)a.ProductId).SingleOrDefaultAsync(ct) ?? id;
     }
 
-    // Nutrition configuration and sport
-    public DbSet<UserConfiguration> UserConfigurations => Set<UserConfiguration>();
+    // Sport sessions and templates
     public DbSet<ActivitySession> ActivitySessions => Set<ActivitySession>();
     public DbSet<SportTemplate> SportTemplates => Set<SportTemplate>();
 

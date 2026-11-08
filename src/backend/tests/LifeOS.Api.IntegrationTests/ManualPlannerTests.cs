@@ -21,6 +21,39 @@ public sealed class ManualPlannerTests(PostgresContainerFixture postgres)
         object? nutrition) =>
         Post<FoodItemDto>(client, "/api/foods", new { name, referenceUnit, nutrition });
 
+    private sealed record CreatedId(Guid Id);
+
+    [Fact]
+    public async Task Sports_are_household_scoped_and_editable_by_their_household_only()
+    {
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        using var client = factory.CreateClient().AsUser(Guid.NewGuid());
+        using var other = factory.CreateClient().AsUser(Guid.NewGuid());
+        var template = await Post<CreatedId>(client, "/api/sport-templates",
+            new { name = "Footing", sport = "running", durationMinutes = 40, distanceKm = 6, intensity = "moderate", calories = 350 });
+        var week = await Post<ManualWeekDto>(client, "/api/manual-planner/weeks",
+            new ManualWeekRequest(new(2026, 10, 12)));
+        var dayId = week.Days[0].Id;
+        var request = new ManualSportRequest(dayId, 420, 460, template.Id, "Footing", "running", "moderate", 40, 6, 350);
+
+        var sport = await Post<ManualSportDto>(client, "/api/manual-planner/sports", request);
+        Assert.Equal(350, sport.Calories);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/manual-planner/weeks/{week.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsJsonAsync("/api/manual-planner/sports", request)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PutAsJsonAsync(
+            $"/api/manual-planner/sports/{sport.Id}", request with { Calories = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.DeleteAsync($"/api/manual-planner/sports/{sport.Id}")).StatusCode);
+
+        var update = await client.PutAsJsonAsync($"/api/manual-planner/sports/{sport.Id}", request with { Calories = 450 });
+        update.EnsureSuccessStatusCode();
+        Assert.Equal(450, (await update.Content.ReadFromJsonAsync<ManualSportDto>())!.Calories);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/manual-planner/sports/{sport.Id}")).StatusCode);
+        var reloaded = await client.GetFromJsonAsync<ManualWeekDto>($"/api/manual-planner/weeks/{week.Id}");
+        Assert.Empty(reloaded!.Days[0].Sports);
+    }
+
     [Fact]
     public async Task Meal_accepts_recipe_and_private_preparation_and_calculates_each_line()
     {

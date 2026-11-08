@@ -174,13 +174,6 @@ export interface AddRecipeIngredientRequest {
   unit: string
 }
 
-export interface ActivityDto {
-  id: string
-  name: string
-  icon: string
-  defaultDurationMinutes?: number
-}
-
 export interface SportTemplateRequest {
   name: string
   sport: string
@@ -194,54 +187,6 @@ export interface SportTemplateDto extends SportTemplateRequest {
   id: string
   householdId: string
   isArchived: boolean
-}
-
-export interface UserConfigurationDto {
-  id: string
-  householdId: string
-  dailyBaseEnergyKcal: number
-  targetNetDeficitKcal: number
-  targetProteinG: number
-  targetCarbsG: number
-  targetFatsG: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface UserConfigurationRequest {
-  dailyBaseEnergyKcal: number
-  targetNetDeficitKcal: number
-  targetProteinG: number
-  targetCarbsG: number
-  targetFatsG: number
-}
-
-export interface ActivitySessionDto {
-  id: string
-  dayPlanId: string
-  type: string
-  intensity: string
-  durationMinutes: number
-  estimatedEnergyKcal: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ActivitySessionRequest {
-  type: string
-  intensity: string
-  durationMinutes: number
-}
-
-export interface DailyNutritionTargetDto {
-  dayPlanId: string
-  dailyBaseEnergyKcal: number
-  activityEnergyKcal: number
-  targetNetDeficitKcal: number
-  dailyFoodTargetKcal: number
-  targetProteinG: number
-  targetCarbsG: number
-  targetFatsG: number
 }
 
 export interface MemberProfileDto {

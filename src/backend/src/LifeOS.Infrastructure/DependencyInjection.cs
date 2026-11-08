@@ -1,12 +1,10 @@
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Application.Households;
-using LifeOS.Application.Library;
 using LifeOS.Application.Recipes;
 using LifeOS.Application.Stores;
 using LifeOS.Domain.FoodItems;
 using LifeOS.Infrastructure.FoodItems;
 using LifeOS.Infrastructure.Households;
-using LifeOS.Infrastructure.Library;
 using LifeOS.Infrastructure.Persistence;
 using LifeOS.Infrastructure.Recipes;
 using LifeOS.Infrastructure.Stores;
@@ -52,8 +50,6 @@ public static class DependencyInjection
 
         // Jalon 2: Recipes and Meals
         services.AddScoped<IRecipeRepository, EfRecipeRepository>();
-        services.AddSingleton<IActivityRepository, InMemoryActivityRepository>();
-        services.AddScoped<GetActivitiesQuery>();
 
         // Generic foods
         services.AddScoped<IFoodItemRepository, EfFoodItemRepository>();

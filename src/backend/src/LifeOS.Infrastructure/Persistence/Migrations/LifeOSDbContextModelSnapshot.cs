@@ -370,48 +370,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("LifeOS.Domain.Households.UserConfiguration", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("DailyBaseEnergyKcal")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<Guid>("HouseholdId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("TargetCarbsG")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<decimal>("TargetFatsG")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<decimal>("TargetNetDeficitKcal")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<decimal>("TargetProteinG")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HouseholdId")
-                        .IsUnique();
-
-                    b.ToTable("user_configurations", (string)null);
-                });
-
             modelBuilder.Entity("LifeOS.Domain.Products.Product", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1297,15 +1255,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasForeignKey("RecipeId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
                         .OnDelete(DeleteBehavior.Cascade);
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Households.UserConfiguration", b =>
-                {
-                    b.HasOne("LifeOS.Domain.Households.Household", null)
-                        .WithMany()
-                        .HasForeignKey("HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Products.Product", b =>

@@ -122,37 +122,4 @@ public sealed class ActivitySession : Entity
     {
         return new ActivitySession(id, dayPlanId, type, intensity, durationMinutes, estimatedEnergyKcal, createdAt, updatedAt);
     }
-
-    /// <summary>
-    /// Updates session details.
-    /// </summary>
-    public void UpdateDetails(
-        string? type = null,
-        string? intensity = null,
-        int? durationMinutes = null,
-        decimal? estimatedEnergyKcal = null,
-        DateTimeOffset? now = null)
-    {
-        if (!string.IsNullOrWhiteSpace(type))
-        {
-            Type = type.ToLowerInvariant();
-        }
-
-        if (!string.IsNullOrWhiteSpace(intensity))
-        {
-            Intensity = intensity.ToLowerInvariant();
-        }
-
-        if (durationMinutes.HasValue && durationMinutes.Value > 0)
-        {
-            DurationMinutes = durationMinutes.Value;
-        }
-
-        if (estimatedEnergyKcal.HasValue && estimatedEnergyKcal.Value >= 0)
-        {
-            EstimatedEnergyKcal = estimatedEnergyKcal.Value;
-        }
-
-        UpdatedAt = now ?? DateTimeOffset.UtcNow;
-    }
 }

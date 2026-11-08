@@ -141,7 +141,6 @@ app.MapCatalogManagementEndpoints();
 app.MapSportTemplatesEndpoints();
 app.MapManualPlannerEndpoints();
 app.MapFoodItemsEndpoints();
-app.MapNutritionEndpoints();
 
 app.Run();
 
