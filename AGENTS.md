@@ -4,7 +4,8 @@
 - Angular 22 + TypeScript in `src/frontend-angular`, native LifeOS controls and PrimeIcons.
 - ASP.NET Core / EF Core / PostgreSQL in `src/backend`.
 - Supabase authentication only; household data belongs to the API.
-- Manual meal and sport planning, generic foods, recipes and manually validated JSON receipts.
+- Generic foods, recipes, sport session templates and manually validated JSON receipts.
+  The week planner was removed (ADR 0008) and will be rebuilt later.
 - Products are commercial price references subordinate to foods, not a competing library.
 - No stock, shopping list, automatic enrichment or Vue frontend.
 

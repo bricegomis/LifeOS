@@ -1,7 +1,9 @@
 # ADR 0007 — Recettes, lignes de repas et avis du foyer
 
 Statut : accepté. Complète l'ADR 0006 sans modifier le modèle
-aliments/produits/tickets.
+aliments/produits/tickets. **Repas planifiés, préparations ponctuelles et leurs avis
+retirés** par [ADR 0008](0008-remove-week-planner.md), 2026-11-10 ; recettes et
+avis d'aliments/recettes restent actifs.
 
 ## Décision produit
 

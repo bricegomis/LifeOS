@@ -21,8 +21,7 @@ diagnostics.
 | Receipt lines | POST /{id}/lines, PUT /{id}/lines/{lineId}, POST /ignore, POST /validate | Pending corrections; JSON lines validate individually, photo lines finalize atomically as a batch. |
 | Stores | GET/POST /api/stores, PUT/DELETE /{id} | Household stores; required explicit choice for receipts. |
 | Recipes / composed meals | /api/recipes, /api/composed-meals | Food ingredients, portions/steps, archival and historical compositions. |
-| Manual planner / sports | /api/manual-planner, /api/sport-templates | Civil times, independent weeks, personal portions, unchanged historical snapshots. |
-| Historical configuration | /api/planning-rules, /api/frequency-rules, /api/week-context | Preserved but not used by the manual planner. |
+| Sport templates | /api/sport-templates | Household session templates (name, sport, duration, distance, intensity, manual calories). The week planner and `/api/manual-planner` were removed (ADR 0008). |
 | Nutrition / version | /api/nutrition/*, /api/version | Existing totals/configuration; public no-store build provenance. |
 
 All new data is household-scoped. Stock/shopping APIs, article compatibility
@@ -88,8 +87,7 @@ src/backend/Dockerfile src/backend` and verify `tesseract --list-langs` in the r
 container includes both `eng` and `fra`.
 
 Layers remain Domain / Application / Infrastructure / API. Endpoint orchestration
-uses the scoped DbContext for transactionally consistent receipt writes, as the
-existing manual planner does. Domain parsing/invariants remain independent of EF.
+uses the scoped DbContext for transactionally consistent receipt writes. Domain parsing/invariants remain independent of EF.
 See [ADR 0006](../../docs/architecture/decisions/0006-foods-products-receipts.md).
 
 ## Households and isolation

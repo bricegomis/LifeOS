@@ -1,6 +1,7 @@
 # ADR 0004 — Transition vers le semainier manuel
 
-Statut : accepté et implémenté, 2026-10-07.
+Statut : accepté et implémenté, 2026-10-07. **Semainier retiré** par
+[ADR 0008](0008-remove-week-planner.md), 2026-11-10 ; seules les séances types restent.
 
 ## Contrats et temps
 

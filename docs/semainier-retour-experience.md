@@ -116,19 +116,16 @@ les produits ne servent qu'aux prix et restent hors du parcours recette).
 3. Assainir la base aliments/recettes.
 4. ADR et contrat d'API du semainier calculé, puis nouvelle interface.
 
-## 8. Périmètre de la suppression (étape 1)
+## 8. Suppression (étape 1) — faite le 2026-11-10
 
-Backend : `Week`, `DayPlan`, `PlannedMeal`, lignes, ingrédients et portions planifiés,
-`ActivitySession`, `EventTime`, `ManualPlannerEndpoints`, DTO et configurations EF,
-une migration qui supprime les tables, et les tests associés (`RemovedFeaturesTests`
-attend désormais des 404). `SportTemplate` et ses routes sont conservés.
+Voir [ADR 0008](architecture/decisions/0008-remove-week-planner.md).
 
-Frontend : `pages/planning` (Semainier et Aujourd'hui), modèles `manual-planner`,
-navigation, et la couche `core/native` qui projette les événements (synchronisation,
-rappels, session de cuisine, liens profonds).
-
-iOS : widget du prochain événement, Live Activity de cuisine, App Intents liés.
-Non vérifiable sous Linux.
-
-À vérifier pendant la suppression : avis sur les préparations ponctuelles
-(`planned-line`), tableau de bord, page Sports (qui ne doit garder que les séances types).
+- **Backend** : semaines, journées, repas et lignes planifiés, `ActivitySession`, routes
+  `/api/manual-planner/*` et avis de préparations ponctuelles supprimés. Migration
+  `RemoveWeekPlanner` volontairement destructive. Séances types conservées
+  (`Domain/Sports`).
+- **Frontend** : pages Semainier et Aujourd'hui supprimées, l'accueil ouvre les
+  recettes. La synchronisation native ne projette plus d'événements et annule les
+  anciens rappels ; la session de cuisine est conservée.
+- **Reste à faire sous macOS** : retirer le widget « prochain événement » (cible
+  `LifeosWidgetExtension`) et décider du sort de la Live Activity de cuisine.

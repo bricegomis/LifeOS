@@ -9,8 +9,11 @@ remplace le produit unifié de l'ADR 0005.
 > Les repas composés et la portion unique au repas sont abandonnés. Un repas
 > contient plusieurs lignes de recettes ou de préparations ponctuelles, chacune
 > avec son rendement, ses portions et sa répartition éventuelle par profil. Les
-> avis d'aliments et de recettes sont indépendants et foyer-scopés. Le semainier
-> reste manuel ; aucun menu généré ni liste de courses active n'est exposé.
+> avis d'aliments et de recettes sont indépendants et foyer-scopés.
+>
+> **Semainier retiré** ([ADR 0008](architecture/decisions/0008-remove-week-planner.md),
+> 2026-11-10) : les repas planifiés, préparations ponctuelles et la section
+> « Planning manuel actif » ci-dessous décrivent l'ancien modèle.
 
 | Terme | Définition | Exemple |
 | --- | --- | --- |
@@ -55,7 +58,7 @@ densité, masse d'une pièce ou poids égoutté inventé. Date et provenance vis
 Ce prix ne choisit jamais un produit pour une recette ; coût non calculable sans
 référence commerciale explicite sûre.
 
-## Planning manuel actif
+## Planning manuel (retiré)
 
 La semaine comprend sept journées indépendantes ; le calendrier, les horaires
 civils, chevauchements permis et événements sportifs sont préservés. Les repas

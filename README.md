@@ -7,7 +7,7 @@ Planifier les repas et le sport, conserver les achats et suivre les prix sans au
 - [Cadrage fonctionnel du MVP](docs/01-scope-and-versions.md)
 - [Concepts fonctionnels](docs/02-core-model.md)
 - [Roadmap fonctionnelle](docs/03-roadmap.md)
-- [UX du semainier manuel](docs/03-week-planner-ux.md)
+- [Semainier : retour d'expérience et orientation](docs/semainier-retour-experience.md) (ancien écran : [UX du semainier manuel](docs/03-week-planner-ux.md), retiré)
 - [État du projet et mémoire historique](docs/PROJECT.md)
 
 La cible active est `src/frontend-angular` + `src/backend` (PostgreSQL),
