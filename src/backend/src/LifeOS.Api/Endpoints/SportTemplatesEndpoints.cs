@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using LifeOS.Api.Authentication;
 using LifeOS.Application.Households;
-using LifeOS.Domain.WeekPlanning;
+using LifeOS.Domain.Sports;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 

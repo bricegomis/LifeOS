@@ -1,5 +1,5 @@
 using LifeOS.Domain.Households;
-using LifeOS.Domain.WeekPlanning;
+using LifeOS.Domain.Sports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

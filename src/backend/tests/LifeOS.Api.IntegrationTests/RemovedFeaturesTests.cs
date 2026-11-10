@@ -17,6 +17,9 @@ public sealed class RemovedFeaturesTests(PostgresContainerFixture postgres)
     [InlineData("/api/nutrition/configuration")]
     [InlineData("/api/nutrition/calculations/day/00000000-0000-0000-0000-000000000001")]
     [InlineData("/api/activity-sessions/day/00000000-0000-0000-0000-000000000001")]
+    [InlineData("/api/manual-planner/weeks")]
+    [InlineData("/api/manual-planner/weeks/00000000-0000-0000-0000-000000000001")]
+    [InlineData("/api/reviews/planned-lines/00000000-0000-0000-0000-000000000001")]
     public async Task Removed_catalogs_and_features_have_no_active_routes(string path)
     {
         await using var factory = new LifeOSApiFactory(postgres.ConnectionString);

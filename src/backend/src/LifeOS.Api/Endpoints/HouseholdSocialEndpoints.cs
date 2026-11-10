@@ -124,9 +124,8 @@ public static class HouseholdSocialEndpoints
         var profile = await db.MemberProfiles.SingleOrDefaultAsync(p => p.Id == id && p.HouseholdId == household, ct);
         if (profile is null) return Results.NotFound();
         if (await db.FoodReviews.AnyAsync(r => r.MemberProfileId == id, ct)
-            || await db.RecipeReviews.AnyAsync(r => r.MemberProfileId == id, ct)
-            || await db.PlannedRecipeLinePortions.AnyAsync(p => p.MemberProfileId == id, ct))
-            return Results.Problem("Ce profil est utilisé par des portions ou des avis et ne peut pas être supprimé.", statusCode: 409);
+            || await db.RecipeReviews.AnyAsync(r => r.MemberProfileId == id, ct))
+            return Results.Problem("Ce profil est utilisé par des avis et ne peut pas être supprimé.", statusCode: 409);
         db.MemberProfiles.Remove(profile);
         await db.SaveChangesAsync(ct);
         return Results.NoContent();

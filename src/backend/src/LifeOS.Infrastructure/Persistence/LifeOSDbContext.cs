@@ -5,7 +5,7 @@ using LifeOS.Domain.Recipes;
 using LifeOS.Domain.Products;
 using LifeOS.Domain.Receipts;
 using LifeOS.Domain.Stores;
-using LifeOS.Domain.WeekPlanning;
+using LifeOS.Domain.Sports;
 using Microsoft.EntityFrameworkCore;
 
 namespace LifeOS.Infrastructure.Persistence;
@@ -34,12 +34,6 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<RecipeIngredient> RecipeIngredients => Set<RecipeIngredient>();
 
     // Manual week planning
-    public DbSet<Week> Weeks => Set<Week>();
-    public DbSet<DayPlan> DayPlans => Set<DayPlan>();
-    public DbSet<PlannedMeal> PlannedMeals => Set<PlannedMeal>();
-    public DbSet<PlannedRecipeLine> PlannedRecipeLines => Set<PlannedRecipeLine>();
-    public DbSet<PlannedRecipeLineIngredient> PlannedRecipeLineIngredients => Set<PlannedRecipeLineIngredient>();
-    public DbSet<PlannedRecipeLinePortion> PlannedRecipeLinePortions => Set<PlannedRecipeLinePortion>();
 
     // Foods and product aliases
     public DbSet<FoodItem> FoodItems => Set<FoodItem>();
@@ -53,7 +47,6 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     }
 
     // Sport sessions and templates
-    public DbSet<ActivitySession> ActivitySessions => Set<ActivitySession>();
     public DbSet<SportTemplate> SportTemplates => Set<SportTemplate>();
 
     // Planning configuration

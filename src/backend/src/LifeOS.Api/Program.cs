@@ -139,7 +139,6 @@ app.MapHouseholdSocialEndpoints();
 app.MapReviewEndpoints();
 app.MapCatalogManagementEndpoints();
 app.MapSportTemplatesEndpoints();
-app.MapManualPlannerEndpoints();
 app.MapFoodItemsEndpoints();
 
 app.Run();
