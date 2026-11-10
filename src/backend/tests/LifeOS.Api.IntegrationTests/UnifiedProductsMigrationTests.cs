@@ -111,8 +111,9 @@ public sealed class UnifiedProductsMigrationTests
             Assert.Equal(timestamp, price.ObservedAt);
             Assert.Empty(await db.Recipes.ToListAsync());
             Assert.Empty(await db.RecipeIngredients.ToListAsync());
-            Assert.Equal(0, await db.Database.SqlQueryRaw<int>(
-                "SELECT count(*)::int AS \"Value\" FROM planned_meals").SingleAsync());
+            foreach (var removed in new[] { "weeks", "day_plans", "planned_meals", "activity_sessions" })
+                Assert.Null(await db.Database.SqlQuery<string?>(
+                    $"SELECT to_regclass({removed})::text AS \"Value\"").SingleAsync());
             Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM stock_items").SingleAsync());
             Assert.Equal(1, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM shopping_list_items").SingleAsync());
             Assert.Equal(0, await db.Database.SqlQueryRaw<int>(

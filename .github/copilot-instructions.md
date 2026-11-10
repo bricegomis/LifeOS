@@ -31,7 +31,7 @@ From `src/frontend-angular`: `npm ci`, `npm run dev`; configure
 `.env.example`. Run `npm test`, `npm run type-check`, `npm run lint`, `npm run build`.
 From `src/backend`: `dotnet build`, `dotnet test`; PostgreSQL tests use Testcontainers/Docker.
 
-Respect API household scope, existing planning/sport/auth behavior and precise
+Respect API household scope, existing sport/auth behavior and precise
 quantities. Do not rewrite applied migrations or historical snapshots.
 The iPhone app wraps Angular with Capacitor 7 plus SwiftUI widgets
 (`src/frontend-angular/ios`, see `docs/ios-v1.md`); its Swift checks need macOS/Xcode.

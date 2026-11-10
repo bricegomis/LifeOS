@@ -1,6 +1,6 @@
 using LifeOS.Domain.Common;
 
-namespace LifeOS.Domain.WeekPlanning;
+namespace LifeOS.Domain.Sports;
 
 public sealed class SportTemplate : Entity
 {

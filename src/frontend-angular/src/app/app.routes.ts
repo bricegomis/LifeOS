@@ -1,10 +1,8 @@
 import { inject } from '@angular/core'
 import { CanActivateFn, CanDeactivateFn, Router, Routes } from '@angular/router'
 import { AuthService } from '@/app/core/auth/auth.service'
-import { DashboardPageComponent } from '@/app/pages/dashboard/dashboard-page.component'
 import { FoodItemsPageComponent } from '@/app/pages/foods/food-items-page.component'
 import { LoginPageComponent } from '@/app/pages/login/login-page.component'
-import { PlanningPageComponent } from '@/app/pages/planning/planning-page.component'
 import { RecipesPageComponent } from '@/app/pages/recipes/recipes-page.component'
 import { SettingsPageComponent } from '@/app/pages/settings/settings-page.component'
 import { TicketsPageComponent } from '@/app/pages/tickets/tickets-page.component'
@@ -32,8 +30,7 @@ export const routes: Routes = [
     component: AppLayoutComponent,
     canActivate: [requireAuthentication],
     children: [
-      { path: '', pathMatch: 'full', component: DashboardPageComponent, canDeactivate: [protectReviewDrafts] },
-      { path: 'planning', component: PlanningPageComponent, canDeactivate: [protectReviewDrafts] },
+      { path: '', pathMatch: 'full', redirectTo: 'recipes' },
       { path: 'recipes', component: RecipesPageComponent, canDeactivate: [protectReviewDrafts] },
       { path: 'foods', component: FoodItemsPageComponent, canDeactivate: [(component: FoodItemsPageComponent) => component.canLeave()] },
       { path: 'products', pathMatch: 'full', redirectTo: 'foods' },
@@ -43,8 +40,10 @@ export const routes: Routes = [
       { path: 'tickets', component: TicketsPageComponent, canDeactivate: [(component: TicketsPageComponent) => component.canLeave()] },
       { path: 'library', pathMatch: 'full', redirectTo: 'foods' },
       { path: 'settings', component: SettingsPageComponent },
-      { path: 'today', pathMatch: 'full', redirectTo: '' },
-      { path: 'planner', pathMatch: 'full', redirectTo: 'planning' },
+      // The week planner and its Today view were removed; keep old links working.
+      { path: 'planning', pathMatch: 'full', redirectTo: 'recipes' },
+      { path: 'today', pathMatch: 'full', redirectTo: 'recipes' },
+      { path: 'planner', pathMatch: 'full', redirectTo: 'recipes' },
     ],
   },
   { path: '**', redirectTo: '' },

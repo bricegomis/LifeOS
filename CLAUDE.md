@@ -8,7 +8,9 @@ code, identifiers and code comments are English.
 
 ## Sources of truth (read before changing behaviour)
 - Current model: `docs/02-core-model.md`, ADR 0006 (foods/products/receipts, receipt
-  photo OCR, food images) and ADR 0007 (recipes, meal lines, household reviews).
+  photo OCR, food images), ADR 0007 (recipes, household reviews) and ADR 0008
+  (week planner removed; `docs/semainier-retour-experience.md` holds the lessons
+  and the planned direction: standalone sport, then a planner computed outside the API).
 - `docs/PROJECT.md`: only the top section ("État actuel" + "Modèle actif") is current.
   Everything under "Mémoire historique" describes the removed
   Vue/local-first/generation era — never treat it as live.
@@ -39,11 +41,12 @@ code, identifiers and code comments are English.
 - Prices: observed price = line total / quantity. Compare only on truly comparable
   bases (kg, L, confirmed pieces); package contents must be confirmed manually.
   No invented density, piece weight or drained weight.
-- Meal line quantities/nutrition: `ingredient quantity × planned portions / yield`;
+- Quantities/nutrition from a recipe: `ingredient quantity × portions / yield`;
   unknown nutrition stays unknown and makes totals incomplete.
 - Reviews: optional integer 0..10 and/or comment, per food or recipe and per profile
   or named household group. 0 ≠ "non noté". Strong FKs, no polymorphic target.
-- Planned meals keep their snapshots; editing a recipe never rewrites planned weeks.
+- There is no week planner for now (ADR 0008). When it comes back, planned meals keep
+  snapshots: editing a recipe never rewrites planned weeks.
 - Out of scope, don't reintroduce: stock, shopping list, automatic week generation,
   rules/scenarios, OFF/external enrichment, name-based matching, Vue, PrimeNG runtime.
 

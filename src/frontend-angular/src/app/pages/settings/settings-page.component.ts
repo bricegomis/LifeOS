@@ -1,6 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
-import { RouterLink } from '@angular/router'
 import { firstValueFrom, forkJoin } from 'rxjs'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import type { HouseholdGroupDto, MemberProfileDto } from '@/app/core/api/api.models'
@@ -8,16 +7,14 @@ import { AuthService } from '@/app/core/auth/auth.service'
 import { apiBaseUrl, buildInfo } from '@/environments/environment'
 import { BuildVersionComponent } from '@/app/shared/build-version.component'
 
-import { LocalRemindersService } from '@/app/core/native/local-reminders.service'
 import { NativeSyncService } from '@/app/core/native/native-sync.service'
 import { DeepLinkService } from '@/app/core/native/deep-link.service'
 import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
-import type { ReminderPreferences } from '@/app/core/native/native.models'
 
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [RouterLink, FormsModule, BuildVersionComponent],
+  imports: [FormsModule, BuildVersionComponent],
   template: `
     <section class="page-stack settings-page">
       <header class="page-hero">
@@ -81,46 +78,8 @@ import type { ReminderPreferences } from '@/app/core/native/native.models'
       </section>
 
       <section class="surface-card">
-        <h2>Rappels locaux iPhone</h2>
-        <p>Recevez des rappels locaux sur cet appareil pour vos repas et séances de sport planifiés.</p>
-        <p class="dialog-hint">Ces rappels sont locaux à cet iPhone. Toute modification apportée depuis un autre appareil sera synchronisée au prochain lancement de l’application.</p>
-
-        <form class="settings-form" (ngSubmit)="saveReminders()">
-          <label class="dialog-check">
-            <input type="checkbox" name="remindersEnabled" [(ngModel)]="reminderPrefs.enabled" />
-            <strong>Activer les rappels locaux</strong>
-          </label>
-
-          @if (reminderPrefs.enabled) {
-            <label class="dialog-field">
-              <span>Avance de notification</span>
-              <select class="text-input" name="leadMinutes" [(ngModel)]="reminderPrefs.leadMinutes">
-                <option [ngValue]="0">À l’heure exacte (0 min)</option>
-                <option [ngValue]="5">5 minutes avant</option>
-                <option [ngValue]="15">15 minutes avant</option>
-                <option [ngValue]="30">30 minutes avant</option>
-              </select>
-            </label>
-
-            <div class="dialog-row">
-              <label class="dialog-check">
-                <input type="checkbox" name="notifyMeals" [(ngModel)]="reminderPrefs.meals" />
-                Rappels de repas
-              </label>
-              <label class="dialog-check">
-                <input type="checkbox" name="notifySports" [(ngModel)]="reminderPrefs.sports" />
-                Rappels de sport
-              </label>
-            </div>
-          }
-
-          <button class="lifeos-button" type="submit" [disabled]="busy()">Enregistrer les rappels</button>
-        </form>
-      </section>
-
-      <section class="surface-card">
-        <h2>Synchronisation iPhone & Widgets</h2>
-        <p>Les widgets et la Live Activity utilisent un cache local synchronisé avec votre foyer. Si le planning est modifié sur un autre appareil, réouvrez LifeOS sur cet iPhone ou cliquez sur Synchroniser.</p>
+        <h2>Synchronisation iPhone</h2>
+        <p>La session de cuisine en cours est conservée dans un cache local de cet iPhone, lié à votre foyer. Réouvrez LifeOS ou cliquez sur Synchroniser pour la restaurer.</p>
         <dl>
           <dt>État de synchronisation</dt>
           <dd>
@@ -146,11 +105,6 @@ import type { ReminderPreferences } from '@/app/core/native/native.models'
         </button>
       </section>
 
-      <section class="surface-card">
-        <h2>Planifier sans configuration</h2>
-        <p>Les portions se règlent séparément pour chaque ligne d’un repas. Les règles et la génération ne pilotent pas le semainier manuel.</p>
-        <a class="lifeos-button" routerLink="/planning">Ouvrir le semainier</a>
-      </section>
     </section>
   `,
   styles: [`
@@ -170,7 +124,6 @@ import type { ReminderPreferences } from '@/app/core/native/native.models'
 export class SettingsPageComponent implements OnInit {
   private readonly api = inject(LifeosApiService)
   readonly auth = inject(AuthService)
-  private readonly reminders = inject(LocalRemindersService)
   readonly nativeSync = inject(NativeSyncService)
   readonly deepLink = inject(DeepLinkService)
   readonly bridgeStatus = nativeBridgeStatus
@@ -186,45 +139,13 @@ export class SettingsPageComponent implements OnInit {
   profileName = ''
   profileCoefficient = 1
   groupName = ''
-  reminderPrefs: ReminderPreferences = this.reminders.getPreferences()
 
   ngOnInit(): void {
     void this.load()
-    this.reminderPrefs = this.reminders.getPreferences()
   }
 
   async triggerNativeSync(): Promise<void> {
     await this.nativeSync.syncNativeState()
-  }
-
-  async saveReminders(): Promise<void> {
-    this.busy.set(true)
-    this.error.set('')
-    this.notice.set('')
-    try {
-      if (this.reminderPrefs.enabled) {
-        const granted = await this.reminders.requestPermissions()
-        if (!granted) {
-          this.error.set('La permission de notifications a été refusée dans iOS. Activez-la dans Réglages > LifeOS.')
-          this.reminderPrefs.enabled = false
-          this.reminders.savePreferences(this.reminderPrefs)
-          await this.reminders.cancelAll()
-          this.busy.set(false)
-          return
-        }
-      }
-      this.reminders.savePreferences(this.reminderPrefs)
-      if (!this.reminderPrefs.enabled) await this.reminders.cancelAll()
-      await this.nativeSync.syncNativeState()
-      if (this.reminderPrefs.enabled && this.nativeSync.syncStatus() !== 'synced') {
-        throw new Error(this.nativeSync.lastSyncError() ?? 'Rappels enregistrés ; synchronisation encore en attente.')
-      }
-      this.notice.set(this.reminderPrefs.enabled ? 'Rappels locaux configurés et planifiés.' : 'Rappels locaux désactivés.')
-    } catch (err) {
-      this.error.set(err instanceof Error ? err.message : 'Erreur lors de l’enregistrement des rappels.')
-    } finally {
-      this.busy.set(false)
-    }
   }
 
   async load(): Promise<void> {

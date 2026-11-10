@@ -5,7 +5,7 @@
   `LifeOS.Application` (use cases, ports) → `LifeOS.Infrastructure` (EF Core
   `LifeOSDbContext`, Npgsql, repositories, file storage) → `LifeOS.Api`
   (minimal API endpoints, DTOs, validation, auth, error handling).
-- Endpoints that need transactional consistency (receipts, manual planner) use the
+- Endpoints that need transactional consistency (receipts) use the
   scoped DbContext directly; keep domain rules in the Domain layer anyway.
 - Auth: Supabase-issued JWT bearer; the caller's household is resolved per request
   (`ResolveHouseholdForUserQuery`, auto-provisioned on first sight). Filter every
@@ -21,6 +21,8 @@
   `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api`
 - Migrations must be additive and preserve IDs, aliases, sources, prices and
   snapshots; rollback is by restoring a backup, not a destructive down-migration.
+  Only exception so far: `RemoveWeekPlanner` (ADR 0008), approved because no planner
+  data was kept.
 
 ## Tests
 - `dotnet test` from `src/backend`. `tests/LifeOS.Domain.Tests` are pure unit tests.

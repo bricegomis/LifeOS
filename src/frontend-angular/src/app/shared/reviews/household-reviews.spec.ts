@@ -123,7 +123,7 @@ describe('shared household review popup', () => {
     assert.equal(component.dirty(), false)
   })
 
-  for (const [targetType, segment] of [['food', 'foods'], ['recipe', 'recipes'], ['planned-line', 'planned-lines']] as const) {
+  for (const [targetType, segment] of [['food', 'foods'], ['recipe', 'recipes']] as const) {
     it(`saves and refreshes ${targetType} reviews in the original encoded scope, including zero and groups`, async () => {
       const { component, calls, loadedReviews } = harness()
       component.targetType = targetType

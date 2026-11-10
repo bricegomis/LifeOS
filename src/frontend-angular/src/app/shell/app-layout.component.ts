@@ -32,8 +32,6 @@ export class AppLayoutComponent implements OnInit {
   readonly signOutError = signal('')
 
   readonly navigation: NavigationItem[] = [
-    { path: '/', title: "Aujourd'hui", mobileTitle: 'Aujourd’hui', icon: 'pi pi-sun' },
-    { path: '/planning', title: 'Semainier', mobileTitle: 'Semaine', icon: 'pi pi-calendar' },
     { path: '/recipes', title: 'Recettes', mobileTitle: 'Recettes', icon: 'pi pi-book' },
     { path: '/foods', title: 'Aliments', mobileTitle: 'Aliments', icon: 'pi pi-apple' },
     { path: '/sports', title: 'Séances sportives', mobileTitle: 'Sport', icon: 'pi pi-bolt' },
@@ -48,7 +46,7 @@ export class AppLayoutComponent implements OnInit {
   ]
 
   readonly mobileNavigation = this.navigation.filter((item) =>
-    ['/', '/planning', '/foods', '/recipes', '/sports'].includes(item.path),
+    ['/recipes', '/foods', '/sports', '/tickets'].includes(item.path),
   )
 
   async ngOnInit(): Promise<void> {

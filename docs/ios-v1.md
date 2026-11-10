@@ -6,6 +6,11 @@ SwiftUI/WidgetKit, des App Intents et une Live Activity ActivityKit. Cible :
 ne remplace le partage local. Supabase gère uniquement l'authentification ; les
 données de foyer restent dans LifeOS API/PostgreSQL.
 
+> **Depuis le 2026-11-10** ([ADR 0008](architecture/decisions/0008-remove-week-planner.md)),
+> le semainier est retiré : le widget « prochain événement » reçoit une liste vide et
+> les rappels locaux sont annulés. La session de cuisine et sa Live Activity restent.
+> Le code Swift du widget n'a pas encore été retiré (à faire sous macOS).
+
 ## Gratuit, mais pas permanent sans maintenance
 
 L'installation visée est **Xcode → iPhone personnel**, avec un compte Apple gratuit

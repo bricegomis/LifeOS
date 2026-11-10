@@ -3,8 +3,9 @@
 - Angular 22 standalone components, signals (`input()`, `output()`, `signal`,
   `inject()`), new control flow (`@if`, `@for`). Templates are mostly inline.
 - Structure: `src/app/core` (api client + models, auth, native/Capacitor bridge),
-  `pages/<feature>` (dashboard, foods, recipes, planning, sports, stores, tickets,
-  settings, login), `shared` (dialog, reviews, cooking), `shell`.
+  `pages/<feature>` (foods, recipes, sports, stores, tickets, settings, login;
+  the planning and dashboard pages were removed by ADR 0008), `shared` (dialog,
+  reviews, cooking), `shell`.
 - UI: native HTML controls and LifeOS CSS tokens from `src/styles.css`; icons are
   PrimeIcons classes (`pi pi-...`). No PrimeNG/PrimeUI or other UI libraries.
 - Dialogs: reuse `shared/dialog/lifeos-dialog.component.ts` (native modal
@@ -15,7 +16,7 @@
   `aria-*` attributes and visible labels. UI text is French.
 - Data comes only from the LifeOS API (`core/api/lifeos-api.service.ts`) with the
   Supabase access token; Supabase is used for auth only. No demo/fallback data:
-  an empty library or week stays empty.
+  an empty library stays empty.
 - Hash-based routing; post-login redirects accept known internal routes only.
 
 ## Tests

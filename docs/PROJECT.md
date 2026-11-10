@@ -62,12 +62,13 @@ données sportives. Elle ne modifie aucune migration historique. Elle n'a pas
 été appliquée à une base de production ; son application à un environnement
 existant nécessite sauvegarde et autorisation explicite.
 
-Le semainier est manuel : création de semaines vides, repas multi-lignes,
-préparations ponctuelles, portions fractionnaires par ligne, duplication et
-nutrition calculée avec inconnues explicites. Les quantités requises sont
-affichées par ingrédient dans le détail du repas. Aucun agrégateur ni parcours
-actif de liste de courses, aucune règle ni génération automatique de semaine
-n'est actuellement exposé ; les anciens scénarios ne sont pas convertis.
+**Semainier retiré** le 2026-11-10 ([ADR 0008](architecture/decisions/0008-remove-week-planner.md)) :
+semaines, repas planifiés, préparations ponctuelles et séances rattachées aux
+journées sont supprimés de l'API, de la base et de l'interface. L'accueil ouvre les
+recettes. Seules les séances types de sport restent. Le prochain semainier sera
+calculé hors de l'API à partir de règles et de bibliothèques exposées par l'API ;
+voir [le retour d'expérience](semainier-retour-experience.md). Aucune liste de
+courses, règle ni génération automatique n'est exposée aujourd'hui.
 
 Le sport, les profils existants, les foyers, l'authentification, les aliments,
 produits, magasins, prix et tickets restent hors du nettoyage. Supabase conserve

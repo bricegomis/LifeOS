@@ -1,5 +1,8 @@
 # LifeOS — Semainier manuel et Aujourd'hui
 
+> **Retiré le 2026-11-10** ([ADR 0008](architecture/decisions/0008-remove-week-planner.md)).
+> Ce document décrit l'ancien écran, conservé comme référence pour la refonte.
+
 Le semainier et la vue Aujourd'hui utilisent les semaines, repas et séances
 persistés par l'API. Une semaine commence vide ; aucun plat de démonstration,
 scénario ou menu généré ne remplace l'absence de données. Voir
