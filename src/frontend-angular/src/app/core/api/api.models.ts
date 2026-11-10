@@ -206,7 +206,6 @@ export interface ReviewDto {
   id: string
   foodItemId: string | null
   recipeId: string | null
-  plannedRecipeLineId: string | null
   memberProfileId: string | null
   householdGroupId: string | null
   targetName: string | null

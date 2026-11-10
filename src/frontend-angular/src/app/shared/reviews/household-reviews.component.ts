@@ -7,7 +7,7 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
 import { ReviewDraftsService } from './review-drafts.service'
 
-type ReviewTarget = 'food' | 'recipe' | 'planned-line'
+type ReviewTarget = 'food' | 'recipe'
 let nextReviewFormId = 0
 
 @Component({
@@ -227,6 +227,6 @@ export class HouseholdReviewsComponent implements OnChanges {
   }
 
   private path(): string {
-    return `/reviews/${this.targetType === 'planned-line' ? 'planned-lines' : `${this.targetType}s`}/${encodeURIComponent(this.targetId)}`
+    return `/reviews/${this.targetType}s/${encodeURIComponent(this.targetId)}`
   }
 }

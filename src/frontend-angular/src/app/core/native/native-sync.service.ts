@@ -2,24 +2,29 @@ import { Injectable, effect, inject, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { AuthService } from '@/app/core/auth/auth.service'
-import type { ManualWeek, ManualWeekSummary } from '@/app/core/api/manual-planner.models'
-import { monday, isoDate, addDays } from '@/app/pages/planning/calendar'
 import type { AppGroupWidgetSnapshot } from './native.models'
-import { projectEventsFromWeeks } from './event-projection'
 import { LifeosNativeBridge, requireNativeBridge } from './native-bridge'
-import { LocalRemindersService } from './local-reminders.service'
 import { CookingSessionService } from './cooking-session.service'
 import { nativeStateCoordinator, SupersededNativeOperation } from './native-state-coordinator'
 
 const LAST_IDENTITY_KEY = 'lifeos.native.activeIdentity'
+// Written by app versions that still had the week planner and its local reminders.
+const LEGACY_REMINDERS_KEY = 'lifeos.native.remindersPreferences'
+
+/**
+ * Keeps native state tied to the signed-in household: purges it on identity change,
+ * restores the cooking session and publishes an empty widget snapshot. The week
+ * planner was removed, so there are no events to project or remind about; pending
+ * reminders scheduled by older versions are cancelled.
+ */
 
 @Injectable({ providedIn: 'root' })
 export class NativeSyncService {
   private readonly api = inject(LifeosApiService)
   private readonly auth = inject(AuthService)
-  private readonly reminders = inject(LocalRemindersService)
   private readonly cooking = inject(CookingSessionService)
   readonly syncStatus = signal<'idle' | 'syncing' | 'synced' | 'stale' | 'error'>('idle')
   readonly lastSyncError = signal<string | null>(null)
@@ -114,21 +119,10 @@ export class NativeSyncService {
       if (typeof localStorage !== 'undefined') localStorage.setItem(LAST_IDENTITY_KEY, identityKey)
       await this.cooking.restoreSession()
       assertCurrent()
-      const summaries = await firstValueFrom(this.api.get<ManualWeekSummary[]>('/manual-planner/weeks'))
-      assertCurrent()
-      const currentMonday = monday(isoDate())
-      const nextMonday = addDays(currentMonday, 7)
-      const weeks: ManualWeek[] = []
-      for (const summary of summaries.filter(s => s.startsOn === currentMonday || s.startsOn === nextMonday)) {
-        weeks.push(await firstValueFrom(this.api.get<ManualWeek>(`/manual-planner/weeks/${summary.id}`)))
-        assertCurrent()
-      }
-      const tz = weeks[0]?.timeZoneId || 'Europe/Paris'
-      const events = projectEventsFromWeeks(weeks, new Date(), tz)
       const snapshot: AppGroupWidgetSnapshot = {
         version: 1, householdId, userId: user.id, generatedAt: new Date().toISOString(),
-        timeZoneId: tz, events,
-        // Cooking has one authoritative file, not a stale duplicate in the planning snapshot.
+        timeZoneId: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris', events: [],
+        // Cooking has one authoritative file, not a stale duplicate in the widget snapshot.
         cookingSession: null,
       }
       await nativeStateCoordinator.run(token, async () => {
@@ -136,7 +130,7 @@ export class NativeSyncService {
         requireNativeBridge()
         await LifeosNativeBridge.saveWidgetSnapshot({ snapshot })
         await LifeosNativeBridge.reloadWidgetTimelines()
-        await this.reminders.rescheduleNotifications(events)
+        await cancelPendingNotifications()
       })
       assertCurrent()
       this.syncStatus.set('synced')
@@ -154,8 +148,11 @@ export class NativeSyncService {
     const errors: unknown[] = []
     for (const clear of [
       () => this.cooking.clearLocalState(),
-      () => this.reminders.clearPreferences(),
-      () => { if (typeof localStorage !== 'undefined') localStorage.removeItem(LAST_IDENTITY_KEY) },
+      () => {
+        if (typeof localStorage === 'undefined') return
+        localStorage.removeItem(LAST_IDENTITY_KEY)
+        localStorage.removeItem(LEGACY_REMINDERS_KEY)
+      },
     ]) {
       try { clear() } catch (error) { errors.push(error) }
     }
@@ -168,7 +165,7 @@ export class NativeSyncService {
         () => LifeosNativeBridge.clearCookingSession(),
         () => LifeosNativeBridge.endLiveActivity(),
         () => LifeosNativeBridge.reloadWidgetTimelines(),
-        () => this.reminders.cancelAll(),
+        () => cancelPendingNotifications(),
       ]) {
         try { await operation() } catch (error) { errors.push(error) }
       }
@@ -182,5 +179,13 @@ export class NativeSyncService {
   private reportError(error: unknown): void {
     this.lastSyncError.set(apiErrorMessage(error))
     this.syncStatus.set(this.lastSyncedAt() ? 'stale' : 'error')
+  }
+}
+
+async function cancelPendingNotifications(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  const pending = await LocalNotifications.getPending()
+  if (pending.notifications.length > 0) {
+    await LocalNotifications.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) })
   }
 }

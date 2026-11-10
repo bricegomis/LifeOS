@@ -35,10 +35,3 @@ export interface AppGroupCookingSession {
 }
 
 export type CookingSessionState = AppGroupCookingSession
-
-export interface ReminderPreferences {
-  enabled: boolean
-  leadMinutes: 0 | 5 | 15 | 30
-  meals: boolean
-  sports: boolean
-}

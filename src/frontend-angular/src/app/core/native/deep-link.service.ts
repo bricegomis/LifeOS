@@ -2,7 +2,6 @@ import { Injectable, inject, signal } from '@angular/core'
 import { Router } from '@angular/router'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
-import { LocalNotifications } from '@capacitor/local-notifications'
 import { AuthService } from '@/app/core/auth/auth.service'
 import { validatedReturnPath } from '@/app/core/auth/auth-flow'
 import { parseNativeUrl } from './native-url'
@@ -13,7 +12,6 @@ export class DeepLinkService {
   private readonly auth = inject(AuthService)
   readonly lastError = signal<string | null>(null)
   private urlListening = false
-  private notificationListening = false
   private initialization: Promise<void> | null = null
   private readonly callbacks = new Map<string, Promise<void>>()
 
@@ -32,14 +30,6 @@ export class DeepLinkService {
     if (!this.urlListening) {
       registrations.push(CapApp.addListener('appUrlOpen', event => { if (event?.url) handle(event.url) })
         .then(() => { this.urlListening = true }, error => this.reportError(error)))
-    }
-    if (!this.notificationListening) {
-      registrations.push(LocalNotifications.addListener('localNotificationActionPerformed', action => {
-          const extra = action.notification.extra as { deepLink?: string; date?: string } | undefined
-          const destination = extra?.deepLink ?? (extra?.date ? `/planning?date=${extra.date}` : '/planning')
-          if (destination.startsWith('lifeos:')) handle(destination)
-          else void this.router.navigateByUrl(validatedReturnPath(destination)).catch(error => this.reportError(error))
-        }).then(() => { this.notificationListening = true }, error => this.reportError(error)))
     }
     await Promise.all(registrations)
     try {
