@@ -12,9 +12,13 @@ code, identifiers and code comments are English.
   proposals, external AI agent, per-person health privacy) and `docs/01-roadmap.md`
   (six steps; each starts with a scoping session, then a clickable mockup the user
   validates before any backend or real UI code).
-- What exists today: `docs/PROJECT.md` (kept current at every delivery),
-  `docs/02-core-model.md`, ADR 0006 (foods/products/receipts), ADR 0007 (recipes,
-  household reviews) and ADR 0008 (first week planner removed).
+- Step 1 target: ADR 0010 (simplified food module: receipts become a stored photo,
+  JSON import/OCR/purchases/household groups/cooking session removed, fibres added,
+  admin area for products and prices, recipe cost per store, full data reset) and
+  `docs/02-core-model.md`.
+- What exists today: `docs/PROJECT.md` (kept current at every delivery), ADR 0006
+  (foods/products/receipts), ADR 0007 (recipes, household reviews) and ADR 0008
+  (first week planner removed). The code still follows these until each step 1 lot lands.
 - `docs/semainier-retour-experience.md`: lessons from the first planner and the
   sport needs already expressed.
 - Historical docs were deleted on 2026-11-11 (git history keeps them). If the docs

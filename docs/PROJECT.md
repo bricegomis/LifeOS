@@ -7,8 +7,9 @@ et la [roadmap](01-roadmap.md).
 
 ## Où en est-on
 
-Aucune étape de la roadmap n'est commencée. Prochaine action : cadrage de
-l'étape 1, « Alimentation saine ».
+Étape 1, « Alimentation saine », en cours. Le cadrage est fait
+([ADR 0010](architecture/decisions/0010-simplified-food-module.md)) ; aucun code n'a
+encore changé. Prochaine action : validation de la maquette des écrans.
 
 ## Ce qui existe
 
@@ -23,7 +24,8 @@ l'étape 1, « Alimentation saine ».
 | Avis | Note 0..10 et commentaire, par aliment ou recette, par profil ou groupe |
 | Sport | Séances types uniquement (nom, sport, durée, distance, intensité, calories) |
 
-Modèle détaillé : [02-core-model.md](02-core-model.md), ADR 0006 et ADR 0007.
+Modèle du code actuel : ADR 0006 et ADR 0007. Modèle cible de l'étape 1 :
+[02-core-model.md](02-core-model.md).
 
 ## Ce qui n'existe pas
 
@@ -33,6 +35,9 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 
 ## Écarts connus avec la cible
 
+- Le code contient encore ce que l'ADR 0010 supprime : import JSON de tickets, OCR,
+  lignes et achats, groupes du foyer, session de cuisine. Les fibres, le ticket
+  réduit à une photo, l'espace d'administration et le coût de recette n'existent pas.
 - Le backend est découpé par couche, pas par module, et les règles métier sont
   mêlées au code HTTP des endpoints. Mise en conformité : étape 1.
 - Points ouverts de la revue de code : [audit-2026-11.md](audit-2026-11.md).
