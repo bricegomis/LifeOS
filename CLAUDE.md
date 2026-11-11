@@ -14,7 +14,7 @@ code, identifiers and code comments are English.
   validates before any backend or real UI code).
 - Step 1 target: ADR 0010 (simplified food module: receipts become a stored photo,
   JSON import/OCR/purchases/household groups/cooking session removed, fibres and
-  recipe images added, admin area for products and prices, min/max recipe cost
+  recipe images added, products always complete (mandatory package contents), min/max recipe cost
   across stores, full data reset) and
   `docs/02-core-model.md`.
 - What exists today: `docs/PROJECT.md` (kept current at every delivery), ADR 0006
