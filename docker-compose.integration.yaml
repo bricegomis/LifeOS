@@ -1,0 +1,60 @@
+# Integration stack: runs the :integration images next to production, with its own
+# database, volumes and URLs. Never point POSTGRES_CONNECTION_STRING at the
+# production database: migrations here may be destructive.
+# See docs/integration-environment.md.
+services:
+  api:
+    image: ghcr.io/bricegomis/lifeos-api:integration
+    container_name: lifeos-integration-api
+    restart: unless-stopped
+    networks:
+      - proxy
+      - backend_db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      # Supabase authentication
+      Supabase__Url: ${SUPABASE_URL}
+      Supabase__Audience: authenticated
+      # PostgreSQL
+      ConnectionStrings__Postgres: ${POSTGRES_CONNECTION_STRING}
+      # Durable storage for original receipt photos
+      Receipts__StoragePath: /data/receipts
+      Receipts__MaxFileBytes: 10485760
+      # Durable storage for optional generic food images
+      FoodImages__StoragePath: /data/foods
+      FoodImages__MaxFileBytes: 10485760
+      # Public frontend URL
+      Cors__AllowedOrigins__0: ${FRONTEND_URL}
+      Cors__AllowedOrigins__1: ${GITHUB_PAGES_URL:-}
+      # Enable OpenAPI/Scalar only when explicitly requested on the VPS.
+      Api__EnableOpenApiUi: ${ENABLE_OPENAPI_UI:-false}
+      # Migrations run at startup, against the integration database only.
+      SkipDatabaseMigration: "false"
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - receipts_data:/data/receipts
+      - food_images:/data/foods
+  web:
+    image: ghcr.io/bricegomis/lifeos-web:integration
+    container_name: lifeos-integration-web
+    restart: unless-stopped
+    networks:
+      - proxy
+    environment:
+      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      VITE_LIFEOS_API_URL: ${VITE_LIFEOS_API_URL}
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+networks:
+  proxy:
+    external: true
+  backend_db:
+    external: true
+volumes:
+  receipts_data:
+    name: lifeos_integration_receipts
+  food_images:
+    name: lifeos_integration_food_images
