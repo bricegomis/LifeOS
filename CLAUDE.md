@@ -71,7 +71,7 @@ code, identifiers and code comments are English.
 - Backend (from `src/backend`): `dotnet build` and `dotnet test`. Integration tests
   need a running Docker daemon (Testcontainers PostgreSQL); if Docker is unavailable,
   say so instead of claiming the tests pass.
-- iOS (`scripts/test-ios-contract.sh`, `npm run cap:sync`) needs macOS/Xcode; on
+- iOS (`npm run cap:sync`, Xcode builds) needs macOS/Xcode; on
   Linux, report it as not run. Unsigned builds never prove an iPhone install.
 - Local checks are not a production verification.
 

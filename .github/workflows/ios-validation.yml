@@ -4,12 +4,10 @@ on:
   pull_request:
     paths:
       - 'src/frontend-angular/**'
-      - 'scripts/test-ios-contract.sh'
       - '.github/workflows/ios-validation.yml'
   push:
     paths:
       - 'src/frontend-angular/**'
-      - 'scripts/test-ios-contract.sh'
       - '.github/workflows/ios-validation.yml'
 
 permissions:
@@ -42,9 +40,6 @@ jobs:
           VITE_LIFEOS_API_URL: https://api.lifeos.example
           VITE_SUPABASE_URL: https://supabase.lifeos.example
           VITE_SUPABASE_ANON_KEY: sb_publishable_lifeos_ci_placeholder
-      - name: Test Swift data contracts
-        working-directory: .
-        run: bash scripts/test-ios-contract.sh
       - name: Build app and widget for generic simulator and device (unsigned)
         shell: bash
         run: |

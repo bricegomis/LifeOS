@@ -18,20 +18,6 @@ export interface AppGroupWidgetSnapshot {
   generatedAt: string
   timeZoneId: string
   events: AppGroupEventItem[]
-  cookingSession: AppGroupCookingSession | null
+  // The cooking session was removed (ADR 0010); the native snapshot schema still carries the key.
+  cookingSession: null
 }
-
-export interface AppGroupCookingSession {
-  version: 2
-  revision: number
-  sessionId: string
-  recipeId: string | null
-  recipeTitle: string
-  startedAt: string
-  steps: string[]
-  completedStepIndices: number[]
-  isCompleted: boolean
-  updatedAt: string
-}
-
-export type CookingSessionState = AppGroupCookingSession
