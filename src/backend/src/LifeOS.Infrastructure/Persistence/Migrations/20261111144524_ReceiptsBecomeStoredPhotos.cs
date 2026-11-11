@@ -11,6 +11,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Added by raw SQL in FoodsAndReceipts, so it is not in the EF model.
+            migrationBuilder.Sql("ALTER TABLE article_price_entries DROP CONSTRAINT IF EXISTS price_receipt_line_fk;");
+
             migrationBuilder.DropTable(
                 name: "purchases");
 
