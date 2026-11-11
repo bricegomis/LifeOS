@@ -257,5 +257,5 @@ pas une garantie d'actualisation immédiate.
 Le cache du widget n'est **pas** un cache de consultation Angular : le planning
 dans l'app dépend encore de l'API. Hors ligne, pas de planning de démonstration,
 pas d'écriture silencieuse. Les améliorations fonctionnelles sont inscrites dans
-[la roadmap](03-roadmap.md), pas implémentées ici. Pas de push APNs, HealthKit,
+[l'étape 6 de la roadmap](01-roadmap.md), pas implémentées ici. Pas de push APNs, HealthKit,
 scan caméra, stock ou courses ; aucune publication ni intervention production.

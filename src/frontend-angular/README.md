@@ -2,8 +2,7 @@
 
 The frontend is a standalone Angular 22 + TypeScript single-page application,
 built with the Angular CLI and styled with native HTML controls and the existing
-LifeOS CSS tokens. Unused PrimeNG/PrimeUI providers and dependencies were removed;
-PrimeIcons (MIT) remains in use for navigation. It is the only, API-backed
+LifeOS CSS tokens. PrimeIcons (MIT) supplies the icons; no PrimeNG/PrimeUI runtime. It is the only, API-backed
 frontend, published by the Docker delivery workflow for VPS deployments and
 packaged for iPhone with Capacitor (see [docs/ios-v1.md](../../docs/ios-v1.md)).
 

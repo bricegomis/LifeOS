@@ -1,75 +1,51 @@
-# LifeOS — Concepts du semainier et des achats
+# LifeOS — Concepts de l'alimentation
 
-Le foyer isole toutes les données métier. Supabase authentifie ; l'API/PostgreSQL
-stocke les données. [ADR 0006](architecture/decisions/0006-foods-products-receipts.md)
-remplace le produit unifié de l'ADR 0005.
+Modèle en vigueur, fixé par
+[ADR 0006](architecture/decisions/0006-foods-products-receipts.md) et
+[ADR 0007](architecture/decisions/0007-recipes-meal-lines-and-household-reviews.md).
+Il sera revu au cadrage de l'étape 1 de la [roadmap](01-roadmap.md).
 
-> **Modèle actif :** voir
-> [ADR 0007](architecture/decisions/0007-recipes-meal-lines-and-household-reviews.md).
-> Les repas composés et la portion unique au repas sont abandonnés. Un repas
-> contient plusieurs lignes de recettes ou de préparations ponctuelles, chacune
-> avec son rendement, ses portions et sa répartition éventuelle par profil. Les
-> avis d'aliments et de recettes sont indépendants et foyer-scopés.
->
-> **Semainier retiré** ([ADR 0008](architecture/decisions/0008-remove-week-planner.md),
-> 2026-11-10) : les repas planifiés, préparations ponctuelles et la section
-> « Planning manuel actif » ci-dessous décrivent l'ancien modèle.
+Le foyer isole toutes les données métier. Supabase authentifie ; l'API et
+PostgreSQL stockent les données.
 
 | Terme | Définition | Exemple |
 | --- | --- | --- |
-| Aliment | Référence culinaire générique, nutrition et digestion manuelles, sans marque/magasin/conditionnement. | Emmental râpé ; haricots rouges en conserve égouttés. |
-| Produit | Référence commerciale alimentaire liée à un aliment, marque/code-barres facultatifs, prix observés. | Sachet d'emmental de 400 g d'une marque donnée. |
-| Ingrédient | Ligne de recette : aliment + quantité + unité, pas un catalogue. | 100 g d'emmental. |
-| Recette | Préparation de bibliothèque, simple ou complète, avec ingrédients, rendement et catégories facultatives. | Légumes vapeur ; dhal avec riz ; chia-coco. |
-| Préparation ponctuelle | Même contenu structuré qu'une recette, mais persisté uniquement dans le repas qui la contient. | Salade saisie directement pour le dîner. |
-| Repas planifié | Créneau d'une journée contenant zéro ou plusieurs lignes de recettes/préparations et de portions indépendantes. | Poulet vapeur, légumes vapeur et dessert. |
-| Avis | Note entière facultative 0..10 et/ou commentaire, par aliment/recette et personne/groupe du foyer. | Avis individuel sur la carotte ou avis commun « Enfants ». |
-| Ticket | Document d'achat daté, magasin, source brute et lignes persistées avant traitement. | Biocoop Nantes Sud, 11 avril 2026. |
+| Aliment | Référence culinaire générique, nutrition et digestion manuelles, sans marque, magasin ni conditionnement. | Emmental râpé ; haricots rouges en conserve égouttés. |
+| Produit | Référence commerciale liée à un aliment, marque et code-barres facultatifs, prix observés. | Sachet d'emmental de 400 g d'une marque donnée. |
+| Ingrédient | Ligne de recette : aliment + quantité + unité. Pas un catalogue. | 100 g d'emmental. |
+| Recette | Préparation de bibliothèque, simple ou complète, avec ingrédients, rendement et catégories facultatives. | Légumes vapeur ; dhal avec riz. |
+| Avis | Note entière facultative 0..10 et/ou commentaire, par aliment ou recette, et par personne ou groupe du foyer. | Avis commun « Enfants » sur la carotte. |
+| Ticket | Document d'achat daté, avec magasin, source brute et lignes conservées avant traitement. | Biocoop Nantes Sud, 11 avril 2026. |
 | Achat | Événement issu d'une ligne validée : produit, quantité, unité, montant total payé. | Un sachet payé 5,95 €. |
-| Prix observé | Prix par base explicite, magasin/date/provenance, jamais prix actuel garanti. | 5,95 €/sachet ; 14,875 €/kg si 400 g confirmés. |
+| Prix observé | Prix par base explicite, avec magasin, date et provenance. Jamais un prix actuel garanti. | 5,95 €/sachet ; 14,875 €/kg si 400 g confirmés. |
 
-Un aliment a zéro à plusieurs produits ; chaque nouveau produit appartient à un
-aliment. Les anciens produits sans preuve alimentaire restent à lier manuellement,
-jamais convertis ou fusionnés par nom. « Article » n'est plus un concept actif.
-Les recettes et nouvelles lignes de repas sélectionnent des aliments, pas des marques.
-Quantité achetée, contenance, quantité de recette et base nutritionnelle sont distinctes.
+Un aliment a zéro à plusieurs produits ; chaque produit créé appartient à un aliment.
+Les recettes choisissent des aliments, jamais des marques. Quantité achetée,
+contenance, quantité de recette et base nutritionnelle sont quatre notions distinctes.
+Rien n'est rapproché par nom.
 
-## Complétion manuelle
+## Nutrition manuelle
 
-Base nutritionnelle, calories/protéines/glucides/lipides, FODMAP bas/modéré/élevé et
-NOVA 1..4 sont nullable. L'aliment reste **À compléter** si l'un de ces sept champs
-manque ; zéro macro est valide. Notes digestives facultatives, sauvegarde partielle
-possible, pas de recommandation médicale ni de santé importée depuis un ticket.
-Une image descriptive est facultative et n'entre pas dans le calcul de complétion.
-L'archive peut conserver des sources antérieures, sans enrichissement automatique.
+Base nutritionnelle, calories, protéines, glucides, lipides, FODMAP
+(bas, modéré, élevé) et NOVA (1 à 4) peuvent être vides. L'aliment reste
+**À compléter** tant qu'un de ces sept champs manque. Zéro est une valeur valide.
+Les notes digestives et l'image sont facultatives et n'entrent pas dans la complétion.
+Aucune recommandation médicale, aucune donnée de santé importée depuis un ticket.
 
-## Ticket et prix
+Dans une recette : `quantité de l'ingrédient × portions / rendement`.
+Une valeur inconnue reste inconnue et rend le total incomplet.
 
-Import JSON fichier/texte : source brute, lignes ordonnées et mentions non alimentaires
-conservées sans montant inventé. Aucun produit/aliment/prix à l'import. Ligne en attente,
-validée ou ignorée ; progression dérivée et reprise depuis l'API.
-Correction et validation **individuelles** ; achat et observation transactionnels,
-un achat par ligne, répétitions distinctes, réimport identique détecté par foyer.
+## Tickets et prix
 
-Minimum informatif dans Aliments : dernière observation de chaque couple
-produit/magasin puis minimum par base réellement comparable (kg, L, pièces confirmées
-comparables). Paquets convertibles seulement avec contenance confirmée ; aucune
-densité, masse d'une pièce ou poids égoutté inventé. Date et provenance visibles.
-Ce prix ne choisit jamais un produit pour une recette ; coût non calculable sans
-référence commerciale explicite sûre.
+Un ticket importé (JSON ou photo) conserve sa source brute et toutes ses lignes.
+L'import ne crée ni aliment, ni produit, ni prix. Chaque ligne est en attente,
+validée ou ignorée. Les lignes d'un ticket JSON se valident une par une ; un
+ticket photo se valide en bloc. Les deux sont transactionnels et idempotents ;
+un réimport identique est détecté par foyer.
 
-## Planning manuel (retiré)
-
-La semaine comprend sept journées indépendantes ; le calendrier, les horaires
-civils, chevauchements permis et événements sportifs sont préservés. Les repas
-contiennent des lignes de recettes/préparations dont le total est explicite ou
-dérivé des répartitions par profil. Nutrition et quantités requises affichées
-par ingrédient utilisent le facteur `portions planifiées / rendement`.
-Les inconnues restent visibles et aucune conversion de pièce en poids n'est
-inventée. Il n'y a pas de calcul agrégé de liste de courses.
-
-Le sport conserve ses valeurs manuelles totales, distinctes des apports. La
-modification d'une recette ne réécrit pas le contenu déjà planifié ; les
-préparations ponctuelles restent attachées à leur repas et sont copiées lors de
-la duplication d'une semaine. Les anciennes données, règles et scénarios du
-modèle culinaire abandonné ne sont pas convertis ni réactivés.
+Prix observé = total de la ligne / quantité. Le minimum affiché sur un aliment
+prend le dernier relevé de chaque couple produit/magasin, puis compare uniquement
+des bases réellement comparables : kg, L, pièces confirmées. Un paquet n'est
+convertible qu'avec une contenance confirmée à la main. Aucune densité, masse de
+pièce ou poids égoutté n'est inventé. Ce minimum est informatif : il ne choisit
+jamais un produit pour une recette.

@@ -1,11 +1,14 @@
 name: Build & Push Docker Images
 
+# main publishes the production images (:latest); integration publishes the
+# images of the integration stack (:integration). See docs/integration-environment.md.
 on:
   push:
-    branches: [main]
+    branches: [main, integration]
 
 env:
   REGISTRY: ghcr.io
+  IMAGE_TAG: ${{ github.ref_name == 'main' && 'latest' || 'integration' }}
   API_IMAGE: ghcr.io/bricegomis/lifeos-api
   WEB_IMAGE: ghcr.io/bricegomis/lifeos-web
 
@@ -38,7 +41,7 @@ jobs:
         with:
           context: ./src/backend
           push: true
-          tags: ${{ env.API_IMAGE }}:latest
+          tags: ${{ env.API_IMAGE }}:${{ env.IMAGE_TAG }}
           build-args: |
             LIFEOS_BUILD_ID=${{ github.sha }}
             LIFEOS_BUILD_NUMBER=${{ github.run_number }}
@@ -58,7 +61,7 @@ jobs:
         with:
           context: ./src/frontend-angular
           push: true
-          tags: ${{ env.WEB_IMAGE }}:latest
+          tags: ${{ env.WEB_IMAGE }}:${{ env.IMAGE_TAG }}
           build-args: |
             LIFEOS_BUILD_ID=${{ github.sha }}
             LIFEOS_BUILD_NUMBER=${{ github.run_number }}

@@ -5,6 +5,13 @@
   `LifeOS.Application` (use cases, ports) → `LifeOS.Infrastructure` (EF Core
   `LifeOSDbContext`, Npgsql, repositories, file storage) → `LifeOS.Api`
   (minimal API endpoints, DTOs, validation, auth, error handling).
+- New modules follow ADR 0009: one folder per module in each project
+  (`Domain/Sport`, `Application/Sport`, ...), own PostgreSQL schema. Plain CRUD
+  endpoints may use the DbContext directly on their own module's tables; actions
+  with real rules, or called by another module, are use cases in Application behind
+  a module data port, testable without HTTP or a database. There is no access to another
+  module's tables or entities (published read contract only). Existing Food and
+  Household code is brought to this style in roadmap step 1 (`docs/01-roadmap.md`).
 - Endpoints that need transactional consistency (receipts) use the
   scoped DbContext directly; keep domain rules in the Domain layer anyway.
 - Auth: Supabase-issued JWT bearer; the caller's household is resolved per request
@@ -21,8 +28,8 @@
   `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api`
 - Migrations must be additive and preserve IDs, aliases, sources, prices and
   snapshots; rollback is by restoring a backup, not a destructive down-migration.
-  Only exception so far: `RemoveWeekPlanner` (ADR 0008), approved because no planner
-  data was kept.
+  Exceptions: `RemoveWeekPlanner` (ADR 0008), and roadmap step 1, where the user
+  accepted losing existing data (ADR 0009) — confirm what is reset before writing it.
 
 ## Tests
 - `dotnet test` from `src/backend`. `tests/LifeOS.Domain.Tests` are pure unit tests.

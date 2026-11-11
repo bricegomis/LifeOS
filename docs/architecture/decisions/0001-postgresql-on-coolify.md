@@ -6,7 +6,7 @@ Accepted
 
 ## Contexte
 
-L'audit technique (`docs/architecture/00-technical-audit.md`) a établi que le
+L'audit technique initial (document supprimé depuis) a établi que le
 backend actuel (`LifeOS.Api`) ne persiste rien durablement : toutes les
 répertoires d'infrastructure sont en mémoire et réamorcées à chaque
 redémarrage. La roadmap technique nécessite une vraie base de données pour
@@ -34,7 +34,7 @@ Npgsql, avec des migrations EF Core versionnées dans le dépôt.
   données métier (voir ADR 0002), et pour ne pas dépendre d'un fournisseur
   tiers pour la donnée la plus sensible du produit.
 - **Base documentaire (DocumentDB / MongoDB-like)** : discutée mais non
-  retenue. Le modèle de données (`docs/architecture/02-data-model.md`)
+  retenue. Le modèle de données
   comporte des relations fortes (foyer, membres, recettes, planning) qui se
   prêtent mieux à un modèle relationnel ; `jsonb` dans PostgreSQL couvre déjà
   les besoins de flexibilité identifiés (métadonnées de recette, payload
