@@ -9,8 +9,7 @@ Accepted
 L'isolation actuelle des données backend se fait par `ownerId` / `sub`
 (l'identifiant utilisateur Supabase), c'est-à-dire par utilisateur individuel
 (cf. audit technique). Or la vision produit
-(`docs/00-vision.md`) et le cadrage fonctionnel
-(`docs/01-scope-and-versions.md`) définissent le **foyer** comme le
+(`docs/00-vision.md`) définit le **foyer** comme le
 périmètre isolé qui possède toutes les données métier, avec un propriétaire
 au MVP et une évolution prévue vers plusieurs membres et invitations.
 
@@ -23,8 +22,7 @@ L'isolation des données métier se fait par `household_id` dès le premier
 jalon technique, et non par identifiant utilisateur individuel. Une table
 `household_members` associe un ou plusieurs utilisateurs Supabase
 (`supabase_user_id`) à un foyer, avec un rôle (`owner` au MVP). Tous les
-agrégats racines du modèle de données
-(`docs/architecture/02-data-model.md`) portent une colonne `household_id`.
+agrégats racines du modèle de données portent une colonne `household_id`.
 
 L'isolation est **applicative et systématique** : l'API résout le
 `household_id` à partir du JWT Supabase validé à chaque requête, et l'utilise
@@ -64,7 +62,7 @@ sont pas exposés comme fonctionnalité utilisateur au MVP.
   et toute requête d'application doit filtrer explicitement dessus.
 - L'API doit implémenter la résolution `supabase_user_id` → `household_id`
   comme une étape systématique tôt dans le traitement de chaque requête
-  authentifiée (voir `docs/architecture/01-target-architecture.md`).
+  authentifiée (voir `docs/architecture/overview.md`).
 - Les contraintes de clé étrangère vers `households` sur les agrégats
   racines fournissent une garantie de cohérence même en cas de bug
   applicatif (une ligne orpheline sans foyer valide est rejetée par la base).

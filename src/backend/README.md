@@ -1,14 +1,12 @@
 # LifeOS API (backend)
 
-A minimal ASP.NET Core Web API for LifeOS, structured to move progressively towards a
-Clean Architecture / DDD layout as recommended by Microsoft's current guidance
-(minimal APIs, layered separation of concerns, dependencies pointing inwards).
+ASP.NET Core minimal API in four layers (Domain / Application / Infrastructure / Api).
+The target module layout and boundary rules are in
+[ADR 0009](../../docs/architecture/decisions/0009-modular-monolith-and-planning-core.md).
 
-API data endpoints are protected by Supabase-issued JWT authentication — the same identity
-provider already used by the frontend — and are
-scoped to the authenticated user (resolved from the JWT `sub` claim). The public
-`GET /api/version` endpoint exposes only the API component name and build provenance for deployment
-diagnostics.
+Data endpoints require a Supabase-issued JWT and are scoped to the caller's
+household. The public `GET /api/version` endpoint exposes only the API component
+name and build provenance.
 
 ## Endpoints and model
 
@@ -20,16 +18,16 @@ diagnostics.
 | Receipts | GET/POST /api/receipts, POST /photo, GET /{id}, GET /{id}/photo, PUT /{id}/context, POST /{id}/finalize | JSON or photo drafts; original image, OCR candidates and raw text; exact duplicate detection per household. |
 | Receipt lines | POST /{id}/lines, PUT /{id}/lines/{lineId}, POST /ignore, POST /validate | Pending corrections; JSON lines validate individually, photo lines finalize atomically as a batch. |
 | Stores | GET/POST /api/stores, PUT/DELETE /{id} | Household stores; required explicit choice for receipts. |
-| Recipes / composed meals | /api/recipes, /api/composed-meals | Food ingredients, portions/steps, archival and historical compositions. |
-| Sport templates | /api/sport-templates | Household session templates (name, sport, duration, distance, intensity, manual calories). The week planner and `/api/manual-planner` were removed (ADR 0008). |
-| Nutrition / version | /api/nutrition/*, /api/version | Existing totals/configuration; public no-store build provenance. |
+| Food images | GET/PUT/DELETE /api/foods/{id}/image | Optional image stored on a durable volume. |
+| Recipes | /api/recipes, /api/recipes/{id}/ingredients | Food ingredients, yield, steps, duration, categories. |
+| Reviews | /api/reviews/foods/{id}, /api/reviews/recipes/{id} | Optional 0..10 score and/or comment, per profile or household group. |
+| Household | /api/households/current, /members, /profiles, /api/household-groups | Household auto-provisioned on first request; profiles and named groups. |
+| Sport templates | /api/sport-templates | Session templates (name, sport, duration, distance, intensity, manual calories). |
+| Version | /api/version | Public, no-store build provenance. |
 
-All new data is household-scoped. Stock/shopping APIs, article compatibility
-catalogue, parallel food seed catalogues and OFF search are removed. Historical
-stock/shopping tables and product legacy nutrition/source columns remain non-mapped.
-Recipes and new meal lines refer to generic foods; commercial products only carry
-prices. The historical balanced engine has no stock dependency, measures ingredient
-reuse and returns costs as non-calculable without explicit commercial references.
+All data is household-scoped. Recipes refer to generic foods; commercial products
+only carry prices. Tables from earlier models (stock, shopping list, legacy
+configuration) may still exist in the database but are not mapped.
 
 Receipt JSON limits: 1 MiB UTF-8, 500 lines, depth 32. Unreadable structure is rejected
 without partial import. Missing usable fields remain pending with diagnostics.
@@ -92,8 +90,7 @@ See [ADR 0006](../../docs/architecture/decisions/0006-foods-products-receipts.md
 
 ## Households and isolation
 
-Every household-scoped table (all tables listed above except the shared `Library`
-seed data) carries a `household_id` foreign key to `households`, and every
+Every business table carries a `household_id` foreign key to `households`, and every
 query/command on these tables is filtered by that id — see
 `docs/architecture/decisions/0003-household-isolation.md`. This isolation is enforced
 **at the application layer**, not via PostgreSQL Row-Level Security: the backend's
@@ -106,8 +103,7 @@ A Supabase user is resolved to a household on every authenticated request via
 1. Look up an existing `household_members` row for the caller's `sub` claim.
 2. If none exists (e.g. a pre-migration Supabase user's first request against the new
    backend), auto-provision a new household with that user as `owner` — on-demand
-   provisioning rather than a bulk data migration, since the current user/data volume is
-   low (see `docs/architecture/00-technical-audit.md`).
+   provisioning rather than a bulk data migration.
 3. A unique index on `household_members.supabase_user_id` makes step 2 safe under
    concurrent requests: a race is caught as a unique-constraint violation and resolved by
    re-reading the now-existing row instead of failing.
@@ -119,10 +115,8 @@ households), even though the MVP only exercises the `owner` role.
 
 ## Persistence (PostgreSQL via EF Core)
 
-Every household-scoped bounded context (see the endpoints table above) is persisted
-through `LifeOSDbContext` (`LifeOS.Infrastructure/Persistence`), targeting PostgreSQL via
-`Npgsql.EntityFrameworkCore.PostgreSQL`. Only the shared `Library` seed data (meal
-components, composite dishes, activities) remains served from in-memory repositories.
+Everything is persisted through `LifeOSDbContext` (`LifeOS.Infrastructure/Persistence`),
+targeting PostgreSQL via `Npgsql.EntityFrameworkCore.PostgreSQL`.
 
 Connection string resolution (`PostgresConnectionStringResolver`) supports either:
 - `ConnectionStrings:Postgres` (standard .NET convention, e.g. env var
@@ -155,7 +149,7 @@ dotnet test
 ```
 
 - `tests/LifeOS.Domain.Tests` — unit tests for domain entities (invariants, no I/O),
-  covering households, stores, foods/products/prices, receipts and nutrition.
+  covering households, stores, foods/products/prices and receipts.
 - `tests/LifeOS.Api.IntegrationTests` — API-level integration tests using
   `Microsoft.AspNetCore.Mvc.Testing` against a real PostgreSQL instance spun up with
   [Testcontainers](https://dotnet.testcontainers.org/) (`Testcontainers.PostgreSql`);
@@ -166,9 +160,8 @@ dotnet test
   - persistence survives a logical API restart (data written by one
     `WebApplicationFactory` instance is read back by an independent instance against the
     same database),
-  - strict cross-household isolation across every persisted bounded context (stores,
-    foods, products, receipts, recipes, composed meals, week planning,
-    planning rules, week context), and
+  - strict cross-household isolation (stores, foods, products, receipts, recipes,
+    reviews, sport templates), and
   - schema-level integrity constraints that don't depend on application-layer checks
     (e.g. `FoodItemSchemaConstraintsTests` proves the `food_items` → `households` foreign
     key cascades on delete and the self-referencing `is_correction_of` foreign key is

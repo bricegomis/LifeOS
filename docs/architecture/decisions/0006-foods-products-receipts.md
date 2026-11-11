@@ -1,7 +1,7 @@
 # ADR 0006 — Aliments génériques, produits et tickets manuels
 
-Statut : accepté et implémenté, 11 octobre 2026. **Remplace explicitement ADR 0005**,
-dont le texte et la migration `UnifiedProducts` restent inchangés comme preuve historique.
+Statut : accepté et implémenté, 11 octobre 2026. Remplace l'ADR 0005 (produit unifié), supprimée de la documentation ;
+la migration `UnifiedProducts` reste inchangée.
 
 ## Décision et vocabulaire
 

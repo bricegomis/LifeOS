@@ -1,7 +1,7 @@
 # ADR 0008 — Retrait du semainier manuel
 
 Statut : accepté, 2026-11-10. Remplace la partie « semainier » de
-[ADR 0004](0004-manual-planner.md) et les repas planifiés de
+l'ADR 0004 (supprimée, voir l'historique git) et les repas planifiés de
 [ADR 0007](0007-recipes-meal-lines-and-household-reviews.md).
 
 ## Contexte
