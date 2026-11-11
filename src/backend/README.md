@@ -21,7 +21,7 @@ name and build provenance.
 | Food images | GET/PUT/DELETE /api/foods/{id}/image | Optional image stored on a durable volume. |
 | Recipes | /api/recipes, /api/recipes/{id}/ingredients | Food ingredients, yield, steps, duration, categories. |
 | Reviews | /api/reviews/foods/{id}, /api/reviews/recipes/{id} | Optional 0..10 score and/or comment, per profile or household group. |
-| Household | /api/households/current, /members, /profiles, /api/household-groups | Household auto-provisioned on first request; profiles and named groups. |
+| Household | /api/households/current, /members, /profiles | Household auto-provisioned on first request; member profiles. |
 | Sport templates | /api/sport-templates | Session templates (name, sport, duration, distance, intensity, manual calories). |
 | Version | /api/version | Public, no-store build provenance. |
 

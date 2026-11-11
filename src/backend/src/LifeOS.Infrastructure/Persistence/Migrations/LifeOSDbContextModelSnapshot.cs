@@ -140,13 +140,10 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("FoodItemId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("HouseholdGroupId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("MemberProfileId")
+                    b.Property<Guid>("MemberProfileId")
                         .HasColumnType("uuid");
 
                     b.Property<int?>("Score")
@@ -161,17 +158,10 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedByUserId", "HouseholdId");
 
-                    b.HasIndex("FoodItemId", "HouseholdGroupId")
-                        .IsUnique()
-                        .HasFilter("\"HouseholdGroupId\" IS NOT NULL");
-
                     b.HasIndex("FoodItemId", "HouseholdId");
 
                     b.HasIndex("FoodItemId", "MemberProfileId")
-                        .IsUnique()
-                        .HasFilter("\"MemberProfileId\" IS NOT NULL");
-
-                    b.HasIndex("HouseholdGroupId", "HouseholdId");
+                        .IsUnique();
 
                     b.HasIndex("MemberProfileId", "HouseholdId");
 
@@ -180,8 +170,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                             t.HasCheckConstraint("ck_food_review_content", "\"Score\" IS NOT NULL OR NULLIF(BTRIM(\"Comment\"), '') IS NOT NULL");
 
                             t.HasCheckConstraint("ck_food_review_score", "\"Score\" IS NULL OR (\"Score\" >= 0 AND \"Score\" <= 10)");
-
-                            t.HasCheckConstraint("ck_food_review_target", "(\"MemberProfileId\" IS NULL) <> (\"HouseholdGroupId\" IS NULL)");
                         });
                 });
 
@@ -204,33 +192,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("households", (string)null);
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Households.HouseholdGroup", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("HouseholdId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("HouseholdId", "Name")
-                        .IsUnique();
-
-                    b.ToTable("household_groups", (string)null);
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Households.HouseholdMember", b =>
@@ -307,13 +268,10 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("HouseholdGroupId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("MemberProfileId")
+                    b.Property<Guid>("MemberProfileId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("RecipeId")
@@ -331,27 +289,18 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedByUserId", "HouseholdId");
 
-                    b.HasIndex("HouseholdGroupId", "HouseholdId");
-
                     b.HasIndex("MemberProfileId", "HouseholdId");
-
-                    b.HasIndex("RecipeId", "HouseholdGroupId")
-                        .IsUnique()
-                        .HasFilter("\"RecipeId\" IS NOT NULL AND \"HouseholdGroupId\" IS NOT NULL");
 
                     b.HasIndex("RecipeId", "HouseholdId");
 
                     b.HasIndex("RecipeId", "MemberProfileId")
-                        .IsUnique()
-                        .HasFilter("\"RecipeId\" IS NOT NULL AND \"MemberProfileId\" IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("recipe_reviews", null, t =>
                         {
                             t.HasCheckConstraint("ck_recipe_review_content", "\"Score\" IS NOT NULL OR NULLIF(BTRIM(\"Comment\"), '') IS NOT NULL");
 
                             t.HasCheckConstraint("ck_recipe_review_score", "\"Score\" IS NULL OR (\"Score\" >= 0 AND \"Score\" <= 10)");
-
-                            t.HasCheckConstraint("ck_recipe_review_target", "(\"MemberProfileId\" IS NULL) <> (\"HouseholdGroupId\" IS NULL)");
                         });
                 });
 
@@ -860,25 +809,11 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("LifeOS.Domain.Households.HouseholdGroup", null)
-                        .WithMany()
-                        .HasForeignKey("HouseholdGroupId", "HouseholdId")
-                        .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
                         .WithMany()
                         .HasForeignKey("MemberProfileId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Households.HouseholdGroup", b =>
-                {
-                    b.HasOne("LifeOS.Domain.Households.Household", null)
-                        .WithMany()
-                        .HasForeignKey("HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
@@ -909,17 +844,12 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("LifeOS.Domain.Households.HouseholdGroup", null)
-                        .WithMany()
-                        .HasForeignKey("HouseholdGroupId", "HouseholdId")
-                        .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
                         .WithMany()
                         .HasForeignKey("MemberProfileId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("LifeOS.Domain.Recipes.Recipe", null)
                         .WithMany()

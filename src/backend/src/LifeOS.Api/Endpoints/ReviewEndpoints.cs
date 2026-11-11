@@ -30,12 +30,8 @@ public static class ReviewEndpoints
     private static IResult Invalid(Exception ex) => Results.Problem(ex.Message, statusCode: 400);
     private static IResult Duplicate() => Results.Problem("Un avis existe déjà pour cette cible. Modifiez l'avis existant.", statusCode: 409);
 
-    private static async Task<bool> ValidTarget(LifeOSDbContext db, Guid household, Guid? profileId, Guid? groupId, CancellationToken ct)
-    {
-        if (profileId.HasValue == groupId.HasValue) return false;
-        if (profileId is { } profile) return await db.MemberProfiles.AnyAsync(p => p.Id == profile && p.HouseholdId == household, ct);
-        return await db.HouseholdGroups.AnyAsync(g => g.Id == groupId && g.HouseholdId == household, ct);
-    }
+    private static Task<bool> ValidProfile(LifeOSDbContext db, Guid household, Guid profileId, CancellationToken ct) =>
+        db.MemberProfiles.AnyAsync(p => p.Id == profileId && p.HouseholdId == household, ct);
 
     private static async Task<IResult> GetFoodReviewsAsync(Guid foodId, ClaimsPrincipal user,
         ResolveHouseholdForUserQuery households, LifeOSDbContext db, CancellationToken ct)
@@ -44,15 +40,12 @@ public static class ReviewEndpoints
         if (household is null) return Results.Unauthorized();
         if (!await db.FoodItems.AnyAsync(f => f.Id == foodId && f.HouseholdId == household, ct)) return Results.NotFound();
         var items = await db.FoodReviews.Where(r => r.FoodItemId == foodId && r.HouseholdId == household)
-            .Select(r => new { r.Id, r.FoodItemId, r.MemberProfileId, r.HouseholdGroupId, r.Score, r.Comment, r.CreatedByUserId, r.UpdatedAt })
+            .Select(r => new { r.Id, r.FoodItemId, r.MemberProfileId, r.Score, r.Comment, r.CreatedByUserId, r.UpdatedAt })
             .ToListAsync(ct);
         var profileNames = await db.MemberProfiles.Where(p => p.HouseholdId == household)
             .ToDictionaryAsync(p => p.Id, p => p.DisplayName, ct);
-        var groupNames = await db.HouseholdGroups.Where(g => g.HouseholdId == household)
-            .ToDictionaryAsync(g => g.Id, g => g.Name, ct);
         return Results.Ok(items.Select(r => new ReviewDto(r.Id, r.FoodItemId, null, r.MemberProfileId,
-            r.HouseholdGroupId, r.MemberProfileId is { } p ? profileNames.GetValueOrDefault(p) : groupNames.GetValueOrDefault(r.HouseholdGroupId!.Value),
-            r.Score, r.Comment, r.CreatedByUserId, r.UpdatedAt)));
+            profileNames.GetValueOrDefault(r.MemberProfileId), r.Score, r.Comment, r.CreatedByUserId, r.UpdatedAt)));
     }
 
     private static async Task<IResult> CreateFoodReviewAsync(Guid foodId, SaveReviewRequest request, ClaimsPrincipal user,
@@ -61,11 +54,11 @@ public static class ReviewEndpoints
         if (!user.TryGetUserId(out var author)) return Results.Unauthorized();
         var household = await households.ExecuteAsync(author, ct);
         if (!await db.FoodItems.AnyAsync(f => f.Id == foodId && f.HouseholdId == household && !f.IsArchived, ct)) return Results.NotFound();
-        if (!await ValidTarget(db, household, request.MemberProfileId, request.HouseholdGroupId, ct))
-            return Results.Problem("La personne ou le groupe doit appartenir à votre foyer.", statusCode: 400);
+        if (!await ValidProfile(db, household, request.MemberProfileId, ct))
+            return Results.Problem("Le profil doit appartenir à votre foyer.", statusCode: 400);
         try
         {
-            var review = FoodReview.Create(household, foodId, request.MemberProfileId, request.HouseholdGroupId,
+            var review = FoodReview.Create(household, foodId, request.MemberProfileId,
                 request.Score, request.Comment, author);
             db.FoodReviews.Add(review);
             await db.SaveChangesAsync(ct);
@@ -112,11 +105,11 @@ public static class ReviewEndpoints
         if (!user.TryGetUserId(out var author)) return Results.Unauthorized();
         var household = await households.ExecuteAsync(author, ct);
         if (!await db.Recipes.AnyAsync(r => r.Id == recipeId && r.HouseholdId == household && !r.IsArchived, ct)) return Results.NotFound();
-        if (!await ValidTarget(db, household, request.MemberProfileId, request.HouseholdGroupId, ct))
-            return Results.Problem("La personne ou le groupe doit appartenir à votre foyer.", statusCode: 400);
+        if (!await ValidProfile(db, household, request.MemberProfileId, ct))
+            return Results.Problem("Le profil doit appartenir à votre foyer.", statusCode: 400);
         try
         {
-            var review = RecipeReview.Create(household, recipeId, request.MemberProfileId, request.HouseholdGroupId,
+            var review = RecipeReview.Create(household, recipeId, request.MemberProfileId,
                 request.Score, request.Comment, author);
             db.RecipeReviews.Add(review);
             await db.SaveChangesAsync(ct);
@@ -153,15 +146,12 @@ public static class ReviewEndpoints
     {
         var items = await db.RecipeReviews.Where(r => r.HouseholdId == household
             && r.RecipeId == recipeId)
-            .Select(r => new { r.Id, r.RecipeId, r.MemberProfileId, r.HouseholdGroupId,
+            .Select(r => new { r.Id, r.RecipeId, r.MemberProfileId,
                 r.Score, r.Comment, r.CreatedByUserId, r.UpdatedAt }).ToListAsync(ct);
         var profiles = await db.MemberProfiles.Where(p => p.HouseholdId == household)
             .ToDictionaryAsync(p => p.Id, p => p.DisplayName, ct);
-        var groups = await db.HouseholdGroups.Where(g => g.HouseholdId == household)
-            .ToDictionaryAsync(g => g.Id, g => g.Name, ct);
         return items.Select(r => new ReviewDto(r.Id, null, r.RecipeId, r.MemberProfileId,
-            r.HouseholdGroupId, r.MemberProfileId is { } p ? profiles.GetValueOrDefault(p) : groups.GetValueOrDefault(r.HouseholdGroupId!.Value),
-            r.Score, r.Comment, r.CreatedByUserId, r.UpdatedAt)).ToList();
+            profiles.GetValueOrDefault(r.MemberProfileId), r.Score, r.Comment, r.CreatedByUserId, r.UpdatedAt)).ToList();
     }
 
     private static async Task<IResult> DeleteReviewAsync(ClaimsPrincipal user, ResolveHouseholdForUserQuery households,
@@ -173,22 +163,21 @@ public static class ReviewEndpoints
 }
 
 public sealed record SaveReviewRequest(
-    Guid? MemberProfileId,
-    Guid? HouseholdGroupId,
+    Guid MemberProfileId,
     [property: Range(0, 10)] int? Score,
     [property: StringLength(2000)] string? Comment);
 public sealed record SaveReviewContentRequest(
     [property: Range(0, 10)] int? Score,
     [property: StringLength(2000)] string? Comment);
 public sealed record ReviewDto(Guid Id, Guid? FoodItemId, Guid? RecipeId,
-    Guid? MemberProfileId, Guid? HouseholdGroupId, string? TargetName, int? Score, string? Comment,
+    Guid MemberProfileId, string? ProfileName, int? Score, string? Comment,
     Guid CreatedByUserId, DateTimeOffset UpdatedAt)
 {
-    public static ReviewDto From(FoodReview review, string? targetName) =>
-        new(review.Id, review.FoodItemId, null, review.MemberProfileId, review.HouseholdGroupId,
-            targetName, review.Score, review.Comment, review.CreatedByUserId, review.UpdatedAt);
+    public static ReviewDto From(FoodReview review, string? profileName) =>
+        new(review.Id, review.FoodItemId, null, review.MemberProfileId,
+            profileName, review.Score, review.Comment, review.CreatedByUserId, review.UpdatedAt);
 
-    public static ReviewDto From(RecipeReview review, string? targetName) =>
+    public static ReviewDto From(RecipeReview review, string? profileName) =>
         new(review.Id, null, review.RecipeId, review.MemberProfileId,
-            review.HouseholdGroupId, targetName, review.Score, review.Comment, review.CreatedByUserId, review.UpdatedAt);
+            profileName, review.Score, review.Comment, review.CreatedByUserId, review.UpdatedAt);
 }

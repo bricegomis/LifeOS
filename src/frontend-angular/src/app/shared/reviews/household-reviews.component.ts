@@ -1,7 +1,7 @@
 import { Component, DestroyRef, HostListener, Input, OnChanges, SimpleChanges, inject, output, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
-import type { HouseholdGroupDto, MemberProfileDto, ReviewDto, SaveReviewRequest } from '@/app/core/api/api.models'
+import type { MemberProfileDto, ReviewDto, SaveReviewRequest } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
@@ -24,7 +24,7 @@ let nextReviewFormId = 0
           @for (review of reviews(); track review.id) {
             <li>
               <div>
-                <strong>{{ review.targetName ?? 'Cible indisponible' }}</strong>
+                <strong>{{ review.profileName ?? 'Cible indisponible' }}</strong>
                 <span>{{ review.score === null ? 'Sans note' : review.score + '/10' }}</span>
                 @if (review.comment) { <p>{{ review.comment }}</p> }
                 <small>Saisi par le compte {{ review.createdByUserId }}</small>
@@ -40,12 +40,12 @@ let nextReviewFormId = 0
         <p>Aucun avis pour le moment. Les avis restent visibles dans votre foyer.</p>
       }
 
-      @if (profiles.length || groups.length) {
+      @if (profiles.length) {
         <div class="review-actions">
           <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="add($event)">Ajouter un avis</button>
         </div>
       } @else {
-        <p>Ajoutez d’abord une personne ou un groupe dans Réglages pour saisir un avis.</p>
+        <p>Ajoutez d’abord un profil dans Réglages pour saisir un avis.</p>
       }
     </section>
     <app-lifeos-dialog [open]="editorOpen()" [heading]="editingId() ? 'Modifier l’avis' : 'Ajouter un avis'"
@@ -54,11 +54,10 @@ let nextReviewFormId = 0
       <form [id]="formId" class="review-form" ngNativeValidate (ngSubmit)="save()" (submit)="$event.stopPropagation()">
         <fieldset class="review-fields" [disabled]="busy()">
           <label class="dialog-field">
-            <span>Personne ou groupe</span>
+            <span>Profil</span>
             <select class="text-input" name="target" required [disabled]="!!editingId()" [(ngModel)]="target">
               <option value="">Choisir</option>
-              @for (profile of profiles; track profile.id) { <option [value]="'profile:' + profile.id">{{ profile.displayName }}</option> }
-              @for (group of groups; track group.id) { <option [value]="'group:' + group.id">{{ group.name }} · groupe</option> }
+              @for (profile of profiles; track profile.id) { <option [value]="profile.id">{{ profile.displayName }}</option> }
             </select>
           </label>
           <div class="dialog-row">
@@ -93,7 +92,6 @@ export class HouseholdReviewsComponent implements OnChanges {
   @Input({ required: true }) targetType: ReviewTarget = 'food'
   @Input({ required: true }) targetId = ''
   @Input() profiles: MemberProfileDto[] = []
-  @Input() groups: HouseholdGroupDto[] = []
   private readonly api = inject(LifeosApiService)
   readonly reviews = signal<ReviewDto[]>([])
   readonly reviewsLoaded = output<ReviewDto[]>()
@@ -155,7 +153,7 @@ export class HouseholdReviewsComponent implements OnChanges {
   edit(review: ReviewDto, event?: Event): void {
     if (this.busy() || this.editorOpen()) return
     this.editingId.set(review.id)
-    this.target = review.memberProfileId ? `profile:${review.memberProfileId}` : `group:${review.householdGroupId}`
+    this.target = review.memberProfileId
     this.score = review.score
     this.comment = review.comment ?? ''
     this.initial = formSnapshot({ target: this.target, score: this.score, comment: this.comment })
@@ -180,16 +178,15 @@ export class HouseholdReviewsComponent implements OnChanges {
 
   async save(): Promise<void> {
     if (this.busy() || !this.editorOpen()) return
-    const [kind, id] = this.target.split(':')
+    const id = this.target
     const text = this.comment.trim()
-    if (!id || (kind !== 'profile' && kind !== 'group') || (this.score === null && !text)
+    if (!id || (this.score === null && !text)
       || (this.score !== null && (!Number.isInteger(this.score) || this.score < 0 || this.score > 10))) {
-      this.error.set('Choisissez une personne ou un groupe et renseignez une note de 0 à 10 ou un commentaire.')
+      this.error.set('Choisissez un profil et renseignez une note de 0 à 10 ou un commentaire.')
       return
     }
     const body: SaveReviewRequest = {
-      memberProfileId: kind === 'profile' ? id : null,
-      householdGroupId: kind === 'group' ? id : null,
+      memberProfileId: id,
       score: this.score,
       comment: text || null,
     }
@@ -212,7 +209,7 @@ export class HouseholdReviewsComponent implements OnChanges {
   }
 
   async remove(review: ReviewDto): Promise<void> {
-    if (this.busy() || !window.confirm(`Supprimer l’avis de « ${review.targetName ?? 'cette cible'} » ?`)) return
+    if (this.busy() || !window.confirm(`Supprimer l’avis de « ${review.profileName ?? 'ce profil'} » ?`)) return
     this.busy.set(true)
     this.error.set('')
     try {

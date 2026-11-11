@@ -23,8 +23,8 @@ function deferred<T>() {
 function harness() {
   const calls: { method: string; path: string; body?: unknown }[] = []
   const review: ReviewDto = {
-    id: 'review-1', memberProfileId: 'profile-1', householdGroupId: null,
-    targetName: 'Test', score: 0, comment: 'Déjà enregistré', createdByUserId: 'user-1',
+    id: 'review-1', memberProfileId: 'profile-1',
+    profileName: 'Test', score: 0, comment: 'Déjà enregistré', createdByUserId: 'user-1',
     createdAt: '', updatedAt: '',
   }
   let rows = [review]
@@ -116,7 +116,7 @@ describe('shared household review popup', () => {
     component.edit(review)
     assert.equal(component.editingId(), review.id)
     assert.equal(component.score, 0)
-    assert.equal(component.target, 'profile:profile-1')
+    assert.equal(component.target, 'profile-1')
     assert.equal(component.dirty(), false)
     component.cancelEdit()
     assert.equal(component.editorOpen(), false)
@@ -124,16 +124,16 @@ describe('shared household review popup', () => {
   })
 
   for (const [targetType, segment] of [['food', 'foods'], ['recipe', 'recipes']] as const) {
-    it(`saves and refreshes ${targetType} reviews in the original encoded scope, including zero and groups`, async () => {
+    it(`saves and refreshes ${targetType} reviews in the original encoded scope, including zero`, async () => {
       const { component, calls, loadedReviews } = harness()
       component.targetType = targetType
       component.add()
-      component.target = 'group:group-1'
+      component.target = 'profile-2'
       component.score = 0
       await component.save()
       assert.equal(calls[0]?.path, `/reviews/${segment}/target%2F1`)
       assert.equal(JSON.stringify(calls[0]?.body), JSON.stringify({
-        memberProfileId: null, householdGroupId: 'group-1', score: 0, comment: null,
+        memberProfileId: 'profile-2', score: 0, comment: null,
       }))
       assert.equal(calls[1]?.method, 'get')
       assert.equal(component.reviews().length, 2)
@@ -151,7 +151,7 @@ describe('shared household review popup', () => {
     await component.save()
     assert.equal(calls.length, 0)
     assert.ok(component.error())
-    component.target = 'profile:profile-1'
+    component.target = 'profile-1'
     component.score = 10.5
     await component.save()
     assert.equal(calls.length, 0)
@@ -187,7 +187,7 @@ describe('shared household review popup', () => {
     const { component, drafts, hold, calls } = harness()
     const pending = deferred<unknown>()
     component.add()
-    component.target = 'profile:profile-1'
+    component.target = 'profile-1'
     component.comment = 'Saisie'
     hold(pending.promise)
     const saving = component.save()
@@ -211,7 +211,7 @@ describe('shared household review popup', () => {
   it('keeps the popup open through list refresh and exposes refresh failures after a persisted save', async () => {
     const { component, hold, calls, fail } = harness()
     component.add()
-    component.target = 'profile:profile-1'
+    component.target = 'profile-1'
     component.score = 5
     const pending = deferred<unknown>()
     const saving = component.save()

@@ -3,7 +3,7 @@ import type { OnDestroy } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
-import type { FoodItemDto, FoodPricesDto, ProductDto, ProductRequest, StoreDto, MemberProfileDto, HouseholdGroupDto, ReviewDto } from '@/app/core/api/api.models'
+import type { FoodItemDto, FoodPricesDto, ProductDto, ProductRequest, StoreDto, MemberProfileDto, ReviewDto } from '@/app/core/api/api.models'
 import { LifeosApiService, apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
 import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
@@ -101,7 +101,7 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
           <p>FODMAP : {{ fodmapLabel(food.fodmap) }} · NOVA : {{ food.nova ?? 'non renseigné' }}</p>
           @if (food.digestiveNotes) { <p>{{ food.digestiveNotes }}</p> }
           <p class="dialog-hint">Informations descriptives, sans recommandation médicale. Source historique : {{ food.source }}.</p>
-          <app-household-reviews #householdReviews targetType="food" [targetId]="food.id" [profiles]="profiles()" [groups]="groups()"
+          <app-household-reviews #householdReviews targetType="food" [targetId]="food.id" [profiles]="profiles()"
             (reviewsLoaded)="updateReviewSummary(food.id, $event)" />
           <h3>Produits et prix</h3>
           <p>Un aliment reste utilisable dans les recettes sans produit associé.</p>
@@ -212,7 +212,6 @@ export class FoodItemsPageComponent implements OnDestroy {
   readonly prices = signal<FoodPricesDto[]>([])
   readonly stores = signal<StoreDto[]>([])
   readonly profiles = signal<MemberProfileDto[]>([])
-  readonly groups = signal<HouseholdGroupDto[]>([])
   readonly reviewSummaries = signal<Record<string, FoodReviewSummary>>({})
   readonly foodImageUrls = signal<Record<string, string>>({})
   readonly foodImageErrors = signal<Record<string, string>>({})
@@ -362,16 +361,15 @@ export class FoodItemsPageComponent implements OnDestroy {
     const version = ++this.loadVersion
     this.loading.set(true); this.error.set('')
     try {
-      const [foods, products, prices, stores, household, groups] = await Promise.all([
+      const [foods, products, prices, stores, household] = await Promise.all([
         firstValueFrom(this.api.get<FoodItemDto[]>('/foods')), firstValueFrom(this.api.get<ProductDto[]>('/products')),
         firstValueFrom(this.api.get<FoodPricesDto[]>('/foods/prices')), firstValueFrom(this.api.get<StoreDto[]>('/stores')),
         firstValueFrom(this.api.get<{ memberProfiles: MemberProfileDto[] }>('/households/current')),
-        firstValueFrom(this.api.get<HouseholdGroupDto[]>('/household-groups')),
       ])
       if (version !== this.loadVersion) return
       this.foods.set(foods); this.products.set(products); this.prices.set(prices); this.stores.set(stores)
       void this.loadFoodImages(foods, version)
-      this.profiles.set(household.memberProfiles); this.groups.set(groups)
+      this.profiles.set(household.memberProfiles)
       if (this.selected()) this.selected.set(foods.find(f => f.id === this.selected()?.id) ?? null)
       this.reviewSummaries.set({})
       // Bound requests because the existing reviews API is scoped to one food.

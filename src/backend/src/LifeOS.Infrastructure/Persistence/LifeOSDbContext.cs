@@ -20,7 +20,6 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
-    public DbSet<HouseholdGroup> HouseholdGroups => Set<HouseholdGroup>();
     public DbSet<FoodReview> FoodReviews => Set<FoodReview>();
     public DbSet<RecipeReview> RecipeReviews => Set<RecipeReview>();
     public DbSet<Store> Stores => Set<Store>();

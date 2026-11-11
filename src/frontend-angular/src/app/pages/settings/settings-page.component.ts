@@ -1,8 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
-import { firstValueFrom, forkJoin } from 'rxjs'
+import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
-import type { HouseholdGroupDto, MemberProfileDto } from '@/app/core/api/api.models'
+import type { MemberProfileDto } from '@/app/core/api/api.models'
 import { AuthService } from '@/app/core/auth/auth.service'
 import { apiBaseUrl, buildInfo } from '@/environments/environment'
 import { BuildVersionComponent } from '@/app/shared/build-version.component'
@@ -18,7 +18,7 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
   template: `
     <section class="page-stack settings-page">
       <header class="page-hero">
-        <div><h1>Réglages</h1><p>Compte, personnes du foyer et groupes d’avis.</p></div>
+        <div><h1>Réglages</h1><p>Compte et profils du foyer.</p></div>
       </header>
       @if (error()) { <p class="settings-error" role="alert">{{ error() }}</p> }
       @if (notice()) { <p class="settings-notice" role="status">{{ notice() }}</p> }
@@ -53,25 +53,6 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
             <div class="settings-row-actions">
               <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="editProfile(profile)">Modifier</button>
               <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="deleteProfile(profile)">Supprimer</button>
-            </div>
-          </div>
-        }
-      </section>
-
-      <section class="surface-card settings-social">
-        <div class="settings-heading"><div><h2>Groupes pour les avis</h2><p>Par exemple, « Enfants ». Le groupe permet un avis commun et n’est pas un profil de consommation collectif.</p></div></div>
-        <form class="settings-form" (ngSubmit)="saveGroup()">
-          <label class="dialog-field"><span>Nom du groupe</span><input class="text-input" name="groupName" required maxlength="100" [(ngModel)]="groupName" /></label>
-          <button class="lifeos-button" type="submit" [disabled]="busy()">{{ editingGroupId() ? 'Enregistrer' : 'Ajouter un groupe' }}</button>
-          @if (editingGroupId()) { <button class="lifeos-button lifeos-button-secondary" type="button" (click)="cancelGroupEdit()">Annuler</button> }
-        </form>
-        @if (!groups().length) { <p>Aucun groupe ajouté.</p> }
-        @for (group of groups(); track group.id) {
-          <div class="settings-row">
-            <strong>{{ group.name }}</strong>
-            <div class="settings-row-actions">
-              <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="editGroup(group)">Modifier</button>
-              <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="deleteGroup(group)">Supprimer</button>
             </div>
           </div>
         }
@@ -130,15 +111,12 @@ export class SettingsPageComponent implements OnInit {
   readonly apiUrl = apiBaseUrl
   readonly buildInfo = buildInfo
   readonly profiles = signal<MemberProfileDto[]>([])
-  readonly groups = signal<HouseholdGroupDto[]>([])
   readonly busy = signal(false)
   readonly error = signal('')
   readonly notice = signal('')
   readonly editingProfileId = signal('')
-  readonly editingGroupId = signal('')
   profileName = ''
   profileCoefficient = 1
-  groupName = ''
 
   ngOnInit(): void {
     void this.load()
@@ -151,12 +129,8 @@ export class SettingsPageComponent implements OnInit {
   async load(): Promise<void> {
     this.error.set('')
     try {
-      const result = await firstValueFrom(forkJoin({
-        household: this.api.get<{ memberProfiles: MemberProfileDto[] }>('/households/members'),
-        groups: this.api.get<HouseholdGroupDto[]>('/household-groups'),
-      }))
-      this.profiles.set(result.household.memberProfiles)
-      this.groups.set(result.groups)
+      const household = await firstValueFrom(this.api.get<{ memberProfiles: MemberProfileDto[] }>('/households/members'))
+      this.profiles.set(household.memberProfiles)
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     }
@@ -210,57 +184,6 @@ export class SettingsPageComponent implements OnInit {
       this.profiles.update(items => items.filter(item => item.id !== profile.id))
       if (this.editingProfileId() === profile.id) this.cancelProfileEdit()
       this.notice.set('Personne supprimée.')
-    } catch (error) {
-      this.error.set(apiErrorMessage(error))
-    } finally {
-      this.busy.set(false)
-    }
-  }
-
-  editGroup(group: HouseholdGroupDto): void {
-    this.editingGroupId.set(group.id)
-    this.groupName = group.name
-    this.notice.set('')
-  }
-
-  cancelGroupEdit(): void {
-    this.editingGroupId.set('')
-    this.groupName = ''
-  }
-
-  async saveGroup(): Promise<void> {
-    const name = this.groupName.trim()
-    if (!name || name.length > 100) {
-      this.error.set('Indiquez un nom de groupe de 100 caractères maximum.')
-      return
-    }
-    this.busy.set(true)
-    this.error.set('')
-    this.notice.set('')
-    try {
-      const id = this.editingGroupId()
-      const group = id
-        ? await firstValueFrom(this.api.put<HouseholdGroupDto>(`/household-groups/${id}`, { name }))
-        : await firstValueFrom(this.api.post<HouseholdGroupDto>('/household-groups', { name }))
-      this.groups.update(items => id ? items.map(item => item.id === id ? group : item) : [...items, group])
-      this.cancelGroupEdit()
-      this.notice.set(id ? 'Groupe mis à jour.' : 'Groupe ajouté.')
-    } catch (error) {
-      this.error.set(apiErrorMessage(error))
-    } finally {
-      this.busy.set(false)
-    }
-  }
-
-  async deleteGroup(group: HouseholdGroupDto): Promise<void> {
-    if (this.busy() || !window.confirm(`Supprimer le groupe « ${group.name} » ?`)) return
-    this.busy.set(true)
-    this.error.set('')
-    try {
-      await firstValueFrom(this.api.delete(`/household-groups/${group.id}`))
-      this.groups.update(items => items.filter(item => item.id !== group.id))
-      if (this.editingGroupId() === group.id) this.cancelGroupEdit()
-      this.notice.set('Groupe supprimé.')
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {

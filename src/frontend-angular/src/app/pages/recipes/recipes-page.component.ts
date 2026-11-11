@@ -12,7 +12,6 @@ import {
   RecipeRequest,
   RecipeIngredientDto,
   MemberProfileDto,
-  HouseholdGroupDto,
 } from '@/app/core/api/api.models'
 
 
@@ -60,7 +59,6 @@ export class RecipesPageComponent implements OnInit {
   readonly recipes = signal<RecipeDto[]>([])
   readonly foodItems = signal<FoodItemDto[]>([])
   readonly profiles = signal<MemberProfileDto[]>([])
-  readonly groups = signal<HouseholdGroupDto[]>([])
   search = ''
   visibleRecipes(): RecipeDto[] {
     return this.recipes().filter(r => !r.isArchived && r.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr')))
@@ -388,10 +386,6 @@ export class RecipesPageComponent implements OnInit {
   private loadHouseholdTargets(): void {
     this.api.get<{ memberProfiles: MemberProfileDto[] }>('/households/current').subscribe({
       next: household => this.profiles.set(household.memberProfiles),
-      error: (error: unknown) => this.error.set(apiErrorMessage(error)),
-    })
-    this.api.get<HouseholdGroupDto[]>('/household-groups').subscribe({
-      next: groups => this.groups.set(groups),
       error: (error: unknown) => this.error.set(apiErrorMessage(error)),
     })
   }
