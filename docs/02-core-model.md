@@ -15,8 +15,8 @@ PostgreSQL stockent les données.
 | Ingrédient | Ligne de recette : aliment + quantité + unité. Pas un catalogue. | 100 g d'emmental. |
 | Avis | Note entière facultative 0..10 et/ou commentaire, par aliment ou recette, et par profil du foyer. | Avis de Léa sur la carotte. |
 | Magasin | Lieu d'achat du foyer. | Biocoop Nantes Sud. |
-| Produit | Référence commerciale liée à un aliment, marque et code-barres facultatifs. | Sachet d'emmental de 400 g d'une marque donnée. |
-| Prix observé | Prix d'un produit dans un magasin à une date, saisi à la main, sur une base explicite. Jamais un prix actuel garanti. | 5,95 €/sachet ; 14,875 €/kg si 400 g confirmés. |
+| Produit | Référence commerciale liée à un aliment, avec une contenance obligatoire (masse, volume ou nombre de pièces) ; marque et code-barres facultatifs. | Sachet d'emmental de 400 g d'une marque donnée. |
+| Prix observé | Prix d'un produit dans un magasin à une date, saisi à la main, sur une base explicite. Jamais un prix actuel garanti. | 5,95 € le sachet de 400 g, soit 14,875 €/kg. |
 | Ticket | Photo d'un ticket de caisse, conservée telle quelle, à traiter ou traitée. | Photo du 11 avril 2026, Biocoop. |
 | Coût de recette | Fourchette minimum–maximum calculée à la lecture, tous magasins confondus. Jamais stockée. | Dhal : de 4,40 € à 7,20 €. |
 
@@ -47,14 +47,14 @@ avis de ses aliments ; aucune moyenne ni score n'est calculé.
 Un ticket est une photo déposée depuis l'application. Il porte sa date de dépôt, un
 magasin et une date d'achat facultatifs, et un état : à traiter ou traité. Le
 déposer ne crée ni produit, ni prix ; rien n'est lu automatiquement. Les prix sont
-saisis à la main dans l'administration, en regardant la photo.
+saisis à la main sur ordinateur, en regardant la photo.
 
 ## Prix et coût de recette
 
-Un prix observé fige sa base : unité d'achat et contenance du produit au moment du
-relevé. Bases comparables : kg, L, pièces confirmées. Un paquet n'est convertible
-qu'avec une contenance confirmée à la main. Aucune densité, masse de pièce ou poids
-égoutté n'est inventé.
+Un produit n'existe que complet : sa contenance est obligatoire, donc tout prix
+relevé se ramène à un prix au kilo, au litre ou à la pièce. Un prix observé fige
+cette base au moment du relevé. Aucune densité, masse de pièce ou poids égoutté
+n'est inventé.
 
 Coût d'une recette : pour chaque ingrédient, le dernier prix relevé de chaque couple
 produit/magasin de l'aliment, sur une base comparable avec l'unité de l'ingrédient.

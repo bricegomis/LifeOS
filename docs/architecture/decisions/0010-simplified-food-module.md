@@ -27,7 +27,7 @@ règles pour un bénéfice faible.
 | Aliment | Gardé, avec son image facultative. Les fibres s'ajoutent à la nutrition. |
 | Recette | Gardée : ingrédients sur aliments, rendement, instructions, durée, catégories. Une image facultative s'ajoute. |
 | Avis | Gardé, par profil uniquement. |
-| Produit | Gardé, toujours lié à un aliment. |
+| Produit | Gardé, toujours lié à un aliment et toujours complet (§ 5). |
 | Magasin | Gardé. |
 | Prix observé | Gardé, saisi à la main. |
 | Ticket | Réduit à une photo conservée (§ 4). |
@@ -43,13 +43,13 @@ règles pour un bénéfice faible.
 
 - **Usage quotidien**, sur ordinateur comme sur smartphone : recettes, aliments,
   avis, photo d'un ticket. Écrans épurés, une seule chose à faire par écran.
-- **Administration**, pensée pour l'ordinateur : magasins, produits, prix, tickets
-  à traiter. C'est une saisie de données de référence ; elle n'apparaît pas dans la
+- **Saisie des données de référence**, pensée pour l'ordinateur : magasins, produits, prix, tickets
+  à traiter. Elle n'apparaît pas dans la
   navigation du smartphone.
 
 Sur les écrans quotidiens, smartphone compris, les prix restent secondaires et en
 lecture seule : la fourchette de coût d'une recette et, sur la fiche aliment, un
-résumé des prix relevés. Toute saisie de prix se fait dans l'administration.
+résumé des prix relevés. Toute saisie de prix se fait sur ordinateur.
 
 L'image porte l'interface : une image par recette et par aliment, affichée dans les
 listes, les fiches et les lignes d'ingrédient. Dans une recette, un ingrédient ouvre
@@ -59,10 +59,14 @@ sont conservées sur le même volume durable, `lifeos_food_images`.
 
 Navigation sur ordinateur : un menu à gauche, repliable par un bouton burger. Il
 contient un bloc par domaine (Alimentation, Sport, puis les suivants) avec une
-entrée par page ; les pages d'administration de l'alimentation sont regroupées sous
-un intitulé dans le bloc Alimentation. En bas du menu : l'entrée Paramètres
+entrée par page ; le bloc Alimentation réunit recettes, aliments, produits et prix,
+magasins et tickets, sans sous-groupe. En bas du menu : l'entrée Paramètres
 (profils du foyer, versions de l'interface et de l'API), puis le compte connecté
 avec sa photo et la déconnexion.
+
+Chaque page de liste (recettes, aliments, produits) commence par une zone de
+filtre : texte, catégories, état ou magasin selon la page. Dans la liste des
+produits, l'aliment ouvre sa fiche.
 
 Les écrans sont validés sur une maquette cliquable avant tout code.
 
@@ -80,7 +84,7 @@ digestives et l'image restent facultatives et hors complétion.
   uniquement par une route authentifiée, filtrée par foyer.
 - Le ticket porte la date de dépôt, un magasin et une date d'achat facultatifs, et
   un état : **à traiter** ou **traité**.
-- Dans l'administration, la liste des tickets à traiter sert de boîte de réception :
+- Sur ordinateur, la liste des tickets à traiter sert de boîte de réception :
   l'utilisateur ouvre la photo, saisit les prix à la main, puis marque le ticket traité.
 - Déposer une photo ne crée ni produit, ni prix. Aucune lecture automatique.
 
@@ -98,9 +102,11 @@ en dernier lot de l'étape 1.
   produit/magasin, parmi les produits non archivés de l'aliment, sur une base
   comparable avec l'unité de l'ingrédient. Le moins cher donne le minimum, le plus
   cher le maximum.
-- Bases comparables : masse (g, kg), volume (ml, L), pièces confirmées. Un paquet ne
-  se convertit qu'avec une contenance confirmée à la main. Aucun passage entre
-  masse, volume et pièce n'est inventé.
+- Un produit n'existe que complet : aliment, nom et contenance (masse, volume ou
+  nombre de pièces) sont obligatoires à la création. Il n'y a plus de produit « à
+  confirmer » : tout prix relevé se ramène à un prix au kilo, au litre ou à la pièce.
+- Aucun passage entre masse, volume et pièce n'est inventé : un prix au kilo ne
+  chiffre pas un ingrédient compté en pièces.
 - Coût de l'ingrédient = quantité × prix sur cette base. Coût minimum de la recette
   = somme des minimums ; coût maximum = somme des maximums ; coût par portion =
   coût / rendement.

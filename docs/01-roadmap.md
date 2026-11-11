@@ -72,8 +72,8 @@ lesquels les autres modules s'aligneront.
   sont gardés. Le ticket devient une simple photo conservée.
 - Import JSON, OCR, lignes de ticket, achats, groupes du foyer et session de
   cuisine sont supprimés.
-- L'interface sépare l'usage quotidien (ordinateur et smartphone) de
-  l'administration des produits et des prix (ordinateur).
+- L'interface met en avant recettes et aliments (ordinateur et smartphone) ; la
+  saisie des produits et des prix se fait sur ordinateur.
 - Tout le code existant est réorganisé en modules (Foyer et Alimentation), pas
   seulement ce qu'on touche. Les tests sont renforcés.
 - La base est remise à zéro : une migration destructive est permise.
@@ -81,7 +81,7 @@ lesquels les autres modules s'aligneront.
 **Déroulé.**
 
 1. **Cadrage fonctionnel.** Fait.
-2. **Maquette cliquable** des écrans quotidiens et de l'administration, validée
+2. **Maquette cliquable** des écrans, validée
    par l'utilisateur.
 3. **Suppression.** Retirer le code, les tables et les écrans abandonnés, ainsi
    que le code mort.
@@ -92,7 +92,7 @@ lesquels les autres modules s'aligneront.
    avec l'utilisateur avant de généraliser. Frontend : dossier par module, routes
    chargées à la demande, gros composants découpés. Test d'architecture ajouté.
 6. **Refonte du modèle** et de l'interface selon la maquette : fibres, images de
-   recettes, ticket photo, administration, migration destructive.
+   recettes, ticket photo, produits toujours complets, migration destructive.
 7. **Coût de recette**, en fourchette minimum–maximum.
 
 **Terminé quand.**
