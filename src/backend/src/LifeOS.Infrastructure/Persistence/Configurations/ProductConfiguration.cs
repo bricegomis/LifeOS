@@ -39,8 +39,6 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
             e.Property(p => p.PackageQuantity).HasPrecision(16, 6);
             e.Property(p => p.Unit).HasMaxLength(20);
             e.Property(p => p.PackageUnit).HasMaxLength(20);
-            e.HasIndex(p => p.ReceiptLineId).IsUnique();
-            e.Ignore(p => p.Provenance);
         });
         b.Metadata.FindNavigation(nameof(Product.PriceHistory))!.SetPropertyAccessMode(PropertyAccessMode.Field);
     }

@@ -73,7 +73,7 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
               @for (price of pricesFor(food.id); track price.unit) {
                 <div class="food-card-price">
                   <p><strong>{{ number(price.price) }} €</strong><span> / {{ unitLabel(price.unit) }}</span></p>
-                  <p class="price-note">{{ price.productName }} · {{ storeName(price.storeId) }} · {{ date(price.observedAt) }} · {{ price.provenance }}</p>
+                  <p class="price-note">{{ price.productName }} · {{ storeName(price.storeId) }} · {{ date(price.observedAt) }}</p>
                 </div>
               }
               @if (!pricesFor(food.id).length) { <p class="price-note">Prix à renseigner ou non comparable</p> }
@@ -186,7 +186,7 @@ export const newProductDraft = (foodItemId = ''): ProductRequest => ({
         @if (product.migrationOrigin) { <p>Provenance historique : {{ product.migrationOrigin }}</p> }
         <h3>Historique des prix</h3>
         <ul class="catalog-list">@for (price of product.priceHistory; track price.id) {
-          <li><p>{{ number(price.price) }} € / {{ unitLabel(price.unit) }} · {{ storeName(price.storeId) }} · {{ date(price.observedAt) }} · {{ price.provenance }}</p>
+          <li><p>{{ number(price.price) }} € / {{ unitLabel(price.unit) }} · {{ storeName(price.storeId) }} · {{ date(price.observedAt) }}</p>
             <p>Contenance du relevé : {{ number(price.packageQuantity) }} {{ price.packageUnit ?? '' }} · {{ price.packageConfirmed ? 'confirmée' : 'non confirmée' }} · {{ price.piecesComparable ? 'pièces comparables' : 'pièces non comparées' }}</p></li>
         }</ul>
         @if (!product.priceHistory.length) { <p>Prix à renseigner.</p> }

@@ -16,13 +16,11 @@ public sealed class GroceryPriceEntry
     public string? PackageUnit { get; private set; }
     public bool PackageConfirmed { get; private set; }
     public bool PiecesComparable { get; private set; }
-    public Guid? ReceiptLineId { get; private set; }
-    public string Provenance => ReceiptLineId is null ? "Relevé manuel / historique" : "Ticket validé";
 
-    public void SetBasis(string unit, decimal? quantity, string? packageUnit, bool confirmed, bool piecesComparable, Guid? receiptLineId)
+    public void SetBasis(string unit, decimal? quantity, string? packageUnit, bool confirmed, bool piecesComparable)
     {
         Unit = unit; PackageQuantity = quantity; PackageUnit = packageUnit;
-        PackageConfirmed = confirmed; PiecesComparable = piecesComparable; ReceiptLineId = receiptLineId;
+        PackageConfirmed = confirmed; PiecesComparable = piecesComparable;
     }
 
     private GroceryPriceEntry(Guid id, Guid storeId, decimal price, DateTimeOffset observedAt, DateTimeOffset createdAt)

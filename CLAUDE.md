@@ -44,9 +44,9 @@ code, identifiers and code comments are English.
   FODMAP, NOVA). Zero is a valid value; "À compléter" when any of the 7 fields is null.
   Product = commercial price reference linked to one food. Recipes and meal lines
   pick foods, never a product/brand implicitly.
-- Receipts: raw source kept, lines `pending`/`validated`/`ignored`; import creates
-  nothing. JSON lines validate one by one; photo receipts finalize atomically. Both
-  are transactional and idempotent. No health/nutrition data imported from receipts.
+- Receipts: a receipt is only a stored photo with optional store and purchase date,
+  `pending` or `processed`. Uploading creates no product and no price; nothing is read
+  from the image (no OCR). Prices are entered by hand.
 - Prices: observed price = line total / quantity. Compare only on truly comparable
   bases (kg, L, confirmed pieces); package contents must be confirmed manually.
   No invented density, piece weight or drained weight.

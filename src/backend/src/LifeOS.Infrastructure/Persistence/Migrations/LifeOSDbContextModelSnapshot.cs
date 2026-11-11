@@ -386,52 +386,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("products", (string)null);
                 });
 
-            modelBuilder.Entity("LifeOS.Domain.Receipts.Purchase", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<Guid>("HouseholdId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Quantity")
-                        .HasPrecision(16, 6)
-                        .HasColumnType("numeric(16,6)");
-
-                    b.Property<Guid>("ReceiptLineId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("StoreId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Total")
-                        .HasPrecision(16, 2)
-                        .HasColumnType("numeric(16,2)");
-
-                    b.Property<string>("Unit")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReceiptLineId")
-                        .IsUnique();
-
-                    b.HasIndex("ProductId", "HouseholdId");
-
-                    b.HasIndex("ReceiptLineId", "HouseholdId");
-
-                    b.HasIndex("StoreId", "HouseholdId");
-
-                    b.ToTable("purchases", (string)null);
-                });
-
             modelBuilder.Entity("LifeOS.Domain.Receipts.Receipt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -439,18 +393,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateOnly?>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<int?>("DeclaredLines")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("DetectedLines")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Diagnostic")
-                        .HasColumnType("text");
 
                     b.Property<string>("DocumentHash")
                         .IsRequired()
@@ -461,26 +403,17 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("ImageContentType")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("ImagePath")
+                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("OcrError")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("OcrText")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("PurchasedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RawDocument")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<DateOnly?>("PurchaseDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -490,90 +423,19 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("StoreId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("StoreName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
+
+                    b.HasAlternateKey("Id", "HouseholdId");
 
                     b.HasIndex("HouseholdId", "DocumentHash")
                         .IsUnique();
 
                     b.HasIndex("StoreId", "HouseholdId");
 
-                    b.ToTable("receipts", (string)null);
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Receipts.ReceiptLine", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("ExcludedMention")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("HouseholdId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("Position")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("PriceMismatchConfirmed")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid?>("ProductId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("Quantity")
-                        .HasPrecision(16, 6)
-                        .HasColumnType("numeric(16,6)");
-
-                    b.Property<string>("RawSource")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("ReceiptId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("SourceDiagnostic")
-                        .HasColumnType("text");
-
-                    b.Property<string>("SourceText")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("StatedUnitPrice")
-                        .HasPrecision(16, 6)
-                        .HasColumnType("numeric(16,6)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal?>("Total")
-                        .HasPrecision(16, 6)
-                        .HasColumnType("numeric(16,6)");
-
-                    b.Property<string>("Unit")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId", "HouseholdId");
-
-                    b.HasIndex("ReceiptId", "HouseholdId");
-
-                    b.HasIndex("ReceiptId", "Position")
-                        .IsUnique();
-
-                    b.ToTable("receipt_lines", (string)null);
+                    b.ToTable("receipts", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_receipt_status", "\"Status\" IN ('pending', 'processed')");
+                        });
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Recipes.Recipe", b =>
@@ -905,9 +767,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                                 .HasPrecision(16, 6)
                                 .HasColumnType("numeric(16,6)");
 
-                            b1.Property<Guid?>("ReceiptLineId")
-                                .HasColumnType("uuid");
-
                             b1.Property<Guid>("StoreId")
                                 .HasColumnType("uuid");
 
@@ -920,9 +779,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                             b1.HasIndex("ArticleId");
 
-                            b1.HasIndex("ReceiptLineId")
-                                .IsUnique();
-
                             b1.ToTable("article_price_entries", (string)null);
 
                             b1.WithOwner()
@@ -930,30 +786,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("PriceHistory");
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Receipts.Purchase", b =>
-                {
-                    b.HasOne("LifeOS.Domain.Products.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId", "HouseholdId")
-                        .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LifeOS.Domain.Receipts.ReceiptLine", null)
-                        .WithMany()
-                        .HasForeignKey("ReceiptLineId", "HouseholdId")
-                        .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("LifeOS.Domain.Stores.Store", null)
-                        .WithMany()
-                        .HasForeignKey("StoreId", "HouseholdId")
-                        .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Receipts.Receipt", b =>
@@ -969,22 +801,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasForeignKey("StoreId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
                         .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Receipts.ReceiptLine", b =>
-                {
-                    b.HasOne("LifeOS.Domain.Products.Product", null)
-                        .WithMany()
-                        .HasForeignKey("ProductId", "HouseholdId")
-                        .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("LifeOS.Domain.Receipts.Receipt", null)
-                        .WithMany("Lines")
-                        .HasForeignKey("ReceiptId", "HouseholdId")
-                        .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Recipes.Recipe", b =>
@@ -1034,11 +850,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Navigation("MemberProfiles");
 
                     b.Navigation("Members");
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Receipts.Receipt", b =>
-                {
-                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Recipes.Recipe", b =>

@@ -3,7 +3,7 @@ using LifeOS.Domain.Articles;
 namespace LifeOS.Domain.Products;
 
 public sealed record ComparablePrice(Guid ProductId, string ProductName, Guid StoreId, decimal Price,
-    string Unit, DateTimeOffset ObservedAt, string Provenance, Guid? ReceiptLineId);
+    string Unit, DateTimeOffset ObservedAt);
 
 public static class ComparablePrices
 {
@@ -32,6 +32,6 @@ public static class ComparablePrices
             else if (unit == "unit" && e.PiecesComparable) unit = "piece";
             else return null;
         }
-        return new(p.Id, p.Name, e.StoreId, price, unit, e.ObservedAt, e.Provenance, e.ReceiptLineId);
+        return new(p.Id, p.Name, e.StoreId, price, unit, e.ObservedAt);
     }
 }

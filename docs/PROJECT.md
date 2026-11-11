@@ -10,7 +10,8 @@ et la [roadmap](01-roadmap.md).
 Étape 1, « Alimentation saine », en cours. Le cadrage est fait
 ([ADR 0010](architecture/decisions/0010-simplified-food-module.md)) et la maquette des
 écrans est validée. Lot en cours : suppression du code abandonné. Déjà retiré : la
-session de cuisine (application web), les groupes du foyer et les avis de groupe.
+session de cuisine (application web), les groupes du foyer et les avis de groupe,
+l'import JSON de tickets, l'OCR, les lignes de ticket et les achats.
 
 ## Ce qui existe
 
@@ -20,7 +21,7 @@ session de cuisine (application web), les groupes du foyer et les avis de groupe
 | Aliments | Fiches génériques, nutrition manuelle (base, 4 macros, FODMAP, NOVA), filtre « À compléter », image facultative, archivage |
 | Produits et prix | Produits commerciaux liés à un aliment, prix observés par magasin, minimum par base comparable |
 | Magasins | Création, modification, suppression |
-| Tickets | Import JSON validé ligne par ligne ; photo avec OCR local Tesseract, validée en bloc |
+| Tickets | Photo conservée, magasin et date d'achat facultatifs, état à traiter ou traité ; aucune lecture automatique |
 | Recettes | Ingrédients sur aliments, rendement, étapes, durée, catégories |
 | Avis | Note 0..10 et commentaire, par aliment ou recette, par profil |
 | Sport | Séances types uniquement (nom, sport, durée, distance, intensité, calories) |
@@ -36,9 +37,10 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 
 ## Écarts connus avec la cible
 
-- Le code contient encore ce que l'ADR 0010 supprime : import JSON de tickets, OCR,
-  lignes et achats. Les fibres, le ticket
-  réduit à une photo, l'espace d'administration et le coût de recette n'existent pas.
+- Restent à faire pour l'ADR 0010 : fibres, image de recette, produits toujours
+  complets (contenance obligatoire), alias et champs hérités à retirer, écrans
+  conformes à la maquette, coût de recette. Les prix se saisissent encore depuis la
+  fiche aliment, pas à côté de la photo du ticket.
 - Le backend est découpé par couche, pas par module, et les règles métier sont
   mêlées au code HTTP des endpoints. Mise en conformité : étape 1.
 - Points ouverts de la revue de code : [audit-2026-11.md](audit-2026-11.md).

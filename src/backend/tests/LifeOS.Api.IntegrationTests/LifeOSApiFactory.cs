@@ -1,5 +1,4 @@
 using LifeOS.Infrastructure.Persistence;
-using LifeOS.Application.Receipts;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -21,8 +20,7 @@ public sealed class LifeOSApiFactory(
     bool enableOpenApiUi = true,
     string buildId = "local",
     string? receiptStoragePath = null,
-    string? foodImageStoragePath = null,
-    IReceiptOcrService? receiptOcrService = null)
+    string? foodImageStoragePath = null)
     : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -41,15 +39,6 @@ public sealed class LifeOSApiFactory(
                 ["FoodImages:StoragePath"] = foodImageStoragePath ?? Path.Combine(Path.GetTempPath(), $"lifeos-food-images-{Guid.NewGuid():N}"),
             });
         });
-
-        if (receiptOcrService is not null)
-        {
-            builder.ConfigureTestServices(services =>
-            {
-                services.RemoveAll<IReceiptOcrService>();
-                services.AddSingleton(receiptOcrService);
-            });
-        }
     }
 
     /// <summary>

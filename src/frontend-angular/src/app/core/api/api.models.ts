@@ -73,8 +73,6 @@ export interface PriceObservationDto {
   price: number
   unit: string
   observedAt: string
-  provenance: string
-  receiptLineId: string | null
   packageQuantity: number | null
   packageUnit: string | null
   packageConfirmed: boolean
@@ -87,55 +85,21 @@ export interface ComparablePriceDto {
   price: number
   unit: string
   observedAt: string
-  provenance: string
 }
 export interface FoodPricesDto { foodItemId: string; prices: ComparablePriceDto[] }
-export interface ReceiptSummaryDto {
+export interface ReceiptDto {
   id: string
-  storeName: string
   storeId: string | null
-  date: string | null
-  purchasedAt: string | null
-  status: 'draft' | 'validated'
-  hasPhoto: boolean
-  totalLines: number
-  completedLines: number
+  /** Purchase date as yyyy-MM-dd, optional. */
+  purchaseDate: string | null
+  status: 'pending' | 'processed'
+  /** Upload timestamp. */
+  createdAt: string
 }
-export interface ReceiptDto extends Omit<ReceiptSummaryDto, 'totalLines'> {
-  rawDocument: string
-  ocrText: string | null
-  ocrError: string | null
-  declaredLines: number | null
-  detectedLines: number | null
-  diagnostic: string | null
-  lines: ReceiptLineDto[]
-}
-export interface ReceiptLineDto {
-  id: string
-  position: number
-  sourceText: string
-  excludedMention: boolean
-  label: string
-  total: number | null
-  quantity: number | null
-  unit: string | null
-  statedUnitPrice: number | null
-  priceMismatchConfirmed: boolean
-  status: 'pending' | 'validated' | 'ignored'
-  productId: string | null
-  diagnostics: string[]
-}
-
-export interface ValidateReceiptLineRequest {
-  productId: string | null
-  foodItemId: string | null
-  newFoodName: string | null
-  newProductName: string | null
-  packageQuantity: number | null
-  packageUnit: string | null
-  packageConfirmed: boolean
-  piecesComparable: boolean
-  confirmPurchaseUnit: boolean
+export interface UpdateReceiptRequest {
+  storeId: string | null
+  purchaseDate: string | null
+  processed: boolean
 }
 
 export interface RecipeIngredientDto {
