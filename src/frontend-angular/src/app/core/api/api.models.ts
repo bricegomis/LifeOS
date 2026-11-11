@@ -102,42 +102,6 @@ export interface UpdateReceiptRequest {
   processed: boolean
 }
 
-export interface RecipeIngredientDto {
-  id: string
-  foodItemId: string
-  quantity: number
-  unit: string
-}
-
-export interface RecipeDto {
-  id: string
-  isArchived: boolean
-  name: string
-  servings: number
-  durationMinutes: number
-  tags: string[]
-  metadata: Record<string, unknown> | null
-  instructions: string | null
-  ingredients: RecipeIngredientDto[]
-  createdAt: string
-  updatedAt: string
-}
-
-export interface RecipeRequest {
-  name: string
-  servings: number
-  durationMinutes: number
-  tags: string[]
-  metadata: Record<string, unknown> | null
-  instructions: string | null
-}
-
-export interface AddRecipeIngredientRequest {
-  foodItemId: string
-  quantity: number
-  unit: string
-}
-
 export interface SportTemplateRequest {
   name: string
   sport: string

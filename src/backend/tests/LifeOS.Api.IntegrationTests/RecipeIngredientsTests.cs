@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using LifeOS.Api.Dtos;
+using LifeOS.Api.Food.Recipes;
 using LifeOS.Application.FoodItems;
 
 namespace LifeOS.Api.IntegrationTests;

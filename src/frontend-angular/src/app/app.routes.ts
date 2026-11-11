@@ -1,17 +1,13 @@
 import { inject } from '@angular/core'
-import { CanActivateFn, CanDeactivateFn, Router, Routes } from '@angular/router'
+import { CanActivateFn, Router, Routes } from '@angular/router'
 import { AuthService } from '@/app/core/auth/auth.service'
 import { FoodItemsPageComponent } from '@/app/pages/foods/food-items-page.component'
 import { LoginPageComponent } from '@/app/pages/login/login-page.component'
-import { RecipesPageComponent } from '@/app/pages/recipes/recipes-page.component'
 import { SettingsPageComponent } from '@/app/pages/settings/settings-page.component'
 import { TicketsPageComponent } from '@/app/pages/tickets/tickets-page.component'
 import { StoresArticlesPageComponent } from '@/app/pages/stores/stores-articles-page.component'
 import { AppLayoutComponent } from '@/app/shell/app-layout.component'
 import { SportsPageComponent } from '@/app/pages/sports/sports-page.component'
-import { ReviewDraftsService } from '@/app/shared/reviews/review-drafts.service'
-
-const protectReviewDrafts: CanDeactivateFn<unknown> = () => inject(ReviewDraftsService).canLeave()
 
 const requireAuthentication: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService)
@@ -31,7 +27,10 @@ export const routes: Routes = [
     canActivate: [requireAuthentication],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'recipes' },
-      { path: 'recipes', component: RecipesPageComponent, canDeactivate: [protectReviewDrafts] },
+      {
+        path: 'recipes',
+        loadChildren: () => import('@/app/food/recipes/recipes.routes').then(module => module.RECIPES_ROUTES),
+      },
       { path: 'foods', component: FoodItemsPageComponent, canDeactivate: [(component: FoodItemsPageComponent) => component.canLeave()] },
       { path: 'products', pathMatch: 'full', redirectTo: 'foods' },
       { path: 'sports', component: SportsPageComponent },

@@ -1,11 +1,9 @@
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Application.Households;
-using LifeOS.Application.Recipes;
 using LifeOS.Application.Stores;
 using LifeOS.Domain.FoodItems;
 using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Persistence;
-using LifeOS.Infrastructure.Recipes;
 using LifeOS.Infrastructure.Stores;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -48,7 +46,6 @@ public static class DependencyInjection
         services.AddScoped<DeleteStoreCommand>();
 
         // Jalon 2: Recipes and Meals
-        services.AddScoped<IRecipeRepository, EfRecipeRepository>();
 
         // Generic foods
 

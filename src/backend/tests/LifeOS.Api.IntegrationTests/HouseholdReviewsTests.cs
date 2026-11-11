@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using LifeOS.Api.Dtos;
+using LifeOS.Api.Food.Recipes;
 using LifeOS.Api.Endpoints;
 using LifeOS.Application.FoodItems;
 
