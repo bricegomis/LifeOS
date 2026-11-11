@@ -36,13 +36,6 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<FoodItem> FoodItems => Set<FoodItem>();
     public DbSet<ProductAlias> ProductAliases => Set<ProductAlias>();
 
-    public async Task<Guid> ResolveProductIdAsync(Guid householdId, Guid id, CancellationToken ct)
-    {
-        // Exact identities only. No name-based matching.
-        return await ProductAliases.Where(a => a.ArticleId == id && a.HouseholdId == householdId)
-            .Select(a => (Guid?)a.ProductId).SingleOrDefaultAsync(ct) ?? id;
-    }
-
     // Sport sessions and templates
     public DbSet<SportTemplate> SportTemplates => Set<SportTemplate>();
 

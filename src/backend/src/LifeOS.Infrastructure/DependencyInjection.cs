@@ -3,7 +3,6 @@ using LifeOS.Application.Households;
 using LifeOS.Application.Recipes;
 using LifeOS.Application.Stores;
 using LifeOS.Domain.FoodItems;
-using LifeOS.Infrastructure.FoodItems;
 using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Persistence;
 using LifeOS.Infrastructure.Recipes;
@@ -52,7 +51,6 @@ public static class DependencyInjection
         services.AddScoped<IRecipeRepository, EfRecipeRepository>();
 
         // Generic foods
-        services.AddScoped<IFoodItemRepository, EfFoodItemRepository>();
 
         return services;
     }

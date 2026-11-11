@@ -6,7 +6,7 @@ using LifeOS.Application.FoodItems;
 namespace LifeOS.Api.IntegrationTests;
 
 [Collection(PostgresCollection.Name)]
-public sealed class Jalon3FoodItemsTests(PostgresContainerFixture postgres)
+public sealed class FoodCompletionTests(PostgresContainerFixture postgres)
 {
     [Fact]
     public async Task Manual_partial_foods_can_be_completed_and_archived_without_losing_nutrition()
