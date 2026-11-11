@@ -91,9 +91,9 @@ lesquels les autres modules s'aligneront.
    module Alimentation, en commençant par une seule tranche (les recettes) relue
    avec l'utilisateur avant de généraliser. Frontend : dossier par module, routes
    chargées à la demande, gros composants découpés. Test d'architecture ajouté.
-6. **Refonte du modèle** et de l'interface selon la maquette : fibres, ticket
-   photo, administration, migration destructive.
-7. **Coût de recette par magasin.**
+6. **Refonte du modèle** et de l'interface selon la maquette : fibres, images de
+   recettes, ticket photo, administration, migration destructive.
+7. **Coût de recette**, en fourchette minimum–maximum.
 
 **Terminé quand.**
 

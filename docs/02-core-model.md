@@ -11,14 +11,14 @@ PostgreSQL stockent les données.
 | Terme | Définition | Exemple |
 | --- | --- | --- |
 | Aliment | Référence culinaire générique, nutrition et digestion manuelles, sans marque, magasin ni conditionnement. | Emmental râpé ; haricots rouges en conserve égouttés. |
-| Recette | Préparation de bibliothèque : ingrédients, rendement en portions, instructions, durée et catégories facultatives. | Légumes vapeur ; dhal avec riz. |
+| Recette | Préparation de bibliothèque : ingrédients, rendement en portions, instructions, durée, catégories et image facultatives. | Légumes vapeur ; dhal avec riz. |
 | Ingrédient | Ligne de recette : aliment + quantité + unité. Pas un catalogue. | 100 g d'emmental. |
 | Avis | Note entière facultative 0..10 et/ou commentaire, par aliment ou recette, et par profil du foyer. | Avis de Léa sur la carotte. |
 | Magasin | Lieu d'achat du foyer. | Biocoop Nantes Sud. |
 | Produit | Référence commerciale liée à un aliment, marque et code-barres facultatifs. | Sachet d'emmental de 400 g d'une marque donnée. |
 | Prix observé | Prix d'un produit dans un magasin à une date, saisi à la main, sur une base explicite. Jamais un prix actuel garanti. | 5,95 €/sachet ; 14,875 €/kg si 400 g confirmés. |
 | Ticket | Photo d'un ticket de caisse, conservée telle quelle, à traiter ou traitée. | Photo du 11 avril 2026, Biocoop. |
-| Coût de recette | Indicateur calculé à la lecture, par magasin. Jamais stocké. | Dhal : 4,80 € chez Leclerc, 6,10 € chez Biocoop. |
+| Coût de recette | Fourchette minimum–maximum calculée à la lecture, tous magasins confondus. Jamais stockée. | Dhal : de 4,40 € à 7,20 €. |
 
 Un aliment a zéro à plusieurs produits ; chaque produit appartient à un aliment.
 Les recettes choisissent des aliments, jamais des marques. Contenance d'un produit,
@@ -56,8 +56,10 @@ relevé. Bases comparables : kg, L, pièces confirmées. Un paquet n'est convert
 qu'avec une contenance confirmée à la main. Aucune densité, masse de pièce ou poids
 égoutté n'est inventé.
 
-Coût d'une recette dans un magasin : pour chaque ingrédient, le dernier prix relevé
-de chaque produit de l'aliment dans ce magasin, puis le moins cher sur une base
-comparable avec l'unité de l'ingrédient. Un ingrédient sans prix ou sans base
-comparable reste inconnu et rend le total incomplet. Le calcul est informatif : il
-ne choisit jamais un produit pour la recette.
+Coût d'une recette : pour chaque ingrédient, le dernier prix relevé de chaque couple
+produit/magasin de l'aliment, sur une base comparable avec l'unité de l'ingrédient.
+Le moins cher donne le minimum, le plus cher le maximum ; la recette additionne les
+minimums d'un côté, les maximums de l'autre. Un ingrédient sans prix comparable
+reste inconnu et rend les deux totaux incomplets. La fourchette ne reflète que les
+produits enregistrés : n'enregistrer que des produits bio donne un minimum bio.
+Le calcul est informatif : il ne choisit jamais un produit pour la recette.

@@ -10,7 +10,7 @@ celle de l'[ADR 0009](0009-modular-monolith-and-planning-core.md).
 
 Le but de l'alimentation dans LifeOS est de trouver des compromis pour manger sain :
 une recette se juge sur sa nutrition, sa digestibilité, l'avis du foyer et son coût,
-qui change selon le magasin (Leclerc ou Biocoop).
+qui dépend des produits achetés et des magasins (Leclerc, Biocoop).
 
 Le modèle actuel sert ce but, mais l'interface mélange tout : la saisie des produits
 et des prix, qui ne sert qu'à alimenter des calculs, est au même niveau que les
@@ -24,14 +24,14 @@ règles pour un bénéfice faible.
 
 | Objet | Décision |
 | --- | --- |
-| Aliment | Gardé. Les fibres s'ajoutent à la nutrition. |
-| Recette | Gardée : ingrédients sur aliments, rendement, instructions, durée, catégories. |
+| Aliment | Gardé, avec son image facultative. Les fibres s'ajoutent à la nutrition. |
+| Recette | Gardée : ingrédients sur aliments, rendement, instructions, durée, catégories. Une image facultative s'ajoute. |
 | Avis | Gardé, par profil uniquement. |
 | Produit | Gardé, toujours lié à un aliment. |
 | Magasin | Gardé. |
 | Prix observé | Gardé, saisi à la main. |
 | Ticket | Réduit à une photo conservée (§ 4). |
-| Coût de recette par magasin | Nouveau (§ 5). |
+| Coût de recette, minimum et maximum | Nouveau (§ 5). |
 | Import JSON de ticket | Supprimé. |
 | OCR Tesseract, lignes de ticket, validation | Supprimés. |
 | Achat | Supprimé : un prix ne provient plus d'une ligne de ticket. |
@@ -47,7 +47,23 @@ règles pour un bénéfice faible.
   à traiter. C'est une saisie de données de référence ; elle n'apparaît pas dans la
   navigation du smartphone.
 
-Les écrans quotidiens ne montrent des prix que le résultat : le coût d'une recette.
+Sur les écrans quotidiens, smartphone compris, les prix restent secondaires et en
+lecture seule : la fourchette de coût d'une recette et, sur la fiche aliment, un
+résumé des prix relevés. Toute saisie de prix se fait dans l'administration.
+
+L'image porte l'interface : une image par recette et par aliment, affichée dans les
+listes, les fiches et les lignes d'ingrédient. Dans une recette, un ingrédient ouvre
+la fiche de son aliment. Les images de recettes suivent les règles des images
+d'aliments (JPEG, PNG ou WebP, 10 Mo, route authentifiée et filtrée par foyer) et
+sont conservées sur le même volume durable, `lifeos_food_images`.
+
+Navigation sur ordinateur : un menu à gauche, repliable par un bouton burger. Il
+contient un bloc par domaine (Alimentation, Sport, puis les suivants) avec une
+entrée par page ; les pages d'administration de l'alimentation sont regroupées sous
+un intitulé dans le bloc Alimentation. En bas du menu : l'entrée Paramètres
+(profils du foyer, versions de l'interface et de l'API), puis le compte connecté
+avec sa photo et la déconnexion.
+
 Les écrans sont validés sur une maquette cliquable avant tout code.
 
 ### 3. Nutrition
@@ -71,22 +87,31 @@ digestives et l'image restent facultatives et hors complétion.
 Le traitement futur des photos (OCR, modèle de vision ou autre) fera l'objet d'une
 ADR dédiée. Il devra respecter l'ADR 0009 : l'API n'appelle aucun fournisseur d'IA.
 
-### 5. Coût d'une recette par magasin
+### 5. Coût d'une recette : minimum et maximum
 
-Un indicateur calculé à la lecture, jamais stocké, livré en dernier lot de l'étape 1.
+Les courses se font dans plusieurs magasins à la fois (la farine ici, le chocolat
+là). Le coût n'est donc pas calculé par magasin, mais comme une fourchette, tous
+magasins confondus. C'est un indicateur calculé à la lecture, jamais stocké, livré
+en dernier lot de l'étape 1.
 
-- Pour chaque magasin et chaque ingrédient : parmi les produits non archivés de
-  l'aliment, on prend le dernier prix relevé de chaque produit dans ce magasin, puis
-  le moins cher sur une base comparable avec l'unité de l'ingrédient.
+- Pour chaque ingrédient : on prend le dernier prix relevé de chaque couple
+  produit/magasin, parmi les produits non archivés de l'aliment, sur une base
+  comparable avec l'unité de l'ingrédient. Le moins cher donne le minimum, le plus
+  cher le maximum.
 - Bases comparables : masse (g, kg), volume (ml, L), pièces confirmées. Un paquet ne
   se convertit qu'avec une contenance confirmée à la main. Aucun passage entre
   masse, volume et pièce n'est inventé.
-- Coût de l'ingrédient = quantité × prix sur cette base. Coût de la recette = somme
-  des ingrédients ; coût par portion = coût / rendement.
-- Un ingrédient sans prix dans ce magasin, ou sans base comparable, reste inconnu
-  et rend le total **incomplet**. Le total partiel est affiché avec le nombre
-  d'ingrédients manquants, jamais comme un coût complet.
-- Chaque ligne du calcul montre le produit retenu, le prix et la date du relevé.
+- Coût de l'ingrédient = quantité × prix sur cette base. Coût minimum de la recette
+  = somme des minimums ; coût maximum = somme des maximums ; coût par portion =
+  coût / rendement.
+- Un ingrédient sans prix comparable reste inconnu et rend les deux totaux
+  **incomplets**. Les totaux partiels sont affichés avec le nombre d'ingrédients
+  manquants, jamais comme un coût complet.
+- Chaque ligne du calcul montre, pour le minimum et pour le maximum, le produit, le
+  magasin, le prix et la date du relevé.
+- La fourchette reflète uniquement les produits enregistrés. L'utilisateur fixe le
+  niveau de qualité du minimum par les produits qu'il saisit : s'il n'enregistre
+  que des produits bio pour un aliment, le minimum est un prix bio.
 
 La recette continue de ne référencer que des aliments. Le calcul ne choisit ni ne
 mémorise aucun produit pour la recette : il change dès qu'un prix est relevé.
