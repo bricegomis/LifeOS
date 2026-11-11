@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
-using LifeOS.Api.Receipts;
+using LifeOS.Api.Food.Files;
+using LifeOS.Infrastructure.Food.Files;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
@@ -15,7 +16,7 @@ public sealed class ReceiptPhotoStorageTests
         {
             var storage = new ReceiptPhotoStorage(Options.Create(new ReceiptPhotoStorageOptions { StoragePath = root }));
             var bytes = new byte[] { 137, 80, 78, 71, 13, 10, 26, 10, 4, 5, 6, 7 };
-            var saved = await storage.SaveAsync(FormFile(bytes, "image/png", "../../../../receipt.png"), CancellationToken.None);
+            var saved = await storage.SaveUploadAsync(FormFile(bytes, "image/png", "../../../../receipt.png"), CancellationToken.None);
 
             Assert.NotEqual("../../../../receipt.png", saved.FileName);
             Assert.Equal(".png", Path.GetExtension(saved.FileName));
@@ -40,13 +41,13 @@ public sealed class ReceiptPhotoStorageTests
                 MaxFileBytes = 8,
             }));
             await Assert.ThrowsAsync<ArgumentException>(() =>
-                limited.SaveAsync(FormFile(new byte[9], "image/png"), CancellationToken.None));
+                limited.SaveUploadAsync(FormFile(new byte[9], "image/png"), CancellationToken.None));
 
             var storage = new ReceiptPhotoStorage(Options.Create(new ReceiptPhotoStorageOptions { StoragePath = root }));
             await Assert.ThrowsAsync<ArgumentException>(() =>
-                storage.SaveAsync(FormFile(new byte[12], "image/png"), CancellationToken.None));
+                storage.SaveUploadAsync(FormFile(new byte[12], "image/png"), CancellationToken.None));
             await Assert.ThrowsAsync<ArgumentException>(() =>
-                storage.SaveAsync(FormFile(new byte[12], "image/gif"), CancellationToken.None));
+                storage.SaveUploadAsync(FormFile(new byte[12], "image/gif"), CancellationToken.None));
             Assert.False(Directory.Exists(root));
         }
         finally

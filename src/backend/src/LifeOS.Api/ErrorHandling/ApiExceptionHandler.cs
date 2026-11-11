@@ -20,7 +20,9 @@ public sealed class ApiExceptionHandler(
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             DuplicateHouseholdMemberException => (StatusCodes.Status409Conflict, "Household membership conflict"),
             Microsoft.EntityFrameworkCore.DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: "23505" } } =>
-                (StatusCodes.Status409Conflict, "Ce raccord ou cette semaine existe déjà. Actualisez puis réessayez."),
+                (StatusCodes.Status409Conflict, "Cet élément existe déjà. Actualisez puis réessayez."),
+            Microsoft.EntityFrameworkCore.DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: "23503" } } =>
+                (StatusCodes.Status409Conflict, "Cet élément est encore utilisé ailleurs et ne peut pas être supprimé."),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred")
         };
 

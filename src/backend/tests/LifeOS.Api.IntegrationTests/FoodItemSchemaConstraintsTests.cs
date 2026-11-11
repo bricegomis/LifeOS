@@ -1,5 +1,5 @@
-using LifeOS.Domain.FoodItems;
-using LifeOS.Domain.Products;
+using LifeOS.Domain.Food.Foods;
+using LifeOS.Domain.Food.Products;
 using LifeOS.Domain.Households;
 using Microsoft.EntityFrameworkCore;
 

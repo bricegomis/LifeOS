@@ -7,8 +7,8 @@ namespace LifeOS.Architecture.Tests;
 
 /// <summary>
 /// Enforces ADR 0009 on compiled code (IL, so method bodies count). A module lives in
-/// <c>LifeOS.&lt;Layer&gt;.&lt;Module&gt;</c>; code not yet moved into a module folder is outside
-/// these rules until roadmap step 1 finishes moving it.
+/// <c>LifeOS.&lt;Layer&gt;.&lt;Module&gt;</c>. Outside modules remain only the shared technical
+/// pieces: <c>Domain.Common</c>, persistence plumbing, authentication, error handling, validation.
 /// </summary>
 public sealed class ModuleBoundaryTests
 {
@@ -74,11 +74,25 @@ public sealed class ModuleBoundaryTests
     }
 
     [Fact]
+    public void Module_endpoints_take_the_household_from_HouseholdContext()
+    {
+        // Resolving the household by hand is how isolation used to be forgotten (audit D1).
+        var result = Types.InAssembly(typeof(Program).Assembly).That()
+            .ResideInNamespaceStartingWith("LifeOS.Api.Food").Or().ResideInNamespaceStartingWith("LifeOS.Api.Sports")
+            .ShouldNot().HaveDependencyOn("LifeOS.Application.Households.ResolveHouseholdForUserQuery")
+            .GetResult();
+        Assert.True(result.IsSuccessful, string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    [Fact]
     public void The_rules_see_the_modules_that_already_exist()
     {
         // Guards against a rename silently emptying the rules above.
         Assert.NotEmpty(Types.InAssembly(typeof(Entity).Assembly).That().ResideInNamespaceStartingWith("LifeOS.Domain.Food").GetTypes());
         Assert.NotEmpty(Types.InAssembly(typeof(Entity).Assembly).That().ResideInNamespaceStartingWith("LifeOS.Domain.Households").GetTypes());
+        Assert.NotEmpty(Types.InAssembly(typeof(Entity).Assembly).That().ResideInNamespaceStartingWith("LifeOS.Domain.Sports").GetTypes());
         Assert.NotEmpty(Types.InAssembly(typeof(Program).Assembly).That().ResideInNamespaceStartingWith("LifeOS.Api.Food").GetTypes());
+        Assert.NotEmpty(Types.InAssembly(typeof(Program).Assembly).That().ResideInNamespaceStartingWith("LifeOS.Api.Sports").GetTypes());
+        Assert.NotEmpty(Types.InAssembly(typeof(LifeOSDbContext).Assembly).That().ResideInNamespaceStartingWith("LifeOS.Infrastructure.Food").GetTypes());
     }
 }

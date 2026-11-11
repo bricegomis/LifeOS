@@ -1,9 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using LifeOS.Api.Food.Foods;
+using LifeOS.Api.Food.Products;
+using LifeOS.Api.Food.Receipts;
 using LifeOS.Api.Food.Recipes;
-using LifeOS.Api.Endpoints;
-using LifeOS.Application.FoodItems;
+using LifeOS.Api.Food.Reviews;
+using LifeOS.Api.Households;
+using LifeOS.Api.Sports;
 
 namespace LifeOS.Api.IntegrationTests;
 

@@ -1,4 +1,4 @@
-using LifeOS.Domain.Products;
+using LifeOS.Domain.Food.Products;
 
 namespace LifeOS.Domain.Tests.Articles;
 
