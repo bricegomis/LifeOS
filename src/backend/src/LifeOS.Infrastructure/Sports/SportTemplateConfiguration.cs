@@ -9,7 +9,7 @@ internal sealed class SportTemplateConfiguration : IEntityTypeConfiguration<Spor
 {
     public void Configure(EntityTypeBuilder<SportTemplate> builder)
     {
-        builder.ToTable("sport_templates", t =>
+        builder.ToTable("sport_templates", "sports", t =>
         {
             t.HasCheckConstraint("ck_sport_duration", "\"DurationMinutes\" > 0 AND \"DurationMinutes\" <= 1440");
             t.HasCheckConstraint("ck_sport_values", "\"Calories\" >= 0 AND (\"DistanceKm\" IS NULL OR \"DistanceKm\" >= 0)");

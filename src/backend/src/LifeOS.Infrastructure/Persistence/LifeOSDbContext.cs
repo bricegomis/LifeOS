@@ -24,13 +24,13 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
 
     // Food module
     public DbSet<FoodItem> FoodItems => Set<FoodItem>();
-    public DbSet<ProductAlias> ProductAliases => Set<ProductAlias>();
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<RecipeIngredient> RecipeIngredients => Set<RecipeIngredient>();
     public DbSet<FoodReview> FoodReviews => Set<FoodReview>();
     public DbSet<RecipeReview> RecipeReviews => Set<RecipeReview>();
     public DbSet<Store> Stores => Set<Store>();
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductPrice> ProductPrices => Set<ProductPrice>();
     public DbSet<Receipt> Receipts => Set<Receipt>();
 
     // Sports module

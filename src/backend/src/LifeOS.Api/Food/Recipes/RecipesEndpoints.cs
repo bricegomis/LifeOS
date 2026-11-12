@@ -1,6 +1,8 @@
+using LifeOS.Api.Food.Files;
 using LifeOS.Api.Households;
 using LifeOS.Api.Validation;
 using LifeOS.Domain.Food.Recipes;
+using LifeOS.Infrastructure.Food.Files;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +26,9 @@ public static class RecipesEndpoints
         group.MapPost("/{recipeId:guid}/ingredients", AddIngredient).WithName("AddRecipeIngredient").Produces<RecipeDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
         group.MapPut("/{recipeId:guid}/ingredients/{ingredientId:guid}", UpdateIngredient).WithName("UpdateRecipeIngredient").Produces<RecipeDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
         group.MapDelete("/{recipeId:guid}/ingredients/{ingredientId:guid}", RemoveIngredient).WithName("DeleteRecipeIngredient").Produces<RecipeDto>().ProducesProblem(StatusCodes.Status404NotFound);
+        group.MapGet("/{recipeId:guid}/image", GetImage).WithName("GetRecipeImage").ProducesProblem(StatusCodes.Status404NotFound);
+        group.MapPut("/{recipeId:guid}/image", UploadImage).WithName("UploadRecipeImage").Produces<RecipeDto>().WithUploadLimit();
+        group.MapDelete("/{recipeId:guid}/image", DeleteImage).WithName("DeleteRecipeImage").Produces(StatusCodes.Status204NoContent);
         return app;
     }
 
@@ -101,5 +106,35 @@ public static class RecipesEndpoints
         if (recipe is null || !recipe.RemoveIngredient(ingredientId)) return Results.NotFound();
         await db.SaveChangesAsync(ct);
         return Results.Ok(RecipeDto.From(recipe));
+    }
+
+    private static async Task<IResult> GetImage(Guid recipeId, HouseholdContext household, HttpContext context,
+        LifeOSDbContext db, FoodImageStorage storage, CancellationToken ct)
+    {
+        var image = await db.Recipes.Where(r => r.Id == recipeId && r.HouseholdId == household.HouseholdId)
+            .Select(r => new { r.ImagePath, r.ImageContentType }).SingleOrDefaultAsync(ct);
+        return storage.Serve(context, image?.ImagePath, image?.ImageContentType);
+    }
+
+    private static async Task<IResult> UploadImage(Guid recipeId, HttpRequest request, HouseholdContext household,
+        LifeOSDbContext db, FoodImageStorage storage, ILogger<FoodImageStorage> logger, CancellationToken ct)
+    {
+        var recipe = await Find(db, household, recipeId, ct);
+        if (recipe is null) return Results.NotFound();
+        await storage.ReplaceImageAsync(request, recipe.ImagePath, stored => recipe.SetImage(stored.FileName, stored.ContentType),
+            () => db.SaveChangesAsync(ct), logger, ct);
+        return Results.Ok(RecipeDto.From(recipe));
+    }
+
+    private static async Task<IResult> DeleteImage(Guid recipeId, HouseholdContext household, LifeOSDbContext db,
+        FoodImageStorage storage, ILogger<FoodImageStorage> logger, CancellationToken ct)
+    {
+        var recipe = await Find(db, household, recipeId, ct);
+        if (recipe is null) return Results.NotFound();
+        var oldPath = recipe.ImagePath;
+        recipe.RemoveImage();
+        await db.SaveChangesAsync(ct);
+        storage.DeleteQuietly(oldPath, e => logger.LogError(e, "Unable to remove a deleted recipe image"));
+        return Results.NoContent();
     }
 }

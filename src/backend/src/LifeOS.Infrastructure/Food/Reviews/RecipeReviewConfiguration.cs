@@ -10,7 +10,7 @@ internal sealed class RecipeReviewConfiguration : IEntityTypeConfiguration<Recip
 {
     public void Configure(EntityTypeBuilder<RecipeReview> builder)
     {
-        builder.ToTable("recipe_reviews", table =>
+        builder.ToTable("recipe_reviews", FoodSchema.Name, table =>
         {
             table.HasCheckConstraint("ck_recipe_review_score", "\"Score\" IS NULL OR (\"Score\" >= 0 AND \"Score\" <= 10)");
             table.HasCheckConstraint("ck_recipe_review_content", "\"Score\" IS NOT NULL OR NULLIF(BTRIM(\"Comment\"), '') IS NOT NULL");

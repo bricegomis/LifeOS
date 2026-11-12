@@ -79,20 +79,8 @@ public static class FoodsEndpoints
     {
         var food = await Find(db, household, id, ct);
         if (food is null) return Results.NotFound();
-        var file = await request.ReadFileAsync("image", "Sélectionnez une image d'aliment.", ct);
-        var oldPath = food.ImagePath;
-        var stored = await storage.SaveUploadAsync(file, ct);
-        try
-        {
-            food.SetImage(stored.FileName, stored.ContentType);
-            await db.SaveChangesAsync(ct);
-        }
-        catch
-        {
-            storage.Delete(stored.FileName);
-            throw;
-        }
-        storage.DeleteQuietly(oldPath, e => logger.LogError(e, "Unable to remove replaced food image"));
+        await storage.ReplaceImageAsync(request, food.ImagePath, stored => food.SetImage(stored.FileName, stored.ContentType),
+            () => db.SaveChangesAsync(ct), logger, ct);
         return Results.Ok(FoodItemDto.From(food));
     }
 

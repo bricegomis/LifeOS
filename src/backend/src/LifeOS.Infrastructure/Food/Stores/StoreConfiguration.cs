@@ -8,7 +8,7 @@ internal sealed class StoreConfiguration : IEntityTypeConfiguration<Store>
 {
     public void Configure(EntityTypeBuilder<Store> builder)
     {
-        builder.ToTable("stores");
+        builder.ToTable("stores", FoodSchema.Name);
 
         builder.HasKey(store => store.Id);
         builder.HasAlternateKey(store => new { store.Id, store.HouseholdId });

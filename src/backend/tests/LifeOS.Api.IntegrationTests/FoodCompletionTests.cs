@@ -16,9 +16,9 @@ public sealed class FoodCompletionTests(PostgresContainerFixture postgres)
         var response = await client.PostAsJsonAsync("/api/foods", new FoodRequest("Aliment", "", new NutritionDto { CaloriesPerUnit = 0 }));
         response.EnsureSuccessStatusCode();
         var food = (await response.Content.ReadFromJsonAsync<FoodItemDto>())!;
-        Assert.Equal(6, food.MissingFields.Count);
-        response = await client.PutAsJsonAsync($"/api/foods/{food.Id}", new FoodRequest("Aliment", "100g", new NutritionDto
-        { CaloriesPerUnit = 0, ProteinsPerUnit = 0, CarbsPerUnit = 0, FatsPerUnit = 0 }, "low", 1));
+        Assert.Equal(7, food.MissingFields.Count);
+        response = await client.PutAsJsonAsync($"/api/foods/{food.Id}", new FoodRequest("Aliment", "100 g", new NutritionDto
+        { CaloriesPerUnit = 0, ProteinsPerUnit = 0, CarbsPerUnit = 0, FatsPerUnit = 0, FibersPerUnit = 0 }, "low", 1));
         response.EnsureSuccessStatusCode();
         food = (await response.Content.ReadFromJsonAsync<FoodItemDto>())!;
         Assert.Empty(food.MissingFields);

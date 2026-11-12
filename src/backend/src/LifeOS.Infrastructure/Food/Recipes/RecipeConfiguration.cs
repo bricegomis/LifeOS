@@ -10,7 +10,7 @@ internal sealed class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
 {
     public void Configure(EntityTypeBuilder<Recipe> builder)
     {
-        builder.ToTable("recipes");
+        builder.ToTable("recipes", FoodSchema.Name);
         builder.HasKey(recipe => recipe.Id);
         builder.Property(recipe => recipe.Id).ValueGeneratedNever();
         builder.Property(recipe => recipe.HouseholdId).IsRequired();
@@ -24,6 +24,9 @@ internal sealed class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
                 tags => string.Join(Recipe.TagSeparator, tags),
                 value => string.IsNullOrEmpty(value) ? new List<string>() : new List<string>(value.Split(Recipe.TagSeparator)))
             .HasMaxLength(1000);
+        builder.Property(recipe => recipe.ImagePath).HasMaxLength(500);
+        builder.Property(recipe => recipe.ImageContentType).HasMaxLength(100);
+        builder.Ignore(recipe => recipe.HasImage);
         builder.Property(recipe => recipe.CreatedAt).IsRequired();
         builder.Property(recipe => recipe.UpdatedAt).IsRequired();
 
@@ -38,7 +41,7 @@ internal sealed class RecipeIngredientConfiguration : IEntityTypeConfiguration<R
 {
     public void Configure(EntityTypeBuilder<RecipeIngredient> builder)
     {
-        builder.ToTable("recipe_ingredients");
+        builder.ToTable("recipe_ingredients", FoodSchema.Name);
         builder.HasKey(ingredient => ingredient.Id);
         builder.Property(ingredient => ingredient.Id).ValueGeneratedNever();
         builder.Property(ingredient => ingredient.RecipeId).IsRequired();
