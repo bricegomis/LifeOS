@@ -42,10 +42,17 @@ public static class ImageFileEndpoints
         storage.DeleteQuietly(oldFileName, e => logger.LogError(e, "Unable to remove a replaced image"));
     }
 
+    /// <summary>
+    /// Serves a stored image privately. A replaced image always gets a new file name, used as
+    /// ETag: the browser keeps a private copy and revalidates it (304) instead of downloading it again.
+    /// </summary>
     public static IResult Serve(this ImageFileStorage storage, HttpContext context, string? fileName, string? contentType)
     {
         if (fileName is null || contentType is null || !storage.Exists(fileName)) return Results.NotFound();
-        context.Response.Headers.CacheControl = "private, no-store";
+        var etag = new Microsoft.Net.Http.Headers.EntityTagHeaderValue($"\"{fileName}\"");
+        context.Response.Headers.CacheControl = "private, no-cache";
+        context.Response.Headers.ETag = etag.ToString();
+        if (context.Request.Headers.IfNoneMatch.ToString() == etag.ToString()) return Results.StatusCode(StatusCodes.Status304NotModified);
         return Results.File(storage.OpenRead(fileName), contentType);
     }
 

@@ -1,9 +1,9 @@
 # LifeOS — Modèle de l'alimentation
 
-Modèle cible de l'étape 1, fixé par
-[ADR 0010](architecture/decisions/0010-simplified-food-module.md). Le code y est
-amené pendant l'étape 1 ; ce qu'il contient réellement à un instant donné est dans
-[PROJECT.md](PROJECT.md).
+Modèle de l'étape 1, fixé par
+[ADR 0010](architecture/decisions/0010-simplified-food-module.md) et implémenté dans le
+module Alimentation (schéma PostgreSQL `food`). Ce que contient l'application est
+résumé dans [PROJECT.md](PROJECT.md).
 
 Le foyer isole toutes les données métier. Supabase authentifie ; l'API et
 PostgreSQL stockent les données.

@@ -93,6 +93,35 @@
             }
           </section>
         }
+
+        <section class="card" aria-labelledby="cost-title">
+          <h2 id="cost-title">Coût de la recette</h2>
+          @if (costError()) { <p class="error-text" role="alert">{{ costError() }}</p> }
+          @if (costLines(); as view) {
+            @if (!recipe.ingredients.length) {
+              <p class="muted">Ajoutez des ingrédients pour estimer le coût.</p>
+            } @else {
+              <div class="cost-stats">
+                <div class="stat"><div class="stat-label">Au moins cher</div><div class="cost-value">{{ view.min }}</div><div class="muted small">{{ view.minPerServing }}</div></div>
+                <div class="stat"><div class="stat-label">Au plus cher</div><div class="cost-value">{{ view.max }}</div><div class="muted small">{{ view.maxPerServing }}</div></div>
+              </div>
+              @if (view.notice) { <p class="notice" style="margin-top: 12px">{{ view.notice }}</p> }
+              <div style="margin-top: 16px">
+                @for (line of view.lines; track $index) {
+                  <div class="cost-line">
+                    <div class="cost-line-head"><span style="font-weight: 500">{{ line.name }}</span><span>{{ line.amount }}</span></div>
+                    @for (detail of line.details; track $index) {
+                      <div class="small" [class.cost-unknown]="line.unknown" [class.muted]="!line.unknown">{{ detail }}</div>
+                    }
+                  </div>
+                }
+              </div>
+              <p class="muted small" style="margin-top: 12px">Tous magasins confondus, d’après les produits enregistrés et leur dernier prix.</p>
+            }
+          } @else if (!costError()) {
+            <p class="status-text" role="status">Calcul du coût…</p>
+          }
+        </section>
       </div>
     </div>
 

@@ -135,6 +135,7 @@ app.MapProfilesEndpoints();
 // Food module
 app.MapFoodsEndpoints();
 app.MapRecipesEndpoints();
+app.MapRecipeCostEndpoints();
 app.MapReviewsEndpoints();
 app.MapStoresEndpoints();
 app.MapProductsEndpoints();

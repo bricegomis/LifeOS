@@ -8,13 +8,14 @@ import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.compone
 import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
 import { ReviewDraftsService } from '@/app/shared/reviews/review-drafts.service'
 import { FoodApiService } from '../food-api.service'
-import type { FoodDto, IngredientUnit } from '../food.models'
+import type { FoodDto, IngredientUnit, StoreDto } from '../food.models'
 import { FoodImageComponent } from '../shared/food-image.component'
 import { fodmapLabel, formatNumber, formatQuantity } from '../shared/format'
+import { costView } from './recipe-cost'
 import { RecipeEditorComponent } from './recipe-editor.component'
 import { buildIngredientRequest, INGREDIENT_UNITS, recipeSteps } from './recipe-form'
 import { recipeNutrition } from './recipe-nutrition'
-import type { RecipeDto, RecipeIngredientDto } from './recipe.models'
+import type { RecipeCostDto, RecipeDto, RecipeIngredientDto } from './recipe.models'
 import { RecipesApiService } from './recipes-api.service'
 
 interface IngredientDraft { id: string; quantity: string; unit: IngredientUnit }
@@ -37,6 +38,9 @@ export class RecipePageComponent implements OnInit {
   readonly recipe = signal<RecipeDto | null>(null)
   readonly foods = signal<FoodDto[]>([])
   readonly profiles = signal<MemberProfileDto[]>([])
+  readonly stores = signal<StoreDto[]>([])
+  readonly cost = signal<RecipeCostDto | null>(null)
+  readonly costError = signal('')
   readonly loading = signal(true)
   readonly error = signal('')
   readonly actionError = signal('')
@@ -55,17 +59,24 @@ export class RecipePageComponent implements OnInit {
     return recipe ? recipeNutrition(recipe, this.foods()) : null
   })
   readonly activeFoods = computed(() => this.foods().filter(food => !food.isArchived))
+  readonly costLines = computed(() => {
+    const cost = this.cost()
+    return cost ? costView(cost, this.foods(), this.stores()) : null
+  })
 
   async ngOnInit(): Promise<void> {
     try {
-      const [recipe, foods, profiles] = await Promise.all([
+      const [recipe, foods, profiles, stores] = await Promise.all([
         firstValueFrom(this.recipesApi.get(this.id())),
         firstValueFrom(this.foodApi.foods()),
         firstValueFrom(this.foodApi.profiles()),
+        firstValueFrom(this.foodApi.stores()),
       ])
       this.recipe.set(recipe)
       this.foods.set(foods)
       this.profiles.set(profiles)
+      this.stores.set(stores)
+      void this.loadCost()
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {
@@ -86,6 +97,19 @@ export class RecipePageComponent implements OnInit {
   edited(recipe: RecipeDto): void {
     this.recipe.set(recipe)
     this.editing.set(false)
+    void this.loadCost()
+  }
+
+  /** The cost is computed on read; it is reloaded after each change of ingredients or yield. */
+  async loadCost(): Promise<void> {
+    const recipe = this.recipe()
+    if (!recipe || recipe.isArchived) return
+    try {
+      this.cost.set(await firstValueFrom(this.recipesApi.cost(recipe.id)))
+      this.costError.set('')
+    } catch (error) {
+      this.costError.set(apiErrorMessage(error))
+    }
   }
 
   async changeImage(event: Event): Promise<void> {
@@ -165,7 +189,14 @@ export class RecipePageComponent implements OnInit {
   private async ingredientAction(action: () => Promise<RecipeDto>): Promise<void> {
     this.busy.set(true)
     this.ingredientError.set('')
-    try { this.recipe.set(await action()) } catch (error) { this.ingredientError.set(apiErrorMessage(error)) } finally { this.busy.set(false) }
+    try {
+      this.recipe.set(await action())
+      void this.loadCost()
+    } catch (error) {
+      this.ingredientError.set(apiErrorMessage(error))
+    } finally {
+      this.busy.set(false)
+    }
   }
 
   private async run(action: () => Promise<void>): Promise<void> {
