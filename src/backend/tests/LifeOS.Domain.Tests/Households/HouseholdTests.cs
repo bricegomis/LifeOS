@@ -7,13 +7,13 @@ public class HouseholdTests
     [Fact]
     public void CreateForOwner_creates_a_single_owner_member_and_a_default_profile()
     {
-        var supabaseUserId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
 
-        var household = Household.CreateForOwner(supabaseUserId, "Foyer de test");
+        var household = Household.CreateForOwner(userId, "Foyer de test");
 
         Assert.Equal("Foyer de test", household.Name);
         Assert.Single(household.Members);
-        Assert.Equal(supabaseUserId, household.Members[0].SupabaseUserId);
+        Assert.Equal(userId, household.Members[0].UserId);
         Assert.Equal(HouseholdRole.Owner, household.Members[0].Role);
         Assert.Equal(household.Id, household.Members[0].HouseholdId);
         Assert.Single(household.MemberProfiles);

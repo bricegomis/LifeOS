@@ -27,6 +27,11 @@ public static class DependencyInjection
         services.AddDbContext<LifeOSDbContext>((serviceProvider, options) =>
             options.UseNpgsql(PostgresConnectionStringResolver.Resolve(serviceProvider.GetRequiredService<IConfiguration>())));
 
+        // Accounts (ADR 0011). The OpenIddict stores use the same context (OpenIddictModel).
+        services.AddScoped<IUserAccountRepository, EfUserAccountRepository>();
+        services.AddScoped<SignInWithGoogle>();
+        services.AddScoped<GetActiveAccount>();
+
         // Household core
         services.AddScoped<IHouseholdRepository, EfHouseholdRepository>();
         services.AddScoped<ResolveHouseholdForUserQuery>();

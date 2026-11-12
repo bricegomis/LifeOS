@@ -5,8 +5,8 @@ Modèle de l'étape 1, fixé par
 module Alimentation (schéma PostgreSQL `food`). Ce que contient l'application est
 résumé dans [PROJECT.md](PROJECT.md).
 
-Le foyer isole toutes les données métier. Supabase authentifie ; l'API et
-PostgreSQL stockent les données.
+Le foyer isole toutes les données métier. L'API authentifie (Google, [ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md)) ;
+l'API et PostgreSQL stockent les données.
 
 | Terme | Définition | Exemple |
 | --- | --- | --- |

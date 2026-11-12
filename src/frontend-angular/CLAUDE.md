@@ -27,7 +27,8 @@
 - Accessibility matters: whole-card links must be keyboard-reachable, keep
   `aria-*` attributes and visible labels. UI text is French.
 - Data comes only from the LifeOS API (`core/api/lifeos-api.service.ts`) with the
-  Supabase access token; Supabase is used for auth only. No demo/fallback data:
+  API's own access token (`core/auth`: OAuth code + PKCE against the API, ADR 0011;
+  no Supabase). No demo/fallback data:
   an empty library stays empty.
 - Hash-based routing; post-login redirects accept known internal routes only.
 
@@ -37,7 +38,7 @@
   and import them with the `.ts` extension (also between pure modules), using `node:test` and `node:assert/strict`.
 - `npm run type-check` / `npm run build` generate `public/config.js` from
   `.env.local` (copy `.env.example`). `LIFEOS_API_URL` has no `/api` suffix.
-  Never put a Supabase service-role/secret key in frontend config.
+  Frontend config holds only `LIFEOS_API_URL`; never put a secret in it.
 
 ## iOS (Capacitor)
 - `ios/` holds the Xcode project and widget extension; see `docs/ios-v1.md`. The

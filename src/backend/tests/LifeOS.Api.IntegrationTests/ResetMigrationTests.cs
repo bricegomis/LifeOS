@@ -47,9 +47,9 @@ public sealed class ResetMigrationTests
         Assert.Equal(["__EFMigrationsHistory"], publicTables);
         var history = await db.Database.SqlQueryRaw<string>(
             "SELECT \"MigrationId\" AS \"Value\" FROM \"__EFMigrationsHistory\"").ToListAsync();
-        Assert.Equal(["20261112055644_FoodModuleReset"], history);
+        Assert.Equal(["20261112055644_FoodModuleReset", "20261112165315_AccountsAndOAuth"], history.Order());
         var schemas = await db.Database.SqlQueryRaw<string>(
-            "SELECT DISTINCT schemaname AS \"Value\" FROM pg_tables WHERE schemaname IN ('households', 'food', 'sports') ORDER BY 1").ToListAsync();
-        Assert.Equal(["food", "households", "sports"], schemas);
+            "SELECT DISTINCT schemaname AS \"Value\" FROM pg_tables WHERE schemaname IN ('households', 'food', 'sports', 'auth') ORDER BY 1").ToListAsync();
+        Assert.Equal(["auth", "food", "households", "sports"], schemas);
     }
 }

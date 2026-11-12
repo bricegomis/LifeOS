@@ -13,9 +13,16 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "8080"
-      # Supabase authentication
-      Supabase__Url: ${SUPABASE_URL}
-      Supabase__Audience: authenticated
+      # Sign-in (ADR 0011): the API signs users in with Google and issues its own tokens.
+      Auth__Issuer: ${LIFEOS_API_URL:-${VITE_LIFEOS_API_URL:-}}
+      Auth__AllowedEmails__0: ${AUTH_ALLOWED_EMAIL}
+      Auth__Google__ClientId: ${GOOGLE_CLIENT_ID}
+      Auth__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+      Auth__SigningKey: ${AUTH_SIGNING_KEY}
+      Auth__EncryptionKey: ${AUTH_ENCRYPTION_KEY}
+      Auth__WebClient__RedirectUris__0: ${FRONTEND_URL}/
+      Auth__WebClient__RedirectUris__1: lifeos://auth/callback
+      Auth__WebClient__RedirectUris__2: ${GITHUB_PAGES_URL:+${GITHUB_PAGES_URL}/LifeOS/}
       # PostgreSQL
       ConnectionStrings__Postgres: ${POSTGRES_CONNECTION_STRING}
       # Durable storage for original receipt photos
@@ -43,8 +50,6 @@ services:
     networks:
       - proxy
     environment:
-      VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-      VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
       LIFEOS_API_URL: ${LIFEOS_API_URL:-${VITE_LIFEOS_API_URL:-}}
     labels:
       - com.centurylinklabs.watchtower.enable=true

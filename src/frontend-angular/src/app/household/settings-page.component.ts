@@ -63,7 +63,7 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
       <section class="card">
         <h2>Compte</h2>
         <p>{{ auth.user()?.email ?? 'Compte du foyer' }}</p>
-        <p class="muted small">Les données du foyer sont conservées par LifeOS API ; Supabase assure uniquement la connexion.</p>
+        <p class="muted small">Connexion avec Google, gérée par LifeOS API, qui conserve aussi les données du foyer.</p>
         <div class="mobile-only" style="margin-top: 12px">
           <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="signOut()">Déconnexion</button>
         </div>

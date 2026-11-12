@@ -10,7 +10,7 @@ public sealed record HouseholdDto(
 
 public sealed record HouseholdMemberDto(
     Guid Id,
-    Guid SupabaseUserId,
+    Guid UserId,
     string Role,
     DateTimeOffset CreatedAt);
 

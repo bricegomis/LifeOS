@@ -3,7 +3,7 @@
 ## Stack and active scope
 - Angular 22 + TypeScript in `src/frontend-angular`, native LifeOS controls and PrimeIcons.
 - ASP.NET Core / EF Core / PostgreSQL in `src/backend`.
-- Supabase authentication only; household data belongs to the API.
+- The API signs users in with Google and is its own OAuth server (ADR 0011); no Supabase.
 - Generic foods, recipes, sport session templates and receipts kept as stored photos.
   The week planner was removed (ADR 0008) and will be rebuilt later.
 - Products are commercial price references subordinate to foods, not a competing library.

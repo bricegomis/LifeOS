@@ -89,7 +89,7 @@ Préserver comptes/authentification, foyers, profils, aliments, produits, magasi
 prix, tickets et achats, ainsi que sport et configuration de présence hors de la
 demande. Ne pas effacer globalement `localStorage` ni faire réapparaître les
 anciens plats par cache ou Supabase. La source métier des recettes, avis et
-semaines est l'API/PostgreSQL ; Supabase reste limité à l'authentification.
+semaines est l'API/PostgreSQL.
 
 Archiver une recette déjà utilisée ou figer son contenu pour conserver les
 semaines historiques ; une édition ultérieure ne réécrit pas silencieusement les

@@ -32,10 +32,9 @@ public sealed class Household : Entity
 
     /// <summary>
     /// Creates a brand-new household with a single owner member and a default member profile,
-    /// used both for explicit household creation and for on-demand provisioning of pre-existing
-    /// Supabase users on their first authenticated request after this milestone.
+    /// provisioned on the user's first authenticated request.
     /// </summary>
-    public static Household CreateForOwner(Guid supabaseUserId, string name, DateTimeOffset? now = null)
+    public static Household CreateForOwner(Guid userId, string name, DateTimeOffset? now = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -45,7 +44,7 @@ public sealed class Household : Entity
         var timestamp = now ?? DateTimeOffset.UtcNow;
         var household = new Household(Guid.NewGuid(), name.Trim(), timestamp, timestamp);
 
-        household._members.Add(HouseholdMember.CreateOwner(household.Id, supabaseUserId, timestamp));
+        household._members.Add(HouseholdMember.CreateOwner(household.Id, userId, timestamp));
         household._memberProfiles.Add(MemberProfile.Create(household.Id, "Moi", 1.0m, timestamp));
 
         return household;

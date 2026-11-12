@@ -33,21 +33,18 @@ Set:
 - `LIFEOS_API_URL` to the backend origin (for example `http://localhost:5000`, without `/api`).
   The former name `VITE_LIFEOS_API_URL` is still read when `LIFEOS_API_URL` is unset,
   in the build script, the Docker image, the compose files and the Pages workflow.
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-The backend must allow the Angular app's origin in `Cors:AllowedOrigins`.
-Supabase is used for authentication only; household data is read from and
-written to the LifeOS API using the Supabase access token.
-Google OAuth is the primary sign-in method; email magic links remain available.
-Follow [the Google/Supabase setup guide](../../docs/google-oauth.md) for provider
-activation, callback/redirect allow-lists, existing-account linking limitations,
-and the final private-Firefox check. No Google secret belongs in frontend config.
+The backend must allow the Angular app's origin in `Cors:AllowedOrigins` and list
+its base URL in `Auth:WebClient:RedirectUris`.
+Sign-in goes through the LifeOS API OAuth server (ADR 0011): the app is the public
+client `lifeos-web` (authorization code + PKCE S256, `core/auth/oauth-client.ts`), the
+API handles Google, and the app keeps an access token and a rotating refresh token
+in `localStorage`. The web callback is the app base URL (`?code=&state=` before the
+hash route); the iPhone app uses `lifeos://auth/callback`. See
+[the sign-in setup guide](../../docs/google-oauth.md). No secret belongs in frontend config.
 
 The predev/prebuild scripts generate an ignored `public/config.js` from those
-environment variables for local development and builds. The Supabase
-anonymous key is public client configuration; it must never be replaced with a
-service-role key. API calls fail visibly when the API URL is missing.
+environment variables for local development and builds. API calls fail visibly when
+the API URL is missing.
 
 The sidebar shows separate `UI Build #123` and `API Build #123` links to the
 producing GitHub Actions run/attempt. Retries show `· tentative 2`; expandable
@@ -68,36 +65,29 @@ npm run lint
 npm run build
 ```
 
-Auth flow and callback tests use Node's built-in test runner, including a real
-Supabase SDK PKCE exchange with a simulated transport. The Angular production
+OAuth helpers (PKCE, callback parsing, token handling) are tested with Node's built-in
+test runner. The Angular production
 build performs strict template and TypeScript checks. Real Google sign-in needs
 manual provider setup and is not covered by these tests.
 
 ## Docker image
 
-`Dockerfile` builds a Supabase-independent Angular image and serves
+`Dockerfile` builds an unconfigured Angular image and serves
 `dist/browser` from nginx. The nginx entrypoint writes `config.js` at container
-startup from `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and
-`LIFEOS_API_URL`, so the same image
-can be deployed to different Supabase projects:
+startup from `LIFEOS_API_URL`, so the same image can target different APIs:
 
 ```sh
 docker build -t lifeos-web .
 docker run --rm -p 8080:80 \
   -e LIFEOS_API_URL="https://<api-host>" \
-  -e VITE_SUPABASE_URL="https://<project-ref>.supabase.co" \
-  -e VITE_SUPABASE_ANON_KEY="<public-anon-key>" \
   lifeos-web
 ```
 
 The `.github/workflows/build-push-docker-images.yml` workflow publishes this
 unconfigured image as `ghcr.io/bricegomis/lifeos-web:latest` on pushes to
-`main`; no Supabase settings are required in GitHub Actions. Supply the three
-runtime variables when starting the container (for example in the root
-`docker-compose.yaml`). `VITE_SUPABASE_URL` should use the same project URL as
-the API's `SUPABASE_URL`. The anonymous key is public and must never be
-replaced with a service-role key. The API host must allow the deployed Angular
-origin through its CORS configuration.
+`main`. Supply `LIFEOS_API_URL` when starting the container (for example in the
+root `docker-compose.yaml`). The API host must allow the deployed Angular origin
+through its CORS configuration and its OAuth redirect URIs.
 
 Build provenance is generated into an ignored
 `src/environments/build-info.generated.ts` module and compiled into the hashed

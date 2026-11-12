@@ -18,6 +18,7 @@ namespace LifeOS.Infrastructure.Persistence;
 public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) : DbContext(options)
 {
     // Household core
+    public DbSet<UserAccount> UserAccounts => Set<UserAccount>();
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
@@ -36,6 +37,9 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     // Sports module
     public DbSet<SportTemplate> SportTemplates => Set<SportTemplate>();
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(LifeOSDbContext).Assembly);
+        OpenIddictModel.Configure(modelBuilder);
+    }
 }
