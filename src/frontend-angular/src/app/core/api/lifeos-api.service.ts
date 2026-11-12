@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http'
 import { inject, Injectable } from '@angular/core'
-import { Observable, throwError } from 'rxjs'
+import { Observable, of, switchMap, throwError } from 'rxjs'
 import { apiBaseUrl } from '@/environments/environment'
 
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -14,12 +14,9 @@ export class LifeosApiService {
     return this.request<T>('GET', path, undefined, query)
   }
 
+  /** Authenticated file download (images, receipt photos). */
   getBlob(path: string): Observable<Blob> {
-    if (!apiBaseUrl) {
-      return throwError(() => new Error('Configurez VITE_LIFEOS_API_URL pour connecter l’application à LifeOS API.'))
-    }
-    const cleanPath = path.startsWith('/') ? path : `/${path}`
-    return this.http.get(`${apiBaseUrl}/api${cleanPath}`, { responseType: 'blob' })
+    return this.url(path).pipe(switchMap(url => this.http.get(url, { responseType: 'blob' })))
   }
 
   post<T>(path: string, body?: unknown): Observable<T> {
@@ -39,18 +36,18 @@ export class LifeosApiService {
   }
 
   private request<T>(method: ApiMethod, path: string, body?: unknown, query?: ApiQuery): Observable<T> {
-    if (!apiBaseUrl) {
-      return throwError(() => new Error('Configurez VITE_LIFEOS_API_URL pour connecter l’application à LifeOS API.'))
-    }
-    const cleanPath = path.startsWith('/') ? path : `/${path}`
     let params = new HttpParams()
     for (const [key, value] of Object.entries(query ?? {})) {
       if (value !== undefined && value !== null) params = params.set(key, String(value))
     }
-    return this.http.request<T>(method, `${apiBaseUrl}/api${cleanPath}`, {
-      body,
-      params,
-    })
+    return this.url(path).pipe(switchMap(url => this.http.request<T>(method, url, { body, params })))
+  }
+
+  private url(path: string): Observable<string> {
+    if (!apiBaseUrl) {
+      return throwError(() => new Error('Configurez LIFEOS_API_URL pour connecter l’application à LifeOS API.'))
+    }
+    return of(`${apiBaseUrl}/api${path.startsWith('/') ? path : `/${path}`}`)
   }
 }
 

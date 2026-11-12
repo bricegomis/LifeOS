@@ -1,0 +1,106 @@
+<div class="page page-narrow food-page">
+  <a class="link-button back-link" [routerLink]="back().link">{{ back().label }}</a>
+
+  @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
+  @if (loading()) { <p class="status-text" role="status">Chargement de l’aliment…</p> }
+
+  @if (food(); as food) {
+    <div class="food-hero">
+      <app-food-image [path]="'/foods/' + food.id + '/image'" [hasImage]="food.hasImage" [version]="food.updatedAt"
+        [name]="food.name" [alt]="'Photo de ' + food.name" label="Photo de l’aliment" width="180px" height="180px" />
+      <div class="food-hero-text">
+        <h1>{{ food.name }}</h1>
+        @if (food.missingFields.length) {
+          <span class="chip chip-todo">À compléter</span>
+          <p class="missing">Manque : {{ food.missingFields.join(', ') }}.</p>
+        } @else {
+          <span class="chip chip-ok">Complet</span>
+        }
+        @if (food.isArchived) { <span class="chip chip-todo">Archivé</span> }
+        <div class="photo-actions">
+          <label class="lifeos-button lifeos-button-secondary" [class.is-disabled]="imageBusy()">
+            {{ food.hasImage ? 'Changer la photo' : 'Ajouter une photo' }}
+            <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" [disabled]="imageBusy()" (change)="changeImage($event)" />
+          </label>
+          @if (food.hasImage) {
+            <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="imageBusy()" (click)="removeImage()">Retirer la photo</button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <form class="card" (ngSubmit)="save()" aria-labelledby="nutrition-title">
+      <h2 id="nutrition-title">Nutrition et digestion</h2>
+      <div class="field-row">
+        <label class="field" style="flex-basis: 100%">
+          <span>Nom</span>
+          <input class="lifeos-input" name="name" maxlength="200" required [(ngModel)]="form.name" />
+        </label>
+        <label class="field">
+          <span>Base nutritionnelle</span>
+          <select class="lifeos-input" name="referenceUnit" [class.is-missing]="!form.referenceUnit" [(ngModel)]="form.referenceUnit">
+            <option value="">À renseigner</option>
+            <option value="100 g">100 g</option>
+            <option value="100 ml">100 ml</option>
+            <option value="1 pièce">1 pièce</option>
+          </select>
+        </label>
+        @for (field of fields; track field.key) {
+          <label class="field">
+            <span>{{ field.label }}</span>
+            <input class="lifeos-input" inputmode="decimal" [name]="field.key" [class.is-missing]="isMissing(form.nutrition[field.key])"
+              [(ngModel)]="form.nutrition[field.key]" />
+          </label>
+        }
+        <label class="field">
+          <span>FODMAP</span>
+          <select class="lifeos-input" name="fodmap" [class.is-missing]="!form.fodmap" [(ngModel)]="form.fodmap">
+            <option value="">À renseigner</option>
+            @for (option of fodmapOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
+          </select>
+        </label>
+        <label class="field">
+          <span>NOVA</span>
+          <select class="lifeos-input" name="nova" [class.is-missing]="!form.nova" [(ngModel)]="form.nova">
+            <option value="">À renseigner</option>
+            @for (option of novaOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
+          </select>
+        </label>
+      </div>
+      <label class="field" style="margin-top: 16px">
+        <span>Notes digestives (facultatif)</span>
+        <textarea class="lifeos-input" name="digestiveNotes" rows="2" maxlength="2000" [(ngModel)]="form.digestiveNotes"></textarea>
+      </label>
+      <p class="muted small" style="margin-top: 8px">Valeurs pour la base choisie. Zéro est une valeur ; un champ vide reste à compléter.</p>
+      <div class="form-footer">
+        <button type="submit" class="lifeos-button" [disabled]="saving() || !dirty()">{{ saving() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+        @if (saved() && !dirty()) { <span class="muted" role="status">Enregistré.</span> }
+        @if (saveError()) { <span class="error-text" role="alert">{{ saveError() }}</span> }
+      </div>
+    </form>
+
+    <section class="card">
+      <app-household-reviews targetType="food" [targetId]="food.id" [profiles]="profiles()" />
+    </section>
+
+    <section class="card" aria-labelledby="prices-title">
+      <div class="prices-header">
+        <div>
+          <h2 id="prices-title">Prix relevés</h2>
+          <p class="muted">{{ prices().range }}</p>
+        </div>
+        <a class="lifeos-button lifeos-button-secondary desktop-only" routerLink="/products">Voir les produits</a>
+      </div>
+      @for (line of prices().lines; track $index) {
+        <div class="price-row">
+          <span><span style="font-weight: 500">{{ line.product }}</span><span class="muted small">{{ line.detail }}</span></span>
+          <span class="price-amount">{{ line.unitPrice }}</span>
+        </div>
+      }
+    </section>
+
+    @if (!food.isArchived) {
+      <div><button type="button" class="lifeos-button lifeos-button-secondary" (click)="archive()">Archiver l’aliment</button></div>
+    }
+  }
+</div>

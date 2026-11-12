@@ -1,0 +1,47 @@
+<div class="page">
+  <div class="page-header">
+    <h1>Recettes</h1>
+    <button type="button" class="lifeos-button" (click)="creating.set(true)">Nouvelle recette</button>
+  </div>
+
+  <div class="filter-bar" role="search">
+    <input type="search" class="lifeos-input" aria-label="Rechercher une recette" placeholder="Rechercher une recette"
+      [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    @if (tags().length) {
+      <button type="button" class="pill" [attr.aria-pressed]="!tag()" (click)="tag.set('')">Toutes</button>
+      @for (item of tags(); track item) {
+        <button type="button" class="pill" [attr.aria-pressed]="tag() === item" (click)="tag.set(item)">{{ item }}</button>
+      }
+    }
+  </div>
+
+  @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
+  @if (loading()) {
+    <p class="status-text" role="status">Chargement des recettes…</p>
+  } @else if (!recipes().length) {
+    <p class="empty-state">Aucune recette pour le moment. Créez la première avec « Nouvelle recette ».</p>
+  } @else if (!visible().length) {
+    <p class="empty-state">Aucune recette ne correspond à ce filtre.</p>
+  } @else {
+    <div class="recipe-cards">
+      @for (recipe of visible(); track recipe.id) {
+        <a class="recipe-card" [routerLink]="['/recipes', recipe.id]">
+          <app-food-image [path]="'/recipes/' + recipe.id + '/image'" [hasImage]="recipe.hasImage" [version]="recipe.updatedAt"
+            [name]="recipe.name" width="100%" height="170px" />
+          <span class="recipe-card-body">
+            <span class="recipe-card-title">{{ recipe.name }}</span>
+            <span class="muted">{{ meta(recipe) }}</span>
+            @if (recipe.tags.length) {
+              <span class="tags">@for (item of recipe.tags; track item) { <span class="tag">{{ item }}</span> }</span>
+            }
+            @if (cost(recipe); as summary) { <span class="muted small">{{ summary }}</span> }
+          </span>
+        </a>
+      }
+    </div>
+  }
+</div>
+
+@if (creating()) {
+  <app-recipe-editor [recipe]="null" (saved)="created($event)" (closed)="creating.set(false)" />
+}

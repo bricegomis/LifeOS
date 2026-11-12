@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
-using LifeOS.Api.Contracts;
-using LifeOS.Application.FoodItems;
+using LifeOS.Api.Food.Foods;
+using LifeOS.Api.Food.Stores;
 
 namespace LifeOS.Api.IntegrationTests;
 
@@ -25,7 +25,7 @@ public sealed class PersistenceAcrossRestartTests(PostgresContainerFixture postg
 
             var createResponse = await client.PostAsJsonAsync(
                 "/api/foods",
-                new FoodRequest("Riz", "100g", null));
+                new FoodRequest("Riz", "100 g", null));
 
             createResponse.EnsureSuccessStatusCode();
             var created = await createResponse.Content.ReadFromJsonAsync<FoodItemDto>();

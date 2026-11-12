@@ -12,9 +12,14 @@ code, identifiers and code comments are English.
   proposals, external AI agent, per-person health privacy) and `docs/01-roadmap.md`
   (six steps; each starts with a scoping session, then a clickable mockup the user
   validates before any backend or real UI code).
-- What exists today: `docs/PROJECT.md` (kept current at every delivery),
-  `docs/02-core-model.md`, ADR 0006 (foods/products/receipts), ADR 0007 (recipes,
-  household reviews) and ADR 0008 (first week planner removed).
+- Step 1 target: ADR 0010 (simplified food module: receipts become a stored photo,
+  JSON import/OCR/purchases/household groups/cooking session removed, fibres and
+  recipe images added, products always complete (mandatory package contents), min/max recipe cost
+  across stores, full data reset) and
+  `docs/02-core-model.md`.
+- What exists today: `docs/PROJECT.md` (kept current at every delivery), ADR 0006
+  (foods/products/receipts), ADR 0007 (recipes, household reviews) and ADR 0008
+  (first week planner removed). The code still follows these until each step 1 lot lands.
 - `docs/semainier-retour-experience.md`: lessons from the first planner and the
   sport needs already expressed.
 - Historical docs were deleted on 2026-11-11 (git history keeps them). If the docs
@@ -35,20 +40,21 @@ code, identifiers and code comments are English.
 - Every persisted business row is filtered by `household_id` at the application layer
   (no Postgres RLS). New queries/commands must resolve and filter by the caller's
   household; cross-household references must be rejected (composite FKs exist).
-- Food = generic culinary reference with manual, nullable nutrition (base, 4 macros,
-  FODMAP, NOVA). Zero is a valid value; "À compléter" when any of the 7 fields is null.
-  Product = commercial price reference linked to one food. Recipes and meal lines
-  pick foods, never a product/brand implicitly.
-- Receipts: raw source kept, lines `pending`/`validated`/`ignored`; import creates
-  nothing. JSON lines validate one by one; photo receipts finalize atomically. Both
-  are transactional and idempotent. No health/nutrition data imported from receipts.
-- Prices: observed price = line total / quantity. Compare only on truly comparable
-  bases (kg, L, confirmed pieces); package contents must be confirmed manually.
-  No invented density, piece weight or drained weight.
+- Food = generic culinary reference with manual, nullable nutrition (base "100 g",
+  "100 ml" or "1 pièce", calories, proteins, carbs, fats, fibres, FODMAP, NOVA). Zero
+  is a valid value; "À compléter" when any of the 8 fields is null. Product =
+  commercial price reference linked to one food, always with its package contents.
+  Recipes pick foods (quantities in g, ml or pièce), never a product/brand.
+- Receipts: a receipt is only a stored photo with optional store and purchase date,
+  `pending` or `processed`. Uploading creates no product and no price; nothing is read
+  from the image (no OCR). Prices are entered by hand.
+- Prices: a price is paid for one package, typed by hand, and freezes the package
+  contents; it compares as a price per kg, L or piece. Mass, volume and pieces are
+  never converted into each other (no invented density, piece weight or drained weight).
 - Quantities/nutrition from a recipe: `ingredient quantity × portions / yield`;
   unknown nutrition stays unknown and makes totals incomplete.
-- Reviews: optional integer 0..10 and/or comment, per food or recipe and per profile
-  or named household group. 0 ≠ "non noté". Strong FKs, no polymorphic target.
+- Reviews: optional integer 0..10 and/or comment, per food or recipe and per household
+  profile. 0 ≠ "non noté". Strong FKs, no polymorphic target.
 - There is no week planner for now (ADR 0008). When it comes back, planned meals keep
   snapshots: editing a recipe never rewrites planned weeks.
 - Module boundaries (ADR 0009): a module never reads another module's tables or
@@ -66,7 +72,7 @@ code, identifiers and code comments are English.
 - Backend (from `src/backend`): `dotnet build` and `dotnet test`. Integration tests
   need a running Docker daemon (Testcontainers PostgreSQL); if Docker is unavailable,
   say so instead of claiming the tests pass.
-- iOS (`scripts/test-ios-contract.sh`, `npm run cap:sync`) needs macOS/Xcode; on
+- iOS (`npm run cap:sync`, Xcode builds) needs macOS/Xcode; on
   Linux, report it as not run. Unsigned builds never prove an iPhone install.
 - Local checks are not a production verification.
 

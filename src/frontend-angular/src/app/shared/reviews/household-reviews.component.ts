@@ -1,7 +1,7 @@
 import { Component, DestroyRef, HostListener, Input, OnChanges, SimpleChanges, inject, output, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
-import type { HouseholdGroupDto, MemberProfileDto, ReviewDto, SaveReviewRequest } from '@/app/core/api/api.models'
+import type { MemberProfileDto, ReviewDto, SaveReviewRequest } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
@@ -16,19 +16,16 @@ let nextReviewFormId = 0
   imports: [FormsModule, LifeosDialogComponent],
   template: `
     <section class="household-reviews" aria-label="Avis du foyer">
-      <h3>Avis du foyer</h3>
+      <h2>Avis du foyer</h2>
       @if (loading()) { <p role="status">Chargement des avis…</p> }
       @if (error() && !editorOpen()) { <p class="review-error" role="alert">{{ error() }}</p> }
       @if (reviews().length) {
         <ul class="review-list">
           @for (review of reviews(); track review.id) {
             <li>
-              <div>
-                <strong>{{ review.targetName ?? 'Cible indisponible' }}</strong>
-                <span>{{ review.score === null ? 'Sans note' : review.score + '/10' }}</span>
-                @if (review.comment) { <p>{{ review.comment }}</p> }
-                <small>Saisi par le compte {{ review.createdByUserId }}</small>
-              </div>
+              <strong>{{ review.profileName ?? 'Profil supprimé' }}</strong>
+              <span class="review-score">{{ review.score === null ? 'Non noté' : review.score + '/10' }}</span>
+              <span class="review-comment">{{ review.comment }}</span>
               <div class="review-actions">
                 <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="edit(review, $event)">Modifier</button>
                 <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="remove(review)">Supprimer</button>
@@ -40,12 +37,12 @@ let nextReviewFormId = 0
         <p>Aucun avis pour le moment. Les avis restent visibles dans votre foyer.</p>
       }
 
-      @if (profiles.length || groups.length) {
+      @if (profiles.length) {
         <div class="review-actions">
           <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="add($event)">Ajouter un avis</button>
         </div>
       } @else {
-        <p>Ajoutez d’abord une personne ou un groupe dans Réglages pour saisir un avis.</p>
+        <p>Ajoutez d’abord un profil dans Paramètres pour saisir un avis.</p>
       }
     </section>
     <app-lifeos-dialog [open]="editorOpen()" [heading]="editingId() ? 'Modifier l’avis' : 'Ajouter un avis'"
@@ -54,11 +51,10 @@ let nextReviewFormId = 0
       <form [id]="formId" class="review-form" ngNativeValidate (ngSubmit)="save()" (submit)="$event.stopPropagation()">
         <fieldset class="review-fields" [disabled]="busy()">
           <label class="dialog-field">
-            <span>Personne ou groupe</span>
+            <span>Profil</span>
             <select class="text-input" name="target" required [disabled]="!!editingId()" [(ngModel)]="target">
               <option value="">Choisir</option>
-              @for (profile of profiles; track profile.id) { <option [value]="'profile:' + profile.id">{{ profile.displayName }}</option> }
-              @for (group of groups; track group.id) { <option [value]="'group:' + group.id">{{ group.name }} · groupe</option> }
+              @for (profile of profiles; track profile.id) { <option [value]="profile.id">{{ profile.displayName }}</option> }
             </select>
           </label>
           <div class="dialog-row">
@@ -77,11 +73,13 @@ let nextReviewFormId = 0
   `,
   styles: [`
     .household-reviews { display: grid; gap: 12px; }
-    .household-reviews h3 { margin: 0; font-size: 1.05rem; }
-    .household-reviews p { margin: 6px 0 0; color: var(--lifeos-text-soft); }
-    .review-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-    .review-list li { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 10px; padding: 12px; border-radius: 10px; background: var(--lifeos-surface-soft); }
-    .review-list span { margin-left: 10px; color: var(--lifeos-accent-strong); font-weight: 750; }
+    .household-reviews h2 { margin: 0; font-size: 17px; font-weight: 600; }
+    .household-reviews p { margin: 0; color: var(--lifeos-text-soft); }
+    .review-list { display: grid; margin: 0; padding: 0; list-style: none; }
+    .review-list li { display: grid; grid-template-columns: 110px 80px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--lifeos-line); }
+    .review-score { font-weight: 600; }
+    .review-comment { color: var(--lifeos-text-soft); }
+    @media (max-width: 560px) { .review-list li { grid-template-columns: minmax(0, 1fr) auto; } .review-comment, .review-list .review-actions { grid-column: 1 / -1; } }
     .review-form, .review-fields { display: grid; gap: 12px; min-width: 0; }
     .review-fields { margin: 0; padding: 0; border: 0; }
     .review-actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -93,7 +91,6 @@ export class HouseholdReviewsComponent implements OnChanges {
   @Input({ required: true }) targetType: ReviewTarget = 'food'
   @Input({ required: true }) targetId = ''
   @Input() profiles: MemberProfileDto[] = []
-  @Input() groups: HouseholdGroupDto[] = []
   private readonly api = inject(LifeosApiService)
   readonly reviews = signal<ReviewDto[]>([])
   readonly reviewsLoaded = output<ReviewDto[]>()
@@ -155,7 +152,7 @@ export class HouseholdReviewsComponent implements OnChanges {
   edit(review: ReviewDto, event?: Event): void {
     if (this.busy() || this.editorOpen()) return
     this.editingId.set(review.id)
-    this.target = review.memberProfileId ? `profile:${review.memberProfileId}` : `group:${review.householdGroupId}`
+    this.target = review.memberProfileId
     this.score = review.score
     this.comment = review.comment ?? ''
     this.initial = formSnapshot({ target: this.target, score: this.score, comment: this.comment })
@@ -180,16 +177,15 @@ export class HouseholdReviewsComponent implements OnChanges {
 
   async save(): Promise<void> {
     if (this.busy() || !this.editorOpen()) return
-    const [kind, id] = this.target.split(':')
+    const id = this.target
     const text = this.comment.trim()
-    if (!id || (kind !== 'profile' && kind !== 'group') || (this.score === null && !text)
+    if (!id || (this.score === null && !text)
       || (this.score !== null && (!Number.isInteger(this.score) || this.score < 0 || this.score > 10))) {
-      this.error.set('Choisissez une personne ou un groupe et renseignez une note de 0 à 10 ou un commentaire.')
+      this.error.set('Choisissez un profil et renseignez une note de 0 à 10 ou un commentaire.')
       return
     }
     const body: SaveReviewRequest = {
-      memberProfileId: kind === 'profile' ? id : null,
-      householdGroupId: kind === 'group' ? id : null,
+      memberProfileId: id,
       score: this.score,
       comment: text || null,
     }
@@ -212,7 +208,7 @@ export class HouseholdReviewsComponent implements OnChanges {
   }
 
   async remove(review: ReviewDto): Promise<void> {
-    if (this.busy() || !window.confirm(`Supprimer l’avis de « ${review.targetName ?? 'cette cible'} » ?`)) return
+    if (this.busy() || !window.confirm(`Supprimer l’avis de « ${review.profileName ?? 'ce profil'} » ?`)) return
     this.busy.set(true)
     this.error.set('')
     try {

@@ -45,7 +45,7 @@ services:
     environment:
       VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
       VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-      VITE_LIFEOS_API_URL: ${VITE_LIFEOS_API_URL}
+      LIFEOS_API_URL: ${LIFEOS_API_URL:-${VITE_LIFEOS_API_URL:-}}
     labels:
       - com.centurylinklabs.watchtower.enable=true
 networks:

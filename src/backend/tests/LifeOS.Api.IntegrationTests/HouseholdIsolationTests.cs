@@ -1,8 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using LifeOS.Api.Contracts;
-using LifeOS.Application.FoodItems;
-using LifeOS.Application.Stores;
+using LifeOS.Api.Food.Foods;
+using LifeOS.Api.Food.Stores;
 
 namespace LifeOS.Api.IntegrationTests;
 
@@ -55,7 +54,7 @@ public sealed class HouseholdIsolationTests(PostgresContainerFixture postgres) :
 
         var createResponse = await clientA.PostAsJsonAsync(
             "/api/foods",
-            new FoodRequest("Lait", "100ml", null));
+            new FoodRequest("Lait", "100 ml", null));
 
         createResponse.EnsureSuccessStatusCode();
         var createdArticle = await createResponse.Content.ReadFromJsonAsync<FoodItemDto>();
@@ -95,7 +94,7 @@ public sealed class HouseholdIsolationTests(PostgresContainerFixture postgres) :
         {
             var householdIdForA = dbContext.HouseholdMembers.Single(m => m.SupabaseUserId == userA).HouseholdId;
 
-            dbContext.Stores.Add(LifeOS.Domain.Stores.Store.Create(householdIdForA, "Marché de A", "1 rue de A", true, true));
+            dbContext.Stores.Add(LifeOS.Domain.Food.Stores.Store.Create(householdIdForA, "Marché de A", "1 rue de A", true, true));
             await dbContext.SaveChangesAsync();
         }
 

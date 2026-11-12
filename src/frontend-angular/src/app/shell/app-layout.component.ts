@@ -1,67 +1,55 @@
-import { Component, inject, OnInit, signal } from '@angular/core'
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router'
-import { firstValueFrom, timeout } from 'rxjs'
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core'
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router'
+import { filter, firstValueFrom } from 'rxjs'
 import { AuthService } from '@/app/core/auth/auth.service'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
-import { parseApiBuildInfo, type BuildInfo } from '@/app/core/build-info'
-import { BuildVersionComponent } from '@/app/shared/build-version.component'
-import { apiBaseUrl, buildInfo } from '@/environments/environment'
 import { NativeSyncService } from '@/app/core/native/native-sync.service'
-
-interface NavigationItem {
-  path: string
-  title: string
-  mobileTitle: string
-  icon: string
-}
+import { NAVIGATION_BLOCKS, MOBILE_TABS, readMenuOpen, writeMenuOpen } from './navigation'
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, BuildVersionComponent],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app-layout.component.html',
+  styleUrl: './app-layout.component.css',
 })
 export class AppLayoutComponent implements OnInit {
   readonly auth = inject(AuthService)
   private readonly router = inject(Router)
   private readonly api = inject(LifeosApiService)
   private readonly nativeSync = inject(NativeSyncService)
-  readonly buildInfo = buildInfo
-  readonly apiBuildInfo = signal<BuildInfo | null>(null)
-  readonly apiBuildStatus = signal(apiBaseUrl ? 'chargement…' : 'non configurée')
+  readonly blocks = NAVIGATION_BLOCKS
+  readonly tabs = MOBILE_TABS
+  readonly menuOpen = signal(readMenuOpen())
+  readonly pendingReceipts = signal(0)
   readonly signOutError = signal('')
+  readonly email = computed(() => this.auth.user()?.email ?? '')
+  readonly initial = computed(() => (this.email()[0] ?? 'L').toLocaleUpperCase('fr'))
 
-  readonly navigation: NavigationItem[] = [
-    { path: '/recipes', title: 'Recettes', mobileTitle: 'Recettes', icon: 'pi pi-book' },
-    { path: '/foods', title: 'Aliments', mobileTitle: 'Aliments', icon: 'pi pi-apple' },
-    { path: '/sports', title: 'Séances sportives', mobileTitle: 'Sport', icon: 'pi pi-bolt' },
-    { path: '/stores', title: 'Magasins', mobileTitle: 'Magasins', icon: 'pi pi-shop' },
-    {
-      path: '/tickets',
-      title: 'Tickets',
-      mobileTitle: 'Tickets',
-      icon: 'pi pi-shopping-cart',
-    },
-    { path: '/settings', title: 'Réglages', mobileTitle: 'Réglages', icon: 'pi pi-cog' },
-  ]
+  constructor() {
+    const subscription = this.router.events.pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => void this.refreshPendingReceipts())
+    inject(DestroyRef).onDestroy(() => subscription.unsubscribe())
+  }
 
-  readonly mobileNavigation = this.navigation.filter((item) =>
-    ['/recipes', '/foods', '/sports', '/tickets'].includes(item.path),
-  )
-
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     void this.nativeSync.initListeners()
     void this.nativeSync.syncNativeState()
+    void this.refreshPendingReceipts()
+  }
 
-    if (!apiBaseUrl) return
+  toggleMenu(): void {
+    this.menuOpen.update(open => !open)
+    writeMenuOpen(this.menuOpen())
+  }
 
+  /** Badge of the Tickets entry: receipts still waiting for their prices. */
+  private async refreshPendingReceipts(): Promise<void> {
     try {
-      const version = await firstValueFrom(
-        this.api.get<unknown>('/version').pipe(timeout({ first: 5000 })),
-      )
-      this.apiBuildInfo.set(parseApiBuildInfo(version))
+      const receipts = await firstValueFrom(this.api.get<{ status: string }[]>('/receipts'))
+      this.pendingReceipts.set(receipts.filter(receipt => receipt.status === 'pending').length)
     } catch {
-      this.apiBuildStatus.set('indisponible')
+      this.pendingReceipts.set(0)
     }
   }
 
@@ -74,9 +62,7 @@ export class AppLayoutComponent implements OnInit {
       await this.router.navigateByUrl('/login')
       if (purgeError) throw purgeError
     } catch (error) {
-      this.signOutError.set(
-        error instanceof Error ? error.message : 'Impossible de terminer la déconnexion.',
-      )
+      this.signOutError.set(error instanceof Error ? error.message : 'Impossible de terminer la déconnexion.')
     }
   }
 }

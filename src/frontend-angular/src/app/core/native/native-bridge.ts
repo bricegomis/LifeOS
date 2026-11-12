@@ -1,6 +1,8 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
-import type { AppGroupWidgetSnapshot, CookingSessionState } from './native.models'
-import { COOKING_STORAGE_KEY, mutateCookingSession, readCookingSession } from './cooking-contract'
+import type { AppGroupWidgetSnapshot } from './native.models'
+
+// Written by app versions that still had the cooking session (removed by ADR 0010).
+const LEGACY_COOKING_STORAGE_KEY = 'lifeos.native.cookingSession'
 
 export function nativeBridgeStatus(): 'web' | 'available' | 'unavailable' {
   if (!Capacitor.isNativePlatform()) return 'web'
@@ -16,20 +18,9 @@ export function requireNativeBridge(): void {
 export interface LifeosNativeBridgePlugin {
   saveWidgetSnapshot(options: { snapshot: AppGroupWidgetSnapshot }): Promise<void>
   clearWidgetSnapshot(): Promise<void>
-  getCookingSession(): Promise<{ session: CookingSessionState | null }>
-  saveCookingSession(options: { session: CookingSessionState }): Promise<void>
-  mutateCookingSession(options: { sessionId: string; operation: 'toggle' | 'complete'; stepIndex?: number }): Promise<{ session: CookingSessionState }>
-  clearCookingSession(options?: { sessionId?: string }): Promise<void>
-  startLiveActivity(options: {
-    sessionId: string
-    recipeTitle: string
-    steps: string[]
-    completedStepIndices: number[]
-  }): Promise<{ activityId?: string; disabled?: boolean }>
-  updateLiveActivity(options: {
-    completedStepIndices: number[]
-    isCompleted: boolean
-  }): Promise<void>
+  /** Legacy cleanup only: the Swift side still stores sessions started by older versions. */
+  clearCookingSession(): Promise<void>
+  /** Legacy cleanup only: ends a Live Activity started by an older version. */
   endLiveActivity(): Promise<void>
   reloadWidgetTimelines(): Promise<void>
 }
@@ -46,48 +37,8 @@ export const LifeosNativeBridge = registerPlugin<LifeosNativeBridgePlugin>('Life
         localStorage.removeItem('lifeos.native.widgetSnapshot')
       }
     },
-    async getCookingSession() {
-      if (typeof localStorage !== 'undefined') {
-        const raw = localStorage.getItem(COOKING_STORAGE_KEY)
-        if (raw) {
-          const session = readCookingSession(JSON.parse(raw))
-          if (!session) localStorage.removeItem(COOKING_STORAGE_KEY)
-          return { session }
-        }
-      }
-      return { session: null }
-    },
-    async saveCookingSession(options: { session: CookingSessionState }) {
-      const session = readCookingSession(options.session)
-      if (!session) throw new Error('Session cuisine expirée')
-      if (typeof localStorage !== 'undefined') {
-        const raw = localStorage.getItem(COOKING_STORAGE_KEY)
-        const current = raw ? readCookingSession(JSON.parse(raw)) : null
-        if (current && !current.isCompleted) throw new Error('Une session cuisine est déjà active')
-        localStorage.setItem(COOKING_STORAGE_KEY, JSON.stringify(session))
-      }
-    },
-    async mutateCookingSession(options: { sessionId: string; operation: 'toggle' | 'complete'; stepIndex?: number }) {
-      const raw = typeof localStorage === 'undefined' ? null : localStorage.getItem(COOKING_STORAGE_KEY)
-      const session = mutateCookingSession(raw ? readCookingSession(JSON.parse(raw)) : null,
-        options.sessionId, options.operation, options.stepIndex)
-      localStorage.setItem(COOKING_STORAGE_KEY, JSON.stringify(session))
-      return { session }
-    },
-    async clearCookingSession(options?: { sessionId?: string }) {
-      if (typeof localStorage !== 'undefined') {
-        const raw = localStorage.getItem(COOKING_STORAGE_KEY)
-        if (options?.sessionId && raw && readCookingSession(JSON.parse(raw))?.sessionId !== options.sessionId) {
-          throw new Error('Session cuisine remplacée')
-        }
-        localStorage.removeItem(COOKING_STORAGE_KEY)
-      }
-    },
-    async startLiveActivity() {
-      return {}
-    },
-    async updateLiveActivity() {
-      // no-op on web
+    async clearCookingSession() {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem(LEGACY_COOKING_STORAGE_KEY)
     },
     async endLiveActivity() {
       // no-op on web

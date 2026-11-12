@@ -2,82 +2,47 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using LifeOS.Api.Endpoints;
-using LifeOS.Application.Receipts;
-using LifeOS.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
+using LifeOS.Api.Food.Foods;
+using LifeOS.Api.Food.Products;
+using LifeOS.Api.Food.Receipts;
+using LifeOS.Api.Food.Reviews;
+using LifeOS.Api.Households;
+using LifeOS.Api.Sports;
 
 namespace LifeOS.Api.IntegrationTests;
 
 [Collection(PostgresCollection.Name)]
 public sealed class ReceiptPhotoTests(PostgresContainerFixture postgres)
 {
-    private const string MultiLineOcr = """
-        MARCHÉ DU CENTRE
-        13/10/2026 18:42
-        2 x YAOURT NATURE 3,50
-        TOMATES 2,40
-        """;
-
     [Fact]
-    public async Task Photo_draft_keeps_original_until_atomic_confirmation_and_records_unit_price_once()
+    public async Task A_photo_is_stored_as_a_pending_receipt_and_creates_no_product_or_price()
     {
         var storagePath = Path.Combine(Path.GetTempPath(), $"lifeos-receipt-photo-{Guid.NewGuid():N}");
         try
         {
-            await using var factory = new LifeOSApiFactory(postgres.ConnectionString,
-                receiptStoragePath: storagePath, receiptOcrService: new FixedReceiptOcrService(MultiLineOcr));
+            await using var factory = new LifeOSApiFactory(postgres.ConnectionString, receiptStoragePath: storagePath);
             using var client = factory.CreateClient().AsUser(Guid.NewGuid());
             var bytes = PngBytes(1);
-            using var form = PhotoForm(bytes);
-            using var upload = await client.PostAsync("/api/receipts/photo", form);
+
+            using var upload = await client.PostAsync("/api/receipts/photo", PhotoForm(bytes));
             Assert.Equal(HttpStatusCode.Created, upload.StatusCode);
-            var receipt = await upload.Content.ReadFromJsonAsync<JsonElement>();
-            var receiptId = Id(receipt);
-            Assert.Equal("draft", receipt.GetProperty("status").GetString());
-            Assert.True(receipt.GetProperty("hasPhoto").GetBoolean());
-            Assert.Equal(MultiLineOcr, receipt.GetProperty("ocrText").GetString());
-            Assert.Equal(2, receipt.GetProperty("lines").GetArrayLength());
-            Assert.Equal("MARCHÉ DU CENTRE", receipt.GetProperty("storeName").GetString());
-            Assert.Equal("2026-10-13T18:42:00+00:00", receipt.GetProperty("purchasedAt").GetString());
+            var receipt = (await upload.Content.ReadFromJsonAsync<ReceiptDto>())!;
+            Assert.Equal("pending", receipt.Status);
+            Assert.Null(receipt.StoreId);
+            Assert.Null(receipt.PurchaseDate);
             Assert.Empty((await client.GetFromJsonAsync<List<JsonElement>>("/api/products"))!);
+            Assert.Single(Directory.GetFiles(storagePath));
 
-            using var imageResponse = await client.GetAsync($"/api/receipts/{receiptId}/photo");
-            Assert.Equal(HttpStatusCode.OK, imageResponse.StatusCode);
-            Assert.Equal(bytes, await imageResponse.Content.ReadAsByteArrayAsync());
-            using var other = factory.CreateClient().AsUser(Guid.NewGuid());
-            Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/receipts/{receiptId}/photo")).StatusCode);
+            using var image = await client.GetAsync($"/api/receipts/{receipt.Id}/photo");
+            Assert.Equal(HttpStatusCode.OK, image.StatusCode);
+            Assert.Equal("image/png", image.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(bytes, await image.Content.ReadAsByteArrayAsync());
 
-            var lines = receipt.GetProperty("lines").EnumerateArray().ToArray();
-            var lineId = Id(lines[0]);
-            var context = new ReceiptContextRequest(null, "Marché du Centre", "13/10/2026",
-                new DateTimeOffset(2026, 10, 13, 18, 42, 0, TimeSpan.Zero));
-            receipt = await Send(client, HttpMethod.Put, $"/api/receipts/{receiptId}/context", context);
-            await Send(client, HttpMethod.Put, $"/api/receipts/{receiptId}/lines/{lineId}",
-                new CorrectReceiptLineRequest("Yaourt nature", 4m, 2m, "unit", null, false));
-            await Send(client, HttpMethod.Post, $"/api/receipts/{receiptId}/lines/{Id(lines[1])}/ignore");
-
-            var finalize = new FinalizeReceiptRequest([
-                new FinalizeReceiptLineRequest(lineId, new ValidateReceiptLineRequest(null, null,
-                    "Yaourt", "Yaourt nature", null, null, false, false))
-            ]);
-            var requests = await Task.WhenAll(Enumerable.Range(0, 3)
-                .Select(_ => client.PostAsJsonAsync($"/api/receipts/{receiptId}/finalize", finalize)));
-            Assert.All(requests, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
-            receipt = await Send(client, HttpMethod.Get, $"/api/receipts/{receiptId}");
-            Assert.Equal("validated", receipt.GetProperty("status").GetString());
-            Assert.Equal("validated", receipt.GetProperty("lines")[0].GetProperty("status").GetString());
-
-            var products = await client.GetFromJsonAsync<List<JsonElement>>("/api/products");
-            var product = Assert.Single(products!);
-            var price = Assert.Single(product.GetProperty("priceHistory").EnumerateArray());
-            Assert.Equal(2m, price.GetProperty("price").GetDecimal());
-            Assert.Equal(new DateTimeOffset(2026, 10, 13, 18, 42, 0, TimeSpan.Zero),
-                price.GetProperty("observedAt").GetDateTimeOffset());
-            await using var db = factory.CreateDbContext();
-            var purchase = Assert.Single(await db.Purchases.Where(p => p.ReceiptLineId == lineId).ToListAsync());
-            Assert.Equal(4m, purchase.Total);
-            Assert.Equal(2m, purchase.Quantity);
+            // The same bytes are refused for this household and leave no orphan file behind.
+            using var duplicate = await client.PostAsync("/api/receipts/photo", PhotoForm(bytes));
+            Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+            Assert.Single(Directory.GetFiles(storagePath));
+            Assert.Single((await client.GetFromJsonAsync<List<ReceiptDto>>("/api/receipts"))!);
         }
         finally
         {
@@ -86,45 +51,60 @@ public sealed class ReceiptPhotoTests(PostgresContainerFixture postgres)
     }
 
     [Fact]
-    public async Task Failed_batch_does_not_persist_partial_products_or_validate_receipt()
+    public async Task Store_and_date_are_optional_then_editable_and_processing_is_reversible()
     {
-        var storagePath = Path.Combine(Path.GetTempPath(), $"lifeos-receipt-rollback-{Guid.NewGuid():N}");
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        using var client = factory.CreateClient().AsUser(Guid.NewGuid());
+        var storeId = await CreateStore(client, "Biocoop");
+
+        using var form = PhotoForm(PngBytes(2));
+        form.Add(new StringContent(storeId.ToString()), "storeId");
+        form.Add(new StringContent("2026-11-08"), "purchaseDate");
+        using var upload = await client.PostAsync("/api/receipts/photo", form);
+        Assert.Equal(HttpStatusCode.Created, upload.StatusCode);
+        var receipt = (await upload.Content.ReadFromJsonAsync<ReceiptDto>())!;
+        Assert.Equal(storeId, receipt.StoreId);
+        Assert.Equal(new DateOnly(2026, 11, 8), receipt.PurchaseDate);
+
+        var processed = await Put(client, receipt.Id, new UpdateReceiptRequest(null, null, true));
+        Assert.Equal("processed", processed.Status);
+        Assert.Null(processed.StoreId);
+        Assert.Null(processed.PurchaseDate);
+
+        var reopened = await Put(client, receipt.Id, new UpdateReceiptRequest(storeId, new DateOnly(2026, 11, 9), false));
+        Assert.Equal("pending", reopened.Status);
+        Assert.Equal(storeId, reopened.StoreId);
+        Assert.Equal(new DateOnly(2026, 11, 9), reopened.PurchaseDate);
+    }
+
+    [Fact]
+    public async Task Invalid_uploads_are_rejected_without_keeping_a_file()
+    {
+        var storagePath = Path.Combine(Path.GetTempPath(), $"lifeos-receipt-photo-{Guid.NewGuid():N}");
         try
         {
-            await using var factory = new LifeOSApiFactory(postgres.ConnectionString,
-                receiptStoragePath: storagePath, receiptOcrService: new FixedReceiptOcrService(MultiLineOcr));
+            await using var factory = new LifeOSApiFactory(postgres.ConnectionString, receiptStoragePath: storagePath);
             using var client = factory.CreateClient().AsUser(Guid.NewGuid());
-            using var form = PhotoForm(PngBytes(2));
-            using var upload = await client.PostAsync("/api/receipts/photo", form);
-            var receipt = await upload.Content.ReadFromJsonAsync<JsonElement>();
-            var receiptId = Id(receipt);
-            var lines = receipt.GetProperty("lines").EnumerateArray().ToArray();
-            var firstId = Id(lines[0]);
-            var secondId = Id(lines[1]);
-            await Send(client, HttpMethod.Put, $"/api/receipts/{receiptId}/context",
-                new ReceiptContextRequest(null, "Marché du Centre", "13/10/2026",
-                    new DateTimeOffset(2026, 10, 13, 18, 42, 0, TimeSpan.Zero)));
-            await Send(client, HttpMethod.Put, $"/api/receipts/{receiptId}/lines/{firstId}",
-                new CorrectReceiptLineRequest("Yaourt nature", 4m, 2m, "unit", null, false));
-            await Send(client, HttpMethod.Put, $"/api/receipts/{receiptId}/lines/{secondId}",
-                new CorrectReceiptLineRequest("Tomates", 2.4m, 1m, "kg", null, false));
 
-            var body = new FinalizeReceiptRequest([
-                new FinalizeReceiptLineRequest(firstId, new ValidateReceiptLineRequest(null, null,
-                    "Yaourt", "Yaourt nature", null, null, false, false)),
-                new FinalizeReceiptLineRequest(secondId, new ValidateReceiptLineRequest(Guid.NewGuid(), null,
-                    null, null, null, null, false, false)),
-            ]);
-            var response = await client.PostAsJsonAsync($"/api/receipts/{receiptId}/finalize", body);
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            receipt = await Send(client, HttpMethod.Get, $"/api/receipts/{receiptId}");
-            Assert.Equal("draft", receipt.GetProperty("status").GetString());
-            Assert.All(receipt.GetProperty("lines").EnumerateArray(), line =>
-                Assert.Equal("pending", line.GetProperty("status").GetString()));
-            Assert.Empty((await client.GetFromJsonAsync<List<JsonElement>>("/api/products"))!);
-            await using var db = factory.CreateDbContext();
-            Assert.Empty(await db.Purchases.Where(p => p.HouseholdId == db.Receipts
-                .Where(r => r.Id == receiptId).Select(r => r.HouseholdId).Single()).ToListAsync());
+            using var noPhoto = await client.PostAsync("/api/receipts/photo", new MultipartFormDataContent { { new StringContent("x"), "other" } });
+            Assert.Equal(HttpStatusCode.BadRequest, noPhoto.StatusCode);
+
+            using var badDate = PhotoForm(PngBytes(3));
+            badDate.Add(new StringContent("08/11/2026"), "purchaseDate");
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/api/receipts/photo", badDate)).StatusCode);
+
+            using var unknownStore = PhotoForm(PngBytes(4));
+            unknownStore.Add(new StringContent(Guid.NewGuid().ToString()), "storeId");
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/api/receipts/photo", unknownStore)).StatusCode);
+
+            var notAnImage = new MultipartFormDataContent();
+            var file = new ByteArrayContent([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+            file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+            notAnImage.Add(file, "photo", "ticket.png");
+            Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync("/api/receipts/photo", notAnImage)).StatusCode);
+
+            Assert.False(Directory.Exists(storagePath) && Directory.GetFiles(storagePath).Length > 0);
+            Assert.Empty((await client.GetFromJsonAsync<List<ReceiptDto>>("/api/receipts"))!);
         }
         finally
         {
@@ -133,44 +113,62 @@ public sealed class ReceiptPhotoTests(PostgresContainerFixture postgres)
     }
 
     [Fact]
-    public async Task Ocr_failure_retains_photo_and_creates_an_empty_editable_draft()
+    public async Task Receipts_photos_and_stores_are_isolated_by_household()
     {
-        var storagePath = Path.Combine(Path.GetTempPath(), $"lifeos-receipt-ocr-error-{Guid.NewGuid():N}");
-        try
-        {
-            await using var factory = new LifeOSApiFactory(postgres.ConnectionString,
-                receiptStoragePath: storagePath, receiptOcrService: new FailingReceiptOcrService());
-            using var client = factory.CreateClient().AsUser(Guid.NewGuid());
-            using var form = PhotoForm(PngBytes(3));
-            using var response = await client.PostAsync("/api/receipts/photo", form);
-            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-            var receipt = await response.Content.ReadFromJsonAsync<JsonElement>();
-            var receiptId = Id(receipt);
-            Assert.Equal("draft", receipt.GetProperty("status").GetString());
-            Assert.Contains("Tesseract absent", receipt.GetProperty("ocrError").GetString());
-            Assert.Empty(receipt.GetProperty("lines").EnumerateArray());
-            Assert.True(receipt.GetProperty("hasPhoto").GetBoolean());
-            await Send(client, HttpMethod.Post, $"/api/receipts/{receiptId}/lines", new AddReceiptLineRequest("Saisie manuelle"));
-            var resumed = await Send(client, HttpMethod.Get, $"/api/receipts/{receiptId}");
-            Assert.Equal(1, resumed.GetProperty("lines").GetArrayLength());
-        }
-        finally
-        {
-            if (Directory.Exists(storagePath)) Directory.Delete(storagePath, recursive: true);
-        }
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        using var owner = factory.CreateClient().AsUser(Guid.NewGuid());
+        using var other = factory.CreateClient().AsUser(Guid.NewGuid());
+        var bytes = PngBytes(5);
+
+        using var upload = await owner.PostAsync("/api/receipts/photo", PhotoForm(bytes));
+        var receipt = (await upload.Content.ReadFromJsonAsync<ReceiptDto>())!;
+
+        Assert.Empty((await other.GetFromJsonAsync<List<ReceiptDto>>("/api/receipts"))!);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/receipts/{receipt.Id}/photo")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PutAsJsonAsync($"/api/receipts/{receipt.Id}",
+            new UpdateReceiptRequest(null, null, true))).StatusCode);
+
+        // Another household's store cannot be attached, and the same photo is not a duplicate there.
+        var foreignStore = await CreateStore(other, "Leclerc");
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PutAsJsonAsync($"/api/receipts/{receipt.Id}",
+            new UpdateReceiptRequest(foreignStore, null, false))).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await other.PostAsync("/api/receipts/photo", PhotoForm(bytes))).StatusCode);
+
+        var unchanged = Assert.Single((await owner.GetFromJsonAsync<List<ReceiptDto>>("/api/receipts"))!);
+        Assert.Equal("pending", unchanged.Status);
+        Assert.Null(unchanged.StoreId);
     }
 
-    private static async Task<JsonElement> Send(HttpClient client, HttpMethod method, string path, object? body = null)
+    [Theory]
+    [InlineData("POST", "/api/receipts")]
+    [InlineData("GET", "/api/receipts/00000000-0000-0000-0000-000000000001")]
+    [InlineData("PUT", "/api/receipts/00000000-0000-0000-0000-000000000001/context")]
+    [InlineData("POST", "/api/receipts/00000000-0000-0000-0000-000000000001/lines")]
+    [InlineData("POST", "/api/receipts/00000000-0000-0000-0000-000000000001/finalize")]
+    public async Task Json_import_lines_and_validation_routes_are_gone(string method, string path)
     {
-        using var response = await client.SendAsync(new HttpRequestMessage(method, path)
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        using var client = factory.CreateClient().AsUser(Guid.NewGuid());
+        using var response = await client.SendAsync(new HttpRequestMessage(new HttpMethod(method), path)
         {
-            Content = body is null ? null : JsonContent.Create(body),
+            Content = JsonContent.Create(new { }),
         });
-        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
-        return await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Contains(response.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
     }
 
-    private static Guid Id(JsonElement value) => value.GetProperty("id").GetGuid();
+    private static async Task<ReceiptDto> Put(HttpClient client, Guid id, UpdateReceiptRequest request)
+    {
+        using var response = await client.PutAsJsonAsync($"/api/receipts/{id}", request);
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        return (await response.Content.ReadFromJsonAsync<ReceiptDto>())!;
+    }
+
+    private static async Task<Guid> CreateStore(HttpClient client, string name)
+    {
+        using var response = await client.PostAsJsonAsync("/api/stores", new { name, address = "", isOrganic = false, isLocal = false });
+        Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+    }
 
     private static MultipartFormDataContent PhotoForm(byte[] bytes)
     {
@@ -183,15 +181,4 @@ public sealed class ReceiptPhotoTests(PostgresContainerFixture postgres)
 
     private static byte[] PngBytes(byte discriminator) =>
         [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, discriminator];
-
-    private sealed class FixedReceiptOcrService(string text) : IReceiptOcrService
-    {
-        public Task<string> ReadTextAsync(string imagePath, CancellationToken cancellationToken) => Task.FromResult(text);
-    }
-
-    private sealed class FailingReceiptOcrService : IReceiptOcrService
-    {
-        public Task<string> ReadTextAsync(string imagePath, CancellationToken cancellationToken) =>
-            Task.FromException<string>(new IOException("Tesseract absent"));
-    }
 }

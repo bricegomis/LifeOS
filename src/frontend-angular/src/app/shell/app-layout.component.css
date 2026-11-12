@@ -1,0 +1,57 @@
+.shell { display: flex; min-height: 100vh; }
+.side-menu {
+  position: sticky; top: 0; display: flex; flex: 0 0 248px; flex-direction: column; gap: 20px;
+  height: 100vh; overflow-y: auto; padding: 16px 12px; background: var(--lifeos-sidebar);
+}
+.menu-closed .side-menu { flex-basis: 68px; align-items: center; }
+.side-menu-top { display: flex; align-items: center; gap: 8px; }
+.burger {
+  display: grid; width: 44px; height: 44px; place-items: center; border: 0;
+  border-radius: var(--lifeos-radius-sm); background: transparent; font-size: 20px;
+}
+.burger:hover { background: var(--lifeos-surface-muted); }
+.brand { font-size: 20px; font-weight: 700; }
+.menu-block { display: flex; flex-direction: column; gap: 2px; }
+.menu-block-title {
+  padding: 0 12px 6px; color: var(--lifeos-text-soft); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.menu-item {
+  display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 0 12px; border-radius: var(--lifeos-radius-sm); color: var(--lifeos-text); font-weight: 500;
+}
+.menu-item:hover { background: var(--lifeos-surface-muted); }
+.menu-item.is-active { background: var(--lifeos-surface); font-weight: 600; }
+.badge {
+  min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--lifeos-accent);
+  color: var(--lifeos-surface); font-size: 12px; font-weight: 600; text-align: center;
+}
+.side-menu-bottom {
+  display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 16px;
+  border-top: 1px solid #d9cfbd;
+}
+.menu-closed .side-menu-bottom { border-top: 0; }
+.account { display: flex; align-items: center; gap: 10px; padding: 4px 12px; }
+.avatar {
+  display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border-radius: 999px;
+  background: var(--lifeos-line-strong); color: var(--lifeos-accent-strong); font-weight: 700;
+}
+.account-text { display: flex; min-width: 0; flex-direction: column; }
+.account-email { overflow: hidden; color: var(--lifeos-text-soft); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.sign-out { margin: 0 12px; }
+.shell-main { flex: 1 1 auto; min-width: 0; padding: 32px 40px 56px; }
+.tab-bar { display: none; }
+
+@media (max-width: 760px) {
+  .side-menu { display: none; }
+  .shell-main { padding: 20px 16px 96px; }
+  .tab-bar {
+    position: fixed; right: 0; bottom: 0; left: 0; z-index: 10; display: flex;
+    padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid var(--lifeos-line); background: var(--lifeos-surface);
+  }
+  .tab {
+    display: grid; flex: 1 1 0; min-width: 0; min-height: 60px; place-items: center;
+    border-top: 3px solid transparent; color: var(--lifeos-text-soft); font-size: 12px; font-weight: 500;
+  }
+  .tab.is-active { border-top-color: var(--lifeos-accent); color: var(--lifeos-accent-strong); font-weight: 700; }
+}

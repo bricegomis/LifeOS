@@ -30,7 +30,9 @@ cp .env.example .env.local
 
 Set:
 
-- `VITE_LIFEOS_API_URL` to the backend origin (for example `http://localhost:5000`, without `/api`)
+- `LIFEOS_API_URL` to the backend origin (for example `http://localhost:5000`, without `/api`).
+  The former name `VITE_LIFEOS_API_URL` is still read when `LIFEOS_API_URL` is unset,
+  in the build script, the Docker image, the compose files and the Pages workflow.
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
@@ -76,13 +78,13 @@ manual provider setup and is not covered by these tests.
 `Dockerfile` builds a Supabase-independent Angular image and serves
 `dist/browser` from nginx. The nginx entrypoint writes `config.js` at container
 startup from `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and
-`VITE_LIFEOS_API_URL`, so the same image
+`LIFEOS_API_URL`, so the same image
 can be deployed to different Supabase projects:
 
 ```sh
 docker build -t lifeos-web .
 docker run --rm -p 8080:80 \
-  -e VITE_LIFEOS_API_URL="https://<api-host>" \
+  -e LIFEOS_API_URL="https://<api-host>" \
   -e VITE_SUPABASE_URL="https://<project-ref>.supabase.co" \
   -e VITE_SUPABASE_ANON_KEY="<public-anon-key>" \
   lifeos-web

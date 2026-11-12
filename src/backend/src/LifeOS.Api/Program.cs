@@ -1,9 +1,13 @@
 using LifeOS.Api.Authentication;
-using LifeOS.Api.Endpoints;
 using LifeOS.Api.ErrorHandling;
-using LifeOS.Api.FoodItems;
-using LifeOS.Api.Receipts;
-using LifeOS.Application.Receipts;
+using LifeOS.Api.Food.Foods;
+using LifeOS.Api.Food.Products;
+using LifeOS.Api.Food.Receipts;
+using LifeOS.Api.Food.Recipes;
+using LifeOS.Api.Food.Reviews;
+using LifeOS.Api.Food.Stores;
+using LifeOS.Api.Households;
+using LifeOS.Api.Sports;
 using LifeOS.Infrastructure;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -17,12 +21,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
-builder.Services.AddInfrastructure();
-builder.Services.Configure<ReceiptPhotoStorageOptions>(builder.Configuration.GetSection("Receipts"));
-builder.Services.AddSingleton<ReceiptPhotoStorage>();
-builder.Services.Configure<FoodImageStorageOptions>(builder.Configuration.GetSection("FoodImages"));
-builder.Services.AddSingleton<FoodImageStorage>();
-builder.Services.AddSingleton<IReceiptOcrService, TesseractReceiptOcrService>();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services
     .AddOptions<SupabaseAuthOptions>()
@@ -130,16 +129,19 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapStoresEndpoints();
+// Household core
 app.MapHouseholdEndpoints();
+app.MapProfilesEndpoints();
+// Food module
+app.MapFoodsEndpoints();
+app.MapRecipesEndpoints();
+app.MapRecipeCostEndpoints();
+app.MapReviewsEndpoints();
+app.MapStoresEndpoints();
 app.MapProductsEndpoints();
 app.MapReceiptsEndpoints();
-app.MapRecipesEndpoints();
-app.MapHouseholdSocialEndpoints();
-app.MapReviewEndpoints();
-app.MapCatalogManagementEndpoints();
+// Sports module
 app.MapSportTemplatesEndpoints();
-app.MapFoodItemsEndpoints();
 
 app.Run();
 

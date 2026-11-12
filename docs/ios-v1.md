@@ -8,8 +8,13 @@ données de foyer restent dans LifeOS API/PostgreSQL.
 
 > **Depuis le 2026-11-10** ([ADR 0008](architecture/decisions/0008-remove-week-planner.md)),
 > le semainier est retiré : le widget « prochain événement » reçoit une liste vide et
-> les rappels locaux sont annulés. La session de cuisine et sa Live Activity restent.
-> Le code Swift du widget n'a pas encore été retiré (à faire sous macOS).
+> les rappels locaux sont annulés.
+> **Depuis le 2026-11-11** ([ADR 0010](architecture/decisions/0010-simplified-food-module.md)),
+> la session de cuisine est retirée de l'application web : plus rien ne la démarre,
+> et chaque synchronisation efface la session et la Live Activity laissées par une
+> ancienne version. Les passages ci-dessous sur la cuisine décrivent du code Swift
+> devenu inatteignable. Ce code, comme celui du widget, sera retiré sous macOS à
+> l'étape 6 de la roadmap.
 
 ## Gratuit, mais pas permanent sans maintenance
 
@@ -49,7 +54,7 @@ Depuis `src/frontend-angular`, copier `.env.example` vers `.env.local` (non suiv
 et renseigner :
 
 ```dotenv
-VITE_LIFEOS_API_URL=https://votre-api.example
+LIFEOS_API_URL=https://votre-api.example
 VITE_SUPABASE_URL=https://votre-projet.supabase.co
 VITE_SUPABASE_ANON_KEY=cle-publique-anon-ou-publishable
 ```
@@ -137,15 +142,8 @@ npm run cap:sync
 open ios/App/App.xcworkspace
 ```
 
-Depuis la racine du dépôt, le test Swift sans compte Apple :
-
-```bash
-bash scripts/test-ios-contract.sh
-```
-
-Il compile les DTO et l'IO coordonnée avec `swiftc`, échange réellement du JSON
-TypeScript/Swift et lance des mutations concurrentes dans des processus distincts.
-Le test ne prouve pas les entitlements sur appareil.
+Le test de contrat TypeScript/Swift de la session de cuisine
+(`scripts/test-ios-contract.sh`) a été supprimé avec la partie TypeScript du contrat.
 
 Compilation **sans signature** depuis `src/frontend-angular` :
 

@@ -8,7 +8,7 @@ export function validateIosConfig(config) {
   }
   const api = new URL(config.apiBaseUrl)
   if (api.pathname.replace(/\/+$/, '').endsWith('/api')) {
-    throw new Error('iOS : VITE_LIFEOS_API_URL doit omettre /api, ajouté par le client')
+    throw new Error('iOS : LIFEOS_API_URL doit omettre /api, ajouté par le client')
   }
   const key = config.supabaseAnonKey
   if (typeof key !== 'string' || !key.trim()) throw new Error('iOS : clé Supabase publique manquante')

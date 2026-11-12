@@ -1,58 +1,54 @@
 using LifeOS.Application.Common.Interfaces;
+using LifeOS.Application.Food.Costs;
+using LifeOS.Application.Food.Products;
+using LifeOS.Application.Food.Receipts;
 using LifeOS.Application.Households;
-using LifeOS.Application.Recipes;
-using LifeOS.Application.Stores;
-using LifeOS.Domain.FoodItems;
-using LifeOS.Infrastructure.FoodItems;
+using LifeOS.Infrastructure.Food.Costs;
+using LifeOS.Infrastructure.Food.Files;
+using LifeOS.Infrastructure.Food.Products;
+using LifeOS.Infrastructure.Food.Receipts;
 using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Persistence;
-using LifeOS.Infrastructure.Recipes;
-using LifeOS.Infrastructure.Stores;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
 
 namespace LifeOS.Infrastructure;
 
-/// <summary>
-/// Wires the Infrastructure layer's implementations behind the Application layer's ports.
-/// </summary>
 public static class DependencyInjection
 {
     /// <summary>
-    /// Registers the EF Core / PostgreSQL-backed domains (households, stores, articles) and the
-    /// remaining in-memory bounded contexts still awaiting migration. The connection string is
-    /// resolved lazily from <see cref="IConfiguration"/> when the <c>DbContext</c> is first
-    /// created (not eagerly at startup), so hosts such as integration tests can inject their own
-    /// configuration after <c>WebApplicationBuilder</c> construction but before first use.
+    /// Registers the PostgreSQL context, the household core use cases and the file storages.
+    /// The connection string is resolved lazily when the <c>DbContext</c> is first created, so
+    /// integration tests can inject their own configuration after the host is built.
     /// </summary>
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<LifeOSDbContext>((serviceProvider, options) =>
-        {
-            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-            options.UseNpgsql(PostgresConnectionStringResolver.Resolve(configuration));
-        });
+            options.UseNpgsql(PostgresConnectionStringResolver.Resolve(serviceProvider.GetRequiredService<IConfiguration>())));
 
-        services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
-
+        // Household core
         services.AddScoped<IHouseholdRepository, EfHouseholdRepository>();
         services.AddScoped<ResolveHouseholdForUserQuery>();
         services.AddScoped<GetCurrentHouseholdQuery>();
 
-        services.AddScoped<IStoreRepository, EfStoreRepository>();
-        services.AddScoped<GetStoresQuery>();
-        services.AddScoped<GetStoreQuery>();
-        services.AddScoped<CreateStoreCommand>();
-        services.AddScoped<UpdateStoreCommand>();
-        services.AddScoped<DeleteStoreCommand>();
+        services.AddSingleton(TimeProvider.System);
 
-        // Jalon 2: Recipes and Meals
-        services.AddScoped<IRecipeRepository, EfRecipeRepository>();
+        // Food module: use cases with rules and the data they need
+        services.AddScoped<IProductPriceData, EfProductPriceData>();
+        services.AddScoped<RecordProductPrice>();
+        services.AddScoped<RemoveProductPrice>();
+        services.AddScoped<IRecipeCostData, EfRecipeCostData>();
+        services.AddScoped<RecipeCosts>();
+        services.AddScoped<IReceiptData, EfReceiptData>();
+        services.AddScoped<ReceiptUseCases>();
+        services.AddSingleton<IReceiptPhotoFiles>(sp => sp.GetRequiredService<ReceiptPhotoStorage>());
 
-        // Generic foods
-        services.AddScoped<IFoodItemRepository, EfFoodItemRepository>();
+        // Food module files
+        services.Configure<FoodImageStorageOptions>(configuration.GetSection("FoodImages"));
+        services.AddSingleton<FoodImageStorage>();
+        services.Configure<ReceiptPhotoStorageOptions>(configuration.GetSection("Receipts"));
+        services.AddSingleton<ReceiptPhotoStorage>();
 
         return services;
     }

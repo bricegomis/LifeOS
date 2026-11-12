@@ -2,14 +2,23 @@
 
 - Angular 22 standalone components, signals (`input()`, `output()`, `signal`,
   `inject()`), new control flow (`@if`, `@for`). Templates are mostly inline.
-- Structure: `src/app/core` (api client + models, auth, native/Capacitor bridge),
-  `pages/<feature>` (foods, recipes, sports, stores, tickets, settings, login;
-  the planning and dashboard pages were removed by ADR 0008), `shared` (dialog,
-  reviews, cooking), `shell`.
-- New modules follow ADR 0009: `src/app/<module>/` with its own pages, API service,
-  models and lazy routes; a module imports only `core` and `shared`, never another
-  module. Existing `pages/<feature>` move in roadmap step 1 (`docs/01-roadmap.md`).
-- UI: native HTML controls and LifeOS CSS tokens from `src/styles.css`; icons are
+- Structure: `src/app/core` (api client, auth, native/Capacitor bridge), `shared`
+  (dialog, household reviews, build version), `shell` (left burger menu with one block
+  per domain, phone tab bar), `login`, and one folder per module: `food` (recipes,
+  foods, products and prices, stores, tickets), `sports`, `household` (settings:
+  profiles, versions, account).
+- A module folder holds its models, its API service (all HTTP calls), pure rules in
+  plain `.ts` files with a `.spec.ts` (e.g. `food/foods/food-form.ts`,
+  `food/recipes/recipe-nutrition.ts`), pages with their `.html`/`.css`, and lazy routes
+  (`food/food.routes.ts`). `module-boundaries.spec.ts` fails when a module imports
+  another module; sub-features of one module (`food/recipes`, `food/foods`) may share
+  `food/shared`.
+- Screens follow the validated step 1 mockup: photos everywhere (`food/shared/food-image.component.ts`
+  loads authenticated images as blobs), a filter bar on top of every list page,
+  prices secondary and read-only on everyday screens. Products, prices and stores
+  are not in the phone tab bar.
+- UI: native HTML controls; tokens and shared blocks (buttons, fields, cards, filter bar,
+  chips, grid tables) in `src/styles.css`, page rules next to each page. Icons are
   PrimeIcons classes (`pi pi-...`). No PrimeNG/PrimeUI or other UI libraries.
 - Dialogs: reuse `shared/dialog/lifeos-dialog.component.ts` (native modal
   `<dialog>`, focus return, dirty-draft confirmation via `dialog-guard.ts`). Detail
@@ -25,14 +34,13 @@
 ## Tests
 - `npm test` runs `node --test "src/**/*.spec.ts"` (Node's runner with native TS
   type stripping, no Angular TestBed). Put testable logic in plain `.ts` modules
-  (e.g. `food-draft.ts`, `food-review-summary.ts`) and import them with the `.ts`
-  extension, using `node:test` and `node:assert/strict`.
+  and import them with the `.ts` extension (also between pure modules), using `node:test` and `node:assert/strict`.
 - `npm run type-check` / `npm run build` generate `public/config.js` from
-  `.env.local` (copy `.env.example`). `VITE_LIFEOS_API_URL` has no `/api` suffix.
+  `.env.local` (copy `.env.example`). `LIFEOS_API_URL` has no `/api` suffix.
   Never put a Supabase service-role/secret key in frontend config.
 
 ## iOS (Capacitor)
-- `ios/` holds the Xcode project, widget extension and Swift contract tests; see
-  `docs/ios-v1.md`. The cooking-session contract is shared between
-  `core/native/cooking-contract*` and Swift files: change both sides together.
+- `ios/` holds the Xcode project and widget extension; see `docs/ios-v1.md`. The
+  cooking session was removed from the web app (ADR 0010); its Swift code is
+  unreachable and stays until roadmap step 6. The web only clears legacy state.
 - No JWT is shared with the widget extension; don't disable ATS.

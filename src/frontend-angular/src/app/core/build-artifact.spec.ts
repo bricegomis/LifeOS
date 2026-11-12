@@ -20,7 +20,8 @@ it('embeds CI provenance separately from replaceable deployment config, with hon
       LIFEOS_BUILD_REPOSITORY: 'bricegomis/LifeOS',
       LIFEOS_BUILD_SERVER_URL: 'https://github.com',
       LIFEOS_BUILD_WORKFLOW: 'Build & Push Docker Images',
-      VITE_LIFEOS_API_URL: 'https://api.example.test',
+      LIFEOS_API_URL: 'https://api.example.test',
+      VITE_LIFEOS_API_URL: 'https://old-name.example.test',
     }
     execFileSync(process.execPath, [script], { cwd, env })
     const readBuild = (): Record<string, unknown> =>
@@ -37,7 +38,7 @@ it('embeds CI provenance separately from replaceable deployment config, with hon
     assert.equal(build.runAttempt, '2')
     assert.equal(build.buildId, 'abcdef123456')
     assert.equal(build.workflow, env.LIFEOS_BUILD_WORKFLOW)
-    assert.equal(window.LIFEOS_CONFIG?.apiBaseUrl, env.VITE_LIFEOS_API_URL)
+    assert.equal(window.LIFEOS_CONFIG?.apiBaseUrl, env.LIFEOS_API_URL)
     assert.equal(window.LIFEOS_CONFIG?.buildId, undefined)
     execFileSync(process.execPath, [script], { cwd, env: { PATH: process.env.PATH } })
     const local = readBuild()

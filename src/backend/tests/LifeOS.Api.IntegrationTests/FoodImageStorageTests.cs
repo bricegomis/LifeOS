@@ -1,4 +1,5 @@
-using LifeOS.Api.FoodItems;
+using LifeOS.Api.Food.Files;
+using LifeOS.Infrastructure.Food.Files;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
@@ -14,7 +15,7 @@ public sealed class FoodImageStorageTests
         {
             var storage = new FoodImageStorage(Options.Create(new FoodImageStorageOptions { StoragePath = root }));
             var bytes = PngBytes(1);
-            var saved = await storage.SaveAsync(FormFile(bytes, "image/png", "../../../../food.png"), CancellationToken.None);
+            var saved = await storage.SaveUploadAsync(FormFile(bytes, "image/png", "../../../../food.png"), CancellationToken.None);
 
             Assert.NotEqual("../../../../food.png", saved.FileName);
             Assert.Equal(".png", Path.GetExtension(saved.FileName));
@@ -38,13 +39,13 @@ public sealed class FoodImageStorageTests
                 MaxFileBytes = 8,
             }));
             await Assert.ThrowsAsync<ArgumentException>(() =>
-                limited.SaveAsync(FormFile(PngBytes(1), "image/png"), CancellationToken.None));
+                limited.SaveUploadAsync(FormFile(PngBytes(1), "image/png"), CancellationToken.None));
 
             var storage = new FoodImageStorage(Options.Create(new FoodImageStorageOptions { StoragePath = root }));
             await Assert.ThrowsAsync<ArgumentException>(() =>
-                storage.SaveAsync(FormFile(new byte[12], "image/png"), CancellationToken.None));
+                storage.SaveUploadAsync(FormFile(new byte[12], "image/png"), CancellationToken.None));
             await Assert.ThrowsAsync<ArgumentException>(() =>
-                storage.SaveAsync(FormFile(new byte[12], "image/gif"), CancellationToken.None));
+                storage.SaveUploadAsync(FormFile(new byte[12], "image/gif"), CancellationToken.None));
             Assert.False(Directory.Exists(root));
         }
         finally

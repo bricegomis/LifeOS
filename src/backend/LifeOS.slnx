@@ -8,5 +8,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/LifeOS.Domain.Tests/LifeOS.Domain.Tests.csproj" />
     <Project Path="tests/LifeOS.Api.IntegrationTests/LifeOS.Api.IntegrationTests.csproj" />
+    <Project Path="tests/LifeOS.Application.Tests/LifeOS.Application.Tests.csproj" />
+    <Project Path="tests/LifeOS.Architecture.Tests/LifeOS.Architecture.Tests.csproj" />
   </Folder>
 </Solution>
