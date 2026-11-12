@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using LifeOS.Api.Contracts;
+using LifeOS.Api.Food.Foods;
+using LifeOS.Api.Food.Stores;
 using LifeOS.Application.Households;
-using LifeOS.Application.Stores;
 
 namespace LifeOS.Api.IntegrationTests;
 

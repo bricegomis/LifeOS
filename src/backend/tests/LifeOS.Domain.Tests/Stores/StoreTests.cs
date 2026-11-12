@@ -1,4 +1,4 @@
-using LifeOS.Domain.Stores;
+using LifeOS.Domain.Food.Stores;
 
 namespace LifeOS.Domain.Tests.Stores;
 

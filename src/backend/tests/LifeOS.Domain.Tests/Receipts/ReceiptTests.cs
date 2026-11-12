@@ -1,4 +1,4 @@
-using LifeOS.Domain.Receipts;
+using LifeOS.Domain.Food.Receipts;
 
 namespace LifeOS.Domain.Tests.Receipts;
 

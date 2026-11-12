@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
-using LifeOS.Api.Contracts;
-using LifeOS.Application.FoodItems;
+using LifeOS.Api.Food.Foods;
+using LifeOS.Api.Food.Stores;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -130,12 +130,12 @@ public sealed class UnifiedProductsMigrationTests
             var unknown = await db.Products.SingleAsync(p => p.Id == unlinkedFood);
             Assert.False(unknown.PurchaseUnitConfirmed);
             Assert.Equal("unknown", Assert.Single(unknown.PriceHistory).Unit);
-            Assert.Empty(LifeOS.Domain.Products.ComparablePrices.Minimums([unknown]));
+            Assert.Empty(LifeOS.Domain.Food.Products.ComparablePrices.Minimums([unknown]));
             Assert.Throws<ArgumentException>(() => unknown.ObservePrice(store, 8, timestamp));
             unknown.Update(unknown.Name, unknown.Description, "bag", null, null, 400m, "g", true, false);
             unknown.ObservePrice(store, 8, timestamp.AddDays(1));
             Assert.Equal("unknown", unknown.PriceHistory[0].Unit);
-            Assert.Equal(20m, Assert.Single(LifeOS.Domain.Products.ComparablePrices.Minimums([unknown])).Price);
+            Assert.Equal(20m, Assert.Single(LifeOS.Domain.Food.Products.ComparablePrices.Minimums([unknown])).Price);
             await db.SaveChangesAsync();
             db.Database.ExecuteSqlRaw("UPDATE products SET \"IsArchived\" = false WHERE id = {0}", food);
         }

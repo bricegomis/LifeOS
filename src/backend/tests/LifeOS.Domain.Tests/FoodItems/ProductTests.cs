@@ -1,6 +1,6 @@
-using LifeOS.Domain.Articles;
+using LifeOS.Domain.Food.Products;
 using LifeOS.Domain.Common;
-using LifeOS.Domain.FoodItems;
+using LifeOS.Domain.Food.Foods;
 
 namespace LifeOS.Domain.Tests.FoodItems;
 
@@ -27,12 +27,12 @@ public sealed class ProductTests
     [Fact]
     public void Food_completeness_distinguishes_zero_null_base_and_digestive_fields()
     {
-        var food = FoodItem.CreateManual(Guid.NewGuid(), "Riz", "", new LifeOS.Domain.FoodItems.Nutrition(0, 0, 0, 0));
+        var food = FoodItem.CreateManual(Guid.NewGuid(), "Riz", "", new LifeOS.Domain.Food.Foods.Nutrition(0, 0, 0, 0));
         Assert.Equal(new[] { "Base nutritionnelle", "FODMAP", "NOVA" }, food.MissingFields);
         food.UpdateDetails("Riz", "100 g", food.Nutrition);
         food.UpdateDigestiveInformation("low", 1, null);
         Assert.Empty(food.MissingFields);
-        food.UpdateDetails("Riz", "100 g", new LifeOS.Domain.FoodItems.Nutrition(0, null, 0, 0));
+        food.UpdateDetails("Riz", "100 g", new LifeOS.Domain.Food.Foods.Nutrition(0, null, 0, 0));
         Assert.Equal("Protéines", Assert.Single(food.MissingFields));
         Assert.Throws<ArgumentException>(() => food.UpdateDigestiveInformation("unknown", 1, ""));
         Assert.Throws<ArgumentException>(() => food.UpdateDigestiveInformation(null, 5, ""));

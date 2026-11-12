@@ -5,30 +5,26 @@
   `LifeOS.Application` (use cases, ports) → `LifeOS.Infrastructure` (EF Core
   `LifeOSDbContext`, Npgsql, repositories, file storage) → `LifeOS.Api`
   (minimal API endpoints, DTOs, validation, auth, error handling).
-- Reference slice: recipes. `Domain/Food/Recipes` (entity and rules),
-  `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and DTOs,
-  DbContext used directly because it is plain management). Copy this layout when
-  moving the rest of the existing code. Module names: `Households` (core), `Food`,
-  `Sports`.
+- Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
+  (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
+  templates). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
+  DTOs). Plain management endpoints use the DbContext directly on their own module's
+  tables; actions with real rules, or called by another module, are use cases in
+  Application, testable without HTTP or a database. A module never touches another
+  module's tables or entities; the household core is the only shared reference.
 - Endpoints take a `HouseholdContext` parameter (`Api/Households`): it resolves the
-  caller's household once. Do not resolve it by hand in new or moved endpoints, and
-  do not wrap domain calls in `try/catch (ArgumentException)`: the global handler
-  returns the 400.
+  caller's household once (auto-provisioned on first sight). Filter every query and
+  command on `household.HouseholdId` and reject cross-household IDs. Do not wrap
+  domain calls in `try/catch`: the global handler turns `ArgumentException` into 400
+  and PostgreSQL unique / foreign key violations into 409.
 - `tests/LifeOS.Architecture.Tests` fails the build when a module references another
-  module or when Domain/Application reference EF or HTTP. Add a new module's name to
-  its list when you create the folder.
-- New modules follow ADR 0009: one folder per module in each project
-  (`Domain/Sport`, `Application/Sport`, ...), own PostgreSQL schema. Plain CRUD
-  endpoints may use the DbContext directly on their own module's tables; actions
-  with real rules, or called by another module, are use cases in Application behind
-  a module data port, testable without HTTP or a database. There is no access to another
-  module's tables or entities (published read contract only). Existing Food and
-  Household code is brought to this style in roadmap step 1 (`docs/01-roadmap.md`).
-- Auth: Supabase-issued JWT bearer; the caller's household is resolved per request
-  (`ResolveHouseholdForUserQuery`, auto-provisioned on first sight). Filter every
-  query/command by that household and reject cross-household IDs.
-- Files (receipt photos `/data/receipts`, food images `/data/foods`) live on durable
-  volumes, only served through authenticated, household-checked routes.
+  module, when a module endpoint resolves the household by hand, or when
+  Domain/Application reference EF or HTTP. Add a new module's name to its list when
+  you create the folder.
+- Files (receipt photos `/data/receipts`, food and recipe images `/data/foods`) live on
+  durable volumes (`Infrastructure/Food/Files`), only served through authenticated,
+  household-checked routes.
 - A receipt is only a stored photo (ADR 0010): no OCR, no lines, no purchases.
 
 ## Migrations
