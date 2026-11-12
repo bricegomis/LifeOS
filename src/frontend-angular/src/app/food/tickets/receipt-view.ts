@@ -1,4 +1,4 @@
-import type { ReceiptDto, StoreDto } from '@/app/core/api/api.models'
+import type { ReceiptDto, StoreDto } from '../food.models'
 
 export type ReceiptFilter = 'pending' | 'all'
 

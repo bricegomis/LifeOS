@@ -1,0 +1,137 @@
+<div class="page">
+  <a class="link-button back-link" routerLink="/recipes">← Recettes</a>
+  @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
+  @if (loading()) { <p class="status-text" role="status">Chargement de la recette…</p> }
+
+  @if (recipe(); as recipe) {
+    <div class="recipe-hero">
+      <div class="recipe-hero-photo">
+        <app-food-image [path]="'/recipes/' + recipe.id + '/image'" [hasImage]="recipe.hasImage" [version]="recipe.updatedAt"
+          [name]="recipe.name" [alt]="'Photo de ' + recipe.name" label="Photo de la recette" width="100%" height="240px" />
+      </div>
+      <div class="recipe-hero-text">
+        <h1>{{ recipe.name }}</h1>
+        <p class="muted">{{ meta(recipe) }}</p>
+        @if (recipe.tags.length) {
+          <div class="tags">@for (item of recipe.tags; track item) { <span class="tag">{{ item }}</span> }</div>
+        }
+        <div class="page-actions">
+          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="editing.set(true)">Modifier</button>
+          <label class="lifeos-button lifeos-button-secondary">
+            {{ recipe.hasImage ? 'Changer la photo' : 'Ajouter une photo' }}
+            <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" [disabled]="busy()" (change)="changeImage($event)" />
+          </label>
+          @if (recipe.hasImage) {
+            <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="removeImage()">Retirer la photo</button>
+          }
+        </div>
+        @if (actionError()) { <p class="error-text" role="alert">{{ actionError() }}</p> }
+      </div>
+    </div>
+
+    <div class="columns">
+      <div class="column-main">
+        <section class="card" aria-labelledby="ingredients-title">
+          <div class="section-header">
+            <h2 id="ingredients-title">Ingrédients</h2>
+            <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="openIngredients()">Modifier les ingrédients</button>
+          </div>
+          @if (!recipe.ingredients.length) {
+            <p class="muted">Aucun ingrédient. Ajoutez-en pour calculer la nutrition et le coût.</p>
+          } @else {
+            <div class="ingredient-grid table-head" aria-hidden="true">
+              <span></span><span>Aliment</span><span>Quantité</span><span class="desktop-only">FODMAP</span><span class="desktop-only">NOVA</span><span></span>
+            </div>
+            @for (ingredient of recipe.ingredients; track ingredient.id) {
+              @let food = this.food(ingredient.foodItemId);
+              <a class="ingredient-grid table-row" [routerLink]="['/foods', ingredient.foodItemId]" [queryParams]="{ from: 'recipe', recipe: recipe.id }">
+                <app-food-image [path]="'/foods/' + ingredient.foodItemId + '/image'" [hasImage]="food?.hasImage ?? false"
+                  [version]="food?.updatedAt ?? ''" [name]="food?.name ?? ''" width="44px" height="44px" />
+                <span class="ingredient-name">{{ food?.name ?? 'Aliment indisponible' }}</span>
+                <span>{{ quantity(ingredient) }}</span>
+                <span class="desktop-only">{{ fodmapLabel(food?.fodmap ?? null) }}</span>
+                <span class="desktop-only">{{ food?.nova ?? '—' }}</span>
+                <span class="muted" aria-hidden="true">›</span>
+              </a>
+            }
+          }
+        </section>
+
+        <section class="card" aria-labelledby="steps-title">
+          <h2 id="steps-title">Préparation</h2>
+          @if (steps().length) {
+            <ol class="steps">
+              @for (step of steps(); track $index) {
+                <li><span class="step-number" aria-hidden="true">{{ $index + 1 }}</span><span>{{ step }}</span></li>
+              }
+            </ol>
+          } @else {
+            <p class="muted">Aucune étape. Ajoutez-les avec « Modifier ».</p>
+          }
+        </section>
+
+        <section class="card">
+          <app-household-reviews targetType="recipe" [targetId]="recipe.id" [profiles]="profiles()" />
+        </section>
+      </div>
+
+      <div class="column-side">
+        @if (nutrition(); as nutrition) {
+          <section class="card" aria-labelledby="nutrition-title">
+            <h2 id="nutrition-title">Nutrition par portion</h2>
+            <div class="stats">
+              @for (cell of nutrition.cells; track cell.label) {
+                <div class="stat">
+                  <div class="stat-label">{{ cell.label }}</div>
+                  <div class="stat-value">{{ number(cell.perPortion) }} {{ cell.unit }}</div>
+                  @if (cell.partial) { <div class="stat-mark">partiel</div> }
+                </div>
+              }
+            </div>
+            @if (nutrition.incompleteFoods.length) {
+              <p class="notice" style="margin-top: 12px">Valeurs partielles. À compléter : {{ nutrition.incompleteFoods.join(', ') }}.</p>
+            }
+          </section>
+        }
+      </div>
+    </div>
+
+    <div><button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="archive()">Archiver la recette</button></div>
+
+    @if (editing()) {
+      <app-recipe-editor [recipe]="recipe" (saved)="edited($event)" (closed)="editing.set(false)" />
+    }
+
+    <app-lifeos-dialog [open]="editingIngredients()" heading="Ingrédients" [wide]="true" cancelLabel="Fermer"
+      [busy]="busy()" [error]="ingredientError()" (dismissed)="editingIngredients.set(false)"
+      description="Chaque ligne s’enregistre aussitôt. Quantités en g, ml ou pièce.">
+      @for (draft of drafts; track draft.id) {
+        <div class="ingredient-editor-row">
+          <span>{{ ingredientName(draft.id) }}</span>
+          <label class="field"><span class="sr-only">Quantité</span>
+            <input class="lifeos-input" inputmode="decimal" [name]="'q-' + draft.id" [(ngModel)]="draft.quantity" (change)="updateIngredient(draft)" /></label>
+          <label class="field"><span class="sr-only">Unité</span>
+            <select class="lifeos-input" [name]="'u-' + draft.id" [(ngModel)]="draft.unit" (change)="updateIngredient(draft)">
+              @for (unit of units; track unit) { <option [value]="unit">{{ unit }}</option> }
+            </select></label>
+          <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="removeIngredient(draft)">Retirer</button>
+        </div>
+      }
+      <form class="ingredient-editor-row" (ngSubmit)="addIngredient()">
+        <label class="field"><span>Aliment</span>
+          <select class="lifeos-input" name="food" [(ngModel)]="newIngredient.foodItemId">
+            <option value="">Choisir un aliment</option>
+            @for (food of activeFoods(); track food.id) { <option [value]="food.id">{{ food.name }}</option> }
+          </select></label>
+        <label class="field"><span>Quantité</span>
+          <input class="lifeos-input" name="quantity" inputmode="decimal" [(ngModel)]="newIngredient.quantity" /></label>
+        <label class="field"><span>Unité</span>
+          <select class="lifeos-input" name="unit" [(ngModel)]="newIngredient.unit">
+            @for (unit of units; track unit) { <option [value]="unit">{{ unit }}</option> }
+          </select></label>
+        <button type="submit" class="lifeos-button" [disabled]="busy()">Ajouter</button>
+      </form>
+      @if (!activeFoods().length) { <p class="muted small">Créez d’abord des aliments dans la page Aliments.</p> }
+    </app-lifeos-dialog>
+  }
+</div>

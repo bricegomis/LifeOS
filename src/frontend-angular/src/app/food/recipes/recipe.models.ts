@@ -1,8 +1,10 @@
+import type { IngredientUnit } from '../food.models'
+
 export interface RecipeIngredientDto {
   id: string
   foodItemId: string
   quantity: number
-  unit: string
+  unit: IngredientUnit
 }
 
 export interface RecipeDto {
@@ -14,6 +16,7 @@ export interface RecipeDto {
   tags: string[]
   instructions: string | null
   ingredients: RecipeIngredientDto[]
+  hasImage: boolean
   createdAt: string
   updatedAt: string
 }
@@ -28,7 +31,7 @@ export interface RecipeRequest {
 
 export interface RecipeIngredientRequest {
   quantity: number
-  unit: string
+  unit: IngredientUnit
 }
 
 export interface AddRecipeIngredientRequest extends RecipeIngredientRequest {

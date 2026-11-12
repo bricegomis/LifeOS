@@ -1,4 +1,8 @@
+import type { IngredientUnit } from '../food.models'
+import { matches } from '../shared/format.ts'
 import type { RecipeDto, RecipeIngredientRequest, RecipeRequest } from './recipe.models'
+
+export const INGREDIENT_UNITS: IngredientUnit[] = ['g', 'ml', 'pièce']
 
 export const MAX_RECIPE_NAME_LENGTH = 200
 export const MAX_TAGS = 20
@@ -42,17 +46,32 @@ export function buildRecipeRequest(values: RecipeFormValues): FormResult<RecipeR
   return { ok: true, value: { name, servings, durationMinutes, tags, instructions: values.instructions.trim() } }
 }
 
-export function buildIngredientRequest(quantity: number, unit: string): FormResult<RecipeIngredientRequest> {
-  const value = Number(quantity)
-  const cleanUnit = unit.trim()
-  if (!Number.isFinite(value) || value <= 0 || !cleanUnit || cleanUnit.length > 50) {
-    return { ok: false, error: 'Indiquez une quantité supérieure à zéro et une unité.' }
+/** Quantities are typed with a decimal comma or point; units are g, ml or pièce. */
+export function buildIngredientRequest(quantity: number | string, unit: string): FormResult<RecipeIngredientRequest> {
+  const value = Number(String(quantity).trim().replace(',', '.'))
+  if (!Number.isFinite(value) || value <= 0 || !INGREDIENT_UNITS.includes(unit as IngredientUnit)) {
+    return { ok: false, error: 'Indiquez une quantité supérieure à zéro, en g, ml ou pièce.' }
   }
-  return { ok: true, value: { quantity: value, unit: cleanUnit } }
+  return { ok: true, value: { quantity: value, unit: unit as IngredientUnit } }
 }
 
-/** Active recipes whose name contains the search text, ignoring case. */
-export function visibleRecipes(recipes: readonly RecipeDto[], search: string): RecipeDto[] {
-  const needle = search.trim().toLocaleLowerCase('fr')
-  return recipes.filter(recipe => !recipe.isArchived && recipe.name.toLocaleLowerCase('fr').includes(needle))
+/** Active recipes whose name contains the search text (case and accents ignored) and carrying the tag, if any. */
+export function visibleRecipes(recipes: readonly RecipeDto[], search: string, tag = ''): RecipeDto[] {
+  return recipes.filter(recipe => !recipe.isArchived && matches(recipe.name, search)
+    && (!tag || recipe.tags.some(t => t.toLocaleLowerCase('fr') === tag.toLocaleLowerCase('fr'))))
+}
+
+/** Every category used by an active recipe, once, in alphabetical order. */
+export function recipeTags(recipes: readonly RecipeDto[]): string[] {
+  const tags = new Map<string, string>()
+  for (const recipe of recipes) if (!recipe.isArchived) for (const tag of recipe.tags) {
+    const key = tag.toLocaleLowerCase('fr')
+    if (!tags.has(key)) tags.set(key, tag)
+  }
+  return [...tags.values()].sort((a, b) => a.localeCompare(b, 'fr'))
+}
+
+/** Instructions are stored as text; each non-empty line is a step. */
+export function recipeSteps(instructions: string | null): string[] {
+  return (instructions ?? '').split(/\r?\n/).map(line => line.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean)
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import type { ReceiptDto, StoreDto } from '../../core/api/api.models.ts'
+import type { ReceiptDto, StoreDto } from '../food.models.ts'
 import { frenchDate, pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleReceipts } from './receipt-view.ts'
 
 const receipt = (over: Partial<ReceiptDto> = {}): ReceiptDto => ({

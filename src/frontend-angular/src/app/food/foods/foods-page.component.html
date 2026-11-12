@@ -1,0 +1,54 @@
+<div class="page">
+  <div class="page-header">
+    <h1>Aliments</h1>
+    <button type="button" class="lifeos-button" (click)="openCreate()">Nouvel aliment</button>
+  </div>
+
+  <div class="filter-bar" role="search">
+    <input type="search" class="lifeos-input" aria-label="Rechercher un aliment" placeholder="Rechercher un aliment"
+      [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    <button type="button" class="pill" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">Tous ({{ activeCount() }})</button>
+    <button type="button" class="pill" [attr.aria-pressed]="filter() === 'todo'" (click)="filter.set('todo')">À compléter ({{ todoCount() }})</button>
+  </div>
+
+  @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
+  @if (loading()) {
+    <p class="status-text" role="status">Chargement des aliments…</p>
+  } @else if (!foods().length) {
+    <p class="empty-state">Aucun aliment pour le moment. Créez le premier avec « Nouvel aliment ».</p>
+  } @else if (!visible().length) {
+    <p class="empty-state">Aucun aliment ne correspond à ce filtre.</p>
+  } @else {
+    <div class="table">
+      <div class="foods-grid table-head" aria-hidden="true">
+        <span></span><span>Aliment</span><span class="desktop-only">Base</span><span>Calories</span>
+        <span class="desktop-only">FODMAP</span><span class="desktop-only">NOVA</span><span>État</span>
+      </div>
+      @for (food of visible(); track food.id) {
+        <a class="foods-grid table-row" [routerLink]="['/foods', food.id]">
+          <app-food-image [path]="'/foods/' + food.id + '/image'" [hasImage]="food.hasImage" [version]="food.updatedAt" [name]="food.name" />
+          <span class="food-name">{{ food.name }}</span>
+          <span class="desktop-only">{{ food.referenceUnit || '—' }}</span>
+          <span>{{ calories(food) }}</span>
+          <span class="desktop-only">{{ fodmapLabel(food.fodmap) }}</span>
+          <span class="desktop-only">{{ food.nova ?? '—' }}</span>
+          <span>
+            @if (food.missingFields.length) { <span class="chip chip-todo">À compléter</span> }
+            @else { <span class="chip chip-ok">Complet</span> }
+          </span>
+        </a>
+      }
+    </div>
+  }
+</div>
+
+<app-lifeos-dialog [open]="creating()" heading="Nouvel aliment" [centered]="true" formId="new-food-form"
+  submitLabel="Créer l’aliment" [busy]="busy()" [dirty]="!!newName.trim()" [error]="createError()" (dismissed)="creating.set(false)">
+  <form id="new-food-form" (ngSubmit)="create()">
+    <label class="field">
+      <span>Nom</span>
+      <input class="lifeos-input" name="name" maxlength="200" required [(ngModel)]="newName" />
+    </label>
+    <p class="muted small">La nutrition, la digestion et la photo se complètent ensuite sur la fiche.</p>
+  </form>
+</app-lifeos-dialog>

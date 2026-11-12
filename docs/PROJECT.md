@@ -1,34 +1,37 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-11. Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-12. Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
 
 ## Où en est-on
 
-Étape 1, « Alimentation saine », en cours. Le cadrage est fait
-([ADR 0010](architecture/decisions/0010-simplified-food-module.md)) et la maquette des
-écrans est validée. Lot en cours : mise en module. La tranche de référence (recettes)
-est faite et attend la relecture de l'utilisateur avant d'être généralisée. Retiré : la
-session de cuisine (application web), les groupes du foyer et les avis de groupe,
-l'import JSON de tickets, l'OCR, les lignes de ticket et les achats.
+Étape 1, « Alimentation saine », en cours. Cadrage
+([ADR 0010](architecture/decisions/0010-simplified-food-module.md)), maquette, suppressions,
+mise en module et refonte du modèle et des écrans sont faits. Reste le coût de recette
+(fourchette minimum–maximum), puis la fusion de l'étape dans `main`.
 
 ## Ce qui existe
 
 | Domaine | Fonctionnalités |
 | --- | --- |
-| Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion |
-| Aliments | Fiches génériques, nutrition manuelle (base, 4 macros, FODMAP, NOVA), filtre « À compléter », image facultative, archivage |
-| Produits et prix | Produits commerciaux liés à un aliment, prix observés par magasin, minimum par base comparable |
-| Magasins | Création, modification, suppression |
-| Tickets | Photo conservée, magasin et date d'achat facultatifs, état à traiter ou traité ; aucune lecture automatique |
-| Recettes | Ingrédients sur aliments, rendement, étapes, durée, catégories |
+| Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion ; page Paramètres (profils, versions de l'interface et de l'API) |
+| Aliments | Fiches génériques avec photo, nutrition manuelle (base 100 g / 100 ml / 1 pièce, calories, protéines, glucides, lipides, fibres, FODMAP, NOVA), état « À compléter », prix relevés en lecture seule, archivage |
+| Recettes | Photo, ingrédients sur aliments en g, ml ou pièce (chaque ingrédient ouvre la fiche de l'aliment), rendement, étapes, durée, catégories, nutrition par portion marquée partielle si une valeur manque |
 | Avis | Note 0..10 et commentaire, par aliment ou recette, par profil |
+| Produits et prix | Produit toujours complet (aliment, nom, contenance) ; prix payé par conditionnement, par magasin et par date, ramené au kilo, au litre ou à la pièce ; tableau avec une colonne par magasin |
+| Magasins | Création, modification, suppression (refusée tant que des prix ou tickets y sont rattachés) |
+| Tickets | Photo conservée, magasin et date d'achat facultatifs, état à traiter ou traité ; sur ordinateur, saisie des prix à côté de la photo ; aucune lecture automatique |
 | Sport | Séances types uniquement (nom, sport, durée, distance, intensité, calories) |
 
-Modèle du code actuel : ADR 0006 et ADR 0007. Modèle cible de l'étape 1 :
-[02-core-model.md](02-core-model.md).
+Navigation : sur ordinateur, menu à gauche repliable avec un bloc par domaine,
+Paramètres et compte en bas ; sur téléphone, onglets Recettes, Aliments, Sport,
+Tickets, Réglages. Chaque liste commence par une zone de filtre.
+
+Modèle : [02-core-model.md](02-core-model.md). Code découpé en modules (ADR 0009) :
+Foyer, Alimentation et Sport, chacun avec son schéma PostgreSQL ; tests d'architecture
+côté backend et Angular.
 
 ## Ce qui n'existe pas
 
@@ -38,16 +41,10 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 
 ## Écarts connus avec la cible
 
-- Restent à faire pour l'ADR 0010 : fibres, image de recette, produits toujours
-  complets (contenance obligatoire), alias et champs hérités à retirer, écrans
-  conformes à la maquette, coût de recette. Les prix se saisissent encore depuis la
-  fiche aliment, pas à côté de la photo du ticket.
-- Seules les recettes suivent le découpage en modules de l'ADR 0009 (backend et
-  Angular), avec un test d'architecture de chaque côté. Le reste du code est encore
-  découpé par couche, et le foyer y est résolu à la main dans chaque endpoint.
+- Coût de recette (ADR 0010, § 5) : pas encore livré.
+- La migration `FoodModuleReset` vide la base au premier démarrage qui la contient
+  (intégration, puis production à la fusion dans `main`) : voir l'ADR 0010, § 6.
 - Points ouverts de la revue de code : [audit-2026-11.md](audit-2026-11.md).
-- La base contient encore des tables d'anciens modèles, non mappées par le code
-  (stock, courses, anciennes configurations).
 - iPhone : le widget « prochain événement » est vide et son code Swift reste à
   retirer ; voir [ios-v1.md](ios-v1.md). Traité à l'étape 6.
 

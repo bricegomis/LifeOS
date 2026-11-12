@@ -1,0 +1,3 @@
+.product-name { color: var(--lifeos-text); font-weight: 500; }
+.price-cell { display: flex; flex-direction: column; }
+.price-value { font-weight: 600; }

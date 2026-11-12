@@ -2,51 +2,56 @@ import { Component, HostListener, OnDestroy, OnInit, computed, inject, signal } 
 import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
-import type { ReceiptDto, StoreDto, UpdateReceiptRequest } from '@/app/core/api/api.models'
+import { FoodApiService } from '../food-api.service'
+import type { FoodDto, ProductDto, ReceiptDto, StoreDto, UpdateReceiptRequest } from '../food.models'
+import { PriceFormComponent } from '../products/price-form.component'
+import { ProductEditorComponent } from '../products/product-editor.component'
 import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleReceipts, type ReceiptFilter } from './receipt-view'
 
 /**
  * A receipt is only a stored photo (ADR 0010): take or pick a picture, optionally say where
- * and when, then mark it processed once its prices have been typed in by hand elsewhere.
+ * and when. On a computer the pending receipts form an inbox: the prices are typed by hand
+ * next to the photo, then the receipt is marked processed.
  */
 @Component({
   selector: 'app-tickets-page',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, PriceFormComponent, ProductEditorComponent],
   styleUrl: './tickets.css',
   template: `
-    <section class="page-stack tickets-page">
-      <header class="page-hero">
-        <div><h1>Tickets</h1><p>Photographiez un ticket de caisse : il est conservé tel quel, rien n’est lu automatiquement.</p></div>
-        <div class="ticket-actions">
+    <section class="page tickets-page">
+      <div class="page-header">
+        <h1>Tickets</h1>
+        <div class="page-actions">
           <label class="lifeos-button">
             <i class="pi pi-camera" aria-hidden="true"></i> Photographier un ticket
-            <input class="ticket-file-input" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" [disabled]="busy()" (change)="choosePhoto($event)" />
+            <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" [disabled]="busy()" (change)="choosePhoto($event)" />
           </label>
           <label class="lifeos-button lifeos-button-secondary">
-            Choisir une photo
-            <input class="ticket-file-input" type="file" accept="image/jpeg,image/png,image/webp" [disabled]="busy()" (change)="choosePhoto($event)" />
+            Choisir une photo existante
+            <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" [disabled]="busy()" (change)="choosePhoto($event)" />
           </label>
         </div>
-      </header>
+      </div>
+      <p class="muted">Le ticket est conservé tel quel : rien n’est lu automatiquement. Les prix se saisissent sur ordinateur, à côté de la photo.</p>
 
-      @if (error()) { <p class="ticket-error" role="alert">{{ error() }}</p> }
+      @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
       @if (notice()) { <p role="status">{{ notice() }}</p> }
 
       @if (draftFile()) {
-        <section class="surface-card">
+        <section class="card">
           <h2>Nouveau ticket</h2>
           <form class="ticket-form" (ngSubmit)="saveDraft()">
             @if (draftPreview(); as preview) { <img class="receipt-photo-preview" [src]="preview" alt="Aperçu de la photo du ticket" /> }
-            <div class="dialog-row">
-              <label class="dialog-field"><span>Magasin (facultatif)</span>
-                <select class="text-input" name="draftStore" [(ngModel)]="draftStoreId">
+            <div class="field-row">
+              <label class="field"><span>Magasin (facultatif)</span>
+                <select class="lifeos-input" name="draftStore" [(ngModel)]="draftStoreId">
                   <option value="">Non renseigné</option>
                   @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
                 </select>
               </label>
-              <label class="dialog-field"><span>Date d’achat (facultative)</span>
-                <input class="text-input" name="draftDate" type="date" [max]="today" [(ngModel)]="draftDate" />
+              <label class="field"><span>Date d’achat (facultative)</span>
+                <input class="lifeos-input" name="draftDate" type="date" [max]="today" [(ngModel)]="draftDate" />
               </label>
             </div>
             <div class="ticket-actions">
@@ -57,9 +62,9 @@ import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleRecei
         </section>
       }
 
-      <div class="ticket-filters" role="group" aria-label="Filtrer les tickets">
-        <button type="button" class="lifeos-button" [class.lifeos-button-secondary]="filter() !== 'pending'" [attr.aria-pressed]="filter() === 'pending'" (click)="filter.set('pending')">À traiter ({{ pending() }})</button>
-        <button type="button" class="lifeos-button" [class.lifeos-button-secondary]="filter() !== 'all'" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">Tous ({{ receipts().length }})</button>
+      <div class="filter-bar" role="group" aria-label="Filtrer les tickets">
+        <button type="button" class="pill" [attr.aria-pressed]="filter() === 'pending'" (click)="filter.set('pending')">À traiter ({{ pending() }})</button>
+        <button type="button" class="pill" [attr.aria-pressed]="filter() === 'all'" (click)="filter.set('all')">Tous ({{ receipts().length }})</button>
       </div>
 
       @if (loading()) { <p role="status">Chargement…</p> }
@@ -81,21 +86,30 @@ import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleRecei
         </ul>
 
         @if (selected(); as receipt) {
-          <section class="surface-card ticket-detail">
-            <h2>Ticket déposé le {{ uploadDay(receipt.createdAt) }}</h2>
-            @if (photoUrl(); as url) { <img class="receipt-photo-preview" [src]="url" alt="Photo du ticket" /> }
-            @else if (photoError()) { <p class="ticket-error" role="alert">{{ photoError() }}</p> }
-            @else { <p role="status">Chargement de la photo…</p> }
+          <section class="card ticket-detail">
+            <div class="ticket-photo">
+              @if (photoUrl(); as url) {
+                <img class="receipt-photo" [src]="url" alt="Photo du ticket" [style.transform]="'rotate(' + rotation() + 'deg)'" />
+                <div class="page-actions">
+                  <a class="lifeos-button lifeos-button-secondary lifeos-button-sm" [href]="url" target="_blank" rel="noopener">Ouvrir en grand</a>
+                  <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="rotate()">Pivoter</button>
+                </div>
+              }
+              @else if (photoError()) { <p class="error-text" role="alert">{{ photoError() }}</p> }
+              @else { <p class="status-text" role="status">Chargement de la photo…</p> }
+            </div>
+            <div class="ticket-side">
+            <h2>Déposé le {{ uploadDay(receipt.createdAt) }}</h2>
             <form class="ticket-form" (ngSubmit)="saveSelected(receipt.status === 'processed')">
-              <div class="dialog-row">
-                <label class="dialog-field"><span>Magasin (facultatif)</span>
-                  <select class="text-input" name="store" [(ngModel)]="storeId">
+              <div class="field-row">
+                <label class="field"><span>Magasin (facultatif)</span>
+                  <select class="lifeos-input" name="store" [(ngModel)]="storeId">
                     <option value="">Non renseigné</option>
                     @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
                   </select>
                 </label>
-                <label class="dialog-field"><span>Date d’achat (facultative)</span>
-                  <input class="text-input" name="date" type="date" [max]="today" [(ngModel)]="purchaseDate" />
+                <label class="field"><span>Date d’achat (facultative)</span>
+                  <input class="lifeos-input" name="date" type="date" [max]="today" [(ngModel)]="purchaseDate" />
                 </label>
               </div>
               <div class="ticket-actions">
@@ -105,15 +119,31 @@ import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleRecei
                 </button>
               </div>
             </form>
+            <div class="price-entry desktop-only">
+              <h3>Relever un prix</h3>
+              <app-price-form [products]="products()" [foods]="foods()" [stores]="stores()"
+                [storeId]="receipt.storeId" [observedOn]="receipt.purchaseDate ?? uploadDate(receipt)" (recorded)="priceRecorded($event)">
+                <button type="button" class="lifeos-button lifeos-button-secondary" (click)="creatingProduct.set(true)">Nouveau produit</button>
+              </app-price-form>
+            </div>
+            </div>
           </section>
         }
       </div>
     </section>
+    @if (creatingProduct()) {
+      <app-product-editor [product]="null" [foods]="foods()" [stores]="stores()" (saved)="productCreated($event)" (closed)="creatingProduct.set(false)" />
+    }
   `,
 })
 export class TicketsPageComponent implements OnInit, OnDestroy {
   private readonly api = inject(LifeosApiService)
+  private readonly food = inject(FoodApiService)
   readonly receipts = signal<ReceiptDto[]>([])
+  readonly products = signal<ProductDto[]>([])
+  readonly foods = signal<FoodDto[]>([])
+  readonly creatingProduct = signal(false)
+  readonly rotation = signal(0)
   readonly stores = signal<StoreDto[]>([])
   readonly selected = signal<ReceiptDto | null>(null)
   readonly filter = signal<ReceiptFilter>('pending')
@@ -162,12 +192,18 @@ export class TicketsPageComponent implements OnInit, OnDestroy {
     this.loading.set(true)
     this.error.set('')
     try {
-      const [receipts, stores] = await Promise.all([
-        firstValueFrom(this.api.get<ReceiptDto[]>('/receipts')),
-        firstValueFrom(this.api.get<StoreDto[]>('/stores')),
+      const [receipts, stores, products, foods] = await Promise.all([
+        firstValueFrom(this.food.receipts()),
+        firstValueFrom(this.food.stores()),
+        firstValueFrom(this.food.products()),
+        firstValueFrom(this.food.foods()),
       ])
       this.receipts.set(receipts)
       this.stores.set(stores)
+      this.products.set(products)
+      this.foods.set(foods)
+      const first = receipts.find(receipt => receipt.status === 'pending')
+      if (first && !this.selected() && window.matchMedia?.('(min-width: 761px)').matches) this.select(first)
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {
@@ -198,14 +234,10 @@ export class TicketsPageComponent implements OnInit, OnDestroy {
   async saveDraft(): Promise<void> {
     const file = this.draftFile()
     if (!file || this.busy()) return
-    const form = new FormData()
-    form.append('photo', file)
-    if (this.draftStoreId) form.append('storeId', this.draftStoreId)
-    if (this.draftDate) form.append('purchaseDate', this.draftDate)
     this.busy.set(true)
     this.error.set('')
     try {
-      const receipt = await firstValueFrom(this.api.post<ReceiptDto>('/receipts/photo', form))
+      const receipt = await firstValueFrom(this.food.uploadReceipt(file, this.draftStoreId || null, this.draftDate || null))
       this.receipts.update(items => [receipt, ...items])
       this.discardDraft()
       this.notice.set('Ticket enregistré.')
@@ -231,7 +263,7 @@ export class TicketsPageComponent implements OnInit, OnDestroy {
     this.error.set('')
     this.notice.set('')
     try {
-      const saved = await firstValueFrom(this.api.put<ReceiptDto>(`/receipts/${encodeURIComponent(receipt.id)}`, body))
+      const saved = await firstValueFrom(this.food.updateReceipt(receipt.id, body))
       this.receipts.update(items => items.map(item => item.id === saved.id ? saved : item))
       this.showSelected(saved)
     } catch (error) {
@@ -241,7 +273,22 @@ export class TicketsPageComponent implements OnInit, OnDestroy {
     }
   }
 
+  /** Prices default to the purchase date, or else the upload day. */
+  uploadDate(receipt: ReceiptDto): string { return receipt.createdAt.slice(0, 10) }
+
+  rotate(): void { this.rotation.update(angle => (angle + 90) % 360) }
+
+  priceRecorded(product: ProductDto): void {
+    this.products.update(list => list.map(item => item.id === product.id ? product : item))
+  }
+
+  productCreated(product: ProductDto): void {
+    this.products.update(list => [...list, product])
+    this.creatingProduct.set(false)
+  }
+
   private showSelected(receipt: ReceiptDto): void {
+    this.rotation.set(0)
     this.selected.set(receipt)
     this.storeId = receipt.storeId ?? ''
     this.purchaseDate = receipt.purchaseDate ?? ''
