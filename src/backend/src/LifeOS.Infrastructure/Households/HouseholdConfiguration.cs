@@ -8,7 +8,7 @@ internal sealed class HouseholdConfiguration : IEntityTypeConfiguration<Househol
 {
     public void Configure(EntityTypeBuilder<Household> builder)
     {
-        builder.ToTable("households");
+        builder.ToTable("households", "households");
 
         builder.HasKey(household => household.Id);
         builder.Property(household => household.Id).ValueGeneratedNever();

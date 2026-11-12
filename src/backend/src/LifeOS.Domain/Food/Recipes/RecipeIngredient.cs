@@ -2,7 +2,7 @@ using LifeOS.Domain.Common;
 
 namespace LifeOS.Domain.Food.Recipes;
 
-/// <summary>A recipe line: one food, an exact quantity and its unit. No conversion is ever inferred.</summary>
+/// <summary>A recipe line: one food, an exact quantity in g, ml or pieces. No conversion is ever inferred.</summary>
 public sealed class RecipeIngredient : Entity
 {
     public const int MaxUnitLength = 50;
@@ -25,11 +25,11 @@ public sealed class RecipeIngredient : Entity
 
     internal void Update(decimal quantity, string unit)
     {
-        if (quantity < 0.000001m || quantity > 1000000 || decimal.Round(quantity, 6) != quantity)
-            throw new ArgumentException("Quantité positive requise (6 décimales maximum).");
-        if (string.IsNullOrWhiteSpace(unit) || unit.Trim().Length > MaxUnitLength)
-            throw new ArgumentException($"Unité requise ({MaxUnitLength} caractères maximum).");
+        Measures.RequirePositive(quantity, "Quantité positive requise (6 décimales maximum).");
+        var clean = unit?.Trim() ?? "";
+        if (!Measures.IngredientUnits.Contains(clean))
+            throw new ArgumentException("Unité d'ingrédient : g, ml ou pièce.");
         Quantity = quantity;
-        Unit = unit.Trim();
+        Unit = clean;
     }
 }

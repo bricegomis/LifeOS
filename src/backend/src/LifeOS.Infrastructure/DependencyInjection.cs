@@ -1,6 +1,10 @@
 using LifeOS.Application.Common.Interfaces;
+using LifeOS.Application.Food.Products;
+using LifeOS.Application.Food.Receipts;
 using LifeOS.Application.Households;
 using LifeOS.Infrastructure.Food.Files;
+using LifeOS.Infrastructure.Food.Products;
+using LifeOS.Infrastructure.Food.Receipts;
 using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +29,16 @@ public static class DependencyInjection
         services.AddScoped<IHouseholdRepository, EfHouseholdRepository>();
         services.AddScoped<ResolveHouseholdForUserQuery>();
         services.AddScoped<GetCurrentHouseholdQuery>();
+
+        services.AddSingleton(TimeProvider.System);
+
+        // Food module: use cases with rules and the data they need
+        services.AddScoped<IProductPriceData, EfProductPriceData>();
+        services.AddScoped<RecordProductPrice>();
+        services.AddScoped<RemoveProductPrice>();
+        services.AddScoped<IReceiptData, EfReceiptData>();
+        services.AddScoped<ReceiptUseCases>();
+        services.AddSingleton<IReceiptPhotoFiles>(sp => sp.GetRequiredService<ReceiptPhotoStorage>());
 
         // Food module files
         services.Configure<FoodImageStorageOptions>(configuration.GetSection("FoodImages"));

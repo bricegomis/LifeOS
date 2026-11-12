@@ -8,7 +8,7 @@ internal sealed class MemberProfileConfiguration : IEntityTypeConfiguration<Memb
 {
     public void Configure(EntityTypeBuilder<MemberProfile> builder)
     {
-        builder.ToTable("member_profiles");
+        builder.ToTable("member_profiles", "households");
 
         builder.HasKey(profile => profile.Id);
         builder.Property(profile => profile.Id).ValueGeneratedNever();

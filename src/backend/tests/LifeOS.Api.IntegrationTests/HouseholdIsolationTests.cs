@@ -54,7 +54,7 @@ public sealed class HouseholdIsolationTests(PostgresContainerFixture postgres) :
 
         var createResponse = await clientA.PostAsJsonAsync(
             "/api/foods",
-            new FoodRequest("Lait", "100ml", null));
+            new FoodRequest("Lait", "100 ml", null));
 
         createResponse.EnsureSuccessStatusCode();
         var createdArticle = await createResponse.Content.ReadFromJsonAsync<FoodItemDto>();

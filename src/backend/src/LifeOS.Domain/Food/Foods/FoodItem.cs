@@ -2,10 +2,17 @@ using LifeOS.Domain.Common;
 
 namespace LifeOS.Domain.Food.Foods;
 
+/// <summary>
+/// A generic culinary reference (ADR 0010): manual nutrition and digestion, no brand, store or
+/// package. It is "À compléter" while one of its eight nutrition fields is missing.
+/// </summary>
 public sealed class FoodItem : Entity
 {
+    public const int MaxNameLength = 200;
+
     public Guid HouseholdId { get; private set; }
     public string Name { get; private set; } = "";
+    /// <summary>"100 g", "100 ml", "1 pièce", or empty while unknown.</summary>
     public string ReferenceUnit { get; private set; } = "";
     public Nutrition? Nutrition { get; private set; }
     public string? Fodmap { get; private set; }
@@ -15,21 +22,18 @@ public sealed class FoodItem : Entity
     public string? ImageContentType { get; private set; }
     public bool HasImage => ImagePath is not null;
     public bool IsArchived { get; private set; }
-    public FoodItemSource Source { get; private set; } = FoodItemSource.Manual;
-    public string? OffBarcode { get; private set; }
-    public string? OffPayload { get; private set; }
-    public Guid? IsCorrectionOf { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
     public IReadOnlyList<string> MissingFields =>
         new (string Label, bool Missing)[]
         {
-            ("Base nutritionnelle", string.IsNullOrWhiteSpace(ReferenceUnit)),
+            ("Base nutritionnelle", ReferenceUnit.Length == 0),
             ("Calories", Nutrition?.CaloriesPerUnit is null),
             ("Protéines", Nutrition?.ProteinsPerUnit is null),
             ("Glucides", Nutrition?.CarbsPerUnit is null),
             ("Lipides", Nutrition?.FatsPerUnit is null),
+            ("Fibres", Nutrition?.FibersPerUnit is null),
             ("FODMAP", Fodmap is null),
             ("NOVA", Nova is null),
         }.Where(f => f.Missing).Select(f => f.Label).ToList();
@@ -47,10 +51,13 @@ public sealed class FoodItem : Entity
 
     public void UpdateDetails(string name, string referenceUnit, Nutrition? nutrition, DateTimeOffset? now = null)
     {
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 500) throw new ArgumentException("Nom d'aliment requis (500 caractères maximum).");
-        if (referenceUnit.Length > 50) throw new ArgumentException("Base limitée à 50 caractères.");
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaxNameLength)
+            throw new ArgumentException($"Nom d'aliment requis ({MaxNameLength} caractères maximum).");
+        var unit = referenceUnit?.Trim() ?? "";
+        if (unit.Length > 0 && !Measures.NutritionBases.Contains(unit))
+            throw new ArgumentException("Base nutritionnelle : 100 g, 100 ml ou 1 pièce.");
         Name = name.Trim();
-        ReferenceUnit = referenceUnit.Trim();
+        ReferenceUnit = unit;
         Nutrition = nutrition;
         UpdatedAt = now ?? DateTimeOffset.UtcNow;
     }
@@ -68,10 +75,7 @@ public sealed class FoodItem : Entity
 
     public void SetImage(string imagePath, string imageContentType)
     {
-        if (string.IsNullOrWhiteSpace(imagePath) || imagePath.Length > 500)
-            throw new ArgumentException("Référence d'image invalide.");
-        if (imageContentType is not ("image/jpeg" or "image/png" or "image/webp"))
-            throw new ArgumentException("Format d'image invalide.");
+        Images.Validate(imagePath, imageContentType);
         ImagePath = imagePath;
         ImageContentType = imageContentType;
         UpdatedAt = DateTimeOffset.UtcNow;

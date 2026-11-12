@@ -1,6 +1,7 @@
 using System.Globalization;
 using LifeOS.Api.Food.Files;
 using LifeOS.Api.Households;
+using LifeOS.Application.Food.Receipts;
 using LifeOS.Domain.Food.Receipts;
 using LifeOS.Infrastructure.Food.Files;
 using LifeOS.Infrastructure.Persistence;
@@ -16,6 +17,7 @@ public sealed record ReceiptDto(Guid Id, Guid? StoreId, DateOnly? PurchaseDate, 
 /// <summary>Store and purchase date are optional; <c>Processed</c> moves the receipt out of the inbox.</summary>
 public sealed record UpdateReceiptRequest(Guid? StoreId, DateOnly? PurchaseDate, bool Processed);
 
+/// <summary>Listing and serving are plain reads; upload and update go through <see cref="ReceiptUseCases"/>.</summary>
 public static class ReceiptsEndpoints
 {
     public static IEndpointRouteBuilder MapReceiptsEndpoints(this IEndpointRouteBuilder app)
@@ -33,30 +35,16 @@ public static class ReceiptsEndpoints
             .Select(r => new ReceiptDto(r.Id, r.StoreId, r.PurchaseDate, r.Status, r.CreatedAt)).ToListAsync(ct));
 
     private static async Task<IResult> UploadPhoto(HttpRequest request, HouseholdContext household,
-        LifeOSDbContext db, ReceiptPhotoStorage storage, CancellationToken ct)
+        ReceiptUseCases receipts, CancellationToken ct)
     {
         var form = await request.ReadFormAsync(ct);
         var photo = form.Files.GetFile("photo") ?? throw new ArgumentException("Sélectionnez une photo de ticket.");
-        var storeId = ParseStore(form["storeId"]);
-        var purchaseDate = ParseDate(form["purchaseDate"]);
-        await RequireStore(db, household, storeId, ct);
-
-        var stored = await storage.SaveUploadAsync(photo, ct);
-        var created = false;
-        try
-        {
-            if (await db.Receipts.AnyAsync(r => r.HouseholdId == household.HouseholdId && r.DocumentHash == stored.Sha256, ct))
-                return Results.Conflict(new { Detail = "Cette photo est déjà enregistrée dans votre foyer." });
-            var receipt = Receipt.Create(household.HouseholdId, stored.Sha256, stored.FileName, stored.ContentType, storeId, purchaseDate);
-            db.Receipts.Add(receipt);
-            await db.SaveChangesAsync(ct);
-            created = true;
-            return Results.Created($"/api/receipts/{receipt.Id}", ReceiptDto.From(receipt));
-        }
-        finally
-        {
-            if (!created) storage.Delete(stored.FileName);
-        }
+        await using var content = photo.OpenReadStream();
+        var result = await receipts.UploadAsync(household.HouseholdId, content, photo.Length, photo.ContentType,
+            ParseStore(form["storeId"]), ParseDate(form["purchaseDate"]), ct);
+        return result.Receipt is { } receipt
+            ? Results.Created($"/api/receipts/{receipt.Id}", ReceiptDto.From(receipt))
+            : Results.Problem("Cette photo est déjà enregistrée dans votre foyer.", statusCode: StatusCodes.Status409Conflict);
     }
 
     private static async Task<IResult> GetPhoto(Guid id, HouseholdContext household, HttpContext context,
@@ -68,22 +56,9 @@ public static class ReceiptsEndpoints
     }
 
     private static async Task<IResult> Update(Guid id, UpdateReceiptRequest request, HouseholdContext household,
-        LifeOSDbContext db, CancellationToken ct)
-    {
-        var receipt = await db.Receipts.SingleOrDefaultAsync(r => r.Id == id && r.HouseholdId == household.HouseholdId, ct);
-        if (receipt is null) return Results.NotFound();
-        await RequireStore(db, household, request.StoreId, ct);
-        receipt.SetContext(request.StoreId, request.PurchaseDate);
-        if (request.Processed) receipt.MarkProcessed(); else receipt.Reopen();
-        await db.SaveChangesAsync(ct);
-        return Results.Ok(ReceiptDto.From(receipt));
-    }
-
-    private static async Task RequireStore(LifeOSDbContext db, HouseholdContext household, Guid? storeId, CancellationToken ct)
-    {
-        if (storeId is { } id && !await db.Stores.AnyAsync(s => s.Id == id && s.HouseholdId == household.HouseholdId, ct))
-            throw new ArgumentException("Magasin indisponible dans votre foyer.");
-    }
+        ReceiptUseCases receipts, CancellationToken ct) =>
+        await receipts.UpdateAsync(household.HouseholdId, id, request.StoreId, request.PurchaseDate, request.Processed, ct) is { } receipt
+            ? Results.Ok(ReceiptDto.From(receipt)) : Results.NotFound();
 
     private static Guid? ParseStore(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null

@@ -13,12 +13,13 @@ public sealed record RecipeDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsArchived,
-    string? Instructions)
+    string? Instructions,
+    bool HasImage)
 {
     public static RecipeDto From(Recipe recipe) => new(
         recipe.Id, recipe.Name, recipe.Servings, recipe.DurationMinutes, recipe.Tags,
         recipe.Ingredients.Select(i => new RecipeIngredientDto(i.Id, i.FoodItemId, i.Quantity, i.Unit)).ToList(),
-        recipe.CreatedAt, recipe.UpdatedAt, recipe.IsArchived, recipe.Instructions);
+        recipe.CreatedAt, recipe.UpdatedAt, recipe.IsArchived, recipe.Instructions, recipe.HasImage);
 }
 
 public sealed record RecipeIngredientDto(Guid Id, Guid FoodItemId, decimal Quantity, string Unit);

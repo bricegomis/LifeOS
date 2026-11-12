@@ -10,7 +10,7 @@ public sealed class ReceiptConfiguration : IEntityTypeConfiguration<Receipt>
 {
     public void Configure(EntityTypeBuilder<Receipt> b)
     {
-        b.ToTable("receipts", table =>
+        b.ToTable("receipts", FoodSchema.Name, table =>
             table.HasCheckConstraint("ck_receipt_status", "\"Status\" IN ('pending', 'processed')"));
         b.HasKey(r => r.Id);
         b.Property(r => r.Id).ValueGeneratedNever();

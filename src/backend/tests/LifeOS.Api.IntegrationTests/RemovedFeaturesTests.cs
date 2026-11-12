@@ -10,6 +10,7 @@ public sealed class RemovedFeaturesTests(PostgresContainerFixture postgres)
     [InlineData("/api/products/search-off")]
     [InlineData("/api/products/search-off-barcode")]
     [InlineData("/api/food-items")]
+    [InlineData("/api/foods/prices")]
     [InlineData("/api/articles")]
     [InlineData("/api/meal-components")]
     [InlineData("/api/composite-dishes")]

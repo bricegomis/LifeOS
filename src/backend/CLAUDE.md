@@ -29,16 +29,17 @@
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
-  `SkipDatabaseMigration=true`. Never edit an existing migration or the history of
-  `UnifiedProducts`/`FoodsAndReceipts`; add a new one:
-  `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api`
-- Migrations must be additive and preserve IDs, aliases, sources, prices and
-  snapshots; rollback is by restoring a backup, not a destructive down-migration.
-  Exceptions: `RemoveWeekPlanner` (ADR 0008), and roadmap step 1, where the user
-  accepted losing existing data (ADR 0009) — confirm what is reset before writing it.
+  `SkipDatabaseMigration=true`. Each module owns a PostgreSQL schema (`households`,
+  `food`, `sports`); `public` only holds `__EFMigrationsHistory`.
+- `FoodModuleReset` (roadmap step 1, ADR 0010) replaced the whole previous history:
+  it drops every table of `public` with its data. Never edit it; add a new migration:
+  `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api --output-dir Persistence/Migrations`
+- From now on migrations are additive and preserve IDs, prices and snapshots; rollback
+  is by restoring a backup, not a destructive down-migration.
 
 ## Tests
-- `dotnet test` from `src/backend`. `tests/LifeOS.Domain.Tests` are pure unit tests.
+- `dotnet test` from `src/backend`. `tests/LifeOS.Domain.Tests` are pure unit tests;
+  `tests/LifeOS.Application.Tests` test use cases with in-memory fakes of their data ports.
   `tests/LifeOS.Api.IntegrationTests` use `WebApplicationFactory` + Testcontainers
   PostgreSQL (Docker required) with `ASPNETCORE_ENVIRONMENT=Testing` and
   `TestAuthHandler`: simulate users with `client.AsUser(guid)` (`X-Test-Sub` header).

@@ -110,9 +110,11 @@ public sealed class RecipeTests
     [InlineData(0, "g")]
     [InlineData(-1, "g")]
     [InlineData(1, " ")]
+    [InlineData(1, "tasse")]
+    [InlineData(1, "kg")]
     [InlineData(0.0000001, "g")]
     [InlineData(1000001, "g")]
-    public void Invalid_quantities_and_blank_units_are_rejected_on_add_and_on_update(double quantity, string unit)
+    public void Invalid_quantities_and_units_other_than_g_ml_or_piece_are_rejected_on_add_and_on_update(double quantity, string unit)
     {
         var recipe = NewRecipe();
         Assert.Throws<ArgumentException>(() => recipe.AddIngredient(Guid.NewGuid(), (decimal)quantity, unit));

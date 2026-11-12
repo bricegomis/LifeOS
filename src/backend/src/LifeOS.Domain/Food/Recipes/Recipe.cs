@@ -4,7 +4,7 @@ namespace LifeOS.Domain.Food.Recipes;
 
 /// <summary>
 /// A library preparation: ingredients picked among the household's foods, a yield in
-/// servings, optional instructions, duration and tags. It never references a product or brand.
+/// servings, optional instructions, duration, tags and image. It never references a product or brand.
 /// </summary>
 public sealed class Recipe : Entity
 {
@@ -22,6 +22,9 @@ public sealed class Recipe : Entity
     public int DurationMinutes { get; private set; }
     public string? Instructions { get; private set; }
     public List<string> Tags { get; private set; } = [];
+    public string? ImagePath { get; private set; }
+    public string? ImageContentType { get; private set; }
+    public bool HasImage => ImagePath is not null;
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public List<RecipeIngredient> Ingredients { get; private set; } = [];
@@ -70,6 +73,21 @@ public sealed class Recipe : Entity
         Ingredients.Remove(ingredient);
         UpdatedAt = now ?? DateTimeOffset.UtcNow;
         return true;
+    }
+
+    public void SetImage(string imagePath, string imageContentType)
+    {
+        Images.Validate(imagePath, imageContentType);
+        ImagePath = imagePath;
+        ImageContentType = imageContentType;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
+    public void RemoveImage()
+    {
+        ImagePath = null;
+        ImageContentType = null;
+        UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     public void Archive(DateTimeOffset? now = null)

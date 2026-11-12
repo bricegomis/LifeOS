@@ -14,7 +14,7 @@ public sealed class FoodItemSchemaConstraintsTests(PostgresContainerFixture post
         await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
         await using (var db = factory.CreateDbContext())
         {
-            db.FoodItems.Add(FoodItem.CreateManual(Guid.NewGuid(), "Orange", "piece"));
+            db.FoodItems.Add(FoodItem.CreateManual(Guid.NewGuid(), "Orange", "1 pièce"));
             await Assert.ThrowsAnyAsync<DbUpdateException>(() => db.SaveChangesAsync());
         }
         await using (var db = factory.CreateDbContext())
@@ -25,7 +25,7 @@ public sealed class FoodItemSchemaConstraintsTests(PostgresContainerFixture post
             var food = FoodItem.CreateManual(a.Id, "Aliment", "");
             db.FoodItems.Add(food);
             await db.SaveChangesAsync();
-            db.Products.Add(Product.Create(b.Id, food.Id, "Produit", "unit"));
+            db.Products.Add(Product.Create(b.Id, food.Id, "Produit", 1, "kg"));
             await Assert.ThrowsAnyAsync<DbUpdateException>(() => db.SaveChangesAsync());
         }
     }

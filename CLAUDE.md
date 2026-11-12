@@ -40,20 +40,21 @@ code, identifiers and code comments are English.
 - Every persisted business row is filtered by `household_id` at the application layer
   (no Postgres RLS). New queries/commands must resolve and filter by the caller's
   household; cross-household references must be rejected (composite FKs exist).
-- Food = generic culinary reference with manual, nullable nutrition (base, 4 macros,
-  FODMAP, NOVA). Zero is a valid value; "À compléter" when any of the 7 fields is null.
-  Product = commercial price reference linked to one food. Recipes and meal lines
-  pick foods, never a product/brand implicitly.
+- Food = generic culinary reference with manual, nullable nutrition (base "100 g",
+  "100 ml" or "1 pièce", calories, proteins, carbs, fats, fibres, FODMAP, NOVA). Zero
+  is a valid value; "À compléter" when any of the 8 fields is null. Product =
+  commercial price reference linked to one food, always with its package contents.
+  Recipes pick foods (quantities in g, ml or pièce), never a product/brand.
 - Receipts: a receipt is only a stored photo with optional store and purchase date,
   `pending` or `processed`. Uploading creates no product and no price; nothing is read
   from the image (no OCR). Prices are entered by hand.
-- Prices: observed price = line total / quantity. Compare only on truly comparable
-  bases (kg, L, confirmed pieces); package contents must be confirmed manually.
-  No invented density, piece weight or drained weight.
+- Prices: a price is paid for one package, typed by hand, and freezes the package
+  contents; it compares as a price per kg, L or piece. Mass, volume and pieces are
+  never converted into each other (no invented density, piece weight or drained weight).
 - Quantities/nutrition from a recipe: `ingredient quantity × portions / yield`;
   unknown nutrition stays unknown and makes totals incomplete.
-- Reviews: optional integer 0..10 and/or comment, per food or recipe and per profile
-  or named household group. 0 ≠ "non noté". Strong FKs, no polymorphic target.
+- Reviews: optional integer 0..10 and/or comment, per food or recipe and per household
+  profile. 0 ≠ "non noté". Strong FKs, no polymorphic target.
 - There is no week planner for now (ADR 0008). When it comes back, planned meals keep
   snapshots: editing a recipe never rewrites planned weeks.
 - Module boundaries (ADR 0009): a module never reads another module's tables or

@@ -138,9 +138,11 @@ l'utilisateur.
 Déroulé de l'étape 1 dans la [roadmap](../../01-roadmap.md). La migration destructive
 est écrite au lot « refonte du modèle », après la mise en module.
 
-Point à trancher à ce lot : puisque la base repart de zéro, les tables du Foyer et
-de l'Alimentation peuvent rejoindre leur propre schéma PostgreSQL, comme les nouveaux
-modules, au lieu de rester dans `public` (ADR 0009, § 2).
+Puisque la base repart de zéro, chaque module a son schéma PostgreSQL dès ce lot
+(ADR 0009, § 2) : `households`, `food` et `sports`. Les migrations précédentes sont
+remplacées par une seule, `FoodModuleReset`, qui supprime toutes les tables de
+`public` (données comprises) puis crée les trois schémas. Seul l'historique des
+migrations reste dans `public`.
 
 ## Conséquences
 
