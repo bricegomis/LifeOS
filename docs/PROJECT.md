@@ -43,7 +43,6 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 
 - La migration `FoodModuleReset` vide la base au premier démarrage qui la contient
   (intégration, puis production à la fusion dans `main`) : voir l'ADR 0010, § 6.
-- Points ouverts de la revue de code : [audit-2026-11.md](audit-2026-11.md).
 - iPhone : le widget « prochain événement » est vide et son code Swift reste à
   retirer ; voir [ios-v1.md](ios-v1.md). Traité à l'étape 6.
 

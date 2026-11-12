@@ -45,7 +45,7 @@ export class LifeosApiService {
 
   private url(path: string): Observable<string> {
     if (!apiBaseUrl) {
-      return throwError(() => new Error('Configurez VITE_LIFEOS_API_URL pour connecter l’application à LifeOS API.'))
+      return throwError(() => new Error('Configurez LIFEOS_API_URL pour connecter l’application à LifeOS API.'))
     }
     return of(`${apiBaseUrl}/api${path.startsWith('/') ? path : `/${path}`}`)
   }

@@ -37,7 +37,7 @@ jobs:
       # cap:sync includes the production Angular build before copying web assets.
       - run: npm run cap:sync
         env:
-          VITE_LIFEOS_API_URL: https://api.lifeos.example
+          LIFEOS_API_URL: https://api.lifeos.example
           VITE_SUPABASE_URL: https://supabase.lifeos.example
           VITE_SUPABASE_ANON_KEY: sb_publishable_lifeos_ci_placeholder
       - name: Build app and widget for generic simulator and device (unsigned)
