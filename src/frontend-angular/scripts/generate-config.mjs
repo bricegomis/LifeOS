@@ -15,7 +15,8 @@ mkdirSync(publicDirectory, { recursive: true })
 const config = {
   supabaseUrl: process.env.VITE_SUPABASE_URL?.trim() ?? '',
   supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY?.trim() ?? '',
-  apiBaseUrl: process.env.VITE_LIFEOS_API_URL?.trim().replace(/\/+$/, '') ?? '',
+  // LIFEOS_API_URL replaces VITE_LIFEOS_API_URL (Vue leftover), still read during the transition.
+  apiBaseUrl: (process.env.LIFEOS_API_URL?.trim() || process.env.VITE_LIFEOS_API_URL?.trim() || '').replace(/\/+$/, ''),
 }
 
 const buildInfo = {

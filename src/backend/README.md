@@ -163,7 +163,7 @@ in this repository.
 
 Allowed CORS origins for the frontend dev server / deployed app are configured under
 `Cors:AllowedOrigins`. For the Angular GitHub Pages deployment, set `GITHUB_PAGES_URL` in the
-deployment environment and set the GitHub repository variable `VITE_LIFEOS_API_URL` to the
+deployment environment and set the GitHub repository variable `LIFEOS_API_URL` to the
 API origin so its sidebar can read `/api/version`.
 
 ## Run locally

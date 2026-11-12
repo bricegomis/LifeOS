@@ -117,7 +117,7 @@ runtime existantes :
 ```text
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<cle-publique-anon>
-VITE_LIFEOS_API_URL=https://<api-host>
+LIFEOS_API_URL=https://<api-host>
 ```
 
 En local, elles sont lues dans `src/frontend-angular/.env.local` par

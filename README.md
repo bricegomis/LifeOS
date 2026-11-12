@@ -15,7 +15,6 @@ séances types de sport.
 | [Architecture](docs/architecture/overview.md) | Schéma d'ensemble et liste des décisions (ADR) |
 | [Leçons du premier semainier](docs/semainier-retour-experience.md) | Pourquoi il a été retiré, besoin sport exprimé |
 | [Version d'intégration](docs/integration-environment.md) | Essayer le travail en cours sans toucher à la production |
-| [Audit de code](docs/audit-2026-11.md) | Points techniques encore ouverts |
 | [Connexion Google](docs/google-oauth.md) | Configuration Supabase Auth et Google OAuth |
 | [iPhone](docs/ios-v1.md) | Installation Xcode gratuite, widgets, renouvellement à 7 jours |
 

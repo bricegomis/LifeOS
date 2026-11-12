@@ -54,7 +54,7 @@ Depuis `src/frontend-angular`, copier `.env.example` vers `.env.local` (non suiv
 et renseigner :
 
 ```dotenv
-VITE_LIFEOS_API_URL=https://votre-api.example
+LIFEOS_API_URL=https://votre-api.example
 VITE_SUPABASE_URL=https://votre-projet.supabase.co
 VITE_SUPABASE_ANON_KEY=cle-publique-anon-ou-publishable
 ```

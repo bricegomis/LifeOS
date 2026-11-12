@@ -37,7 +37,7 @@ dans l'historique git.
 
 - API : `Supabase:Url`, `Supabase:Audience`, `Cors:AllowedOrigins`, et
   `ConnectionStrings:Postgres` ou `DATABASE_URL`.
-- Angular : `VITE_LIFEOS_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
+- Angular : `LIFEOS_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
   écrits dans un `config.js` public. Clé anonyme uniquement.
 - `/api/version` est public et indique le build de l'API.
 - Routes Angular en hash ; base `/LifeOS/` pour GitHub Pages et `/` pour nginx.

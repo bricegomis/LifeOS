@@ -36,7 +36,7 @@
   type stripping, no Angular TestBed). Put testable logic in plain `.ts` modules
   and import them with the `.ts` extension (also between pure modules), using `node:test` and `node:assert/strict`.
 - `npm run type-check` / `npm run build` generate `public/config.js` from
-  `.env.local` (copy `.env.example`). `VITE_LIFEOS_API_URL` has no `/api` suffix.
+  `.env.local` (copy `.env.example`). `LIFEOS_API_URL` has no `/api` suffix.
   Never put a Supabase service-role/secret key in frontend config.
 
 ## iOS (Capacitor)

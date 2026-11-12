@@ -33,7 +33,7 @@ l'API d'intégration.
    (`.env.example`), avec ces différences :
    - `POSTGRES_CONNECTION_STRING` : la base d'intégration ;
    - `FRONTEND_URL` : l'adresse de l'interface d'intégration ;
-   - `VITE_LIFEOS_API_URL` : l'adresse de l'API d'intégration ;
+   - `LIFEOS_API_URL` : l'adresse de l'API d'intégration ;
    - les variables Supabase restent identiques : même projet, mêmes comptes.
 4. **Supabase → Authentication → URL Configuration** : ajouter l'adresse de
    l'interface d'intégration aux « Redirect URLs » (par exemple
