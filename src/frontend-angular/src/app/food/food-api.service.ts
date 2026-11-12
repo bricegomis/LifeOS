@@ -1,10 +1,11 @@
 import { inject, Injectable } from '@angular/core'
-import { map, Observable } from 'rxjs'
+import { from, map, Observable, switchMap } from 'rxjs'
 import type { MemberProfileDto } from '@/app/core/api/api.models'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import type {
   FoodDto, FoodRequest, PriceRequest, ProductDto, ProductRequest, ReceiptDto, StoreDto, StoreRequest, UpdateReceiptRequest,
 } from './food.models'
+import { LIBRARY_IMAGE, RECEIPT_PHOTO, reduceImage } from './shared/image-reduction'
 
 const id = (value: string) => encodeURIComponent(value)
 
@@ -24,11 +25,13 @@ export class FoodApiService {
   updateFood(foodId: string, request: FoodRequest): Observable<FoodDto> { return this.api.put<FoodDto>(`/foods/${id(foodId)}`, request) }
   archiveFood(foodId: string): Observable<void> { return this.api.delete(`/foods/${id(foodId)}`) }
 
-  /** Uploads to `/{kind}/{id}/image`; returns the updated food or recipe. */
+  /** Reduces the picture, then uploads it to `/{kind}/{id}/image`; returns the updated food or recipe. */
   uploadImage<T>(kind: 'foods' | 'recipes', targetId: string, file: File): Observable<T> {
-    const form = new FormData()
-    form.append('image', file)
-    return this.api.put<T>(`/${kind}/${id(targetId)}/image`, form)
+    return from(reduceImage(file, LIBRARY_IMAGE)).pipe(switchMap(image => {
+      const form = new FormData()
+      form.append('image', image)
+      return this.api.put<T>(`/${kind}/${id(targetId)}/image`, form)
+    }))
   }
   removeImage(kind: 'foods' | 'recipes', targetId: string): Observable<void> { return this.api.delete(`/${kind}/${id(targetId)}/image`) }
 
@@ -49,12 +52,15 @@ export class FoodApiService {
   }
 
   receipts(): Observable<ReceiptDto[]> { return this.api.get<ReceiptDto[]>('/receipts') }
+  /** Reduces the photo (readable, a few hundred KB), then stores it as a pending receipt. */
   uploadReceipt(photo: File, storeId: string | null, purchaseDate: string | null): Observable<ReceiptDto> {
-    const form = new FormData()
-    form.append('photo', photo)
-    if (storeId) form.append('storeId', storeId)
-    if (purchaseDate) form.append('purchaseDate', purchaseDate)
-    return this.api.post<ReceiptDto>('/receipts/photo', form)
+    return from(reduceImage(photo, RECEIPT_PHOTO)).pipe(switchMap(reduced => {
+      const form = new FormData()
+      form.append('photo', reduced)
+      if (storeId) form.append('storeId', storeId)
+      if (purchaseDate) form.append('purchaseDate', purchaseDate)
+      return this.api.post<ReceiptDto>('/receipts/photo', form)
+    }))
   }
   updateReceipt(receiptId: string, request: UpdateReceiptRequest): Observable<ReceiptDto> {
     return this.api.put<ReceiptDto>(`/receipts/${id(receiptId)}`, request)

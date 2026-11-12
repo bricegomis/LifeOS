@@ -25,7 +25,7 @@ module Alimentation sont livrés. Pour connecter Claude : [assistant-claude.md](
 | Avis | Note 0..10 et commentaire, par aliment ou recette, par profil |
 | Produits et prix | Produit toujours complet (aliment, nom, contenance) ; prix payé par conditionnement, par magasin et par date, ramené au kilo, au litre ou à la pièce ; tableau avec une colonne par magasin |
 | Magasins | Création, modification, suppression (refusée tant que des prix ou tickets y sont rattachés) |
-| Tickets | Photo conservée, magasin et date d'achat facultatifs, état à traiter ou traité ; sur ordinateur, saisie des prix à côté de la photo ; aucune lecture automatique |
+| Tickets | Photo conservée, allégée dans l'appli avant l'envoi (JPEG, 2560 px au plus ; 1600 px pour les photos d'aliments et de recettes), magasin et date d'achat facultatifs, état à traiter ou traité ; sur ordinateur, saisie des prix à côté de la photo ; aucune lecture automatique |
 | Sport | Séances types uniquement (nom, sport, durée, distance, intensité, calories) |
 
 Navigation : sur ordinateur, menu à gauche repliable avec un bloc par domaine,

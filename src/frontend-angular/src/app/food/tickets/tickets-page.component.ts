@@ -33,7 +33,7 @@ import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleRecei
           </label>
         </div>
       </div>
-      <p class="muted">Le ticket est conservé tel quel : rien n’est lu automatiquement. Les prix se saisissent sur ordinateur, à côté de la photo.</p>
+      <p class="muted">La photo est allégée avant l’envoi, sans perdre la lisibilité ; rien n’est lu automatiquement. Les prix se saisissent sur ordinateur, à côté de la photo.</p>
 
       @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
       @if (notice()) { <p role="status">{{ notice() }}</p> }
