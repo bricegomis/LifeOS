@@ -63,8 +63,11 @@ public sealed class AssistantMcpTests(PostgresContainerFixture postgres)
         var result = await mcp.CallToolAsync("get_household");
         Assert.NotEqual(true, result.IsError);
         var text = string.Join("", result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text));
-        Assert.Contains("Élise", text);
-        Assert.DoesNotContain("Voisin", text);
+        using var household = JsonDocument.Parse(text);
+        var names = household.RootElement.GetProperty("profiles").EnumerateArray()
+            .Select(profile => profile.GetProperty("name").GetString()).ToList();
+        Assert.Contains("Élise", names);
+        Assert.DoesNotContain("Voisin", names);
     }
 
     [Fact]
