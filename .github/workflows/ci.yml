@@ -1,0 +1,150 @@
+name: CI
+
+# One workflow so the main ruleset can require a single check ("CI ok").
+# Jobs are skipped when their sources did not change; the gate job always
+# reports, so pull requests never wait on a check that was never started.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'src/frontend-angular/**'
+              - '.github/workflows/ci.yml'
+            backend:
+              - 'src/backend/**'
+              - '.github/workflows/ci.yml'
+
+  frontend:
+    name: Angular frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend-angular
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/frontend-angular/package-lock.json
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+        env:
+          LIFEOS_BUILD_ID: ${{ github.sha }}
+          LIFEOS_BUILD_NUMBER: ${{ github.run_number }}
+          LIFEOS_RUN_ID: ${{ github.run_id }}
+          LIFEOS_RUN_ATTEMPT: ${{ github.run_attempt }}
+          LIFEOS_BUILD_REPOSITORY: ${{ github.repository }}
+          LIFEOS_BUILD_SERVER_URL: ${{ github.server_url }}
+          LIFEOS_BUILD_WORKFLOW: ${{ github.workflow }}
+
+  ios:
+    name: iOS native
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: src/frontend-angular
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/frontend-angular/package-lock.json
+      - name: Show native toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+          pod --version
+      - run: npm ci
+      - run: npm test
+      # cap:sync includes the production Angular build before copying web assets.
+      - run: npm run cap:sync
+        env:
+          LIFEOS_API_URL: https://api.lifeos.example
+      - name: Build app and widget for generic simulator and device (unsigned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for platform in simulator device; do
+            if [[ "$platform" == simulator ]]; then
+              sdk=iphonesimulator
+              destination='generic/platform=iOS Simulator'
+              configuration=Debug
+            else
+              sdk=iphoneos
+              destination='generic/platform=iOS'
+              configuration=Release
+            fi
+            for scheme in App LifeosWidgetExtension; do
+              xcodebuild -workspace ios/App/App.xcworkspace \
+                -scheme "$scheme" -configuration "$configuration" \
+                -sdk "$sdk" -destination "$destination" \
+                -derivedDataPath "ios/DerivedData/$platform" \
+                CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+                CODE_SIGN_IDENTITY= build
+            done
+          done
+
+  backend:
+    name: Backend tests
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        working-directory: src/backend
+        run: dotnet restore
+      - name: Build
+        working-directory: src/backend
+        run: dotnet build --no-restore --configuration Release
+      - name: Test
+        working-directory: src/backend
+        # tests/LifeOS.Api.IntegrationTests spins up its own ephemeral PostgreSQL
+        # container via Testcontainers; ubuntu-latest runners have Docker preinstalled.
+        run: dotnet test --no-build --configuration Release
+
+  ci-ok:
+    name: CI ok
+    if: always()
+    needs: [changes, frontend, ios, backend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when a needed job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo "All required jobs passed or were skipped."
