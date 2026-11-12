@@ -56,4 +56,10 @@
   settings (docs/google-oauth.md).
 - Auth (ADR 0011): the API is its own OAuth server (OpenIddict, `Api/Authentication`),
   Google sign-in, accounts in `households.users`, OAuth tables in schema `auth`. Clients
-  are registered at startup in `OAuthClients`, never dynamically.
+  are registered at startup in `OAuthClients` (`lifeos-web`) or just in time from a
+  trusted Claude metadata document (`ClientMetadataDocuments`); never dynamic registration.
+- MCP (`/mcp`, `Api/Assistant`): stateless HTTP transport, policy `Assistant` (tokens
+  issued for the `/mcp` resource). Tools are `[McpServerToolType]` classes in their
+  module's Api folder (e.g. `Households/HouseholdAssistantTools.cs`), resolve the
+  household with `AssistantRequest.HouseholdAsync` and call the same use cases or
+  queries as the endpoints. Tool descriptions are French documentation, not prompts.

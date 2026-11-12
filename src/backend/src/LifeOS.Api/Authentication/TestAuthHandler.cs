@@ -17,7 +17,8 @@ namespace LifeOS.Api.Authentication;
 public sealed class TestAuthHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
-    UrlEncoder encoder)
+    UrlEncoder encoder,
+    IOptions<AuthOptions> authOptions)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string SchemeName = "Test";
@@ -32,7 +33,10 @@ public sealed class TestAuthHandler(
 
         await EnsureAccountAsync(userId);
 
-        var identity = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId.ToString())], SchemeName);
+        // Simulated tokens are valid for the API and the MCP endpoint alike.
+        var identity = new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, userId.ToString()), new Claim("aud", authOptions.Value.McpResource.AbsoluteUri)],
+            SchemeName);
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
     }
 

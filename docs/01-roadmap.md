@@ -129,7 +129,7 @@ Claude (claude.ai web et iPhone, Claude Code) plutôt qu'en saisissant chaque fi
    Angular, retrait de Supabase, migration destructive des comptes. Fait.
 2. **Endpoint MCP.** `/mcp`, découverte OAuth, clients Claude Code et claude.ai,
    écran de consentement, accès accordés révocables dans les Réglages. Un premier
-   outil en lecture pour valider la connexion depuis claude.ai et Claude Code.
+   outil en lecture pour valider la connexion depuis claude.ai et Claude Code. Fait.
 3. **Outils Alimentation.** Recherche et création d'aliments, recettes, magasins,
    produits, prix et avis ; image par URL ; nutrition et coût des recettes.
 4. **Outils Tickets.** Tickets en attente, photo, saisie des prix, ticket traité.

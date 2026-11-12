@@ -92,19 +92,23 @@ Supabase est retiré : l'API authentifie l'utilisateur et émet ses jetons.
   jetons d'accès courts, jetons de rafraîchissement à rotation, révocation. Les
   échanges de jetons reposent sur une bibliothèque éprouvée (OpenIddict), pas sur du
   code maison.
-- **Clients enregistrés d'avance**, pas d'enregistrement dynamique :
+- **Clients connus**, pas d'enregistrement dynamique :
   - `lifeos-web` : l'application Angular (web et iPhone, retour par
-    `lifeos://auth/callback`), sans écran de consentement ;
-  - Claude Code : par son document de métadonnées client (CIMD), avec retour local
-    `http://localhost` ou `http://127.0.0.1` sur n'importe quel port ;
-  - claude.ai (web, bureau, iPhone) : par son CIMD s'il en présente un, sinon par un
-    identifiant client saisi dans les réglages avancés du connecteur ; retour
-    `https://claude.ai/api/mcp/auth_callback`.
+    `lifeos://auth/callback`), enregistrée au démarrage, sans écran de consentement ;
+  - Claude (claude.ai web, bureau, iPhone, et Claude Code) : par son document de
+    métadonnées client (CIMD), une URL HTTPS servie par `claude.ai` ou `claude.com`.
+    À chaque demande d'autorisation, l'API lit ce document, vérifie qu'il se nomme
+    lui-même et qu'il déclare l'adresse de retour, puis enregistre le client. Une
+    adresse de retour locale (`http://localhost`, `http://127.0.0.1`) est acceptée sur
+    n'importe quel port, comme l'exige Claude Code. Tout autre domaine est refusé.
 - **Découverte** : `/mcp` répond `401` avec un pointeur vers les métadonnées de
   ressource protégée (RFC 9728) ; l'API publie ses métadonnées de serveur
-  d'autorisation (RFC 8414).
+  d'autorisation (RFC 8414), qui annoncent le CIMD et des clients publics seulement.
+- **Jetons de Claude** : émis pour la ressource `/mcp` (RFC 8707) ; `/mcp` refuse les
+  jetons de l'application.
 - **Consentement** : la première connexion d'un client Claude affiche « Autoriser
-  Claude à accéder à LifeOS » avec le nom d'hôte du retour. Les Réglages listent les
+  Claude à accéder à LifeOS » avec le nom d'hôte du retour, et un avertissement pour
+  un retour vers cet ordinateur (Claude Code). Les Réglages listent les
   accès accordés, révocables.
 - **Portée** : une seule portée, l'accès complet du compte (§ 1). Les jetons d'agent de
   l'étape 4 seront distincts.

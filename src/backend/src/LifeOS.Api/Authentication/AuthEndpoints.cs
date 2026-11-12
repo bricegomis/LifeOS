@@ -3,6 +3,7 @@ using System.Security.Claims;
 using LifeOS.Application.Households;
 using LifeOS.Domain.Households;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.IdentityModel.Tokens;
@@ -28,7 +29,9 @@ public static class AuthEndpoints
         HttpContext context,
         GetActiveAccount getActiveAccount,
         IOpenIddictApplicationManager applications,
-        IOpenIddictAuthorizationManager authorizations)
+        IOpenIddictAuthorizationManager authorizations,
+        IAntiforgery antiforgery,
+        Microsoft.Extensions.Options.IOptions<AuthOptions> authOptions)
     {
         var request = context.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenIddict authorization request is missing.");
@@ -56,21 +59,43 @@ public static class AuthEndpoints
 
         var application = await applications.FindByClientIdAsync(request.ClientId!, context.RequestAborted)
             ?? throw new InvalidOperationException("The client application cannot be found.");
-
-        // Only the LifeOS app exists for now and it needs no consent; Claude clients and their
-        // consent screen come with the MCP endpoint (roadmap step 1 bis, lot 2).
-        if (await applications.GetConsentTypeAsync(application, context.RequestAborted) != ConsentTypes.Implicit)
-            return Forbid(Errors.ConsentRequired, "Ce client n’est pas encore autorisé.");
-
-        var applicationId = await applications.GetIdAsync(application, context.RequestAborted);
+        var applicationId = (await applications.GetIdAsync(application, context.RequestAborted))!;
+        var subject = account.Id.ToString();
         var scopes = request.GetScopes();
-        var principal = CreatePrincipal(account, scopes);
+        // The LifeOS app calls the API; every other client (Claude) gets tokens for the MCP endpoint.
+        ImmutableArray<string> resources = request.ClientId == AuthOptions.WebClientOptions.ClientId
+            ? []
+            : [authOptions.Value.McpResource.AbsoluteUri];
 
         // One permanent authorization per user and client: tokens hang off it, and revoking it
-        // (settings, lot 2) revokes them all.
+        // (Réglages) revokes them all. A client that needs consent asks only once.
         var authorization = await FirstOrDefaultAsync(authorizations.FindAsync(
-            account.Id.ToString(), applicationId!, Statuses.Valid, AuthorizationTypes.Permanent, scopes, context.RequestAborted))
-            ?? await authorizations.CreateAsync(principal, account.Id.ToString(), applicationId!, AuthorizationTypes.Permanent, scopes, context.RequestAborted);
+            subject, applicationId, Statuses.Valid, AuthorizationTypes.Permanent, scopes, context.RequestAborted));
+
+        if (authorization is null && await applications.GetConsentTypeAsync(application, context.RequestAborted) != ConsentTypes.Implicit)
+        {
+            var decision = context.Request.HasFormContentType
+                ? (await context.Request.ReadFormAsync(context.RequestAborted))[ConsentPage.DecisionField].ToString()
+                : string.Empty;
+            if (decision is not (ConsentPage.Accept or ConsentPage.Deny))
+            {
+                var displayName = await applications.GetDisplayNameAsync(application, context.RequestAborted) ?? request.ClientId!;
+                return ConsentPage.Render(context, antiforgery, displayName, account.Email, new Uri(request.RedirectUri!));
+            }
+            try
+            {
+                await antiforgery.ValidateRequestAsync(context);
+            }
+            catch (AntiforgeryValidationException)
+            {
+                return Forbid(Errors.AccessDenied, "Le formulaire d’autorisation a expiré. Relancez la connexion.");
+            }
+            if (decision == ConsentPage.Deny)
+                return Forbid(Errors.AccessDenied, "Accès refusé.");
+        }
+
+        var principal = CreatePrincipal(account, scopes, resources);
+        authorization ??= await authorizations.CreateAsync(principal, subject, applicationId, AuthorizationTypes.Permanent, scopes, context.RequestAborted);
         principal.SetAuthorizationId(await authorizations.GetIdAsync(authorization, context.RequestAborted));
 
         return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -92,18 +117,19 @@ public static class AuthEndpoints
         if (account is null)
             return Forbid(Errors.InvalidGrant, "Ce compte n’est plus autorisé à utiliser LifeOS.");
 
-        var principal = CreatePrincipal(account, result.Principal!.GetScopes());
+        var principal = CreatePrincipal(account, result.Principal!.GetScopes(), result.Principal!.GetResources());
         principal.SetAuthorizationId(result.Principal!.GetAuthorizationId());
         return Results.SignIn(principal, authenticationScheme: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
-    private static ClaimsPrincipal CreatePrincipal(UserAccount account, ImmutableArray<string> scopes)
+    private static ClaimsPrincipal CreatePrincipal(UserAccount account, ImmutableArray<string> scopes, ImmutableArray<string> resources)
     {
         var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType, Claims.Name, Claims.Role);
         identity.SetClaim(Claims.Subject, account.Id.ToString())
             .SetClaim(Claims.Email, account.Email)
             .SetClaim(Claims.Name, account.DisplayName ?? account.Email);
         identity.SetScopes(scopes);
+        identity.SetResources(resources);
         identity.SetDestinations(claim => claim.Type switch
         {
             Claims.Email when scopes.Contains(Scopes.Email) => [Destinations.AccessToken, Destinations.IdentityToken],

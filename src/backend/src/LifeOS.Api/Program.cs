@@ -1,3 +1,4 @@
+using LifeOS.Api.Assistant;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.ErrorHandling;
 using LifeOS.Api.Food.Foods;
@@ -21,6 +22,7 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.AddLifeOSAuthentication();
+builder.AddLifeOSAssistant();
 
 builder.Services.AddCors(options =>
 {
@@ -83,11 +85,14 @@ app.UseLifeOSForwardedHeaders();
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseClientMetadataRegistration();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Sign-in and OAuth (ADR 0011)
+// Sign-in and OAuth, connected assistants and the MCP endpoint (ADR 0011)
 app.MapAuthEndpoints();
+app.MapConnectionsEndpoints();
+app.MapLifeOSAssistant();
 // Household core
 app.MapHouseholdEndpoints();
 app.MapProfilesEndpoints();

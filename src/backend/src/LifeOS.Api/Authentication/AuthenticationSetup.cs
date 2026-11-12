@@ -61,6 +61,8 @@ public static class AuthenticationSetup
                     OpenIddict.Abstractions.OpenIddictConstants.Scopes.Profile,
                     OpenIddict.Abstractions.OpenIddictConstants.Scopes.OfflineAccess,
                     OAuthClients.ApiScope);
+                // Claude's tokens are issued for the MCP endpoint (RFC 8707 resource indicator).
+                server.RegisterResources(options.McpResource);
                 server.SetAccessTokenLifetime(TimeSpan.FromHours(1));
                 // Refresh tokens rotate at each use, so this is an inactivity limit.
                 server.SetRefreshTokenLifetime(TimeSpan.FromDays(60));
@@ -78,6 +80,19 @@ public static class AuthenticationSetup
                     server.AddEncryptionKey(ReadEncryptionKey(options.EncryptionKey));
                 }
 
+                // Claude registers itself with its client ID metadata document (CIMD) only when the
+                // metadata advertises it and accepts public clients (token_endpoint_auth_method "none").
+                server.AddEventHandler<OpenIddict.Server.OpenIddictServerEvents.HandleConfigurationRequestContext>(handler =>
+                    handler.UseInlineHandler(context =>
+                    {
+                        context.Metadata["client_id_metadata_document_supported"] = true;
+                        // Every client is public (PKCE, no secret). Advertising private_key_jwt would make
+                        // Claude present a confidential metadata document LifeOS does not accept.
+                        context.TokenEndpointAuthenticationMethods.Clear();
+                        context.TokenEndpointAuthenticationMethods.Add(OpenIddict.Abstractions.OpenIddictConstants.ClientAuthenticationMethods.None);
+                        return default;
+                    }).SetOrder(OpenIddict.Server.OpenIddictServerHandlers.Discovery.AttachClientAuthenticationMethods.Descriptor.Order + 1));
+
                 var aspNetCore = server.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
                     .EnableTokenEndpointPassthrough();
@@ -90,13 +105,18 @@ public static class AuthenticationSetup
                 validation.UseAspNetCore();
             });
 
+        services.AddHttpClient(ClientMetadataDocuments.HttpClientName, http => http.Timeout = TimeSpan.FromSeconds(5))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+        services.AddAntiforgery(antiforgery => antiforgery.Cookie.Name = "lifeos.consent");
+
         if (isTesting)
         {
             // Integration tests authenticate via TestAuthHandler instead of real tokens, so
             // several simulated users and households can be exercised deterministically.
             services.AddAuthentication(TestAuthHandler.SchemeName)
                 .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { })
-                .AddCookie(SessionScheme);
+                .AddCookie(SessionScheme)
+                .AddAssistantSchemes(TestAuthHandler.SchemeName);
         }
         else
         {
@@ -110,7 +130,8 @@ public static class AuthenticationSetup
                     // Google on the next ones; tokens carry the long-lived session.
                     cookie.ExpireTimeSpan = TimeSpan.FromDays(1);
                     cookie.SlidingExpiration = false;
-                });
+                })
+                .AddAssistantSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
 
             if (!string.IsNullOrWhiteSpace(options.Google.ClientId))
             {
@@ -135,7 +156,12 @@ public static class AuthenticationSetup
             }
         }
 
-        services.AddAuthorization();
+        services.AddAuthorization(authorization => authorization.AddPolicy(AssistantAuthentication.Policy, policy => policy
+            .AddAuthenticationSchemes(AssistantAuthentication.Scheme)
+            .RequireAuthenticatedUser()
+            // Only tokens issued for the MCP endpoint, not the app's own tokens.
+            .RequireAssertion(context => context.User.HasClaim(
+                OpenIddict.Abstractions.OpenIddictConstants.Claims.Audience, options.McpResource.AbsoluteUri))));
     }
 
     /// <summary>
@@ -173,6 +199,14 @@ public static class AuthenticationSetup
     }
 
     public static void UseLifeOSForwardedHeaders(this WebApplication app) => app.UseForwardedHeaders();
+
+    /// <summary>Registers trusted Claude clients from their metadata document before OpenIddict validates the request.</summary>
+    public static void UseClientMetadataRegistration(this WebApplication app) => app.Use(async (context, next) =>
+    {
+        if (context.Request.Path.Equals("/connect/authorize", StringComparison.OrdinalIgnoreCase))
+            await ClientMetadataDocuments.RegisterFromAuthorizationRequestAsync(context);
+        await next(context);
+    });
 
     private static SecurityKey ReadSigningKey(string? pem)
     {

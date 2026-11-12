@@ -15,6 +15,7 @@ séances types de sport.
 | [Architecture](docs/architecture/overview.md) | Schéma d'ensemble et liste des décisions (ADR) |
 | [Leçons du premier semainier](docs/semainier-retour-experience.md) | Pourquoi il a été retiré, besoin sport exprimé |
 | [Version d'intégration](docs/integration-environment.md) | Essayer le travail en cours sans toucher à la production |
+| [Assistant Claude](docs/assistant-claude.md) | Connecter claude.ai et Claude Code à LifeOS |
 | [Connexion Google](docs/google-oauth.md) | Client Google, clés des jetons et variables de déploiement |
 | [iPhone](docs/ios-v1.md) | Installation Xcode gratuite, widgets, renouvellement à 7 jours |
 

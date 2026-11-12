@@ -19,6 +19,13 @@ export interface SportTemplateDto extends SportTemplateRequest {
   isArchived: boolean
 }
 
+/** An assistant (Claude) allowed to act on LifeOS through the MCP endpoint (ADR 0011). */
+export interface AssistantConnectionDto {
+  id: string
+  clientName: string
+  grantedAt: string | null
+}
+
 export interface MemberProfileDto {
   id: string
   displayName: string
