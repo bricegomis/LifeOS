@@ -24,6 +24,15 @@ public sealed class AuthOptions
 
     public WebClientOptions WebClient { get; set; } = new();
 
+    /// <summary>
+    /// Hosts whose client ID metadata documents (CIMD) are trusted: Claude on the web, desktop,
+    /// mobile and Claude Code. Any other URL client is refused (ADR 0011).
+    /// </summary>
+    public string[] TrustedClientMetadataHosts { get; set; } = ["claude.ai", "claude.com"];
+
+    /// <summary>The MCP endpoint URL, also the resource Claude's tokens are issued for.</summary>
+    public Uri McpResource => new(new Uri(string.IsNullOrWhiteSpace(Issuer) ? "http://localhost/" : Issuer.TrimEnd('/') + "/"), "mcp");
+
     public sealed class GoogleOptions
     {
         public string? ClientId { get; set; }

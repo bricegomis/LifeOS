@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms'
 import { firstValueFrom, timeout } from 'rxjs'
 import { parseApiBuildInfo, type BuildInfo } from '@/app/core/build-info'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
-import type { MemberProfileDto } from '@/app/core/api/api.models'
+import type { AssistantConnectionDto, MemberProfileDto } from '@/app/core/api/api.models'
 import { AuthService } from '@/app/core/auth/auth.service'
 import { apiBaseUrl, buildInfo } from '@/environments/environment'
 import { BuildVersionComponent } from '@/app/shared/build-version.component'
@@ -49,6 +49,32 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
           <button class="lifeos-button" type="submit" [disabled]="busy()">{{ editingProfileId() ? 'Enregistrer' : 'Ajouter un profil' }}</button>
           @if (editingProfileId()) { <button class="lifeos-button lifeos-button-secondary" type="button" (click)="cancelProfileEdit()">Annuler</button> }
         </form>
+      </section>
+
+      <section class="card settings-section">
+        <div>
+          <h2>Assistants connectés</h2>
+          <p class="muted">Claude peut remplir et lire LifeOS pendant une discussion, avec les droits de votre compte. Ajoutez cette adresse comme connecteur personnalisé dans claude.ai, ou avec <code>claude mcp add</code> dans Claude Code.</p>
+        </div>
+        <div class="mcp-url">
+          <code>{{ mcpUrl || 'Adresse de l’API non configurée' }}</code>
+          @if (mcpUrl) {
+            <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="copyMcpUrl()">
+              <i class="pi pi-copy" aria-hidden="true"></i> {{ copied() ? 'Copiée' : 'Copier' }}
+            </button>
+          }
+        </div>
+        @for (connection of connections(); track connection.id) {
+          <div class="profile-grid profile-row connection-row">
+            <strong>{{ connection.clientName }}</strong>
+            <span class="muted small">{{ connection.grantedAt ? 'Autorisé le ' + formatDate(connection.grantedAt) : '' }}</span>
+            <span class="page-actions">
+              <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="revokeConnection(connection)">Retirer l’accès</button>
+            </span>
+          </div>
+        } @empty {
+          <p class="muted">Aucun assistant autorisé.</p>
+        }
       </section>
 
       <section class="card">
@@ -102,6 +128,8 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
     .profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) 160px auto; align-items: center; gap: 12px; padding: 0; }
     .profile-row { padding: 12px 0; border-top: 1px solid var(--lifeos-line); }
     .settings-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding-top: 12px; border-top: 1px solid var(--lifeos-line); }
+    .mcp-url { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    .mcp-url code { padding: 6px 10px; border-radius: var(--lifeos-radius-sm); background: var(--lifeos-accent-soft); overflow-wrap: anywhere; }
     .versions { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 12px; margin: 0; }
     .versions dt { font-weight: 500; }
     .versions dd { margin: 0; color: var(--lifeos-text-soft); overflow-wrap: anywhere; }
@@ -128,6 +156,9 @@ export class SettingsPageComponent implements OnInit {
   readonly error = signal('')
   readonly notice = signal('')
   readonly editingProfileId = signal('')
+  readonly connections = signal<AssistantConnectionDto[]>([])
+  readonly copied = signal(false)
+  readonly mcpUrl = apiBaseUrl ? `${apiBaseUrl}/mcp` : ''
   profileName = ''
   profileCoefficient = 1
 
@@ -169,8 +200,39 @@ export class SettingsPageComponent implements OnInit {
     try {
       const household = await firstValueFrom(this.api.get<{ memberProfiles: MemberProfileDto[] }>('/households/members'))
       this.profiles.set(household.memberProfiles)
+      this.connections.set(await firstValueFrom(this.api.get<AssistantConnectionDto[]>('/account/connections')))
     } catch (error) {
       this.error.set(apiErrorMessage(error))
+    }
+  }
+
+  formatDate(value: string): string {
+    return new Date(value).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  }
+
+  async copyMcpUrl(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.mcpUrl)
+      this.copied.set(true)
+      setTimeout(() => this.copied.set(false), 2000)
+    } catch {
+      this.error.set('Copie impossible : sélectionnez l’adresse à la main.')
+    }
+  }
+
+  async revokeConnection(connection: AssistantConnectionDto): Promise<void> {
+    if (this.busy() || !window.confirm(`Retirer l’accès de « ${connection.clientName} » à LifeOS ?`)) return
+    this.busy.set(true)
+    this.error.set('')
+    this.notice.set('')
+    try {
+      await firstValueFrom(this.api.delete(`/account/connections/${encodeURIComponent(connection.id)}`))
+      this.connections.update(items => items.filter(item => item.id !== connection.id))
+      this.notice.set('Accès retiré. L’assistant devra demander à nouveau votre autorisation.')
+    } catch (error) {
+      this.error.set(apiErrorMessage(error))
+    } finally {
+      this.busy.set(false)
     }
   }
 
