@@ -6,7 +6,7 @@ using LifeOS.Application.FoodItems;
 namespace LifeOS.Api.IntegrationTests;
 
 [Collection(PostgresCollection.Name)]
-public sealed class Jalon2PersistenceTests(PostgresContainerFixture postgres)
+public sealed class RecipePersistenceTests(PostgresContainerFixture postgres)
 {
     [Fact]
     public async Task Recipe_crud_is_persistent_and_household_scoped()

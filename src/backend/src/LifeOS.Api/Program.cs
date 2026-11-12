@@ -135,7 +135,6 @@ app.MapReceiptsEndpoints();
 app.MapRecipesEndpoints();
 app.MapHouseholdSocialEndpoints();
 app.MapReviewEndpoints();
-app.MapCatalogManagementEndpoints();
 app.MapSportTemplatesEndpoints();
 app.MapFoodItemsEndpoints();
 

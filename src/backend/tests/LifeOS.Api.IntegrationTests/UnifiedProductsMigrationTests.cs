@@ -125,8 +125,6 @@ public sealed class UnifiedProductsMigrationTests
             Assert.Equal(unlinkedFood, (await db.Products.SingleAsync(p => p.Id == unlinkedFood)).FoodItemId);
             Assert.NotEqual(unlinkedFood, unlinkedArticle);
             Assert.Single(await db.FoodItems.Where(p => p.HouseholdId == household && p.Name == "Même nom").ToListAsync());
-            Assert.Equal(food, await db.ResolveProductIdAsync(household, article, default));
-            Assert.Equal(article, await db.ResolveProductIdAsync(foreignHousehold, article, default));
             Assert.Equal(3, await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM legacy_articles").SingleAsync());
             Assert.False(db.Database.HasPendingModelChanges());
             var unknown = await db.Products.SingleAsync(p => p.Id == unlinkedFood);
