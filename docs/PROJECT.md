@@ -7,10 +7,9 @@ et la [roadmap](01-roadmap.md).
 
 ## Où en est-on
 
-Étape 1, « Alimentation saine », en cours. Cadrage
-([ADR 0010](architecture/decisions/0010-simplified-food-module.md)), maquette, suppressions,
-mise en module, refonte du modèle et des écrans, et coût de recette sont faits. Reste
-la fusion de l'étape dans `main`, qui remet la base à zéro.
+Étape 1, « Alimentation saine », livrée le 2026-11-12
+([ADR 0010](architecture/decisions/0010-simplified-food-module.md)). Prochaine étape :
+Sport ([roadmap](01-roadmap.md)), qui commence par un cadrage.
 
 ## Ce qui existe
 
@@ -41,8 +40,6 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 
 ## Écarts connus avec la cible
 
-- La migration `FoodModuleReset` vide la base au premier démarrage qui la contient
-  (intégration, puis production à la fusion dans `main`) : voir l'ADR 0010, § 6.
 - iPhone : le widget « prochain événement » est vide et son code Swift reste à
   retirer ; voir [ios-v1.md](ios-v1.md). Traité à l'étape 6.
 
