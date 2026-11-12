@@ -9,6 +9,7 @@ Vision : [00-vision.md](00-vision.md).
 | # | Étape | Résultat |
 | --- | --- | --- |
 | 1 | Alimentation saine | Un module Alimentation simple, testé et conforme à l'ADR 0009 |
+| 1 bis | Assistant Claude | LifeOS se remplit et se consulte en discutant avec Claude (MCP) |
 | 2 | Sport | Séances réalisées, récurrence et bilan, utilisables seuls |
 | 3 | Tâches | Routines, todos et projets, utilisables seuls |
 | 4 | Semainier | Calendrier rempli par un agent IA, propositions à valider |
@@ -26,7 +27,11 @@ Vision : [00-vision.md](00-vision.md).
 - **Un module par étape**, construit selon l'ADR 0009 : tables et schéma propres,
   contrat publié, isolation par foyer testée, test d'architecture vert.
 - **Web d'abord.** Le code Swift n'est pas touché avant l'étape 6.
-- **Hors périmètre** tout du long : stock, liste de courses, enrichissement externe.
+- **Hors périmètre** tout du long : stock, liste de courses, enrichissement externe
+  par l'API. L'assistant conversationnel peut chercher nutrition et images, sous le
+  contrôle de l'utilisateur ([ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md)).
+- **Outils de l'assistant.** À partir de l'étape 2, chaque module livre aussi ses
+  outils MCP (lecture et écriture), selon l'ADR 0011.
 
 ## Branches et livraison
 
@@ -102,6 +107,36 @@ lesquels les autres modules s'aligneront.
   aucun code Alimentation ne touche les tables d'un autre module ;
 - le test d'architecture et tous les contrôles backend et frontend passent ;
 - les points de l'audit de novembre encore pertinents sont traités ou fermés.
+
+## Étape 1 bis — Assistant Claude (MCP)
+
+**But.** Remplir LifeOS, vide après l'étape 1, et le consulter en discutant avec
+Claude (claude.ai web et iPhone, Claude Code) plutôt qu'en saisissant chaque fiche.
+
+**Décisions prises.** Cadrage fait le 2026-11-12 :
+[ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md).
+
+- Serveur MCP dans l'API ; les outils appellent les cas d'usage existants.
+- Écriture directe pour les bibliothèques, propositions pour le futur semainier.
+- L'assistant agit avec tous les droits du compte, santé de son profil comprise.
+- Supabase est retiré : connexion Google gérée par l'API, qui devient serveur OAuth.
+- Comptes et foyers remis à zéro. Pas de maquette : trois écrans simples.
+
+**Déroulé.**
+
+1. **Comptes et connexion.** Table `users`, connexion Google par l'API, liste des
+   adresses autorisées, serveur OAuth (client `lifeos-web`), page de connexion
+   Angular, retrait de Supabase, migration destructive des comptes.
+2. **Endpoint MCP.** `/mcp`, découverte OAuth, clients Claude Code et claude.ai,
+   écran de consentement, accès accordés révocables dans les Réglages. Un premier
+   outil en lecture pour valider la connexion depuis claude.ai et Claude Code.
+3. **Outils Alimentation.** Recherche et création d'aliments, recettes, magasins,
+   produits, prix et avis ; image par URL ; nutrition et coût des recettes.
+4. **Outils Tickets.** Tickets en attente, photo, saisie des prix, ticket traité.
+
+**Terminé quand.** Depuis une discussion sur iPhone, l'utilisateur crée un aliment
+complet avec son image, une recette, et traite un ticket photographié dans
+l'application ; un autre foyer ne voit rien de tout cela (testé).
 
 ## Étape 2 — Sport
 

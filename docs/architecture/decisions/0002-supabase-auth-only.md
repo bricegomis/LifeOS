@@ -2,7 +2,9 @@
 
 ## Statut
 
-Accepted
+Remplacée par l'[ADR 0011](0011-conversational-assistant-mcp.md) (2026-11-12) :
+Supabase est retiré, l'API authentifie elle-même. Reste en vigueur jusqu'à la
+livraison du lot 1 de l'étape 1 bis.
 
 ## Contexte
 

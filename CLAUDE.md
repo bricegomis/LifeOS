@@ -17,6 +17,10 @@ code, identifiers and code comments are English.
   recipe images added, products always complete (mandatory package contents), min/max recipe cost
   across stores, full data reset) and
   `docs/02-core-model.md`.
+- Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the
+  API; Supabase removed, the API signs users in with Google and becomes the OAuth
+  server; the assistant acts with the account's rights, writes libraries directly
+  and only proposes planner changes; enrichment is done by the assistant, never the API).
 - What exists today: `docs/PROJECT.md` (kept current at every delivery), ADR 0006
   (foods/products/receipts), ADR 0007 (recipes, household reviews) and ADR 0008
   (first week planner removed). The code still follows these until each step 1 lot lands.
@@ -64,7 +68,7 @@ code, identifiers and code comments are English.
   Planning is computed by an external agent; the API never calls an AI provider.
 - Health data is owned by a profile, not shared with the household, never sent to the agent.
 - Out of scope, don't reintroduce: stock, shopping list, planning computed inside the
-  API, OFF/external enrichment, name-based matching, Vue, PrimeNG runtime.
+  API, OFF/external enrichment or name-based matching inside the API, Vue, PrimeNG runtime.
 
 ## Verification
 - Frontend (from `src/frontend-angular`): `npm run type-check`, `npm test`,

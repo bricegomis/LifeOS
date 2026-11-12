@@ -168,6 +168,9 @@ ou une proposition acceptée par lui.
 - Les règles et préférences de planification sont des données stockées par l'API
   et modifiables dans l'application.
 - L'agent ne lit jamais le dossier santé (§ 8).
+- L'assistant conversationnel, qui agit au nom de l'utilisateur pendant une
+  discussion, est un autre acteur, aux droits du compte :
+  [ADR 0011](0011-conversational-assistant-mcp.md).
 
 Les règles et la génération reviennent donc dans le périmètre, mais le calcul
 reste hors de l'API. Stock et liste de courses restent hors périmètre.
