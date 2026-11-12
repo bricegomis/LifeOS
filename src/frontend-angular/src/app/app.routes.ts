@@ -1,13 +1,8 @@
 import { inject } from '@angular/core'
 import { CanActivateFn, Router, Routes } from '@angular/router'
 import { AuthService } from '@/app/core/auth/auth.service'
-import { FoodItemsPageComponent } from '@/app/pages/foods/food-items-page.component'
-import { LoginPageComponent } from '@/app/pages/login/login-page.component'
-import { SettingsPageComponent } from '@/app/pages/settings/settings-page.component'
-import { TicketsPageComponent } from '@/app/pages/tickets/tickets-page.component'
-import { StoresArticlesPageComponent } from '@/app/pages/stores/stores-articles-page.component'
+import { LoginPageComponent } from '@/app/login/login-page.component'
 import { AppLayoutComponent } from '@/app/shell/app-layout.component'
-import { SportsPageComponent } from '@/app/pages/sports/sports-page.component'
 
 const requireAuthentication: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService)
@@ -27,19 +22,13 @@ export const routes: Routes = [
     canActivate: [requireAuthentication],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'recipes' },
-      {
-        path: 'recipes',
-        loadChildren: () => import('@/app/food/recipes/recipes.routes').then(module => module.RECIPES_ROUTES),
-      },
-      { path: 'foods', component: FoodItemsPageComponent, canDeactivate: [(component: FoodItemsPageComponent) => component.canLeave()] },
-      { path: 'products', pathMatch: 'full', redirectTo: 'foods' },
-      { path: 'sports', component: SportsPageComponent },
-      { path: 'stores', component: StoresArticlesPageComponent },
-      { path: 'articles', pathMatch: 'full', redirectTo: 'foods' },
-      { path: 'tickets', component: TicketsPageComponent, canDeactivate: [(component: TicketsPageComponent) => component.canLeave()] },
+      // Food module: recipes, foods, products and prices, stores, tickets.
+      { path: '', loadChildren: () => import('@/app/food/food.routes').then(module => module.FOOD_ROUTES) },
+      { path: 'sports', loadComponent: () => import('@/app/sports/sports-page.component').then(module => module.SportsPageComponent) },
+      { path: 'settings', loadComponent: () => import('@/app/household/settings-page.component').then(module => module.SettingsPageComponent) },
+      // Old links keep working.
+      { path: 'articles', pathMatch: 'full', redirectTo: 'products' },
       { path: 'library', pathMatch: 'full', redirectTo: 'foods' },
-      { path: 'settings', component: SettingsPageComponent },
-      // The week planner and its Today view were removed; keep old links working.
       { path: 'planning', pathMatch: 'full', redirectTo: 'recipes' },
       { path: 'today', pathMatch: 'full', redirectTo: 'recipes' },
       { path: 'planner', pathMatch: 'full', redirectTo: 'recipes' },

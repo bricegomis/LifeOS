@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { RecipeDto } from './recipe.models.ts'
-import { buildIngredientRequest, buildRecipeRequest, parseTags, visibleRecipes } from './recipe-form.ts'
+import { buildIngredientRequest, buildRecipeRequest, parseTags, recipeSteps, recipeTags, visibleRecipes } from './recipe-form.ts'
 
 const values = { name: ' Dhal ', servings: 4, durationMinutes: 35, tagsText: 'plat, Plat, , batch', instructions: ' Cuire. ' }
 
@@ -32,17 +32,31 @@ describe('recipe form rules', () => {
     assert.equal(buildRecipeRequest({ ...values, tagsText: Array.from({ length: 21 }, (_, i) => `t${i}`).join(',') }).ok, false)
   })
 
-  it('validates an ingredient quantity and unit without converting anything', () => {
-    assert.deepEqual(buildIngredientRequest(0.3, ' kg '), { ok: true, value: { quantity: 0.3, unit: 'kg' } })
+  it('accepts g, ml or pièce with a decimal comma and converts nothing', () => {
+    assert.deepEqual(buildIngredientRequest('12,5', 'g'), { ok: true, value: { quantity: 12.5, unit: 'g' } })
+    assert.deepEqual(buildIngredientRequest(2, 'pièce'), { ok: true, value: { quantity: 2, unit: 'pièce' } })
+    assert.equal(buildIngredientRequest(0.3, 'kg').ok, false)
     assert.equal(buildIngredientRequest(0, 'g').ok, false)
-    assert.equal(buildIngredientRequest(Number.NaN, 'g').ok, false)
-    assert.equal(buildIngredientRequest(1, '  ').ok, false)
+    assert.equal(buildIngredientRequest('beaucoup', 'g').ok, false)
   })
 
   it('lists active recipes matching the search', () => {
     const recipe = (name: string, isArchived = false) => ({ name, isArchived }) as RecipeDto
-    const list = [recipe('Dhal'), recipe('Gratin'), recipe('Dhal ancien', true)]
+    const list = [recipe('Dhal'), recipe('Gratin'), recipe('Dhal ancien', true)].map(item => ({ ...item, tags: [] }))
     assert.deepEqual(visibleRecipes(list, ' dh ').map(item => item.name), ['Dhal'])
     assert.equal(visibleRecipes(list, '').length, 2)
+  })
+
+  it('filters by category and lists the categories in use once', () => {
+    const recipe = (name: string, tags: string[], isArchived = false) => ({ name, tags, isArchived }) as RecipeDto
+    const list = [recipe('Dhal', ['plat', 'végétarien']), recipe('Porridge', ['Petit-déjeuner']), recipe('Vieux', ['oublié'], true)]
+    assert.deepEqual(recipeTags(list), ['Petit-déjeuner', 'plat', 'végétarien'])
+    assert.deepEqual(visibleRecipes(list, '', 'PLAT').map(item => item.name), ['Dhal'])
+    assert.deepEqual(visibleRecipes(list, 'éta', '').map(item => item.name), [])
+  })
+
+  it('reads each non-empty instruction line as a step', () => {
+    assert.deepEqual(recipeSteps('1. Rincer.\n\n2) Cuire 20 min.\nServir'), ['Rincer.', 'Cuire 20 min.', 'Servir'])
+    assert.deepEqual(recipeSteps(null), [])
   })
 })

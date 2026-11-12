@@ -1,0 +1,63 @@
+<div class="page">
+  <div class="page-header">
+    <h1>Produits et prix</h1>
+    <div class="page-actions">
+      <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="!products().length || !stores().length"
+        (click)="recordingPrice.set(true)">Relever un prix</button>
+      <button type="button" class="lifeos-button" [disabled]="!foods().length" (click)="editing.set(null)">Nouveau produit</button>
+    </div>
+  </div>
+
+  <div class="filter-bar" role="search">
+    <input type="search" class="lifeos-input" aria-label="Rechercher un produit ou un aliment" placeholder="Rechercher un produit ou un aliment"
+      [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    <label>Magasin
+      <select class="lifeos-input" [ngModel]="storeId()" (ngModelChange)="storeId.set($event)">
+        <option value="">Tous</option>
+        @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
+      </select>
+    </label>
+  </div>
+
+  @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
+  @if (loading()) {
+    <p class="status-text" role="status">Chargement des produits…</p>
+  } @else if (!foods().length) {
+    <p class="empty-state">Un produit appartient à un aliment : créez d’abord vos aliments.</p>
+  } @else if (!products().length) {
+    <p class="empty-state">Aucun produit pour le moment. Ajoutez-en avec « Nouveau produit ».</p>
+  } @else if (!rows().length) {
+    <p class="empty-state">Aucun produit ne correspond à ce filtre.</p>
+  } @else {
+    @if (!stores().length) { <p class="notice">Ajoutez un magasin pour relever des prix.</p> }
+    <div class="table">
+      <div class="table-head" [style.grid-template-columns]="gridColumns()" [style.min-width]="minWidth()" aria-hidden="true">
+        <span>Aliment</span><span>Produit</span><span>Conditionnement</span>
+        @for (store of stores(); track store.id) { <span>{{ store.name }}</span> }
+      </div>
+      @for (row of rows(); track row.product.id) {
+        <div class="table-row" [style.grid-template-columns]="gridColumns()" [style.min-width]="minWidth()">
+          <span><a class="link-button" [routerLink]="['/foods', row.product.foodItemId]" [queryParams]="{ from: 'products' }">{{ row.foodName }}</a></span>
+          <span><button type="button" class="link-button product-name" (click)="editing.set(row.product)">{{ row.product.name }}</button></span>
+          <span>{{ row.pack }}</span>
+          @for (cell of row.cells; track $index) {
+            @if (cell) {
+              <span class="price-cell"><span class="price-value">{{ cell.price }}</span><span class="muted small">{{ cell.detail }}</span></span>
+            } @else { <span class="muted">—</span> }
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@if (editing() !== undefined) {
+  <app-product-editor [product]="editing() ?? null" [foods]="foods()" [stores]="stores()"
+    (saved)="saved($event)" (changed)="changed($event)" (archived)="archived($event)" (closed)="editing.set(undefined)" />
+}
+
+<app-lifeos-dialog [open]="recordingPrice()" heading="Relever un prix" [wide]="true" cancelLabel="Fermer" (dismissed)="recordingPrice.set(false)">
+  @if (recordingPrice()) {
+    <app-price-form [products]="products()" [foods]="foods()" [stores]="stores()" (recorded)="replace($event)" />
+  }
+</app-lifeos-dialog>
