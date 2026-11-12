@@ -17,6 +17,7 @@ public sealed class ApiExceptionHandler(
         var (statusCode, title) = exception switch
         {
             ArgumentException or FormatException => (StatusCodes.Status400BadRequest, "Invalid request"),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             DuplicateHouseholdMemberException => (StatusCodes.Status409Conflict, "Household membership conflict"),
             Microsoft.EntityFrameworkCore.DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: "23505" } } =>
                 (StatusCodes.Status409Conflict, "Ce raccord ou cette semaine existe déjà. Actualisez puis réessayez."),

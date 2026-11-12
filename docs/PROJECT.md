@@ -9,7 +9,8 @@ et la [roadmap](01-roadmap.md).
 
 Étape 1, « Alimentation saine », en cours. Le cadrage est fait
 ([ADR 0010](architecture/decisions/0010-simplified-food-module.md)) et la maquette des
-écrans est validée. Lot en cours : suppression du code abandonné. Déjà retiré : la
+écrans est validée. Lot en cours : mise en module. La tranche de référence (recettes)
+est faite et attend la relecture de l'utilisateur avant d'être généralisée. Retiré : la
 session de cuisine (application web), les groupes du foyer et les avis de groupe,
 l'import JSON de tickets, l'OCR, les lignes de ticket et les achats.
 
@@ -41,8 +42,9 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
   complets (contenance obligatoire), alias et champs hérités à retirer, écrans
   conformes à la maquette, coût de recette. Les prix se saisissent encore depuis la
   fiche aliment, pas à côté de la photo du ticket.
-- Le backend est découpé par couche, pas par module, et les règles métier sont
-  mêlées au code HTTP des endpoints. Mise en conformité : étape 1.
+- Seules les recettes suivent le découpage en modules de l'ADR 0009 (backend et
+  Angular), avec un test d'architecture de chaque côté. Le reste du code est encore
+  découpé par couche, et le foyer y est résolu à la main dans chaque endpoint.
 - Points ouverts de la revue de code : [audit-2026-11.md](audit-2026-11.md).
 - La base contient encore des tables d'anciens modèles, non mappées par le code
   (stock, courses, anciennes configurations).

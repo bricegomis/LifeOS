@@ -5,6 +5,18 @@
   `LifeOS.Application` (use cases, ports) → `LifeOS.Infrastructure` (EF Core
   `LifeOSDbContext`, Npgsql, repositories, file storage) → `LifeOS.Api`
   (minimal API endpoints, DTOs, validation, auth, error handling).
+- Reference slice: recipes. `Domain/Food/Recipes` (entity and rules),
+  `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and DTOs,
+  DbContext used directly because it is plain management). Copy this layout when
+  moving the rest of the existing code. Module names: `Households` (core), `Food`,
+  `Sports`.
+- Endpoints take a `HouseholdContext` parameter (`Api/Households`): it resolves the
+  caller's household once. Do not resolve it by hand in new or moved endpoints, and
+  do not wrap domain calls in `try/catch (ArgumentException)`: the global handler
+  returns the 400.
+- `tests/LifeOS.Architecture.Tests` fails the build when a module references another
+  module or when Domain/Application reference EF or HTTP. Add a new module's name to
+  its list when you create the folder.
 - New modules follow ADR 0009: one folder per module in each project
   (`Domain/Sport`, `Application/Sport`, ...), own PostgreSQL schema. Plain CRUD
   endpoints may use the DbContext directly on their own module's tables; actions

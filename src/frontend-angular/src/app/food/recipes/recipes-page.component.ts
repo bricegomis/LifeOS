@@ -5,14 +5,10 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
 import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
-import {
-  AddRecipeIngredientRequest,
-  FoodItemDto,
-  RecipeDto,
-  RecipeRequest,
-  RecipeIngredientDto,
-  MemberProfileDto,
-} from '@/app/core/api/api.models'
+import type { FoodItemDto, MemberProfileDto } from '@/app/core/api/api.models'
+import type { RecipeDto, RecipeIngredientDto } from './recipe.models'
+import { buildIngredientRequest, buildRecipeRequest, visibleRecipes } from './recipe-form'
+import { RecipesApiService } from './recipes-api.service'
 
 
 @Component({
@@ -20,49 +16,17 @@ import {
   standalone: true,
   imports: [FormsModule, RouterLink, LifeosDialogComponent, HouseholdReviewsComponent],
   templateUrl: './recipes-page.component.html',
-  styles: [`
-    .recipes-page { gap: 28px; }
-    .recipes-workspace { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.6fr); gap: 20px; align-items: start; }
-    .recipes-directory, .recipe-editor { min-width: 0; padding: 22px; border: 1px solid var(--lifeos-line); border-radius: 22px; background: var(--lifeos-surface); box-shadow: 0 8px 26px rgb(68 55 35 / 7%); }
-    .recipes-directory { display: grid; gap: 14px; }
-    .recipes-directory-heading, .recipe-row, .recipe-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .recipes-directory-heading h2, .recipe-section-heading h3 { margin: 0; font-size: 1.05rem; }
-    .recipe-row { width: 100%; padding: 13px 14px; border: 1px solid transparent; border-radius: 14px; background: var(--lifeos-surface-soft); color: var(--lifeos-text); text-align: left; cursor: pointer; }
-    .recipe-row:hover, .recipe-row.is-selected { border-color: var(--lifeos-accent); background: var(--lifeos-accent-soft); }
-    .recipe-row span { min-width: 0; font-weight: 800; overflow-wrap: anywhere; }
-    .recipe-row small { color: var(--lifeos-text-soft); white-space: nowrap; }
-    .recipe-directory-list, .recipe-editor-form, .recipe-editor-content, .recipe-ingredients { display: grid; gap: 12px; }
-    .recipe-editor { display: grid; gap: 22px; }
-    .recipe-editor-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px; }
-    .recipe-editor-heading h2 { margin: 0; font-size: 1.3rem; }
-        .recipe-field { display: grid; min-width: 0; gap: 7px; color: var(--lifeos-text); font-weight: 700; }
-    .recipe-field > span { color: var(--lifeos-text-soft); font-size: .78rem; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; }
-    .recipe-field input, .recipe-field textarea, .recipe-field select { width: 100%; min-height: 2.8rem; padding: .65rem .75rem; border: 1px solid var(--lifeos-line); border-radius: 9px; background: #fff; color: var(--lifeos-text); font: inherit; }
-    .recipe-field textarea { min-height: 6rem; resize: vertical; }
-    .recipe-field-wide, .recipe-form-actions, .recipe-feedback, .recipe-ingredients { grid-column: 1 / -1; }
-    .recipe-form-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
-    .recipe-section { display: grid; gap: 12px; padding-top: 18px; border-top: 1px solid var(--lifeos-line); }
-    .recipe-ingredient-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 12px 14px; border-radius: 13px; background: var(--lifeos-surface-soft); }
-    .recipe-ingredient-row strong { overflow-wrap: anywhere; }
-    .recipe-ingredient-row span, .recipe-muted { color: var(--lifeos-text-soft); }
-    .recipe-feedback { margin: 0; color: var(--lifeos-accent-strong); font-weight: 700; }
-    .recipe-error { margin: 0; padding: 12px 14px; border-radius: 12px; background: #fff0ed; color: #8f2017; font-weight: 700; }
-    .recipe-empty { margin: 0; color: var(--lifeos-text-soft); line-height: 1.5; }
-    .recipe-form-actions .lifeos-button { min-height: 2.65rem; }
-    @media (max-width: 850px) { .recipes-workspace { grid-template-columns: minmax(0, 1fr); } }
-    @media (max-width: 560px) { .recipe-editor-form { grid-template-columns: minmax(0, 1fr); } .recipe-field-wide, .recipe-form-actions, .recipe-feedback, .recipe-ingredients { grid-column: auto; } .recipes-directory, .recipe-editor { padding: 17px; } }
-  `],
+  styleUrl: './recipes-page.component.css',
 })
 export class RecipesPageComponent implements OnInit {
   private readonly api = inject(LifeosApiService)
+  private readonly recipesApi = inject(RecipesApiService)
 
   readonly recipes = signal<RecipeDto[]>([])
   readonly foodItems = signal<FoodItemDto[]>([])
   readonly profiles = signal<MemberProfileDto[]>([])
   search = ''
-  visibleRecipes(): RecipeDto[] {
-    return this.recipes().filter(r => !r.isArchived && r.name.toLocaleLowerCase('fr').includes(this.search.toLocaleLowerCase('fr')))
-  }
+  visibleRecipes(): RecipeDto[] { return visibleRecipes(this.recipes(), this.search) }
   activeFoods(): FoodItemDto[] { return this.foodItems().filter(f => !f.isArchived) }
   ingredientEdit: { id: string; foodItemId: string; quantity: number; unit: string } | null = null
   readonly dialog = signal<'recipe' | 'ingredient' | 'editIngredient' | null>(null)
@@ -80,7 +44,6 @@ export class RecipesPageComponent implements OnInit {
   readonly servings = signal(2)
   readonly durationMinutes = signal(30)
   readonly tagsText = signal('')
-  readonly metadataText = signal('')
   readonly instructionsText = signal('')
   readonly ingredientReviewFoodId = signal('')
   readonly ingredientFoodItemId = signal('')
@@ -125,14 +88,6 @@ export class RecipesPageComponent implements OnInit {
     this.tagsText.set(value)
   }
 
-  get metadataValue(): string {
-    return this.metadataText()
-  }
-
-  set metadataValue(value: string) {
-    this.metadataText.set(value)
-  }
-
   get instructionsValue(): string { return this.instructionsText() }
   set instructionsValue(value: string) { this.instructionsText.set(value) }
 
@@ -170,9 +125,8 @@ export class RecipesPageComponent implements OnInit {
     this.servings.set(recipe?.servings ?? 2)
     this.durationMinutes.set(recipe?.durationMinutes ?? 30)
     this.tagsText.set(recipe?.tags.join(', ') ?? '')
-    this.metadataText.set(recipe?.metadata ? JSON.stringify(recipe.metadata, null, 2) : '')
     this.instructionsText.set(recipe?.instructions ?? '')
-    this.showMore = !!(this.tagsText() || this.metadataText())
+    this.showMore = !!this.tagsText()
     this.openDialog('recipe')
   }
 
@@ -219,7 +173,7 @@ export class RecipesPageComponent implements OnInit {
     this.error.set(null)
     this.feedback.set('')
     this.loading.set(true)
-    this.api.get<RecipeDto>(`/recipes/${encodeURIComponent(id)}`).subscribe({
+    this.recipesApi.get(id).subscribe({
       next: (recipe) => {
         this.selectedRecipe.set(recipe)
         this.loading.set(false)
@@ -232,30 +186,20 @@ export class RecipesPageComponent implements OnInit {
   }
 
   saveRecipe(): void {
-    const name = this.recipeName().trim()
-    const servings = Number(this.servings())
-    const durationMinutes = Number(this.durationMinutes())
-    if (!name || name.length > 200 || !Number.isFinite(servings) || servings < 1
-      || !Number.isFinite(durationMinutes) || durationMinutes < 0) {
-      this.dialogError.set('Vérifiez le nom (200 caractères maximum), les portions (au moins 1) et la durée (0 minute ou plus).')
+    const built = buildRecipeRequest({
+      name: this.recipeName(), servings: this.servings(), durationMinutes: this.durationMinutes(),
+      tagsText: this.tagsText(), instructions: this.instructionsText(),
+    })
+    if (!built.ok) {
+      this.dialogError.set(built.error)
       return
     }
-
-    const request: RecipeRequest = {
-      name,
-      servings,
-      durationMinutes,
-      tags: this.tagsText().split(',').map((tag) => tag.trim()).filter(Boolean),
-      metadata: null,
-      instructions: this.instructionsText().trim() || null,
-    }
+    const request = built.value
     const id = this.editingId()
     this.saving.set(true)
     this.dialogError.set('')
     this.feedback.set('')
-    const request$ = id
-      ? this.api.put<RecipeDto>(`/recipes/${encodeURIComponent(id)}`, request)
-      : this.api.post<RecipeDto>('/recipes', request)
+    const request$ = id ? this.recipesApi.update(id, request) : this.recipesApi.create(request)
     request$.subscribe({
       next: (recipe) => {
         this.saving.set(false)
@@ -272,22 +216,19 @@ export class RecipesPageComponent implements OnInit {
 
   addIngredient(): void {
     const foodItemId = this.ingredientFoodItemId().trim()
-    const quantity = Number(this.ingredientQuantity())
-    const unit = this.ingredientUnit().trim()
+    const built = buildIngredientRequest(this.ingredientQuantity(), this.ingredientUnit())
     const recipe = this.selectedRecipe()
     if (!recipe) {
       this.dialogError.set('Enregistrez ou sélectionnez une recette avant d’ajouter un ingrédient.')
       return
     }
-    if (!this.activeFoods().some((food) => food.id === foodItemId) || !unit || !Number.isFinite(quantity) || quantity <= 0) {
+    if (!this.activeFoods().some((food) => food.id === foodItemId) || !built.ok) {
       this.dialogError.set('Choisissez un aliment du catalogue, une quantité supérieure à zéro et une unité.')
       return
     }
-
-    const request: AddRecipeIngredientRequest = { foodItemId, quantity, unit }
     this.saving.set(true)
     this.dialogError.set('')
-    this.api.post<RecipeDto>(`/recipes/${encodeURIComponent(recipe.id)}/ingredients`, request).subscribe({
+    this.recipesApi.addIngredient(recipe.id, { foodItemId, ...built.value }).subscribe({
       next: () => {
         this.saving.set(false)
         this.ingredientFoodItemId.set('')
@@ -306,14 +247,14 @@ export class RecipesPageComponent implements OnInit {
 
   deleteRecipe(): void {
     const recipe = this.selectedRecipe()
-    if (!recipe || !window.confirm(`Archiver la recette « ${recipe.name} » ? Les repas existants restent conservés.`)) return
+    if (!recipe || !window.confirm(`Archiver la recette « ${recipe.name} » ?`)) return
     this.saving.set(true)
     this.error.set(null)
-    this.api.delete(`/recipes/${encodeURIComponent(recipe.id)}`).subscribe({
+    this.recipesApi.archive(recipe.id).subscribe({
       next: () => {
         this.saving.set(false)
         this.selectedRecipe.set(null)
-        this.feedback.set('Recette archivée. Les repas existants sont conservés.')
+        this.feedback.set('Recette archivée.')
         this.loadRecipes()
       },
       error: (error: unknown) => {
@@ -332,20 +273,24 @@ export class RecipesPageComponent implements OnInit {
     const recipe = this.selectedRecipe()
     const edit = this.ingredientEdit
     if (!recipe || !edit || this.saving()) return
-    if (!remove && (!Number.isFinite(Number(edit.quantity)) || Number(edit.quantity) <= 0 || !edit.unit.trim())) {
-      this.dialogError.set('Indiquez une quantité supérieure à zéro et une unité.')
+    const built = buildIngredientRequest(edit.quantity, edit.unit)
+    if (!remove && !built.ok) {
+      this.dialogError.set(built.error)
       return
     }
     this.saving.set(true)
     this.dialogError.set('')
-    const path = `/recipes/${recipe.id}/ingredients/${edit.id}`
-    const request = remove ? this.api.delete(path) : this.api.put(path, { id: edit.id, quantity: edit.quantity, unit: edit.unit })
+    const request = remove || !built.ok
+      ? this.recipesApi.removeIngredient(recipe.id, edit.id)
+      : this.recipesApi.updateIngredient(recipe.id, edit.id, built.value)
     request.subscribe({
-      next: () => {
+      // Ingredient calls return the whole recipe: no reload needed.
+      next: (updated) => {
         this.saving.set(false)
         this.closeDialog()
         this.feedback.set(remove ? 'Ingrédient retiré.' : 'Ingrédient modifié.')
-        this.loadRecipes(recipe.id)
+        this.selectedRecipe.set(updated)
+        this.recipes.update(items => items.map(item => item.id === updated.id ? updated : item))
       },
       error: (error: unknown) => {
         this.saving.set(false)
@@ -356,7 +301,7 @@ export class RecipesPageComponent implements OnInit {
 
   private loadRecipes(selectId?: string): void {
     this.loading.set(true)
-    this.api.get<RecipeDto[]>('/recipes').subscribe({
+    this.recipesApi.list().subscribe({
       next: (recipes) => {
         this.recipes.set(recipes)
         this.loading.set(false)

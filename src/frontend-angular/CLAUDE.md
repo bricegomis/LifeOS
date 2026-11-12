@@ -6,6 +6,10 @@
   `pages/<feature>` (foods, recipes, sports, stores, tickets, settings, login;
   the planning and dashboard pages were removed by ADR 0008), `shared` (dialog,
   reviews, cooking), `shell`.
+- Reference slice: `src/app/food/recipes/` — `recipe.models.ts`, `recipes-api.service.ts`
+  (all HTTP calls), `recipe-form.ts` (pure rules with a `.spec.ts`), the page with its
+  `.html` and `.css`, and `recipes.routes.ts` loaded with `loadChildren`.
+  `module-boundaries.spec.ts` fails when a module imports another module or `pages/`.
 - New modules follow ADR 0009: `src/app/<module>/` with its own pages, API service,
   models and lazy routes; a module imports only `core` and `shared`, never another
   module. Existing `pages/<feature>` move in roadmap step 1 (`docs/01-roadmap.md`).

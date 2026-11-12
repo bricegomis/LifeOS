@@ -1,5 +1,5 @@
 using LifeOS.Domain.Households;
-using LifeOS.Domain.Recipes;
+using LifeOS.Domain.Food.Recipes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

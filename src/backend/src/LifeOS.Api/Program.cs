@@ -1,6 +1,7 @@
 using LifeOS.Api.Authentication;
 using LifeOS.Api.Endpoints;
 using LifeOS.Api.ErrorHandling;
+using LifeOS.Api.Food.Recipes;
 using LifeOS.Api.FoodItems;
 using LifeOS.Api.Receipts;
 using LifeOS.Infrastructure;

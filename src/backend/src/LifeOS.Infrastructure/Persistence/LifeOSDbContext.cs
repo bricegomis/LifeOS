@@ -1,7 +1,7 @@
 using LifeOS.Domain.Articles;
 using LifeOS.Domain.FoodItems;
 using LifeOS.Domain.Households;
-using LifeOS.Domain.Recipes;
+using LifeOS.Domain.Food.Recipes;
 using LifeOS.Domain.Products;
 using LifeOS.Domain.Receipts;
 using LifeOS.Domain.Stores;
