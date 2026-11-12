@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-12. Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-12 (outils Alimentation de l'assistant). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -10,15 +10,15 @@ et la [roadmap](01-roadmap.md).
 Étape 1, « Alimentation saine », livrée le 2026-11-12
 ([ADR 0010](architecture/decisions/0010-simplified-food-module.md)). En cours : étape 1 bis,
 assistant Claude ([ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md)) ;
-la connexion Google par l'API (sans Supabase) et l'endpoint MCP sont livrés ; les outils
-Alimentation viennent ensuite. Pour connecter Claude : [assistant-claude.md](assistant-claude.md).
+la connexion Google par l'API (sans Supabase), l'endpoint MCP et les outils de tout le
+module Alimentation sont livrés. Pour connecter Claude : [assistant-claude.md](assistant-claude.md).
 
 ## Ce qui existe
 
 | Domaine | Fonctionnalités |
 | --- | --- |
 | Compte | Connexion Google gérée par l'API, réservée aux adresses autorisées ; l'API émet ses propres jetons (accès 1 h, rafraîchissement par rotation) |
-| Assistant Claude | Endpoint MCP `/mcp` pour claude.ai et Claude Code, avec consentement à la première connexion ; outil `get_household` (lecture du foyer et des profils) ; accès révocables dans Réglages |
+| Assistant Claude | Endpoint MCP `/mcp` pour claude.ai et Claude Code, avec consentement à la première connexion ; outils pour lire et remplir tout le module Alimentation (aliments avec image par URL, recettes avec nutrition et coût, magasins, produits, prix, avis, tickets) ; accès révocables dans Réglages |
 | Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion ; page Paramètres (profils, versions de l'interface et de l'API) |
 | Aliments | Fiches génériques avec photo, nutrition manuelle (base 100 g / 100 ml / 1 pièce, calories, protéines, glucides, lipides, fibres, FODMAP, NOVA), état « À compléter », prix relevés en lecture seule, archivage |
 | Recettes | Photo, ingrédients sur aliments en g, ml ou pièce (chaque ingrédient ouvre la fiche de l'aliment), rendement, étapes, durée, catégories, nutrition par portion marquée partielle si une valeur manque ; coût minimum–maximum tous magasins confondus, calculé à la lecture, avec le détail du produit, du magasin et du prix retenus |

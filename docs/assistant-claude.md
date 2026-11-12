@@ -37,11 +37,26 @@ assistant cessent de fonctionner ; il devra redemander l'autorisation.
 
 ## Ce que fait l'assistant
 
-| Outil | Rôle | Disponible |
-| --- | --- | --- |
-| `get_household` | Foyer et profils | oui |
-| Aliments, recettes, magasins, produits, prix, images | Recherche et création | lot 3 |
-| Tickets en attente, photo, saisie des prix | Traitement des tickets | lot 4 |
+Claude agit directement dans les bibliothèques (ADR 0011, § 3) : il montre ce qu'il va
+créer, tu valides dans la discussion. Il cherche lui-même les valeurs nutritionnelles
+(Ciqual en priorité) et les images ; LifeOS ne va jamais chercher ces données seul.
+
+| Domaine | Outils |
+| --- | --- |
+| Foyer | `get_household` (profils, pour les avis) |
+| Aliments | `search_foods`, `get_food` (avec produits et avis), `create_food`, `update_food` (remplace toute la fiche), `archive_food`, `set_food_image_from_url`, `remove_food_image` |
+| Recettes | `search_recipes`, `get_recipe` (ingrédients, nutrition par portion, coût min–max, avis), `create_recipe` (avec ses ingrédients), `update_recipe`, `add_recipe_ingredient`, `update_recipe_ingredient`, `remove_recipe_ingredient`, `archive_recipe`, `set_recipe_image_from_url`, `remove_recipe_image` |
+| Magasins | `list_stores`, `create_store`, `update_store`, `delete_store` |
+| Produits et prix | `search_products`, `create_product`, `update_product`, `archive_product`, `add_price`, `remove_price` |
+| Avis | `list_reviews`, `save_review` (crée ou remplace l'avis d'un profil), `delete_review` |
+| Tickets | `list_receipts`, `get_receipt_photo` (Claude lit la photo), `update_receipt` (magasin, date, traité) |
+
+Images par URL : `https` uniquement, adresse publique (jamais le réseau local), JPEG,
+PNG ou WebP de 10 Mo au plus, téléchargées en 20 secondes au plus.
+
+Tickets : la photo se prend toujours dans l'application. Ensuite, par exemple : « Traite
+mon dernier ticket ». Claude lit la photo, propose un produit pour chaque ligne, saisit
+les prix que tu confirmes et marque le ticket traité.
 
 ## Dépannage
 
@@ -50,3 +65,4 @@ assistant cessent de fonctionner ; il devra redemander l'autorisation.
 | « Couldn't reach the MCP server » | Adresse sans `/mcp`, ou API injoignable depuis Internet |
 | Erreur `invalid_client` après le clic sur Se connecter | Client Claude inconnu : son document de métadonnées n'a pas pu être lu (journaux de l'API, « Client metadata document ») |
 | Retour en boucle sur l'écran de connexion | Adresse Google non autorisée (`AUTH_ALLOWED_EMAIL`) |
+| Les nouveaux outils n'apparaissent pas | claude.ai garde l'ancienne liste : déconnecter puis reconnecter le connecteur, ou ouvrir une nouvelle discussion |

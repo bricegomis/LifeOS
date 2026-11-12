@@ -19,7 +19,7 @@ public sealed record StoreRequest(
     bool IsOrganic,
     bool IsLocal);
 
-/// <summary>Simple management screen (ADR 0009): direct DbContext access, rules in <see cref="Store"/>.</summary>
+/// <summary>Simple management screen (ADR 0009): HTTP glue over <see cref="StoreLibrary"/>.</summary>
 public static class StoresEndpoints
 {
     public static IEndpointRouteBuilder MapStoresEndpoints(this IEndpointRouteBuilder app)
@@ -33,42 +33,61 @@ public static class StoresEndpoints
         return app;
     }
 
-    private static Task<Store?> Find(LifeOSDbContext db, HouseholdContext household, Guid id, CancellationToken ct) =>
-        db.Stores.SingleOrDefaultAsync(s => s.Id == id && s.HouseholdId == household.HouseholdId, ct);
+    private static async Task<IResult> List(HouseholdContext household, StoreLibrary stores, CancellationToken ct) =>
+        Results.Ok((await stores.ListAsync(household.HouseholdId, ct)).Select(StoreDto.From).ToList());
 
-    private static async Task<IResult> List(HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
+    private static async Task<IResult> Get(Guid storeId, HouseholdContext household, StoreLibrary stores, CancellationToken ct) =>
+        await stores.FindAsync(household.HouseholdId, storeId, ct) is { } store ? Results.Ok(StoreDto.From(store)) : Results.NotFound();
+
+    private static async Task<IResult> Create(StoreRequest request, HouseholdContext household, StoreLibrary stores, CancellationToken ct)
     {
-        var stores = await db.Stores.AsNoTracking().Where(s => s.HouseholdId == household.HouseholdId)
-            .OrderBy(s => s.Name).ToListAsync(ct);
-        return Results.Ok(stores.Select(StoreDto.From).ToList());
-    }
-
-    private static async Task<IResult> Get(Guid storeId, HouseholdContext household, LifeOSDbContext db, CancellationToken ct) =>
-        await Find(db, household, storeId, ct) is { } store ? Results.Ok(StoreDto.From(store)) : Results.NotFound();
-
-    private static async Task<IResult> Create(StoreRequest request, HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
-    {
-        var store = Store.Create(household.HouseholdId, request.Name, request.Address ?? "", request.IsOrganic, request.IsLocal);
-        db.Stores.Add(store);
-        await db.SaveChangesAsync(ct);
+        var store = await stores.CreateAsync(household.HouseholdId, request, ct);
         return Results.Created($"/api/stores/{store.Id}", StoreDto.From(store));
     }
 
-    private static async Task<IResult> Update(Guid storeId, StoreRequest request, HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
+    private static async Task<IResult> Update(Guid storeId, StoreRequest request, HouseholdContext household, StoreLibrary stores, CancellationToken ct) =>
+        await stores.UpdateAsync(household.HouseholdId, storeId, request, ct) is { } store ? Results.Ok(StoreDto.From(store)) : Results.NotFound();
+
+    private static async Task<IResult> Delete(Guid storeId, HouseholdContext household, StoreLibrary stores, CancellationToken ct) =>
+        await stores.DeleteAsync(household.HouseholdId, storeId, ct) ? Results.NoContent() : Results.NotFound();
+}
+
+/// <summary>
+/// Store management shared by the endpoints and the assistant tools (ADR 0011): plain DbContext
+/// access, rules in <see cref="Store"/>, scoped to one household.
+/// </summary>
+public sealed class StoreLibrary(LifeOSDbContext db)
+{
+    public async Task<List<Store>> ListAsync(Guid householdId, CancellationToken ct) =>
+        await db.Stores.AsNoTracking().Where(s => s.HouseholdId == householdId).OrderBy(s => s.Name).ToListAsync(ct);
+
+    public Task<Store?> FindAsync(Guid householdId, Guid id, CancellationToken ct) =>
+        db.Stores.SingleOrDefaultAsync(s => s.Id == id && s.HouseholdId == householdId, ct);
+
+    public async Task<Store> CreateAsync(Guid householdId, StoreRequest request, CancellationToken ct)
     {
-        var store = await Find(db, household, storeId, ct);
-        if (store is null) return Results.NotFound();
-        store.UpdateDetails(request.Name, request.Address ?? "", request.IsOrganic, request.IsLocal);
+        var store = Store.Create(householdId, request.Name, request.Address ?? "", request.IsOrganic, request.IsLocal);
+        db.Stores.Add(store);
         await db.SaveChangesAsync(ct);
-        return Results.Ok(StoreDto.From(store));
+        return store;
     }
 
-    private static async Task<IResult> Delete(Guid storeId, HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
+    public async Task<Store?> UpdateAsync(Guid householdId, Guid id, StoreRequest request, CancellationToken ct)
     {
-        var store = await Find(db, household, storeId, ct);
-        if (store is null) return Results.NotFound();
+        var store = await FindAsync(householdId, id, ct);
+        if (store is null) return null;
+        store.UpdateDetails(request.Name, request.Address ?? "", request.IsOrganic, request.IsLocal);
+        await db.SaveChangesAsync(ct);
+        return store;
+    }
+
+    /// <summary>A store still used by a price or a receipt is kept: the database refuses the delete (409).</summary>
+    public async Task<bool> DeleteAsync(Guid householdId, Guid id, CancellationToken ct)
+    {
+        var store = await FindAsync(householdId, id, ct);
+        if (store is null) return false;
         db.Stores.Remove(store);
         await db.SaveChangesAsync(ct);
-        return Results.NoContent();
+        return true;
     }
 }

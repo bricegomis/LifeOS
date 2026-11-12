@@ -41,13 +41,15 @@ le dossier santé.
 
 - Endpoint `/mcp` dans `LifeOS.Api` (transport HTTP, SDK officiel
   `ModelContextProtocol.AspNetCore`), dans le même conteneur. Pas de nouveau service.
-- Chaque outil appelle un cas d'usage existant de la couche Application, comme un
-  contrôleur. Validation, foyer, références et snapshots restent au même endroit.
+- Chaque outil passe par le même code que l'endpoint correspondant : un cas d'usage de
+  la couche Application pour une action à règles (prix, tickets, coûts), sinon la
+  classe de gestion du module partagée avec les endpoints (par exemple `FoodLibrary`).
+  Validation, foyer, références et snapshots restent au même endroit.
 - L'API n'appelle toujours aucun fournisseur d'IA et ne contient aucun prompt. Les
   descriptions d'outils sont de la documentation, pas des prompts.
 - Les outils sont nommés par cas d'usage, pas en CRUD générique :
   `search_foods`, `create_food`, `set_food_image_from_url`, `create_recipe`,
-  `list_pending_receipts`, `get_receipt_photo`, `add_price`, etc. Chaque module ajoute
+  `list_receipts`, `get_receipt_photo`, `add_price`, etc. Chaque module ajoute
   ses outils quand il est livré, dans son propre dossier.
 - Les outils de création renvoient l'identifiant et l'objet créé. Les outils de
   recherche existent pour que l'assistant vérifie l'existant avant de créer.

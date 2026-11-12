@@ -21,14 +21,13 @@ public static class ImageFileEndpoints
     }
 
     /// <summary>
-    /// Stores the uploaded <c>image</c> field, lets <paramref name="apply"/> point the entity to it and
+    /// Stores <paramref name="content"/>, lets <paramref name="apply"/> point the entity to it and
     /// saves; the new file is removed if saving fails, the replaced one once saving succeeded.
     /// </summary>
-    public static async Task ReplaceImageAsync(this ImageFileStorage storage, HttpRequest request, string? oldFileName,
-        Action<StoredFile> apply, Func<Task> save, ILogger logger, CancellationToken ct)
+    public static async Task ReplaceImageAsync(this ImageFileStorage storage, Stream content, long length, string? contentType,
+        string? oldFileName, Action<StoredFile> apply, Func<Task> save, ILogger logger, CancellationToken ct)
     {
-        var file = await request.ReadFileAsync("image", "Sélectionnez une image.", ct);
-        var stored = await storage.SaveUploadAsync(file, ct);
+        var stored = await storage.SaveAsync(content, length, contentType, ct);
         try
         {
             apply(stored);

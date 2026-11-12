@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace LifeOS.Api.Food.Recipes;
 
 /// <summary>
-/// Simple management screen (ADR 0009): the endpoints read and write the Food module's own
-/// tables directly; validity rules live in <see cref="Recipe"/>. Invalid input raised by the
+/// Simple management screen (ADR 0009): HTTP glue over <see cref="RecipeLibrary"/>, shared with
+/// the assistant; validity rules live in <see cref="Recipe"/>. Invalid input raised by the
 /// domain becomes a 400 through the global exception handler.
 /// </summary>
 public static class RecipesEndpoints
@@ -32,81 +32,38 @@ public static class RecipesEndpoints
         return app;
     }
 
-    private static Task<Recipe?> Find(LifeOSDbContext db, HouseholdContext household, Guid recipeId, CancellationToken ct) =>
-        db.Recipes.Include(recipe => recipe.Ingredients)
-            .SingleOrDefaultAsync(recipe => recipe.Id == recipeId && recipe.HouseholdId == household.HouseholdId, ct);
+    private static IResult Ok(Recipe? recipe) => recipe is null ? Results.NotFound() : Results.Ok(RecipeDto.From(recipe));
 
-    private static async Task<IResult> List(HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
+    private static async Task<IResult> List(HouseholdContext household, RecipeLibrary recipes, CancellationToken ct) =>
+        Results.Ok((await recipes.ListAsync(household.HouseholdId, ct: ct)).Select(RecipeDto.From).ToList());
+
+    private static async Task<IResult> Get(Guid recipeId, HouseholdContext household, RecipeLibrary recipes, CancellationToken ct) =>
+        Ok(await recipes.FindAsync(household.HouseholdId, recipeId, ct));
+
+    private static async Task<IResult> Create(CreateRecipeRequest request, HouseholdContext household, RecipeLibrary recipes, CancellationToken ct)
     {
-        var recipes = await db.Recipes.AsNoTracking().Include(recipe => recipe.Ingredients)
-            .Where(recipe => recipe.HouseholdId == household.HouseholdId)
-            .OrderBy(recipe => recipe.Name).ThenBy(recipe => recipe.Id).ToListAsync(ct);
-        return Results.Ok(recipes.Select(RecipeDto.From).ToList());
-    }
-
-    private static async Task<IResult> Get(Guid recipeId, HouseholdContext household, LifeOSDbContext db, CancellationToken ct) =>
-        await Find(db, household, recipeId, ct) is { } recipe ? Results.Ok(RecipeDto.From(recipe)) : Results.NotFound();
-
-    private static async Task<IResult> Create(CreateRecipeRequest request, HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
-    {
-        var recipe = Recipe.Create(household.HouseholdId, request.Name, request.Servings, request.DurationMinutes,
-            request.Tags, request.Instructions);
-        db.Recipes.Add(recipe);
-        await db.SaveChangesAsync(ct);
+        var recipe = await recipes.CreateAsync(household.HouseholdId, request, null, ct);
         return Results.Created($"/api/recipes/{recipe.Id}", RecipeDto.From(recipe));
     }
 
     private static async Task<IResult> Update(Guid recipeId, UpdateRecipeRequest request, HouseholdContext household,
-        LifeOSDbContext db, CancellationToken ct)
-    {
-        var recipe = await Find(db, household, recipeId, ct);
-        if (recipe is null) return Results.NotFound();
-        recipe.Update(request.Name, request.Servings, request.DurationMinutes, request.Tags, request.Instructions);
-        await db.SaveChangesAsync(ct);
-        return Results.Ok(RecipeDto.From(recipe));
-    }
+        RecipeLibrary recipes, CancellationToken ct) =>
+        Ok(await recipes.UpdateAsync(household.HouseholdId, recipeId, request, ct));
 
-    private static async Task<IResult> Archive(Guid recipeId, HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
-    {
-        var recipe = await Find(db, household, recipeId, ct);
-        if (recipe is null) return Results.NotFound();
-        recipe.Archive();
-        await db.SaveChangesAsync(ct);
-        return Results.NoContent();
-    }
+    private static async Task<IResult> Archive(Guid recipeId, HouseholdContext household, RecipeLibrary recipes, CancellationToken ct) =>
+        await recipes.ArchiveAsync(household.HouseholdId, recipeId, ct) is null ? Results.NotFound() : Results.NoContent();
 
     private static async Task<IResult> AddIngredient(Guid recipeId, AddRecipeIngredientRequest request,
-        HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
-    {
-        var recipe = await Find(db, household, recipeId, ct);
-        if (recipe is null) return Results.NotFound();
-        // Foods belong to the same module; the household filter rejects cross-household references.
-        if (!await db.FoodItems.AnyAsync(food => food.Id == request.FoodItemId
-                && food.HouseholdId == household.HouseholdId && !food.IsArchived, ct))
-            throw new ArgumentException("L'ingrédient doit référencer un aliment actif de votre foyer.");
-        // Added through the DbSet so EF inserts the line instead of guessing its state from the key.
-        db.RecipeIngredients.Add(recipe.AddIngredient(request.FoodItemId, request.Quantity, request.Unit));
-        await db.SaveChangesAsync(ct);
-        return Results.Ok(RecipeDto.From(recipe));
-    }
+        HouseholdContext household, RecipeLibrary recipes, CancellationToken ct) =>
+        Ok(await recipes.AddIngredientAsync(household.HouseholdId, recipeId, request, ct));
 
     private static async Task<IResult> UpdateIngredient(Guid recipeId, Guid ingredientId, UpdateRecipeIngredientRequest request,
-        HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
-    {
-        var recipe = await Find(db, household, recipeId, ct);
-        if (recipe is null || !recipe.UpdateIngredient(ingredientId, request.Quantity, request.Unit)) return Results.NotFound();
-        await db.SaveChangesAsync(ct);
-        return Results.Ok(RecipeDto.From(recipe));
-    }
+        HouseholdContext household, RecipeLibrary recipes, CancellationToken ct) =>
+        Ok(await recipes.UpdateIngredientAsync(household.HouseholdId, recipeId, ingredientId, request, ct));
 
     private static async Task<IResult> RemoveIngredient(Guid recipeId, Guid ingredientId, HouseholdContext household,
-        LifeOSDbContext db, CancellationToken ct)
-    {
-        var recipe = await Find(db, household, recipeId, ct);
-        if (recipe is null || !recipe.RemoveIngredient(ingredientId)) return Results.NotFound();
-        await db.SaveChangesAsync(ct);
-        return Results.Ok(RecipeDto.From(recipe));
-    }
+        RecipeLibrary recipes, CancellationToken ct) =>
+        Ok(await recipes.RemoveIngredientAsync(household.HouseholdId, recipeId, ingredientId, ct));
 
     private static async Task<IResult> GetImage(Guid recipeId, HouseholdContext household, HttpContext context,
         LifeOSDbContext db, FoodImageStorage storage, CancellationToken ct)
@@ -117,24 +74,13 @@ public static class RecipesEndpoints
     }
 
     private static async Task<IResult> UploadImage(Guid recipeId, HttpRequest request, HouseholdContext household,
-        LifeOSDbContext db, FoodImageStorage storage, ILogger<FoodImageStorage> logger, CancellationToken ct)
+        RecipeLibrary recipes, CancellationToken ct)
     {
-        var recipe = await Find(db, household, recipeId, ct);
-        if (recipe is null) return Results.NotFound();
-        await storage.ReplaceImageAsync(request, recipe.ImagePath, stored => recipe.SetImage(stored.FileName, stored.ContentType),
-            () => db.SaveChangesAsync(ct), logger, ct);
-        return Results.Ok(RecipeDto.From(recipe));
+        var file = await request.ReadFileAsync("image", "Sélectionnez une image.", ct);
+        await using var content = file.OpenReadStream();
+        return Ok(await recipes.ReplaceImageAsync(household.HouseholdId, recipeId, content, file.Length, file.ContentType, ct));
     }
 
-    private static async Task<IResult> DeleteImage(Guid recipeId, HouseholdContext household, LifeOSDbContext db,
-        FoodImageStorage storage, ILogger<FoodImageStorage> logger, CancellationToken ct)
-    {
-        var recipe = await Find(db, household, recipeId, ct);
-        if (recipe is null) return Results.NotFound();
-        var oldPath = recipe.ImagePath;
-        recipe.RemoveImage();
-        await db.SaveChangesAsync(ct);
-        storage.DeleteQuietly(oldPath, e => logger.LogError(e, "Unable to remove a deleted recipe image"));
-        return Results.NoContent();
-    }
+    private static async Task<IResult> DeleteImage(Guid recipeId, HouseholdContext household, RecipeLibrary recipes, CancellationToken ct) =>
+        await recipes.RemoveImageAsync(household.HouseholdId, recipeId, ct) is null ? Results.NotFound() : Results.NoContent();
 }

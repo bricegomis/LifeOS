@@ -60,6 +60,13 @@
   trusted Claude metadata document (`ClientMetadataDocuments`); never dynamic registration.
 - MCP (`/mcp`, `Api/Assistant`): stateless HTTP transport, policy `Assistant` (tokens
   issued for the `/mcp` resource). Tools are `[McpServerToolType]` classes in their
-  module's Api folder (e.g. `Households/HouseholdAssistantTools.cs`), resolve the
-  household with `AssistantRequest.HouseholdAsync` and call the same use cases or
-  queries as the endpoints. Tool descriptions are French documentation, not prompts.
+  module's Api folder (e.g. `Food/Foods/FoodAssistantTools.cs`), resolve the
+  household with `AssistantRequest.HouseholdAsync` and call the same code as the
+  endpoints: Application use cases, or the module's management class shared with the
+  endpoints (`FoodLibrary`, `RecipeLibrary`, `StoreLibrary`, `ProductLibrary`,
+  `ReviewLibrary`, registered in `Api/Food/FoodModule.cs`). Never query the DbContext in
+  a tool when an endpoint already does the same thing. `ArgumentException` and unique/FK
+  violations reach the assistant as readable errors (call-tool filter in
+  `AssistantSetup`); not found is `AssistantRequest.NotFound`. Images by URL go through
+  `IRemoteImageSource` (https, public addresses only, 10 MB, 20 s).
+  Tool descriptions are French documentation, not prompts.

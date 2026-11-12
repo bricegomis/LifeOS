@@ -1,6 +1,7 @@
 using LifeOS.Api.Assistant;
 using LifeOS.Api.Authentication;
 using LifeOS.Api.ErrorHandling;
+using LifeOS.Api.Food;
 using LifeOS.Api.Food.Foods;
 using LifeOS.Api.Food.Products;
 using LifeOS.Api.Food.Receipts;
@@ -20,6 +21,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddFoodLibraries();
 
 builder.AddLifeOSAuthentication();
 builder.AddLifeOSAssistant();

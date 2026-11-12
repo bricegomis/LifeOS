@@ -54,6 +54,8 @@ public static class DependencyInjection
         services.AddSingleton<FoodImageStorage>();
         services.Configure<ReceiptPhotoStorageOptions>(configuration.GetSection("Receipts"));
         services.AddSingleton<ReceiptPhotoStorage>();
+        // Images found by the assistant (ADR 0011): https only, public addresses only.
+        services.AddSingleton<IRemoteImageSource, RemoteImageDownloader>();
 
         return services;
     }

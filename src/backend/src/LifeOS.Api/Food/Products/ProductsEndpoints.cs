@@ -58,48 +58,24 @@ public static class ProductsEndpoints
         return app;
     }
 
-    private static Task<Product?> Find(LifeOSDbContext db, HouseholdContext household, Guid id, CancellationToken ct) =>
-        db.Products.Include(p => p.Prices).SingleOrDefaultAsync(p => p.Id == id && p.HouseholdId == household.HouseholdId, ct);
-
     /// <param name="foodId">Optional: only the products of this food (food sheet).</param>
-    private static async Task<IResult> List(HouseholdContext household, LifeOSDbContext db, CancellationToken ct, Guid? foodId = null)
-    {
-        var query = db.Products.AsNoTracking().Include(p => p.Prices).Where(p => p.HouseholdId == household.HouseholdId);
-        if (foodId is { } id) query = query.Where(p => p.FoodItemId == id);
-        var products = await query.OrderBy(p => p.Name).ThenBy(p => p.Id).ToListAsync(ct);
-        return Results.Ok(products.Select(ProductDto.From).ToList());
-    }
+    private static async Task<IResult> List(HouseholdContext household, ProductLibrary products, CancellationToken ct, Guid? foodId = null) =>
+        Results.Ok((await products.ListAsync(household.HouseholdId, foodId, ct: ct)).Select(ProductDto.From).ToList());
 
-    private static async Task<IResult> Create(ProductRequest r, HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
+    private static async Task<IResult> Create(ProductRequest r, HouseholdContext household, ProductLibrary products, CancellationToken ct)
     {
-        await RequireActiveFood(db, household, r.FoodItemId, ct);
-        var product = Product.Create(household.HouseholdId, r.FoodItemId, r.Name, r.PackageQuantity, r.PackageUnit, r.Brand, r.Barcode);
-        db.Products.Add(product);
-        await db.SaveChangesAsync(ct);
+        var product = await products.CreateAsync(household.HouseholdId, r, ct);
         return Results.Created($"/api/products/{product.Id}", ProductDto.From(product));
     }
 
-    private static async Task<IResult> Get(Guid id, HouseholdContext household, LifeOSDbContext db, CancellationToken ct) =>
-        await Find(db, household, id, ct) is { } product ? Results.Ok(ProductDto.From(product)) : Results.NotFound();
+    private static async Task<IResult> Get(Guid id, HouseholdContext household, ProductLibrary products, CancellationToken ct) =>
+        await products.FindAsync(household.HouseholdId, id, ct) is { } product ? Results.Ok(ProductDto.From(product)) : Results.NotFound();
 
-    private static async Task<IResult> Update(Guid id, ProductRequest r, HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
-    {
-        var product = await Find(db, household, id, ct);
-        if (product is null) return Results.NotFound();
-        await RequireActiveFood(db, household, r.FoodItemId, ct);
-        product.Update(r.FoodItemId, r.Name, r.PackageQuantity, r.PackageUnit, r.Brand, r.Barcode);
-        await db.SaveChangesAsync(ct);
-        return Results.Ok(ProductDto.From(product));
-    }
+    private static async Task<IResult> Update(Guid id, ProductRequest r, HouseholdContext household, ProductLibrary products, CancellationToken ct) =>
+        await products.UpdateAsync(household.HouseholdId, id, r, ct) is { } product ? Results.Ok(ProductDto.From(product)) : Results.NotFound();
 
-    private static async Task<IResult> Archive(Guid id, HouseholdContext household, LifeOSDbContext db, CancellationToken ct)
-    {
-        var product = await Find(db, household, id, ct);
-        if (product is null) return Results.NotFound();
-        product.Archive();
-        await db.SaveChangesAsync(ct);
-        return Results.NoContent();
-    }
+    private static async Task<IResult> Archive(Guid id, HouseholdContext household, ProductLibrary products, CancellationToken ct) =>
+        await products.ArchiveAsync(household.HouseholdId, id, ct) is null ? Results.NotFound() : Results.NoContent();
 
     private static async Task<IResult> RecordPrice(Guid id, PriceRequest r, HouseholdContext household,
         RecordProductPrice useCase, CancellationToken ct) =>
@@ -110,10 +86,64 @@ public static class ProductsEndpoints
         RemoveProductPrice useCase, CancellationToken ct) =>
         await useCase.ExecuteAsync(household.HouseholdId, id, priceId, ct) is { } product
             ? Results.Ok(ProductDto.From(product)) : Results.NotFound();
+}
 
-    private static async Task RequireActiveFood(LifeOSDbContext db, HouseholdContext household, Guid id, CancellationToken ct)
+/// <summary>
+/// Product management shared by the endpoints and the assistant tools (ADR 0011): plain CRUD on
+/// the Food tables, rules in <see cref="Product"/>, scoped to one household.
+/// </summary>
+public sealed class ProductLibrary(LifeOSDbContext db)
+{
+    /// <param name="foodId">Optional: only the products of this food.</param>
+    /// <param name="search">Optional: name or brand contains this text.</param>
+    public async Task<List<Product>> ListAsync(Guid householdId, Guid? foodId = null, string? search = null,
+        bool includeArchived = true, CancellationToken ct = default)
     {
-        if (!await db.FoodItems.AnyAsync(f => f.Id == id && f.HouseholdId == household.HouseholdId && !f.IsArchived, ct))
+        var query = db.Products.AsNoTracking().Include(p => p.Prices).Where(p => p.HouseholdId == householdId);
+        if (foodId is { } id) query = query.Where(p => p.FoodItemId == id);
+        if (!includeArchived) query = query.Where(p => !p.IsArchived);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var pattern = $"%{Foods.FoodLibrary.EscapeLike(search.Trim())}%";
+            query = query.Where(p => EF.Functions.ILike(p.Name, pattern, "\\") || EF.Functions.ILike(p.Brand ?? "", pattern, "\\"));
+        }
+        return await query.OrderBy(p => p.Name).ThenBy(p => p.Id).ToListAsync(ct);
+    }
+
+    public Task<Product?> FindAsync(Guid householdId, Guid id, CancellationToken ct) =>
+        db.Products.Include(p => p.Prices).SingleOrDefaultAsync(p => p.Id == id && p.HouseholdId == householdId, ct);
+
+    public async Task<Product> CreateAsync(Guid householdId, ProductRequest r, CancellationToken ct)
+    {
+        await RequireActiveFood(householdId, r.FoodItemId, ct);
+        var product = Product.Create(householdId, r.FoodItemId, r.Name, r.PackageQuantity, r.PackageUnit, r.Brand, r.Barcode);
+        db.Products.Add(product);
+        await db.SaveChangesAsync(ct);
+        return product;
+    }
+
+    public async Task<Product?> UpdateAsync(Guid householdId, Guid id, ProductRequest r, CancellationToken ct)
+    {
+        var product = await FindAsync(householdId, id, ct);
+        if (product is null) return null;
+        await RequireActiveFood(householdId, r.FoodItemId, ct);
+        product.Update(r.FoodItemId, r.Name, r.PackageQuantity, r.PackageUnit, r.Brand, r.Barcode);
+        await db.SaveChangesAsync(ct);
+        return product;
+    }
+
+    public async Task<Product?> ArchiveAsync(Guid householdId, Guid id, CancellationToken ct)
+    {
+        var product = await FindAsync(householdId, id, ct);
+        if (product is null) return null;
+        product.Archive();
+        await db.SaveChangesAsync(ct);
+        return product;
+    }
+
+    private async Task RequireActiveFood(Guid householdId, Guid id, CancellationToken ct)
+    {
+        if (!await db.FoodItems.AnyAsync(f => f.Id == id && f.HouseholdId == householdId && !f.IsArchived, ct))
             throw new ArgumentException("Choisissez un aliment actif de votre foyer.");
     }
 }

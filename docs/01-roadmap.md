@@ -131,8 +131,8 @@ Claude (claude.ai web et iPhone, Claude Code) plutôt qu'en saisissant chaque fi
    écran de consentement, accès accordés révocables dans les Réglages. Un premier
    outil en lecture pour valider la connexion depuis claude.ai et Claude Code. Fait.
 3. **Outils Alimentation.** Recherche et création d'aliments, recettes, magasins,
-   produits, prix et avis ; image par URL ; nutrition et coût des recettes.
-4. **Outils Tickets.** Tickets en attente, photo, saisie des prix, ticket traité.
+   produits, prix et avis ; image par URL ; nutrition et coût des recettes. Fait.
+4. **Outils Tickets.** Tickets en attente, photo, saisie des prix, ticket traité. Fait.
 
 **Terminé quand.** Depuis une discussion sur iPhone, l'utilisateur crée un aliment
 complet avec son image, une recette, et traite un ticket photographié dans
