@@ -84,16 +84,16 @@ lesquels les autres modules s'aligneront.
 2. **Maquette cliquable** des écrans, validée
    par l'utilisateur.
 3. **Suppression.** Retirer le code, les tables et les écrans abandonnés, ainsi
-   que le code mort.
+   que le code mort. Fait.
 4. **Tests.** Couvrir ce qui reste avant de le déplacer : isolation par foyer,
-   règles du domaine, parcours d'API.
+   règles du domaine, parcours d'API. Fait.
 5. **Mise en module.** Noyau Foyer (résolution du foyer en un seul endroit) et
    module Alimentation, en commençant par une seule tranche (les recettes) relue
    avec l'utilisateur avant de généraliser. Frontend : dossier par module, routes
-   chargées à la demande, gros composants découpés. Test d'architecture ajouté.
+   chargées à la demande, gros composants découpés. Test d'architecture ajouté. Fait.
 6. **Refonte du modèle** et de l'interface selon la maquette : fibres, images de
-   recettes, ticket photo, produits toujours complets, migration destructive.
-7. **Coût de recette**, en fourchette minimum–maximum.
+   recettes, ticket photo, produits toujours complets, migration destructive. Fait.
+7. **Coût de recette**, en fourchette minimum–maximum. Fait.
 
 **Terminé quand.**
 

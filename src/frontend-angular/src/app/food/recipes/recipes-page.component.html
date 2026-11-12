@@ -34,6 +34,7 @@
             @if (recipe.tags.length) {
               <span class="tags">@for (item of recipe.tags; track item) { <span class="tag">{{ item }}</span> }</span>
             }
+            @if (cost(recipe); as summary) { <span class="muted small">{{ summary }}</span> }
           </span>
         </a>
       }

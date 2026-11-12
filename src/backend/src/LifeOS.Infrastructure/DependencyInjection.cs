@@ -1,7 +1,9 @@
 using LifeOS.Application.Common.Interfaces;
+using LifeOS.Application.Food.Costs;
 using LifeOS.Application.Food.Products;
 using LifeOS.Application.Food.Receipts;
 using LifeOS.Application.Households;
+using LifeOS.Infrastructure.Food.Costs;
 using LifeOS.Infrastructure.Food.Files;
 using LifeOS.Infrastructure.Food.Products;
 using LifeOS.Infrastructure.Food.Receipts;
@@ -36,6 +38,8 @@ public static class DependencyInjection
         services.AddScoped<IProductPriceData, EfProductPriceData>();
         services.AddScoped<RecordProductPrice>();
         services.AddScoped<RemoveProductPrice>();
+        services.AddScoped<IRecipeCostData, EfRecipeCostData>();
+        services.AddScoped<RecipeCosts>();
         services.AddScoped<IReceiptData, EfReceiptData>();
         services.AddScoped<ReceiptUseCases>();
         services.AddSingleton<IReceiptPhotoFiles>(sp => sp.GetRequiredService<ReceiptPhotoStorage>());

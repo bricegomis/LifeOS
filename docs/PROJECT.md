@@ -9,8 +9,8 @@ et la [roadmap](01-roadmap.md).
 
 Étape 1, « Alimentation saine », en cours. Cadrage
 ([ADR 0010](architecture/decisions/0010-simplified-food-module.md)), maquette, suppressions,
-mise en module et refonte du modèle et des écrans sont faits. Reste le coût de recette
-(fourchette minimum–maximum), puis la fusion de l'étape dans `main`.
+mise en module, refonte du modèle et des écrans, et coût de recette sont faits. Reste
+la fusion de l'étape dans `main`, qui remet la base à zéro.
 
 ## Ce qui existe
 
@@ -18,7 +18,7 @@ mise en module et refonte du modèle et des écrans sont faits. Reste le coût d
 | --- | --- |
 | Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion ; page Paramètres (profils, versions de l'interface et de l'API) |
 | Aliments | Fiches génériques avec photo, nutrition manuelle (base 100 g / 100 ml / 1 pièce, calories, protéines, glucides, lipides, fibres, FODMAP, NOVA), état « À compléter », prix relevés en lecture seule, archivage |
-| Recettes | Photo, ingrédients sur aliments en g, ml ou pièce (chaque ingrédient ouvre la fiche de l'aliment), rendement, étapes, durée, catégories, nutrition par portion marquée partielle si une valeur manque |
+| Recettes | Photo, ingrédients sur aliments en g, ml ou pièce (chaque ingrédient ouvre la fiche de l'aliment), rendement, étapes, durée, catégories, nutrition par portion marquée partielle si une valeur manque ; coût minimum–maximum tous magasins confondus, calculé à la lecture, avec le détail du produit, du magasin et du prix retenus |
 | Avis | Note 0..10 et commentaire, par aliment ou recette, par profil |
 | Produits et prix | Produit toujours complet (aliment, nom, contenance) ; prix payé par conditionnement, par magasin et par date, ramené au kilo, au litre ou à la pièce ; tableau avec une colonne par magasin |
 | Magasins | Création, modification, suppression (refusée tant que des prix ou tickets y sont rattachés) |
@@ -41,7 +41,6 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 
 ## Écarts connus avec la cible
 
-- Coût de recette (ADR 0010, § 5) : pas encore livré.
 - La migration `FoodModuleReset` vide la base au premier démarrage qui la contient
   (intégration, puis production à la fusion dans `main`) : voir l'ADR 0010, § 6.
 - Points ouverts de la revue de code : [audit-2026-11.md](audit-2026-11.md).
