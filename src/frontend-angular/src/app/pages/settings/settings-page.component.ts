@@ -79,7 +79,7 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
 
       <section class="surface-card">
         <h2>Synchronisation iPhone</h2>
-        <p>La session de cuisine en cours est conservée dans un cache local de cet iPhone, lié à votre foyer. Réouvrez LifeOS ou cliquez sur Synchroniser pour la restaurer.</p>
+        <p>Les données affichées par les widgets de cet iPhone sont liées à votre foyer et effacées à la déconnexion.</p>
         <dl>
           <dt>État de synchronisation</dt>
           <dd>

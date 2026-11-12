@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { describe, it } from 'node:test'
 import ts from 'typescript'
-import { readCookingSession, mutateCookingSession } from './cooking-contract.ts'
 import { NativeStateCoordinator, SupersededNativeOperation } from './native-state-coordinator.ts'
 import { parseNativeUrl } from './native-url.ts'
 import { validatedReturnPath } from '../auth/auth-flow.ts'
@@ -28,24 +27,11 @@ function harness() {
   let get = async (path: string): Promise<unknown> => path === '/households/current' ? { id: 'house-a' } : []
   const api = { get: (path: string) => get(path) }
   const bridge = {
-    getCookingSession: async () => {
-      const raw = storage.get('lifeos.native.cookingSession')
-      return { session: raw ? readCookingSession(JSON.parse(raw)) : null }
-    },
-    saveCookingSession: async ({ session }: { session: unknown }) => { storage.set('lifeos.native.cookingSession', JSON.stringify(session)) },
-    mutateCookingSession: async ({ sessionId, operation, stepIndex }: { sessionId: string; operation: 'toggle' | 'complete'; stepIndex?: number }) => {
-      const raw = storage.get('lifeos.native.cookingSession')
-      const session = mutateCookingSession(raw ? readCookingSession(JSON.parse(raw)) : null, sessionId, operation, stepIndex)
-      storage.set('lifeos.native.cookingSession', JSON.stringify(session))
-      return { session }
-    },
     clearCookingSession: async () => { storage.delete('lifeos.native.cookingSession'); writes.push('clear-cooking') },
     saveWidgetSnapshot: async ({ snapshot }: { snapshot: unknown }) => { storage.set('widget', JSON.stringify(snapshot)); writes.push('snapshot') },
     clearWidgetSnapshot: async () => { storage.delete('widget'); writes.push('clear-widget') },
     reloadWidgetTimelines: async () => {},
     endLiveActivity: async () => { writes.push('end-activity') },
-    startLiveActivity: async () => ({ disabled: true }),
-    updateLiveActivity: async () => {},
   }
   const router = { navigateByUrl: async (url: string) => { writes.push(url); return true } }
   providers.set(authToken, auth)
@@ -67,8 +53,6 @@ function harness() {
     '@/app/core/auth/auth.service': { AuthService: authToken },
     '@/app/core/auth/auth-flow': { validatedReturnPath },
     './native-bridge': { LifeosNativeBridge: bridge, requireNativeBridge: () => {} },
-    './recipe-steps': { splitInstructionsIntoSteps: () => ['Couper', 'Cuire'] },
-    './cooking-contract': { readCookingSession, COOKING_STORAGE_KEY: 'lifeos.native.cookingSession' },
     './native-state-coordinator': { nativeStateCoordinator: coordinator, SupersededNativeOperation },
     './native-url': { parseNativeUrl },
   }
@@ -83,16 +67,6 @@ function harness() {
     })
     return exports
   }
-  const Cooking = load('cooking-session.service.ts')['CookingSessionService']!
-  const cooking = new Cooking() as {
-    currentSession: ReturnType<typeof signal<ReturnType<typeof readCookingSession>>>
-    lastError: ReturnType<typeof signal<string | null>>
-    startSession: (title: string, id: null, raw: string) => Promise<unknown>
-    restoreSession: () => Promise<unknown>
-    toggleStep: (index: number) => Promise<void>
-  }
-  providers.set(Cooking, cooking)
-  imports['./cooking-session.service'] = { CookingSessionService: Cooking }
   const Sync = load('native-sync.service.ts')['NativeSyncService']!
   const sync = new Sync() as {
     syncNativeState: () => Promise<void>; purgeAll: () => Promise<void>; initListeners: () => Promise<void>
@@ -109,21 +83,19 @@ function harness() {
     effects[0]!()
     await settle()
   }
-  return { storage, coordinator, auth, writes, bridge, cooking, sync, links, capApp, effects, init, settle, notifications, setGet: (fn: typeof get) => { get = fn } }
+  return { storage, coordinator, auth, writes, bridge, sync, links, capApp, effects, init, settle, notifications, setGet: (fn: typeof get) => { get = fn } }
 }
 
 describe('production native services through deterministic ports', () => {
-  it('purges JS storage, memory, notifications and native files, with no restore resurrection', async () => {
+  it('purges JS storage, notifications and native files, including a session left by an older version', async () => {
     const h = harness()
     await h.init()
-    await h.cooking.startSession('Soupe', null, 'Couper\nCuire')
-    assert.ok(h.cooking.currentSession())
+    h.storage.set('lifeos.native.cookingSession', '{"sessionId":"legacy"}')
     await h.sync.purgeAll()
-    assert.equal(h.cooking.currentSession(), null)
     assert.equal(h.storage.has('lifeos.native.cookingSession'), false)
     assert.equal(h.storage.has('lifeos.native.activeIdentity'), false)
     assert.equal(h.storage.has('widget'), false)
-    await assert.rejects(h.cooking.restoreSession(), SupersededNativeOperation)
+    assert.ok(h.writes.includes('end-activity'))
     assert.ok(h.writes.includes('cancel-pending'))
   })
   it('invalidates a sync waiting on the API before logout; it cannot republish', async () => {
@@ -142,28 +114,13 @@ describe('production native services through deterministic ports', () => {
   it('continues every cleanup surface after a failure and reports partial purge explicitly', async () => {
     const h = harness()
     await h.init()
-    await h.cooking.startSession('Soupe', null, 'Couper')
+    h.storage.set('lifeos.native.cookingSession', '{"sessionId":"legacy"}')
+    h.writes.length = 0
     h.bridge.clearWidgetSnapshot = async () => { throw new Error('App Group unavailable') }
     await assert.rejects(h.sync.purgeAll(), /Purge partielle.*App Group unavailable/)
-    assert.equal(h.cooking.currentSession(), null)
     assert.equal(h.storage.has('lifeos.native.cookingSession'), false)
     assert.ok(h.writes.includes('cancel-pending'))
     assert.equal(h.sync.syncStatus(), 'error')
-  })
-  it('purges after an already admitted native write and never permits a cooking write to recreate old state', async () => {
-    const h = harness()
-    await h.init()
-    let finish!: () => void
-    const gate = new Promise<void>(resolve => { finish = resolve })
-    h.bridge.saveCookingSession = async ({ session }) => { await gate; h.storage.set('lifeos.native.cookingSession', JSON.stringify(session)) }
-    const starting = h.cooking.startSession('Soupe', null, 'Couper')
-    const rejected = assert.rejects(starting, SupersededNativeOperation)
-    await Promise.resolve()
-    const purging = h.sync.purgeAll()
-    finish()
-    await Promise.all([rejected, purging])
-    assert.equal(h.cooking.currentSession(), null)
-    assert.equal(h.storage.has('lifeos.native.cookingSession'), false)
   })
   it('keeps an existing same-user widget snapshot when the network fails, without claiming Angular offline support', async () => {
     const h = harness()
@@ -175,27 +132,15 @@ describe('production native services through deterministic ports', () => {
     assert.equal(h.sync.syncStatus(), 'stale')
     assert.equal(h.sync.lastSyncError(), 'offline')
   })
-  it('clears the old identity immediately even if the new account is offline', async () => {
+  it('clears the old identity even if the new account is offline', async () => {
     const h = harness()
     await h.init()
-    await h.cooking.startSession('Soupe', null, 'Couper')
     h.setGet(async () => { throw new Error('offline') })
     h.auth.user.set({ id: 'user-b' })
     h.effects[0]!()
-    assert.equal(h.cooking.currentSession(), null)
     await h.settle()
     assert.equal(h.storage.has('widget'), false)
-    assert.equal(h.storage.has('lifeos.native.cookingSession'), false)
-  })
-  it('does not use a stale JS copy when a widget completes another step', async () => {
-    const h = harness()
-    await h.init()
-    await h.cooking.startSession('Soupe', null, 'Couper')
-    const initial = h.cooking.currentSession()!
-    await h.bridge.mutateCookingSession({ sessionId: initial.sessionId, operation: 'toggle', stepIndex: 0 })
-    await h.cooking.toggleStep(1)
-    assert.deepEqual(h.cooking.currentSession()?.completedStepIndices, [0, 1])
-    assert.equal(h.cooking.currentSession()?.revision, 2)
+    assert.equal(h.storage.has('lifeos.native.activeIdentity'), false)
   })
   it('awaits listener registration failures and surfaces them instead of leaking rejected promises', async () => {
     const h = harness()
@@ -219,15 +164,11 @@ describe('production native services through deterministic ports', () => {
     assert.equal(urlRegistrations, 1)
     assert.equal(exchanges, 1)
   })
-  it('restores cuisine after verified household identity even when the widget write fails', async () => {
+  it('reports a failed widget write as stale after a first successful sync', async () => {
     const h = harness()
     await h.init()
-    await h.cooking.startSession('Soupe', null, 'Couper')
-    const session = h.cooking.currentSession()
-    h.cooking.currentSession.set(null)
     h.bridge.saveWidgetSnapshot = async () => { throw new Error('App Group unavailable') }
     await h.sync.syncNativeState()
-    assert.deepEqual(h.cooking.currentSession(), readCookingSession(session))
     assert.equal(h.sync.syncStatus(), 'stale')
     assert.equal(h.sync.lastSyncError(), 'App Group unavailable')
   })
@@ -265,10 +206,13 @@ describe('production native services through deterministic ports', () => {
     assert.equal(h.links.lastError(), 'PKCE verifier missing')
     assert.equal(h.writes.filter(x => x === '/login').length, 1)
   })
-  it('publishes an empty widget snapshot and cancels reminders left by the removed planner', async () => {
+  it('publishes an empty widget snapshot and clears reminders, cooking session and Live Activity left by older versions', async () => {
     const h = harness()
     h.storage.set('lifeos.native.remindersPreferences', '{"enabled":true}')
+    h.storage.set('lifeos.native.cookingSession', '{"sessionId":"legacy"}')
     await h.init()
+    assert.equal(h.storage.has('lifeos.native.cookingSession'), false)
+    assert.ok(h.writes.includes('end-activity'))
     const snapshot = JSON.parse(h.storage.get('widget')!) as { householdId: string; events: unknown[] }
     assert.equal(snapshot.householdId, 'house-a')
     assert.deepEqual(snapshot.events, [])

@@ -7,7 +7,6 @@ import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.ser
 import { AuthService } from '@/app/core/auth/auth.service'
 import type { AppGroupWidgetSnapshot } from './native.models'
 import { LifeosNativeBridge, requireNativeBridge } from './native-bridge'
-import { CookingSessionService } from './cooking-session.service'
 import { nativeStateCoordinator, SupersededNativeOperation } from './native-state-coordinator'
 
 const LAST_IDENTITY_KEY = 'lifeos.native.activeIdentity'
@@ -15,17 +14,16 @@ const LAST_IDENTITY_KEY = 'lifeos.native.activeIdentity'
 const LEGACY_REMINDERS_KEY = 'lifeos.native.remindersPreferences'
 
 /**
- * Keeps native state tied to the signed-in household: purges it on identity change,
- * restores the cooking session and publishes an empty widget snapshot. The week
- * planner was removed, so there are no events to project or remind about; pending
- * reminders scheduled by older versions are cancelled.
+ * Keeps native state tied to the signed-in household: purges it on identity change
+ * and publishes an empty widget snapshot. The week planner and the cooking session
+ * were removed, so there is nothing to project: reminders, cooking sessions and
+ * Live Activities left by older versions are cleared on every sync.
  */
 
 @Injectable({ providedIn: 'root' })
 export class NativeSyncService {
   private readonly api = inject(LifeosApiService)
   private readonly auth = inject(AuthService)
-  private readonly cooking = inject(CookingSessionService)
   readonly syncStatus = signal<'idle' | 'syncing' | 'synced' | 'stale' | 'error'>('idle')
   readonly lastSyncError = signal<string | null>(null)
   readonly lastSyncedAt = signal<string | null>(null)
@@ -117,12 +115,9 @@ export class NativeSyncService {
       }
       assertCurrent()
       if (typeof localStorage !== 'undefined') localStorage.setItem(LAST_IDENTITY_KEY, identityKey)
-      await this.cooking.restoreSession()
-      assertCurrent()
       const snapshot: AppGroupWidgetSnapshot = {
         version: 1, householdId, userId: user.id, generatedAt: new Date().toISOString(),
         timeZoneId: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris', events: [],
-        // Cooking has one authoritative file, not a stale duplicate in the widget snapshot.
         cookingSession: null,
       }
       await nativeStateCoordinator.run(token, async () => {
@@ -131,6 +126,8 @@ export class NativeSyncService {
         await LifeosNativeBridge.saveWidgetSnapshot({ snapshot })
         await LifeosNativeBridge.reloadWidgetTimelines()
         await cancelPendingNotifications()
+        await LifeosNativeBridge.clearCookingSession()
+        await LifeosNativeBridge.endLiveActivity()
       })
       assertCurrent()
       this.syncStatus.set('synced')
@@ -147,7 +144,6 @@ export class NativeSyncService {
     this.needsRerun = false
     const errors: unknown[] = []
     for (const clear of [
-      () => this.cooking.clearLocalState(),
       () => {
         if (typeof localStorage === 'undefined') return
         localStorage.removeItem(LAST_IDENTITY_KEY)

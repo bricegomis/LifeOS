@@ -32,7 +32,7 @@
   Never put a Supabase service-role/secret key in frontend config.
 
 ## iOS (Capacitor)
-- `ios/` holds the Xcode project, widget extension and Swift contract tests; see
-  `docs/ios-v1.md`. The cooking-session contract is shared between
-  `core/native/cooking-contract*` and Swift files: change both sides together.
+- `ios/` holds the Xcode project and widget extension; see `docs/ios-v1.md`. The
+  cooking session was removed from the web app (ADR 0010); its Swift code is
+  unreachable and stays until roadmap step 6. The web only clears legacy state.
 - No JWT is shared with the widget extension; don't disable ATS.
