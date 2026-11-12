@@ -64,40 +64,36 @@ L'étape 4 (semainier) a besoin des contrats publiés par les étapes 1 à 3.
 **But.** Partir d'une base de code propre et d'un modèle alimentaire simple, sur
 lesquels les autres modules s'aligneront.
 
-**Décisions déjà prises.**
+**Décisions prises.** Cadrage fait le 2026-11-11 :
+[ADR 0010](architecture/decisions/0010-simplified-food-module.md) et
+[02-core-model.md](02-core-model.md).
 
-- Le fonctionnel est simplifié : ce qui crée de la confusion est supprimé ou refondu.
+- Aliments (avec fibres), recettes, avis par profil, magasins, produits et prix
+  sont gardés. Le ticket devient une simple photo conservée.
+- Import JSON, OCR, lignes de ticket, achats, groupes du foyer et session de
+  cuisine sont supprimés.
+- L'interface met en avant recettes et aliments (ordinateur et smartphone) ; la
+  saisie des produits et des prix se fait sur ordinateur.
 - Tout le code existant est réorganisé en modules (Foyer et Alimentation), pas
-  seulement ce qu'on touche.
-- Les tests sont renforcés.
-- Les données actuelles peuvent être perdues : le modèle peut être cassé et une
-  migration destructive est permise.
+  seulement ce qu'on touche. Les tests sont renforcés.
+- La base est remise à zéro : une migration destructive est permise.
 
 **Déroulé.**
 
-1. **Cadrage fonctionnel.** Passer en revue aliments, produits, magasins, prix,
-   tickets (JSON et photo OCR), recettes, avis et session de cuisine. Pour chacun :
-   garder, simplifier ou supprimer. Résultat : ADR 0010 et `02-core-model.md` révisé.
-2. **Suppression.** Retirer le code, les tables et les écrans abandonnés, ainsi
-   que le code mort (audit, section B).
-3. **Tests.** Couvrir ce qui reste avant de le déplacer : isolation par foyer,
+1. **Cadrage fonctionnel.** Fait.
+2. **Maquette cliquable** des écrans, validée
+   par l'utilisateur.
+3. **Suppression.** Retirer le code, les tables et les écrans abandonnés, ainsi
+   que le code mort.
+4. **Tests.** Couvrir ce qui reste avant de le déplacer : isolation par foyer,
    règles du domaine, parcours d'API.
-4. **Mise en module.** Noyau Foyer (résolution du foyer en un seul endroit) et
+5. **Mise en module.** Noyau Foyer (résolution du foyer en un seul endroit) et
    module Alimentation, en commençant par une seule tranche (les recettes) relue
-   avec l'utilisateur avant de généraliser. Frontend :
-   dossier par module, routes chargées à la demande, gros composants découpés.
-   Test d'architecture ajouté.
-5. **Refonte du modèle** décidée au cadrage, avec sa migration.
-
-**À cadrer.**
-
-- Quels objets restent, et lesquels sont réellement utilisés au quotidien ?
-- Tickets : garder l'import JSON, la photo OCR, les deux, ou aucun ?
-- Produits et prix : quel usage concret, maintenant que stock et courses sont exclus ?
-- Recettes : composants réutilisables, portions, étapes — qu'est-ce qui sert ?
-- Avis par profil et par groupe : niveau de détail utile ?
-- Nutrition : quels champs sont nécessaires au futur bilan énergétique ?
-- Remise à zéro complète de la base, ou conservation de certaines tables ?
+   avec l'utilisateur avant de généraliser. Frontend : dossier par module, routes
+   chargées à la demande, gros composants découpés. Test d'architecture ajouté.
+6. **Refonte du modèle** et de l'interface selon la maquette : fibres, images de
+   recettes, ticket photo, produits toujours complets, migration destructive.
+7. **Coût de recette**, en fourchette minimum–maximum.
 
 **Terminé quand.**
 
@@ -202,8 +198,9 @@ venir du module Santé.
 **But.** Rendre l'usage quotidien sur téléphone fiable et rapide.
 
 **Contenu prévu.** Lecture hors ligne des prochains jours, coches mises en file,
-notifications, widgets du semainier. Retrait du widget « prochain événement » et
-décision sur la Live Activity de cuisine, en attente depuis l'ADR 0008.
+notifications, widgets du semainier. Retrait du code Swift du widget « prochain
+événement » et de la Live Activity de cuisine (session de cuisine supprimée par
+l'ADR 0010).
 Demande macOS et Xcode ; l'installation réelle reste une vérification humaine.
 
 Cette étape ne dépend pas de l'étape 5 : elle peut passer avant la santé si

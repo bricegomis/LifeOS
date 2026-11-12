@@ -1,9 +1,9 @@
-# LifeOS — Concepts de l'alimentation
+# LifeOS — Modèle de l'alimentation
 
-Modèle en vigueur, fixé par
-[ADR 0006](architecture/decisions/0006-foods-products-receipts.md) et
-[ADR 0007](architecture/decisions/0007-recipes-meal-lines-and-household-reviews.md).
-Il sera revu au cadrage de l'étape 1 de la [roadmap](01-roadmap.md).
+Modèle cible de l'étape 1, fixé par
+[ADR 0010](architecture/decisions/0010-simplified-food-module.md). Le code y est
+amené pendant l'étape 1 ; ce qu'il contient réellement à un instant donné est dans
+[PROJECT.md](PROJECT.md).
 
 Le foyer isole toutes les données métier. Supabase authentifie ; l'API et
 PostgreSQL stockent les données.
@@ -11,41 +11,55 @@ PostgreSQL stockent les données.
 | Terme | Définition | Exemple |
 | --- | --- | --- |
 | Aliment | Référence culinaire générique, nutrition et digestion manuelles, sans marque, magasin ni conditionnement. | Emmental râpé ; haricots rouges en conserve égouttés. |
-| Produit | Référence commerciale liée à un aliment, marque et code-barres facultatifs, prix observés. | Sachet d'emmental de 400 g d'une marque donnée. |
+| Recette | Préparation de bibliothèque : ingrédients, rendement en portions, instructions, durée, catégories et image facultatives. | Légumes vapeur ; dhal avec riz. |
 | Ingrédient | Ligne de recette : aliment + quantité + unité. Pas un catalogue. | 100 g d'emmental. |
-| Recette | Préparation de bibliothèque, simple ou complète, avec ingrédients, rendement et catégories facultatives. | Légumes vapeur ; dhal avec riz. |
-| Avis | Note entière facultative 0..10 et/ou commentaire, par aliment ou recette, et par personne ou groupe du foyer. | Avis commun « Enfants » sur la carotte. |
-| Ticket | Document d'achat daté, avec magasin, source brute et lignes conservées avant traitement. | Biocoop Nantes Sud, 11 avril 2026. |
-| Achat | Événement issu d'une ligne validée : produit, quantité, unité, montant total payé. | Un sachet payé 5,95 €. |
-| Prix observé | Prix par base explicite, avec magasin, date et provenance. Jamais un prix actuel garanti. | 5,95 €/sachet ; 14,875 €/kg si 400 g confirmés. |
+| Avis | Note entière facultative 0..10 et/ou commentaire, par aliment ou recette, et par profil du foyer. | Avis de Léa sur la carotte. |
+| Magasin | Lieu d'achat du foyer. | Biocoop Nantes Sud. |
+| Produit | Référence commerciale liée à un aliment, avec une contenance obligatoire (masse, volume ou nombre de pièces) ; marque et code-barres facultatifs. | Sachet d'emmental de 400 g d'une marque donnée. |
+| Prix observé | Prix d'un produit dans un magasin à une date, saisi à la main, sur une base explicite. Jamais un prix actuel garanti. | 5,95 € le sachet de 400 g, soit 14,875 €/kg. |
+| Ticket | Photo d'un ticket de caisse, conservée telle quelle, à traiter ou traitée. | Photo du 11 avril 2026, Biocoop. |
+| Coût de recette | Fourchette minimum–maximum calculée à la lecture, tous magasins confondus. Jamais stockée. | Dhal : de 4,40 € à 7,20 €. |
 
-Un aliment a zéro à plusieurs produits ; chaque produit créé appartient à un aliment.
-Les recettes choisissent des aliments, jamais des marques. Quantité achetée,
-contenance, quantité de recette et base nutritionnelle sont quatre notions distinctes.
+Un aliment a zéro à plusieurs produits ; chaque produit appartient à un aliment.
+Les recettes choisissent des aliments, jamais des marques. Contenance d'un produit,
+quantité d'une recette et base nutritionnelle sont trois notions distinctes.
 Rien n'est rapproché par nom.
 
 ## Nutrition manuelle
 
-Base nutritionnelle, calories, protéines, glucides, lipides, FODMAP
+Base nutritionnelle, calories, protéines, glucides, lipides, fibres, FODMAP
 (bas, modéré, élevé) et NOVA (1 à 4) peuvent être vides. L'aliment reste
-**À compléter** tant qu'un de ces sept champs manque. Zéro est une valeur valide.
+**À compléter** tant qu'un de ces huit champs manque. Zéro est une valeur valide.
 Les notes digestives et l'image sont facultatives et n'entrent pas dans la complétion.
-Aucune recommandation médicale, aucune donnée de santé importée depuis un ticket.
+Aucune recommandation médicale.
 
 Dans une recette : `quantité de l'ingrédient × portions / rendement`.
 Une valeur inconnue reste inconnue et rend le total incomplet.
 
-## Tickets et prix
+## Avis
 
-Un ticket importé (JSON ou photo) conserve sa source brute et toutes ses lignes.
-L'import ne crée ni aliment, ni produit, ni prix. Chaque ligne est en attente,
-validée ou ignorée. Les lignes d'un ticket JSON se valident une par une ; un
-ticket photo se valide en bloc. Les deux sont transactionnels et idempotents ;
-un réimport identique est détecté par foyer.
+Un avis par profil et par aliment ou recette, modifiable et supprimable. Zéro est
+une vraie note, distincte de « non noté ». L'avis d'une recette est indépendant des
+avis de ses aliments ; aucune moyenne ni score n'est calculé.
 
-Prix observé = total de la ligne / quantité. Le minimum affiché sur un aliment
-prend le dernier relevé de chaque couple produit/magasin, puis compare uniquement
-des bases réellement comparables : kg, L, pièces confirmées. Un paquet n'est
-convertible qu'avec une contenance confirmée à la main. Aucune densité, masse de
-pièce ou poids égoutté n'est inventé. Ce minimum est informatif : il ne choisit
-jamais un produit pour une recette.
+## Tickets
+
+Un ticket est une photo déposée depuis l'application. Il porte sa date de dépôt, un
+magasin et une date d'achat facultatifs, et un état : à traiter ou traité. Le
+déposer ne crée ni produit, ni prix ; rien n'est lu automatiquement. Les prix sont
+saisis à la main sur ordinateur, en regardant la photo.
+
+## Prix et coût de recette
+
+Un produit n'existe que complet : sa contenance est obligatoire, donc tout prix
+relevé se ramène à un prix au kilo, au litre ou à la pièce. Un prix observé fige
+cette base au moment du relevé. Aucune densité, masse de pièce ou poids égoutté
+n'est inventé.
+
+Coût d'une recette : pour chaque ingrédient, le dernier prix relevé de chaque couple
+produit/magasin de l'aliment, sur une base comparable avec l'unité de l'ingrédient.
+Le moins cher donne le minimum, le plus cher le maximum ; la recette additionne les
+minimums d'un côté, les maximums de l'autre. Un ingrédient sans prix comparable
+reste inconnu et rend les deux totaux incomplets. La fourchette ne reflète que les
+produits enregistrés : n'enregistrer que des produits bio donne un minimum bio.
+Le calcul est informatif : il ne choisit jamais un produit pour la recette.

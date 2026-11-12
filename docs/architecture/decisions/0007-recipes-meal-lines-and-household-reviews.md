@@ -2,8 +2,9 @@
 
 Statut : accepté. Complète l'ADR 0006 sans modifier le modèle
 aliments/produits/tickets. **Repas planifiés, préparations ponctuelles et leurs avis
-retirés** par [ADR 0008](0008-remove-week-planner.md), 2026-11-10 ; recettes et
-avis d'aliments/recettes restent actifs.
+retirés** par [ADR 0008](0008-remove-week-planner.md), 2026-11-10. **Groupes nommés
+et avis de groupe retirés** par [ADR 0010](0010-simplified-food-module.md),
+2026-11-11. Recettes et avis par profil restent actifs.
 
 ## Décision produit
 

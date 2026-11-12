@@ -2,6 +2,9 @@
 
 Statut : accepté et implémenté, 11 octobre 2026. Remplace l'ADR 0005 (produit unifié), supprimée de la documentation ;
 la migration `UnifiedProducts` reste inchangée.
+**Tickets JSON, OCR, lignes, achats et alias retirés** par
+[ADR 0010](0010-simplified-food-module.md), 2026-11-11 ; aliments, produits,
+magasins et prix restent actifs.
 
 ## Décision et vocabulaire
 
