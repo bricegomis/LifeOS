@@ -25,8 +25,6 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<Store> Stores => Set<Store>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Receipt> Receipts => Set<Receipt>();
-    public DbSet<ReceiptLine> ReceiptLines => Set<ReceiptLine>();
-    public DbSet<Purchase> Purchases => Set<Purchase>();
 
     // Recipes and planned meals
     public DbSet<Recipe> Recipes => Set<Recipe>();

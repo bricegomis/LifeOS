@@ -4,7 +4,7 @@
 - Angular 22 + TypeScript in `src/frontend-angular`, native LifeOS controls and PrimeIcons.
 - ASP.NET Core / EF Core / PostgreSQL in `src/backend`.
 - Supabase authentication only; household data belongs to the API.
-- Generic foods, recipes, sport session templates and manually validated JSON receipts.
+- Generic foods, recipes, sport session templates and receipts kept as stored photos.
   The week planner was removed (ADR 0008) and will be rebuilt later.
 - Products are commercial price references subordinate to foods, not a competing library.
 - Target (ADR 0009): modular monolith with Food, Sport, Tasks, Health and Planning

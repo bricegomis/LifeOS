@@ -12,14 +12,12 @@
   a module data port, testable without HTTP or a database. There is no access to another
   module's tables or entities (published read contract only). Existing Food and
   Household code is brought to this style in roadmap step 1 (`docs/01-roadmap.md`).
-- Endpoints that need transactional consistency (receipts) use the
-  scoped DbContext directly; keep domain rules in the Domain layer anyway.
 - Auth: Supabase-issued JWT bearer; the caller's household is resolved per request
   (`ResolveHouseholdForUserQuery`, auto-provisioned on first sight). Filter every
   query/command by that household and reject cross-household IDs.
 - Files (receipt photos `/data/receipts`, food images `/data/foods`) live on durable
   volumes, only served through authenticated, household-checked routes.
-- OCR runs the local `tesseract` binary (fra+eng); no remote OCR or paid API.
+- A receipt is only a stored photo (ADR 0010): no OCR, no lines, no purchases.
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
@@ -40,7 +38,7 @@
   `HouseholdIsolationTests.cs`); removed features stay covered by
   `RemovedFeaturesTests.cs`.
 - Filter example:
-  `dotnet test tests/LifeOS.Api.IntegrationTests --filter 'FullyQualifiedName~ReceiptsTests'`
+  `dotnet test tests/LifeOS.Api.IntegrationTests --filter 'FullyQualifiedName~ReceiptPhotoTests'`
 - Local run: `dotnet run --project src/LifeOS.Api` (http://localhost:5292,
   Scalar at `/scalar/v1` in Development); needs `Supabase__Url` and a Postgres
   connection string (`ConnectionStrings__Postgres` or `DATABASE_URL`).

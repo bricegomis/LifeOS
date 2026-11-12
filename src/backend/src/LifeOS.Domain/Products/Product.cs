@@ -60,12 +60,12 @@ public sealed class Product : Entity
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    public GroceryPriceEntry ObservePrice(Guid storeId, decimal price, DateTimeOffset date, Guid? receiptLineId = null)
+    public GroceryPriceEntry ObservePrice(Guid storeId, decimal price, DateTimeOffset date)
     {
         if (IsArchived) throw new ArgumentException("Produit archivé.");
         if (!PurchaseUnitConfirmed) throw new ArgumentException("Confirmez l'unité d'achat avant de relever un prix.");
         var entry = GroceryPriceEntry.Create(storeId, price, date);
-        entry.SetBasis(PurchaseUnit, PackageQuantity, PackageUnit, PackageConfirmed, PiecesComparable, receiptLineId);
+        entry.SetBasis(PurchaseUnit, PackageQuantity, PackageUnit, PackageConfirmed, PiecesComparable);
         _priceHistory.Add(entry);
         UpdatedAt = DateTimeOffset.UtcNow;
         return entry;
