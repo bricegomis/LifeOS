@@ -197,18 +197,12 @@ export interface MemberProfileDto {
   updatedAt: string
 }
 
-export interface HouseholdGroupDto {
-  id: string
-  name: string
-}
-
 export interface ReviewDto {
   id: string
   foodItemId: string | null
   recipeId: string | null
-  memberProfileId: string | null
-  householdGroupId: string | null
-  targetName: string | null
+  memberProfileId: string
+  profileName: string | null
   score: number | null
   comment: string | null
   createdByUserId: string
@@ -216,8 +210,7 @@ export interface ReviewDto {
 }
 
 export interface SaveReviewRequest {
-  memberProfileId: string | null
-  householdGroupId: string | null
+  memberProfileId: string
   score: number | null
   comment: string | null
 }

@@ -10,19 +10,19 @@ et la [roadmap](01-roadmap.md).
 Étape 1, « Alimentation saine », en cours. Le cadrage est fait
 ([ADR 0010](architecture/decisions/0010-simplified-food-module.md)) et la maquette des
 écrans est validée. Lot en cours : suppression du code abandonné. Déjà retiré : la
-session de cuisine (application web).
+session de cuisine (application web), les groupes du foyer et les avis de groupe.
 
 ## Ce qui existe
 
 | Domaine | Fonctionnalités |
 | --- | --- |
-| Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion, groupes nommés |
+| Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion |
 | Aliments | Fiches génériques, nutrition manuelle (base, 4 macros, FODMAP, NOVA), filtre « À compléter », image facultative, archivage |
 | Produits et prix | Produits commerciaux liés à un aliment, prix observés par magasin, minimum par base comparable |
 | Magasins | Création, modification, suppression |
 | Tickets | Import JSON validé ligne par ligne ; photo avec OCR local Tesseract, validée en bloc |
 | Recettes | Ingrédients sur aliments, rendement, étapes, durée, catégories |
-| Avis | Note 0..10 et commentaire, par aliment ou recette, par profil ou groupe |
+| Avis | Note 0..10 et commentaire, par aliment ou recette, par profil |
 | Sport | Séances types uniquement (nom, sport, durée, distance, intensité, calories) |
 
 Modèle du code actuel : ADR 0006 et ADR 0007. Modèle cible de l'étape 1 :
@@ -37,7 +37,7 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 ## Écarts connus avec la cible
 
 - Le code contient encore ce que l'ADR 0010 supprime : import JSON de tickets, OCR,
-  lignes et achats, groupes du foyer. Les fibres, le ticket
+  lignes et achats. Les fibres, le ticket
   réduit à une photo, l'espace d'administration et le coût de recette n'existent pas.
 - Le backend est découpé par couche, pas par module, et les règles métier sont
   mêlées au code HTTP des endpoints. Mise en conformité : étape 1.

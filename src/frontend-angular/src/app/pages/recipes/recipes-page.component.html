@@ -86,7 +86,7 @@
           }
         </section>
         <section class="recipe-section">
-          <app-household-reviews targetType="recipe" [targetId]="recipe.id" [profiles]="profiles()" [groups]="groups()" />
+          <app-household-reviews targetType="recipe" [targetId]="recipe.id" [profiles]="profiles()" />
         </section>
       } @else {
         <h2 id="recipe-detail-title" class="sr-only">Détail de la recette</h2>
@@ -150,7 +150,7 @@
       </label>
     </div>
     @if (ingredientReviewFoodId(); as foodId) {
-      <app-household-reviews targetType="food" [targetId]="foodId" [profiles]="profiles()" [groups]="groups()" />
+      <app-household-reviews targetType="food" [targetId]="foodId" [profiles]="profiles()" />
     }
   </form>
 </app-lifeos-dialog>

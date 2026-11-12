@@ -6,8 +6,7 @@ public sealed class RecipeReview : Entity
 {
     public Guid HouseholdId { get; private set; }
     public Guid RecipeId { get; private set; }
-    public Guid? MemberProfileId { get; private set; }
-    public Guid? HouseholdGroupId { get; private set; }
+    public Guid MemberProfileId { get; private set; }
     public int? Score { get; private set; }
     public string? Comment { get; private set; }
     public Guid CreatedByUserId { get; private set; }
@@ -17,37 +16,35 @@ public sealed class RecipeReview : Entity
     private RecipeReview() { }
 
     public static RecipeReview Create(Guid householdId, Guid recipeId,
-        Guid? memberProfileId, Guid? groupId, int? score, string? comment, Guid author)
+        Guid memberProfileId, int? score, string? comment, Guid author)
     {
-        Validate(householdId, recipeId, memberProfileId, groupId, score, comment, author);
+        Validate(householdId, recipeId, memberProfileId, score, comment, author);
         var now = DateTimeOffset.UtcNow;
         return new RecipeReview
         {
             Id = Guid.NewGuid(), HouseholdId = householdId, RecipeId = recipeId,
-            MemberProfileId = memberProfileId,
-            HouseholdGroupId = groupId, Score = score,
+            MemberProfileId = memberProfileId, Score = score,
             Comment = Clean(comment), CreatedByUserId = author, CreatedAt = now, UpdatedAt = now,
         };
     }
 
     public void Update(int? score, string? comment)
     {
-        Validate(HouseholdId, RecipeId, MemberProfileId, HouseholdGroupId,
-            score, comment, CreatedByUserId);
+        Validate(HouseholdId, RecipeId, MemberProfileId, score, comment, CreatedByUserId);
         Score = score;
         Comment = Clean(comment);
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
     private static void Validate(Guid householdId, Guid recipeId,
-        Guid? profileId, Guid? groupId, int? score, string? comment, Guid author)
+        Guid profileId, int? score, string? comment, Guid author)
     {
         if (householdId == Guid.Empty || author == Guid.Empty)
             throw new ArgumentException("Le foyer et l'auteur sont obligatoires.");
         if (recipeId == Guid.Empty)
             throw new ArgumentException("L'avis doit cibler une recette.");
-        if (profileId.HasValue == groupId.HasValue)
-            throw new ArgumentException("Choisissez une personne ou un groupe, mais pas les deux.");
+        if (profileId == Guid.Empty)
+            throw new ArgumentException("L'avis doit être rattaché à un profil du foyer.");
         if (score is < 0 or > 10) throw new ArgumentOutOfRangeException(nameof(score), "La note doit être comprise entre 0 et 10.");
         if (string.IsNullOrWhiteSpace(comment) && score is null)
             throw new ArgumentException("Renseignez une note ou un commentaire.");
