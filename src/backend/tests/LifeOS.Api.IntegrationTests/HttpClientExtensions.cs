@@ -8,10 +8,10 @@ internal static class HttpClientExtensions
     /// Attaches the <see cref="TestAuthHandler"/> header so the request is authenticated as the
     /// given simulated Supabase user (see <see cref="TestAuthHandler"/>).
     /// </summary>
-    public static HttpClient AsUser(this HttpClient client, Guid supabaseUserId)
+    public static HttpClient AsUser(this HttpClient client, Guid userId)
     {
         client.DefaultRequestHeaders.Remove(TestAuthHandler.SubHeaderName);
-        client.DefaultRequestHeaders.Add(TestAuthHandler.SubHeaderName, supabaseUserId.ToString());
+        client.DefaultRequestHeaders.Add(TestAuthHandler.SubHeaderName, userId.ToString());
         return client;
     }
 }

@@ -12,11 +12,11 @@ public sealed class EfHouseholdRepository(LifeOSDbContext dbContext) : IHousehol
 {
     private readonly LifeOSDbContext _dbContext = dbContext;
 
-    public async Task<Household?> FindBySupabaseUserIdAsync(Guid supabaseUserId, CancellationToken cancellationToken = default)
+    public async Task<Household?> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var member = await _dbContext.HouseholdMembers
             .AsNoTracking()
-            .FirstOrDefaultAsync(m => m.SupabaseUserId == supabaseUserId, cancellationToken);
+            .FirstOrDefaultAsync(m => m.UserId == userId, cancellationToken);
 
         if (member is null)
         {

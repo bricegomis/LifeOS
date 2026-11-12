@@ -46,8 +46,6 @@ jobs:
           LIFEOS_BUILD_SERVER_URL: ${{ github.server_url }}
           LIFEOS_BUILD_WORKFLOW: ${{ github.workflow }}
           LIFEOS_API_URL: ${{ vars.LIFEOS_API_URL || vars.VITE_LIFEOS_API_URL }}
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

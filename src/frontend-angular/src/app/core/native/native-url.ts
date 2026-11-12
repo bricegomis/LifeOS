@@ -2,14 +2,6 @@ import { validatedReturnPath } from '../auth/auth-flow.ts'
 
 export type NativeUrl = { kind: 'auth' } | { kind: 'route'; path: string }
 
-export function nativeAuthReturnPath(path: string): string {
-  if (path === '/login' || path.startsWith('/login?')) {
-    const query = new URLSearchParams(path.split('?')[1] ?? '')
-    return validatedReturnPath(query.get('redirect'))
-  }
-  return validatedReturnPath(path)
-}
-
 export function parseNativeUrl(value: string): NativeUrl {
   const url = new URL(value)
   if (url.protocol !== 'lifeos:' || url.username || url.password || url.port) {

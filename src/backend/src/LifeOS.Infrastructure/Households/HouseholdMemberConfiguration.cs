@@ -14,15 +14,18 @@ internal sealed class HouseholdMemberConfiguration : IEntityTypeConfiguration<Ho
         builder.Property(member => member.Id).ValueGeneratedNever();
 
         builder.Property(member => member.HouseholdId).IsRequired();
-        builder.Property(member => member.SupabaseUserId).IsRequired();
-        builder.HasAlternateKey(member => new { member.SupabaseUserId, member.HouseholdId });
+        builder.Property(member => member.UserId).IsRequired();
+        builder.HasAlternateKey(member => new { member.UserId, member.HouseholdId });
         builder.Property(member => member.Role)
             .HasConversion<string>()
             .HasMaxLength(20)
             .IsRequired();
         builder.Property(member => member.CreatedAt).IsRequired();
 
-        // MVP invariant (ADR 0003): a Supabase user resolves to at most one active household.
-        builder.HasIndex(member => member.SupabaseUserId).IsUnique();
+        // MVP invariant (ADR 0003): a user account resolves to at most one active household.
+        builder.HasIndex(member => member.UserId).IsUnique();
+        builder.HasOne<UserAccount>().WithMany()
+            .HasForeignKey(member => member.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

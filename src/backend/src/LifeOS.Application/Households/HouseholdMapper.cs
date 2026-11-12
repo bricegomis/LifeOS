@@ -12,7 +12,7 @@ internal static class HouseholdMapper
             household.Members
                 .Select(member => new HouseholdMemberDto(
                     member.Id,
-                    member.SupabaseUserId,
+                    member.UserId,
                     member.Role.ToString().ToLowerInvariant(),
                     member.CreatedAt))
                 .ToList(),

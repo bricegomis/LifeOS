@@ -20,12 +20,12 @@ corriger ce décalage dès le premier jalon plutôt que de le reporter.
 
 L'isolation des données métier se fait par `household_id` dès le premier
 jalon technique, et non par identifiant utilisateur individuel. Une table
-`household_members` associe un ou plusieurs utilisateurs Supabase
-(`supabase_user_id`) à un foyer, avec un rôle (`owner` au MVP). Tous les
+`household_members` associe un ou plusieurs comptes utilisateur
+(`UserId`, table `users` depuis l'[ADR 0011](0011-conversational-assistant-mcp.md)) à un foyer, avec un rôle (`owner` au MVP). Tous les
 agrégats racines du modèle de données portent une colonne `household_id`.
 
 L'isolation est **applicative et systématique** : l'API résout le
-`household_id` à partir du JWT Supabase validé à chaque requête, et l'utilise
+`household_id` à partir du jeton d'accès validé à chaque requête, et l'utilise
 pour filtrer toutes les lectures et écritures. Ce filtrage n'est pas laissé à
 l'initiative du client (le client ne transmet jamais directement un
 `household_id` de confiance).
@@ -60,7 +60,7 @@ sont pas exposés comme fonctionnalité utilisateur au MVP.
 - Toute nouvelle entité de données métier doit inclure une colonne
   `household_id` (directe ou via une relation vers une entité qui la porte)
   et toute requête d'application doit filtrer explicitement dessus.
-- L'API doit implémenter la résolution `supabase_user_id` → `household_id`
+- L'API doit implémenter la résolution compte → `household_id`
   comme une étape systématique tôt dans le traitement de chaque requête
   authentifiée (voir `docs/architecture/overview.md`).
 - Les contraintes de clé étrangère vers `households` sur les agrégats

@@ -34,11 +34,9 @@ l'API d'intégration.
    - `POSTGRES_CONNECTION_STRING` : la base d'intégration ;
    - `FRONTEND_URL` : l'adresse de l'interface d'intégration ;
    - `LIFEOS_API_URL` : l'adresse de l'API d'intégration ;
-   - les variables Supabase restent identiques : même projet, mêmes comptes.
-4. **Supabase → Authentication → URL Configuration** : ajouter l'adresse de
-   l'interface d'intégration aux « Redirect URLs » (par exemple
-   `https://lifeos-int.example.com/**`).
-5. Démarrer la pile après la première publication des images `:integration`.
+   - clés des jetons propres à l'intégration ; client Google avec l'URI
+     `https://<api-d-integration>/signin-google` (voir [le guide](google-oauth.md)).
+4. Démarrer la pile après la première publication des images `:integration`.
 
 ## À savoir
 

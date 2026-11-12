@@ -4,7 +4,7 @@ ASP.NET Core minimal API in four layers (Domain / Application / Infrastructure /
 The target module layout and boundary rules are in
 [ADR 0009](../../docs/architecture/decisions/0009-modular-monolith-and-planning-core.md).
 
-Data endpoints require a Supabase-issued JWT and are scoped to the caller's
+Data endpoints require an access token issued by the API itself (see Authentication) and are scoped to the caller's
 household. The public `GET /api/version` endpoint exposes only the API component
 name and build provenance.
 
@@ -61,17 +61,14 @@ Every business table carries a `household_id` foreign key to `households`, and e
 query/command on these tables is filtered by that id — see
 `docs/architecture/decisions/0003-household-isolation.md`. This isolation is enforced
 **at the application layer**, not via PostgreSQL Row-Level Security: the backend's
-database is a separate PostgreSQL instance from Supabase (which is used purely for
-authentication, see `docs/architecture/decisions/0002-supabase-auth-only.md`), so there
-is no Supabase-managed RLS to rely on here.
+database has no RLS policies to rely on.
 
-A Supabase user is resolved to a household on every authenticated request via
+A signed-in user account is resolved to a household on every authenticated request via
 `ResolveHouseholdForUserQuery` (`LifeOS.Application/Households`):
 1. Look up an existing `household_members` row for the caller's `sub` claim.
-2. If none exists (e.g. a pre-migration Supabase user's first request against the new
-   backend), auto-provision a new household with that user as `owner` — on-demand
-   provisioning rather than a bulk data migration.
-3. A unique index on `household_members.supabase_user_id` makes step 2 safe under
+2. If none exists (the account's first request), auto-provision a new household with
+   that user as `owner`.
+3. A unique index on `household_members.UserId` makes step 2 safe under
    concurrent requests: a race is caught as a unique-constraint violation and resolved by
    re-reading the now-existing row instead of failing.
 
@@ -122,8 +119,8 @@ dotnet test
   [Testcontainers](https://dotnet.testcontainers.org/) (`Testcontainers.PostgreSql`);
   requires a working Docker daemon. They exercise the app's real startup path,
   including automatic migrations, and a `TestAuthHandler` (active only when
-  `ASPNETCORE_ENVIRONMENT=Testing`) that simulates distinct Supabase users via an
-  `X-Test-Sub` header instead of real JWTs. These tests prove:
+  `ASPNETCORE_ENVIRONMENT=Testing`) that simulates distinct users via an
+  `X-Test-Sub` header instead of real tokens (and creates their account on first sight). These tests prove:
   - persistence survives a logical API restart (data written by one
     `WebApplicationFactory` instance is read back by an independent instance against the
     same database),
@@ -136,30 +133,24 @@ dotnet test
 
 ## Authentication
 
-The API validates the same JWT access tokens issued by Supabase Auth for the frontend
-(`src/frontend-angular/src/app/core/auth`). No separate login flow is implemented in the
-backend: the frontend keeps using Supabase for sign-in and simply forwards the access
-token as a `Bearer` token to the API.
+The API is its own OAuth 2.1 server ([ADR 0011](../../docs/architecture/decisions/0011-conversational-assistant-mcp.md)),
+built on OpenIddict (`LifeOS.Api/Authentication`):
 
-Configuration lives under the `Supabase` section (`appsettings.json` /
-environment variables):
+- `/connect/authorize` signs the user in with Google (`/signin-google`), keeps a
+  one-day `lifeos.session` cookie and returns an authorization code (PKCE S256 only).
+  Only verified addresses listed in `Auth:AllowedEmails` get in; the first sign-in
+  creates the `households.users` row (`SignInWithGoogle`).
+- `/connect/token` exchanges codes and rotating refresh tokens; the account is checked
+  again at each refresh (`GetActiveAccount`). `/connect/revoke` revokes a token.
+- API routes validate the access token locally (`sub` = LifeOS user id).
+- Clients are registered at startup, never dynamically (`OAuthClients`): `lifeos-web`,
+  the Angular app, with `Auth:WebClient:RedirectUris`.
+- OpenIddict tables live in the `auth` schema.
 
-```json
-{
-  "Supabase": {
-    "Url": "https://<project-ref>.supabase.co",
-    "Audience": "authenticated"
-  }
-}
-```
-
-- `Supabase:Url` — the Supabase project URL (same value as the frontend's
-  `VITE_SUPABASE_URL`).
-- `Supabase:Audience` — the expected `aud` claim, `authenticated` by default.
-
-The issuer (`{Supabase:Url}/auth/v1`) is used as the JWT bearer `Authority`; signing
-keys are resolved automatically from Supabase's OIDC metadata, so no secret is stored
-in this repository.
+Configuration (`Auth` section; see [docs/google-oauth.md](../../docs/google-oauth.md)):
+`Issuer`, `AllowedEmails`, `Google:ClientId`, `Google:ClientSecret`, `SigningKey` (RSA
+PEM), `EncryptionKey` (32 bytes, base64), `WebClient:RedirectUris`. In Development and
+Testing the token keys are ephemeral when not set.
 
 Allowed CORS origins for the frontend dev server / deployed app are configured under
 `Cors:AllowedOrigins`. For the Angular GitHub Pages deployment, set `GITHUB_PAGES_URL` in the
@@ -176,9 +167,8 @@ dotnet build
 dotnet run --project src/LifeOS.Api
 ```
 
-Set `Supabase:Url` (e.g. via `dotnet user-secrets` or an environment variable
-`Supabase__Url`) to point at your Supabase project before calling the API with a real
-access token.
+Signing in needs a Google client (`Auth__Google__ClientId`, `Auth__Google__ClientSecret`)
+and `Auth__AllowedEmails__0`; see [docs/google-oauth.md](../../docs/google-oauth.md).
 
 ## Testing the API with OpenAPI / Scalar
 
@@ -186,7 +176,7 @@ In the `Development` environment the API exposes its OpenAPI document (via
 `Microsoft.AspNetCore.OpenApi`) at `/openapi/v1.json`, and an interactive
 [Scalar](https://scalar.com/) API reference/tester at `/scalar/v1` (e.g.
 `http://localhost:5292/scalar/v1` when running locally). Use it to browse every endpoint
-and send authenticated requests (paste a Supabase access token as a `Bearer` token) without
+and send authenticated requests (paste a LifeOS access token as a `Bearer` token) without
 needing a separate tool such as Postman.
 
 In production, both routes are disabled by default. To enable them on the VPS, set
@@ -212,8 +202,12 @@ it locally from `src/backend`:
 ```bash
 docker build -t lifeos-api --build-arg LIFEOS_BUILD_ID=local -f Dockerfile .
 docker run --rm -p 8080:8080 \
-  -e Supabase__Url="https://<project-ref>.supabase.co" \
-  -e Cors__AllowedOrigins__0="http://localhost:5173" \
+  -e Auth__Google__ClientId="<google-client-id>" \
+  -e Auth__Google__ClientSecret="<google-client-secret>" \
+  -e Auth__SigningKey="$(openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048)" \
+  -e Auth__EncryptionKey="$(openssl rand -base64 32)" \
+  -e Auth__AllowedEmails__0="you@example.com" \
+  -e Cors__AllowedOrigins__0="http://localhost:4200" \
   lifeos-api
 ```
 

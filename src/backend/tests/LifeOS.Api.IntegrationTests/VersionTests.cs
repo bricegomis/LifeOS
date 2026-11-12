@@ -54,7 +54,6 @@ public sealed class VersionTests
             {
                 metadata["SkipDatabaseMigration"] = "true";
                 metadata["ConnectionStrings:Postgres"] = "Host=localhost;Database=unused;Username=unused;Password=unused";
-                metadata["Supabase:Url"] = "https://test.supabase.co";
                 config.AddInMemoryCollection(metadata);
             });
         }

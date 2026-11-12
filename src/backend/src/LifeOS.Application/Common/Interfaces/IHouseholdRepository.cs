@@ -8,9 +8,9 @@ namespace LifeOS.Application.Common.Interfaces;
 public interface IHouseholdRepository
 {
     /// <summary>
-    /// Finds the household a Supabase user belongs to, if any (via <see cref="HouseholdMember"/>).
+    /// Finds the household a user account belongs to, if any (via <see cref="HouseholdMember"/>).
     /// </summary>
-    Task<Household?> FindBySupabaseUserIdAsync(Guid supabaseUserId, CancellationToken cancellationToken = default);
+    Task<Household?> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     Task<Household?> GetByIdAsync(Guid householdId, CancellationToken cancellationToken = default);
 

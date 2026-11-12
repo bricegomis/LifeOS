@@ -54,7 +54,7 @@ public sealed class BackendTaskIsolationTests(PostgresContainerFixture postgres)
         Assert.NotNull(household);
         Assert.Single(household.Members);
         Assert.Single(household.MemberProfiles);
-        Assert.Equal(userId, household.Members[0].SupabaseUserId);
+        Assert.Equal(userId, household.Members[0].UserId);
         Assert.Equal("owner", household.Members[0].Role);
         Assert.Equal("Moi", household.MemberProfiles[0].DisplayName);
     }

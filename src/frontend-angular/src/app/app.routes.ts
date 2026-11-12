@@ -9,9 +9,10 @@ const requireAuthentication: CanActivateFn = async (_route, state) => {
   const router = inject(Router)
 
   await auth.ensureReady()
-  return auth.authenticated()
-    ? true
-    : router.createUrlTree(['/login'], { queryParams: { redirect: state.url } })
+  if (!auth.authenticated()) return router.createUrlTree(['/login'], { queryParams: { redirect: state.url } })
+  // Back from the sign-in page: go where the user was heading.
+  const returnPath = auth.takeReturnPath()
+  return returnPath && returnPath !== '/' && returnPath !== state.url ? router.parseUrl(returnPath) : true
 }
 
 export const routes: Routes = [

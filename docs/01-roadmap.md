@@ -126,7 +126,7 @@ Claude (claude.ai web et iPhone, Claude Code) plutôt qu'en saisissant chaque fi
 
 1. **Comptes et connexion.** Table `users`, connexion Google par l'API, liste des
    adresses autorisées, serveur OAuth (client `lifeos-web`), page de connexion
-   Angular, retrait de Supabase, migration destructive des comptes.
+   Angular, retrait de Supabase, migration destructive des comptes. Fait.
 2. **Endpoint MCP.** `/mcp`, découverte OAuth, clients Claude Code et claude.ai,
    écran de consentement, accès accordés révocables dans les Réglages. Un premier
    outil en lecture pour valider la connexion depuis claude.ai et Claude Code.

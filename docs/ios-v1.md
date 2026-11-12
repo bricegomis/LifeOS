@@ -3,7 +3,7 @@
 LifeOS utilise Angular 22 dans une WebView Capacitor 7, avec une vraie extension
 SwiftUI/WidgetKit, des App Intents et une Live Activity ActivityKit. Cible :
 **iOS 17 minimum**. Les widgets sont conservés ; ni raccourci, ni endpoint public
-ne remplace le partage local. Supabase gère uniquement l'authentification ; les
+ne remplace le partage local. La connexion passe par LifeOS API (Google) ; les
 données de foyer restent dans LifeOS API/PostgreSQL.
 
 > **Depuis le 2026-11-10** ([ADR 0008](architecture/decisions/0008-remove-week-planner.md)),
@@ -55,18 +55,15 @@ et renseigner :
 
 ```dotenv
 LIFEOS_API_URL=https://votre-api.example
-VITE_SUPABASE_URL=https://votre-projet.supabase.co
-VITE_SUPABASE_ANON_KEY=cle-publique-anon-ou-publishable
 ```
 
-L'URL API **ne contient pas `/api`** : le client l'ajoute. Ne mettre ni clé
-`service_role`, ni `sb_secret_`, ni mot de passe, ni chaîne PostgreSQL dans le
-frontend. Ces trois valeurs sont publiques et embarquées dans `config.js`, pas
+L'URL API **ne contient pas `/api`** : le client l'ajoute. Ne mettre ni secret,
+ni mot de passe, ni chaîne PostgreSQL dans le frontend. Cette valeur est publique et embarquées dans `config.js`, pas
 chargées depuis les variables d'un serveur Docker une fois l'app installée.
 Changer `.env.local` impose build, synchronisation et réinstallation.
 
 `npm run cap:sync` vérifie le **`config.js` du bundle produit** : HTTPS, URL API
-sans double `/api`, clé Supabase anon/publishable uniquement. Cela ne prouve pas
+sans double `/api`. Cela ne prouve pas
 la disponibilité réelle des services. Ne pas désactiver ATS pour contourner HTTP.
 
 Actions externes à réaliser par l'utilisateur/administrateur, sans les modifier
@@ -75,12 +72,9 @@ dans ce lot :
 - API : autoriser exactement l'origine **`capacitor://localhost`** dans
   `Cors:AllowedOrigins` pour la configuration Capacitor par défaut ; garder les
   origines web nécessaires. Ne pas remplacer par `AllowAnyOrigin`, ni retirer
-  JWT/isolation foyer. Certificat HTTPS valide et API accessible depuis l'iPhone.
-- Supabase Auth → URL Configuration : autoriser
-  `lifeos://auth/callback` **avec les paramètres de retour utilisés**. Vérifier
-  également `lifeos://auth/callback?redirect=%2Fplanning` ; au besoin utiliser
-  `lifeos://auth/callback**` dans la liste de redirections du projet de confiance.
-  Activer/configurer Google et la connexion e-mail selon [le guide OAuth](google-oauth.md).
+  jetons/isolation foyer. Certificat HTTPS valide et API accessible depuis l'iPhone.
+- API : `lifeos://auth/callback` figure dans `Auth:WebClient:RedirectUris`
+  (déjà le cas dans `docker-compose.yaml`) ; voir [le guide de connexion](google-oauth.md).
 - Un lien PKCE doit revenir sur **cet iPhone qui l'a demandé**, où réside le
   vérificateur. Les erreurs d'expiration/refus/vérificateur sont affichées sur
   Login ; ne pas copier le code vers un autre appareil. Les callbacks froids et

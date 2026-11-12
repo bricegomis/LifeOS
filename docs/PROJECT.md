@@ -8,13 +8,15 @@ et la [roadmap](01-roadmap.md).
 ## Où en est-on
 
 Étape 1, « Alimentation saine », livrée le 2026-11-12
-([ADR 0010](architecture/decisions/0010-simplified-food-module.md)). Prochaine étape :
-Sport ([roadmap](01-roadmap.md)), qui commence par un cadrage.
+([ADR 0010](architecture/decisions/0010-simplified-food-module.md)). En cours : étape 1 bis,
+assistant Claude ([ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md)) ;
+le lot 1 (connexion Google par l'API, sans Supabase) est livré, l'endpoint MCP vient ensuite.
 
 ## Ce qui existe
 
 | Domaine | Fonctionnalités |
 | --- | --- |
+| Compte | Connexion Google gérée par l'API, réservée aux adresses autorisées ; l'API émet ses propres jetons (accès 1 h, rafraîchissement par rotation) |
 | Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion ; page Paramètres (profils, versions de l'interface et de l'API) |
 | Aliments | Fiches génériques avec photo, nutrition manuelle (base 100 g / 100 ml / 1 pièce, calories, protéines, glucides, lipides, fibres, FODMAP, NOVA), état « À compléter », prix relevés en lecture seule, archivage |
 | Recettes | Photo, ingrédients sur aliments en g, ml ou pièce (chaque ingrédient ouvre la fiche de l'aliment), rendement, étapes, durée, catégories, nutrition par portion marquée partielle si une valeur manque ; coût minimum–maximum tous magasins confondus, calculé à la lecture, avec le détail du produit, du magasin et du prix retenus |
@@ -46,8 +48,9 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 ## Technique
 
 Angular 22 (`src/frontend-angular`), aussi empaqueté pour iPhone avec Capacitor 7.
-API ASP.NET Core / EF Core / PostgreSQL (`src/backend`). Supabase sert uniquement à
-l'authentification. Schéma d'ensemble : [architecture/overview.md](architecture/overview.md).
+API ASP.NET Core / EF Core / PostgreSQL (`src/backend`). L'API connecte avec Google
+et émet ses propres jetons ([ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md),
+[guide](google-oauth.md)). Schéma d'ensemble : [architecture/overview.md](architecture/overview.md).
 
 Une fusion dans `main` publie les images Docker, que le serveur récupère seul :
 c'est un déploiement. Les migrations s'appliquent au démarrage de l'API ;

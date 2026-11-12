@@ -19,8 +19,11 @@ public sealed class FoodItemSchemaConstraintsTests(PostgresContainerFixture post
         }
         await using (var db = factory.CreateDbContext())
         {
-            var a = Household.CreateForOwner(Guid.NewGuid(), "A");
-            var b = Household.CreateForOwner(Guid.NewGuid(), "B");
+            var ownerA = UserAccount.Create($"a-{Guid.NewGuid():N}", "a@test.lifeos", null, DateTimeOffset.UtcNow);
+            var ownerB = UserAccount.Create($"b-{Guid.NewGuid():N}", "b@test.lifeos", null, DateTimeOffset.UtcNow);
+            db.UserAccounts.AddRange(ownerA, ownerB);
+            var a = Household.CreateForOwner(ownerA.Id, "A");
+            var b = Household.CreateForOwner(ownerB.Id, "B");
             db.Households.AddRange(a, b);
             var food = FoodItem.CreateManual(a.Id, "Aliment", "");
             db.FoodItems.Add(food);

@@ -37,8 +37,8 @@ public sealed class HouseholdIsolationTests(PostgresContainerFixture postgres) :
         await clientB.GetAsync("/api/stores");
 
         await using var dbContext = _factory.CreateDbContext();
-        var householdIdForA = dbContext.HouseholdMembers.Single(m => m.SupabaseUserId == userA).HouseholdId;
-        var householdIdForB = dbContext.HouseholdMembers.Single(m => m.SupabaseUserId == userB).HouseholdId;
+        var householdIdForA = dbContext.HouseholdMembers.Single(m => m.UserId == userA).HouseholdId;
+        var householdIdForB = dbContext.HouseholdMembers.Single(m => m.UserId == userB).HouseholdId;
 
         Assert.NotEqual(householdIdForA, householdIdForB);
     }
@@ -92,7 +92,7 @@ public sealed class HouseholdIsolationTests(PostgresContainerFixture postgres) :
 
         await using (var dbContext = _factory.CreateDbContext())
         {
-            var householdIdForA = dbContext.HouseholdMembers.Single(m => m.SupabaseUserId == userA).HouseholdId;
+            var householdIdForA = dbContext.HouseholdMembers.Single(m => m.UserId == userA).HouseholdId;
 
             dbContext.Stores.Add(LifeOS.Domain.Food.Stores.Store.Create(householdIdForA, "Marché de A", "1 rue de A", true, true));
             await dbContext.SaveChangesAsync();

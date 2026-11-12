@@ -24,7 +24,7 @@ internal sealed class FoodReviewConfiguration : IEntityTypeConfiguration<FoodRev
         builder.HasOne<MemberProfile>().WithMany().HasForeignKey(r => new { r.MemberProfileId, r.HouseholdId })
             .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<HouseholdMember>().WithMany().HasForeignKey(r => new { r.CreatedByUserId, r.HouseholdId })
-            .HasPrincipalKey(m => new { m.SupabaseUserId, m.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
+            .HasPrincipalKey(m => new { m.UserId, m.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(r => new { r.FoodItemId, r.MemberProfileId }).IsUnique();
     }
 }

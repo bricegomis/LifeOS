@@ -16,12 +16,12 @@ public sealed class PersistenceAcrossRestartTests(PostgresContainerFixture postg
     [Fact]
     public async Task Household_and_article_data_survive_an_api_restart()
     {
-        var supabaseUserId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
         Guid articleId;
 
         await using (var firstRun = new LifeOSApiFactory(postgres.ConnectionString))
         {
-            using var client = firstRun.CreateClient().AsUser(supabaseUserId);
+            using var client = firstRun.CreateClient().AsUser(userId);
 
             var createResponse = await client.PostAsJsonAsync(
                 "/api/foods",
@@ -35,7 +35,7 @@ public sealed class PersistenceAcrossRestartTests(PostgresContainerFixture postg
         // the API process stopping. Nothing but the PostgreSQL container survives below this line.
 
         await using var secondRun = new LifeOSApiFactory(postgres.ConnectionString);
-        using var reconnectedClient = secondRun.CreateClient().AsUser(supabaseUserId);
+        using var reconnectedClient = secondRun.CreateClient().AsUser(userId);
 
         var articles = await reconnectedClient.GetFromJsonAsync<List<FoodItemDto>>("/api/foods");
 
@@ -45,25 +45,25 @@ public sealed class PersistenceAcrossRestartTests(PostgresContainerFixture postg
     [Fact]
     public async Task Household_provisioning_is_idempotent_across_restarts()
     {
-        var supabaseUserId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
         Guid householdIdAfterFirstRun;
 
         await using (var firstRun = new LifeOSApiFactory(postgres.ConnectionString))
         {
-            using var client = firstRun.CreateClient().AsUser(supabaseUserId);
+            using var client = firstRun.CreateClient().AsUser(userId);
             await client.GetAsync("/api/stores");
 
             await using var dbContext = firstRun.CreateDbContext();
-            householdIdAfterFirstRun = dbContext.HouseholdMembers.Single(m => m.SupabaseUserId == supabaseUserId).HouseholdId;
+            householdIdAfterFirstRun = dbContext.HouseholdMembers.Single(m => m.UserId == userId).HouseholdId;
         }
 
         await using var secondRun = new LifeOSApiFactory(postgres.ConnectionString);
-        using var reconnectedClient = secondRun.CreateClient().AsUser(supabaseUserId);
+        using var reconnectedClient = secondRun.CreateClient().AsUser(userId);
         await reconnectedClient.GetAsync("/api/stores");
 
         await using var secondDbContext = secondRun.CreateDbContext();
         var householdIdAfterSecondRun = secondDbContext.HouseholdMembers
-            .Single(m => m.SupabaseUserId == supabaseUserId).HouseholdId;
+            .Single(m => m.UserId == userId).HouseholdId;
 
         Assert.Equal(householdIdAfterFirstRun, householdIdAfterSecondRun);
     }

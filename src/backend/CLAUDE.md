@@ -30,10 +30,12 @@
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
   `SkipDatabaseMigration=true`. Each module owns a PostgreSQL schema (`households`,
-  `food`, `sports`); `public` only holds `__EFMigrationsHistory`.
+  `food`, `sports`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
 - `FoodModuleReset` (roadmap step 1, ADR 0010) replaced the whole previous history:
   it drops every table of `public` with its data. Never edit it; add a new migration:
   `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api --output-dir Persistence/Migrations`
+- `AccountsAndOAuth` (ADR 0011) truncates every household and its data, once, when
+  accounts move from Supabase to LifeOS.
 - From now on migrations are additive and preserve IDs, prices and snapshots; rollback
   is by restoring a backup, not a destructive down-migration.
 
@@ -49,5 +51,9 @@
 - Filter example:
   `dotnet test tests/LifeOS.Api.IntegrationTests --filter 'FullyQualifiedName~ReceiptPhotoTests'`
 - Local run: `dotnet run --project src/LifeOS.Api` (http://localhost:5292,
-  Scalar at `/scalar/v1` in Development); needs `Supabase__Url` and a Postgres
-  connection string (`ConnectionStrings__Postgres` or `DATABASE_URL`).
+  Scalar at `/scalar/v1` in Development); needs a Postgres connection string
+  (`ConnectionStrings__Postgres` or `DATABASE_URL`); signing in also needs the `Auth__Google__*`
+  settings (docs/google-oauth.md).
+- Auth (ADR 0011): the API is its own OAuth server (OpenIddict, `Api/Authentication`),
+  Google sign-in, accounts in `households.users`, OAuth tables in schema `auth`. Clients
+  are registered at startup in `OAuthClients`, never dynamically.

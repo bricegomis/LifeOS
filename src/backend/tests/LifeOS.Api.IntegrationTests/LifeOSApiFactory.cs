@@ -32,7 +32,6 @@ public sealed class LifeOSApiFactory(
             configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Postgres"] = connectionString,
-                ["Supabase:Url"] = "https://test.supabase.co",
                 ["Api:EnableOpenApiUi"] = enableOpenApiUi.ToString(),
                 ["LifeOS:BuildId"] = buildId,
                 ["Receipts:StoragePath"] = receiptStoragePath ?? Path.Combine(Path.GetTempPath(), $"lifeos-api-tests-{Guid.NewGuid():N}"),

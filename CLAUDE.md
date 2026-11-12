@@ -35,7 +35,6 @@ code, identifiers and code comments are English.
 - `src/backend` — ASP.NET Core (.NET 10) Clean Architecture: Domain / Application /
   Infrastructure / Api, plus `tests/`. See its `CLAUDE.md`.
 - `docs/` — product docs (French) and `docs/architecture/decisions/` ADRs.
-- `supabase/` — legacy Supabase migrations; Supabase is auth only now, don't add tables.
 - `docker-compose.yaml` — production compose (VPS/Coolify, images from GHCR, watchtower).
 - `docker-compose.integration.yaml` — integration stack (`:integration` images, own
   database and volumes); see `docs/integration-environment.md`.
