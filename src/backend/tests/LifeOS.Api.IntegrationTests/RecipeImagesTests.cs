@@ -32,7 +32,7 @@ public sealed class RecipeImagesTests(PostgresContainerFixture postgres)
             Assert.Single(Directory.GetFiles(storagePath));
             using var read = await client.GetAsync($"/api/recipes/{recipe.Id}/image");
             Assert.Equal(new byte[] { 0xFF, 0xD8, 0xFF, 2 }, await read.Content.ReadAsByteArrayAsync());
-            Assert.Equal("private, no-store", read.Headers.CacheControl?.ToString());
+            Assert.True(read.Headers.CacheControl is { Private: true, NoStore: true });
 
             Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/recipes/{recipe.Id}/image")).StatusCode);
             Assert.Empty(Directory.GetFiles(storagePath));

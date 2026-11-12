@@ -34,7 +34,7 @@ public sealed class HouseholdReviewsTests(PostgresContainerFixture postgres)
             new { displayName = "Parent", portionCoefficient = 1m })).GetProperty("id").GetGuid();
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/household-groups/")).StatusCode);
         var food = await Post<FoodItemDto>(client, "/api/foods",
-            new { name = "Mozzarella", referenceUnit = "piece", nutrition = (object?)null });
+            new { name = "Mozzarella", referenceUnit = "1 pièce", nutrition = (object?)null });
 
         await Post<ReviewDto>(client, $"/api/reviews/foods/{food.Id}",
             new { memberProfileId = profileId, score = 0, comment = (string?)null });
