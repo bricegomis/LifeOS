@@ -18,6 +18,8 @@ code, identifiers and code comments are English.
   across stores, full data reset) and
   `docs/02-core-model.md`.
 - Food classification: ADR 0012 (family, roles, conservation, season months, tags).
+- Step 2 target: ADR 0013 (sport: logged sessions, weekly goals instead of dated
+  expected sessions, daily challenges with streaks and jokers; Garmin import later).
 - Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly

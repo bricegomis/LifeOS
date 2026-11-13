@@ -142,23 +142,34 @@ l'application ; un autre foyer ne voit rien de tout cela (testé).
 
 **But.** Un sport utilisable seul, sans semainier.
 
-**Contenu prévu.** Séances types (existent), séances réalisées à une date,
-récurrence des séances attendues, bilan hebdomadaire des calories par personne.
-Chaque séance porte un profil et une source (manuelle ou importée).
-Acquis des [leçons du premier semainier](semainier-retour-experience.md) : confirmation
-explicite, calories saisies par séance, aucun calcul automatique.
+**Décisions prises.** Cadrage fait le 2026-11-13 :
+[ADR 0013](architecture/decisions/0013-sport-module.md).
 
-**À cadrer.**
+- Séances réalisées à une date, depuis une séance type ou un sport (liste fixe) :
+  durée, calories saisies, distance, ressenti, fréquence cardiaque, notes. La
+  musculation et le crossfit sont notés en texte libre.
+- Objectifs de la semaine (par séance type, par sport, en nombre de séances ou en
+  volume) au lieu de séances attendues datées.
+- Défis du jour (100 pompes, 20 min de mobilité) remplis par séries cumulées, avec
+  série de jours, jokers, calendrier, totaux et paliers.
+- Un profil sur chaque donnée ; seul l'utilisateur principal est affiché.
+- Import Garmin reporté (ADR dédiée) ; seule la source de la séance est prévue.
 
-- Quels sports, et quelles données par séance (durée, distance, ressenti, charge) ?
-- Récurrence simple (jours de la semaine) ou plans d'entraînement sur plusieurs semaines ?
-- Objectifs (volume hebdomadaire, progression) : dès cette étape ou plus tard ?
-- Quelle vue en attendant le semainier : liste de la semaine, historique, graphiques ?
-- Import Garmin, Strava ou Apple Santé : reporté, ou préparé ici par une ADR ?
+**Déroulé.**
+
+1. **Cadrage fonctionnel.** Fait.
+2. **Maquette cliquable** : accueil Sport, saisie de séance, historique,
+   progression, réglages.
+3. **Séances réalisées** et liste fixe des sports (migration des séances types).
+4. **Objectifs de la semaine** et bilan.
+5. **Défis du jour** et gamification.
+6. **Outils de l'assistant** pour tout le module.
+7. **Progression** : graphiques par semaine et par défi.
 
 **Terminé quand.** L'utilisateur enregistre ses séances pendant plusieurs semaines
-sans friction et lit son bilan hebdomadaire. Le module publie son contrat de
-lecture (séances attendues et réalisées, calories par jour et par profil).
+sans friction, tient ses défis du jour et lit son bilan hebdomadaire. Le module
+publie son contrat de lecture (séances réalisées, calories par jour et par profil,
+avancement des objectifs et des défis).
 
 ## Étape 3 — Tâches
 
