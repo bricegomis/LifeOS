@@ -17,6 +17,7 @@ code, identifiers and code comments are English.
   recipe images added, products always complete (mandatory package contents), min/max recipe cost
   across stores, full data reset) and
   `docs/02-core-model.md`.
+- Food classification: ADR 0012 (family, roles, conservation, season months, tags).
 - Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly
@@ -43,6 +44,10 @@ code, identifiers and code comments are English.
 - Every persisted business row is filtered by `household_id` at the application layer
   (no Postgres RLS). New queries/commands must resolve and filter by the caller's
   household; cross-household references must be rejected (composite FKs exist).
+- Food classification (ADR 0012): a required family from a fixed list, optional roles
+  (fixed, several), conservation, season months (none = not seasonal) and free household
+  tags; season is computed on read for the current month; never part of "À compléter".
+  A frozen food is a separate food, not stock.
 - Food = generic culinary reference with manual, nullable nutrition (base "100 g",
   "100 ml" or "1 pièce", calories, proteins, carbs, fats, fibres, FODMAP, NOVA). Zero
   is a valid value; "À compléter" when any of the 8 fields is null. Product =

@@ -44,7 +44,7 @@ créer, tu valides dans la discussion. Il cherche lui-même les valeurs nutritio
 | Domaine | Outils |
 | --- | --- |
 | Foyer | `get_household` (profils, pour les avis) |
-| Aliments | `search_foods`, `get_food` (avec produits et avis), `create_food`, `update_food` (remplace toute la fiche), `archive_food`, `set_food_image_from_url`, `remove_food_image` |
+| Aliments | `search_foods` (filtres famille, rôle, conservation, étiquette, mois de saison), `get_food` (avec produits et avis), `create_food` (famille obligatoire), `update_food` (remplace toute la fiche, classement compris), `archive_food`, `set_food_image_from_url`, `remove_food_image` |
 | Recettes | `search_recipes`, `get_recipe` (ingrédients, nutrition par portion, coût min–max, avis), `create_recipe` (avec ses ingrédients), `update_recipe`, `add_recipe_ingredient`, `update_recipe_ingredient`, `remove_recipe_ingredient`, `archive_recipe`, `set_recipe_image_from_url`, `remove_recipe_image` |
 | Magasins | `list_stores`, `create_store`, `update_store`, `delete_store` |
 | Produits et prix | `search_products`, `create_product`, `update_product`, `archive_product`, `add_price`, `remove_price` |

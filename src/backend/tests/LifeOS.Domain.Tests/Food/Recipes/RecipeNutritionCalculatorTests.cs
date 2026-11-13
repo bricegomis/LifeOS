@@ -10,8 +10,8 @@ public sealed class RecipeNutritionCalculatorTests
     [Fact]
     public void Nutrition_per_serving_is_quantity_times_value_per_base_divided_by_the_yield()
     {
-        var rice = FoodItem.CreateManual(Household, "Riz", "100 g", new Nutrition(350, 7, 77, 1, 2));
-        var egg = FoodItem.CreateManual(Household, "Œuf", "1 pièce", new Nutrition(70, 6, 0, 5, 0));
+        var rice = FoodItem.CreateManual(Household, "Riz", "grain", "100 g", new Nutrition(350, 7, 77, 1, 2));
+        var egg = FoodItem.CreateManual(Household, "Œuf", "egg", "1 pièce", new Nutrition(70, 6, 0, 5, 0));
         var recipe = Recipe.Create(Household, "Riz aux œufs", 2, 20);
         recipe.AddIngredient(rice.Id, 200, "g");
         recipe.AddIngredient(egg.Id, 4, "pièce");
@@ -29,8 +29,8 @@ public sealed class RecipeNutritionCalculatorTests
     [Fact]
     public void Unknown_values_and_other_dimensions_stay_unknown_and_make_the_total_partial()
     {
-        var milk = FoodItem.CreateManual(Household, "Lait", "100 ml", new Nutrition(46, 3.3, 4.8, 1.6, null));
-        var apple = FoodItem.CreateManual(Household, "Pomme", "1 pièce", new Nutrition(80, 0.4, 19, 0.3, 3));
+        var milk = FoodItem.CreateManual(Household, "Lait", "dairy", "100 ml", new Nutrition(46, 3.3, 4.8, 1.6, null));
+        var apple = FoodItem.CreateManual(Household, "Pomme", "fruit", "1 pièce", new Nutrition(80, 0.4, 19, 0.3, 3));
         var recipe = Recipe.Create(Household, "Compote", 1, 10);
         recipe.AddIngredient(milk.Id, 200, "ml");
         // Grams of a food described per piece: no piece weight is invented.

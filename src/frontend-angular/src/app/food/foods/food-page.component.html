@@ -29,7 +29,83 @@
       </div>
     </div>
 
-    <form class="card" (ngSubmit)="save()" aria-labelledby="nutrition-title">
+    <form class="food-form" (ngSubmit)="save()" aria-label="Fiche de l’aliment">
+    <section class="card desktop-only" aria-labelledby="class-title">
+      <h2 id="class-title">Classement</h2>
+      <div class="field-row">
+        <label class="field">
+          <span>Famille (obligatoire)</span>
+          <select class="lifeos-input" name="family" required [class.is-missing]="!form.family" [(ngModel)]="form.family">
+            @if (!form.family) { <option value="">Choisir une famille</option> }
+            @for (option of familyOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
+          </select>
+        </label>
+        <label class="field">
+          <span>Conservation (facultatif)</span>
+          <select class="lifeos-input" name="conservation" [(ngModel)]="form.conservation">
+            <option value="">Non précisée</option>
+            @for (option of conservationOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
+          </select>
+        </label>
+      </div>
+      <fieldset class="class-group">
+        <legend>Rôles dans l’assiette (facultatif, plusieurs possibles)</legend>
+        <div class="tags">
+          @for (option of roleOptions; track option[0]) {
+            <button type="button" class="pill" [attr.aria-pressed]="hasRole(option[0])" (click)="toggleRole(option[0])">{{ option[1] }}</button>
+          }
+        </div>
+      </fieldset>
+      <fieldset class="class-group">
+        <legend class="class-legend-row">
+          <span>Mois de saison (facultatif)</span>
+          <span class="chip" [class]="'chip-season-' + seasonNow().kind">{{ seasonNow().text }}</span>
+        </legend>
+        <div class="month-grid">
+          @for (month of months; track month.value) {
+            <button type="button" class="month-toggle" [class.is-current]="month.value === this.month"
+              [attr.aria-pressed]="hasMonth(month.value)" [attr.aria-label]="month.name" (click)="toggleMonth(month.value)">{{ month.label }}</button>
+          }
+        </div>
+        <p class="muted small">Aucun mois coché : pas saisonnier (sec, conserve, surgelé…). Le mois entouré est le mois en cours.</p>
+      </fieldset>
+      <fieldset class="class-group">
+        <legend>Étiquettes du foyer (facultatif)</legend>
+        <div class="tags">
+          @for (tag of form.tags; track tag) {
+            <span class="tag tag-removable">{{ tag }}
+              <button type="button" class="tag-remove" [attr.aria-label]="'Retirer l’étiquette ' + tag" (click)="removeTag(tag)">×</button>
+            </span>
+          } @empty { <span class="muted">Aucune étiquette.</span> }
+        </div>
+        <div class="tag-input">
+          <input class="lifeos-input" name="tagDraft" aria-label="Nouvelle étiquette" placeholder="Nouvelle étiquette"
+            [maxlength]="maxTagLength" [(ngModel)]="tagDraft" (keydown.enter)="$event.preventDefault(); addTag()" />
+          <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addTag()">Ajouter</button>
+        </div>
+        @if (suggestions().length) {
+          <div class="tags">
+            <span class="muted small">Déjà utilisées dans le foyer :</span>
+            @for (tag of suggestions(); track tag) {
+              <button type="button" class="pill pill-suggestion" (click)="addTag(tag)">+ {{ tag }}</button>
+            }
+          </div>
+        }
+      </fieldset>
+    </section>
+
+    <section class="card mobile-only" aria-labelledby="class-title-mobile">
+      <div class="class-legend-row">
+        <h2 id="class-title-mobile">Classement</h2>
+        <span class="chip" [class]="'chip-season-' + seasonNow().kind">{{ seasonNow().text }}</span>
+      </div>
+      @for (row of classRows(food); track row.label) {
+        <div class="class-row"><span class="muted">{{ row.label }}</span><span>{{ row.value }}</span></div>
+      }
+      <p class="muted small" style="margin-top: 8px">Le classement se modifie depuis l’ordinateur.</p>
+    </section>
+
+    <section class="card" aria-labelledby="nutrition-title">
       <h2 id="nutrition-title">Nutrition et digestion</h2>
       <div class="field-row">
         <label class="field" style="flex-basis: 100%">
@@ -77,6 +153,7 @@
         @if (saved() && !dirty()) { <span class="muted" role="status">Enregistré.</span> }
         @if (saveError()) { <span class="error-text" role="alert">{{ saveError() }}</span> }
       </div>
+    </section>
     </form>
 
     <section class="card">

@@ -4,6 +4,11 @@ export type Fodmap = 'low' | 'moderate' | 'high'
 export type NutritionBase = '100 g' | '100 ml' | '1 pièce'
 export type IngredientUnit = 'g' | 'ml' | 'pièce'
 export type PackageUnit = 'g' | 'kg' | 'ml' | 'L' | 'pièce'
+/** Food classification (ADR 0012); labels in `shared/classification.ts`. */
+export type FoodFamily = 'vegetable' | 'fruit' | 'grain' | 'legume' | 'meat' | 'fish' | 'egg' | 'dairy' | 'fat'
+  | 'nut_seed' | 'herb_spice' | 'condiment' | 'sweet' | 'drink' | 'other'
+export type FoodRole = 'protein' | 'starch' | 'vegetable' | 'fat' | 'seasoning' | 'sweet'
+export type Conservation = 'fresh' | 'frozen' | 'canned' | 'dry'
 
 export interface NutritionDto {
   caloriesPerUnit: number | null
@@ -21,6 +26,13 @@ export interface FoodRequest {
   fodmap: Fodmap | null
   nova: number | null
   digestiveNotes: string | null
+  /** Required. */
+  family: FoodFamily
+  roles: FoodRole[]
+  conservation: Conservation | null
+  /** 1..12, sorted; empty means "not seasonal". */
+  seasonMonths: number[]
+  tags: string[]
 }
 
 export interface FoodDto extends FoodRequest {

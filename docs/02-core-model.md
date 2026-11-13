@@ -1,7 +1,8 @@
 # LifeOS — Modèle de l'alimentation
 
 Modèle de l'étape 1, fixé par
-[ADR 0010](architecture/decisions/0010-simplified-food-module.md) et implémenté dans le
+[ADR 0010](architecture/decisions/0010-simplified-food-module.md), complété par le classement des aliments
+([ADR 0012](architecture/decisions/0012-food-classification.md)), et implémenté dans le
 module Alimentation (schéma PostgreSQL `food`). Ce que contient l'application est
 résumé dans [PROJECT.md](PROJECT.md).
 
@@ -10,7 +11,7 @@ l'API et PostgreSQL stockent les données.
 
 | Terme | Définition | Exemple |
 | --- | --- | --- |
-| Aliment | Référence culinaire générique, nutrition et digestion manuelles, sans marque, magasin ni conditionnement. | Emmental râpé ; haricots rouges en conserve égouttés. |
+| Aliment | Référence culinaire générique, classée, nutrition et digestion manuelles, sans marque, magasin ni conditionnement. | Emmental râpé ; haricots rouges en conserve égouttés. |
 | Recette | Préparation de bibliothèque : ingrédients, rendement en portions, instructions, durée, catégories et image facultatives. | Légumes vapeur ; dhal avec riz. |
 | Ingrédient | Ligne de recette : aliment + quantité + unité. Pas un catalogue. | 100 g d'emmental. |
 | Avis | Note entière facultative 0..10 et/ou commentaire, par aliment ou recette, et par profil du foyer. | Avis de Léa sur la carotte. |
@@ -24,6 +25,22 @@ Un aliment a zéro à plusieurs produits ; chaque produit appartient à un alime
 Les recettes choisissent des aliments, jamais des marques. Contenance d'un produit,
 quantité d'une recette et base nutritionnelle sont trois notions distinctes.
 Rien n'est rapproché par nom.
+
+## Classement
+
+Chaque aliment a une **famille** (ce qu'il est, obligatoire) : Légume, Fruit, Céréale
+et féculent, Légumineuse, Viande, Poisson et fruits de mer, Œuf, Produit laitier,
+Matière grasse, Fruit à coque et graine, Herbe et épice, Condiment et sauce, Produit
+sucré, Boisson ou Autre. Facultatifs : ses **rôles** dans l'assiette (Protéine,
+Féculent, Légume, Matière grasse, Assaisonnement, Sucré ; plusieurs possibles), sa
+**conservation** (Frais, Surgelé, Conserve, Sec), ses **mois de saison** et des
+**étiquettes** libres du foyer.
+
+Le tofu est une légumineuse de rôle Protéine ; les lentilles ont les rôles Protéine
+et Féculent. Aucun mois coché : l'aliment n'est pas saisonnier. « De saison »,
+« Toute l'année » ou « Hors saison » se calcule à la lecture pour le mois en cours ;
+rien n'est masqué. Un surgelé est un aliment distinct (pas de stock). Le classement
+n'entre pas dans « À compléter ».
 
 ## Nutrition manuelle
 

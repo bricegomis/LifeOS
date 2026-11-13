@@ -26,8 +26,8 @@ public sealed class RecipeCostTests(PostgresContainerFixture postgres)
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var leclerc = await Post<StoreDto>(a, "/api/stores", new StoreRequest("Leclerc", "", false, false));
         var biocoop = await Post<StoreDto>(a, "/api/stores", new StoreRequest("Biocoop", "", true, true));
-        var lentils = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Lentilles corail", "100 g", null));
-        var curry = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Curry", "100 g", null));
+        var lentils = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Lentilles corail", "100 g", null, Family: "legume"));
+        var curry = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Curry", "100 g", null, Family: "herb_spice"));
         var pack = await Post<ProductDto>(a, "/api/products", new ProductRequest(lentils.Id, "Lentilles 500 g", 500, "g"));
         var loose = await Post<ProductDto>(a, "/api/products", new ProductRequest(lentils.Id, "Lentilles vrac", 1, "kg"));
         await Post<ProductDto>(a, $"/api/products/{pack.Id}/prices", new PriceRequest(leclerc.Id, 1.80m, today));

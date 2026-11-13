@@ -35,7 +35,7 @@ public sealed class AccountsMigrationTests
 
         await using var factory = new LifeOSApiFactory(container.GetConnectionString());
         var client = factory.CreateClient().AsUser(Guid.NewGuid());
-        (await client.PostAsJsonAsync("/api/foods", new FoodRequest("Lentilles", "100 g", null))).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync("/api/foods", new FoodRequest("Lentilles", "100 g", null, Family: "legume"))).EnsureSuccessStatusCode();
 
         await using var check = factory.CreateDbContext();
         Assert.Equal(1, await check.Households.CountAsync());

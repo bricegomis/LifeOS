@@ -8,8 +8,12 @@ import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.compone
 import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
 import { ReviewDraftsService } from '@/app/shared/reviews/review-drafts.service'
 import { FoodApiService } from '../food-api.service'
-import type { FoodDto, IngredientUnit, StoreDto } from '../food.models'
+import type { FoodDto, FoodFamily, FoodRole, IngredientUnit, StoreDto } from '../food.models'
+import {
+  currentMonth, familyLabel, familyOptions, MONTH_NAMES, offSeasonNotice, ROLE_LABELS, roleOptions, seasonStatus, sortBySeason,
+} from '../shared/classification'
 import { FoodImageComponent } from '../shared/food-image.component'
+import { matches } from '../shared/format'
 import { fodmapLabel, formatNumber, formatQuantity } from '../shared/format'
 import { costView } from './recipe-cost'
 import { RecipeEditorComponent } from './recipe-editor.component'
@@ -59,6 +63,47 @@ export class RecipePageComponent implements OnInit {
     return recipe ? recipeNutrition(recipe, this.foods()) : null
   })
   readonly activeFoods = computed(() => this.foods().filter(food => !food.isArchived))
+
+  /** Season of the ingredients for the current month (ADR 0012), computed on read. */
+  readonly month = currentMonth()
+  readonly seasonNotice = computed(() => {
+    const recipe = this.recipe()
+    if (!recipe) return null
+    const foods = recipe.ingredients.map(i => this.food(i.foodItemId)).filter((food): food is FoodDto => !!food)
+    return offSeasonNotice(foods, this.month)
+  })
+
+  /** Ingredient picker: search and filters, in season first unless asked otherwise. Nothing is hidden by season. */
+  readonly pickSearch = signal('')
+  readonly pickFamily = signal<FoodFamily | ''>('')
+  readonly pickRole = signal<FoodRole | ''>('')
+  readonly pickSeasonFirst = signal(true)
+  readonly familyOptions = familyOptions
+  readonly roleOptions = roleOptions
+  readonly pickHint = computed(() => this.pickSeasonFirst()
+    ? `De saison en ${MONTH_NAMES[this.month - 1]}, puis toute l’année, puis hors saison. Rien n’est masqué.`
+    : 'Ordre alphabétique.')
+  readonly pickerFoods = computed(() => {
+    const used = new Set(this.recipe()?.ingredients.map(i => i.foodItemId) ?? [])
+    const family = this.pickFamily()
+    const role = this.pickRole()
+    const found = this.activeFoods().filter(food => !used.has(food.id) && matches(food.name, this.pickSearch())
+      && (!family || food.family === family) && (!role || food.roles.includes(role)))
+    return this.pickSeasonFirst() ? sortBySeason(found, this.month) : [...found].sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+  })
+
+  season(food: FoodDto | undefined) { return seasonStatus(food?.seasonMonths ?? [], this.month) }
+
+  pickDetail(food: FoodDto): string {
+    return [familyLabel(food.family), food.roles.map(role => ROLE_LABELS[role]).join(', ')].filter(Boolean).join(' · ')
+  }
+
+  /** Picks the food and the unit matching its nutrition base; the quantity is still typed by hand. */
+  choose(food: FoodDto): void {
+    const unit: IngredientUnit = food.referenceUnit === '100 ml' ? 'ml' : food.referenceUnit === '1 pièce' ? 'pièce' : 'g'
+    this.newIngredient = { ...this.newIngredient, foodItemId: food.id, unit }
+    this.ingredientError.set('')
+  }
   readonly costLines = computed(() => {
     const cost = this.cost()
     return cost ? costView(cost, this.foods(), this.stores()) : null
@@ -144,6 +189,9 @@ export class RecipePageComponent implements OnInit {
     if (!recipe) return
     this.drafts = recipe.ingredients.map(i => ({ id: i.id, quantity: String(i.quantity).replace('.', ','), unit: i.unit }))
     this.newIngredient = { foodItemId: '', quantity: '', unit: 'g' }
+    this.pickSearch.set('')
+    this.pickFamily.set('')
+    this.pickRole.set('')
     this.ingredientError.set('')
     this.editingIngredients.set(true)
   }

@@ -36,19 +36,25 @@
             <h2 id="ingredients-title">Ingrédients</h2>
             <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="openIngredients()">Modifier les ingrédients</button>
           </div>
+          @if (seasonNotice(); as notice) { <p class="notice-offseason" style="margin-bottom: 12px">{{ notice }}</p> }
           @if (!recipe.ingredients.length) {
             <p class="muted">Aucun ingrédient. Ajoutez-en pour calculer la nutrition et le coût.</p>
           } @else {
             <div class="ingredient-grid table-head" aria-hidden="true">
-              <span></span><span>Aliment</span><span>Quantité</span><span class="desktop-only">FODMAP</span><span class="desktop-only">NOVA</span><span></span>
+              <span></span><span>Aliment</span><span>Quantité</span><span class="desktop-only">Saison</span><span class="desktop-only">FODMAP</span><span class="desktop-only">NOVA</span><span></span>
             </div>
             @for (ingredient of recipe.ingredients; track ingredient.id) {
               @let food = this.food(ingredient.foodItemId);
               <a class="ingredient-grid table-row" [routerLink]="['/foods', ingredient.foodItemId]" [queryParams]="{ from: 'recipe', recipe: recipe.id }">
                 <app-food-image [path]="'/foods/' + ingredient.foodItemId + '/image'" [hasImage]="food?.hasImage ?? false"
                   [version]="food?.updatedAt ?? ''" [name]="food?.name ?? ''" width="44px" height="44px" />
-                <span class="ingredient-name">{{ food?.name ?? 'Aliment indisponible' }}</span>
+                @let status = season(food);
+                <span class="ingredient-name-cell">
+                  <span class="ingredient-name">{{ food?.name ?? 'Aliment indisponible' }}</span>
+                  <span class="mobile-only"><span class="chip" [class]="'chip-season-' + status.kind">{{ status.label }}</span></span>
+                </span>
                 <span>{{ quantity(ingredient) }}</span>
+                <span class="desktop-only"><span class="chip" [class]="'chip-season-' + status.kind">{{ status.label }}</span></span>
                 <span class="desktop-only">{{ fodmapLabel(food?.fodmap ?? null) }}</span>
                 <span class="desktop-only">{{ food?.nova ?? '—' }}</span>
                 <span class="muted" aria-hidden="true">›</span>
@@ -146,12 +152,39 @@
           <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="removeIngredient(draft)">Retirer</button>
         </div>
       }
+      <div class="picker" role="group" aria-labelledby="picker-title">
+        <h3 id="picker-title" class="picker-title">Ajouter un ingrédient</h3>
+        <div class="filter-line">
+          <input type="search" class="lifeos-input picker-search" aria-label="Chercher un aliment à ajouter" placeholder="Chercher un aliment"
+            [ngModel]="pickSearch()" (ngModelChange)="pickSearch.set($event)" />
+          <select class="lifeos-input picker-select" aria-label="Famille" [ngModel]="pickFamily()" (ngModelChange)="pickFamily.set($event)">
+            <option value="">Toutes les familles</option>
+            @for (option of familyOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
+          </select>
+          <select class="lifeos-input picker-select" aria-label="Rôle" [ngModel]="pickRole()" (ngModelChange)="pickRole.set($event)">
+            <option value="">Tous les rôles</option>
+            @for (option of roleOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
+          </select>
+          <button type="button" class="pill" [attr.aria-pressed]="pickSeasonFirst()" (click)="pickSeasonFirst.set(!pickSeasonFirst())">De saison d’abord</button>
+        </div>
+        <p class="muted small">{{ pickHint() }}</p>
+        <div class="picker-list">
+          @for (food of pickerFoods(); track food.id) {
+            @let status = season(food);
+            <button type="button" class="picker-row" [attr.aria-pressed]="newIngredient.foodItemId === food.id" (click)="choose(food)">
+              <app-food-image [path]="'/foods/' + food.id + '/image'" [hasImage]="food.hasImage" [version]="food.updatedAt"
+                [name]="food.name" width="40px" height="40px" />
+              <span class="picker-name"><span>{{ food.name }}</span><span class="muted small">{{ pickDetail(food) }}</span></span>
+              <span class="chip" [class]="'chip-season-' + status.kind">{{ status.label }}</span>
+            </button>
+          } @empty {
+            <p class="muted small">Aucun aliment ne correspond.</p>
+          }
+        </div>
+      </div>
       <form class="ingredient-editor-row" (ngSubmit)="addIngredient()">
-        <label class="field"><span>Aliment</span>
-          <select class="lifeos-input" name="food" [(ngModel)]="newIngredient.foodItemId">
-            <option value="">Choisir un aliment</option>
-            @for (food of activeFoods(); track food.id) { <option [value]="food.id">{{ food.name }}</option> }
-          </select></label>
+        <div class="field"><span>Aliment choisi</span>
+          <span class="picked-food">{{ newIngredient.foodItemId ? (food(newIngredient.foodItemId)?.name ?? '') : 'Choisissez un aliment ci-dessus' }}</span></div>
         <label class="field"><span>Quantité</span>
           <input class="lifeos-input" name="quantity" inputmode="decimal" [(ngModel)]="newIngredient.quantity" /></label>
         <label class="field"><span>Unité</span>

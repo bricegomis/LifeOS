@@ -37,7 +37,7 @@ public sealed class ResetMigrationTests
 
         await using var factory = new LifeOSApiFactory(container.GetConnectionString());
         var client = factory.CreateClient().AsUser(Guid.NewGuid());
-        var created = await client.PostAsJsonAsync("/api/foods", new FoodRequest("Lentilles", "100 g", null));
+        var created = await client.PostAsJsonAsync("/api/foods", new FoodRequest("Lentilles", "100 g", null, Family: "legume"));
         created.EnsureSuccessStatusCode();
         Assert.Single(await client.GetFromJsonAsync<List<FoodItemDto>>("/api/foods") ?? []);
 

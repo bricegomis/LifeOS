@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-12 (outils Alimentation de l'assistant). Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-13 (classement des aliments). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -11,17 +11,18 @@ et la [roadmap](01-roadmap.md).
 ([ADR 0010](architecture/decisions/0010-simplified-food-module.md)). En cours : étape 1 bis,
 assistant Claude ([ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md)) ;
 la connexion Google par l'API (sans Supabase), l'endpoint MCP et les outils de tout le
-module Alimentation sont livrés. Pour connecter Claude : [assistant-claude.md](assistant-claude.md).
+module Alimentation sont livrés, ainsi que le classement des aliments
+([ADR 0012](architecture/decisions/0012-food-classification.md)). Pour connecter Claude : [assistant-claude.md](assistant-claude.md).
 
 ## Ce qui existe
 
 | Domaine | Fonctionnalités |
 | --- | --- |
 | Compte | Connexion Google gérée par l'API, réservée aux adresses autorisées ; l'API émet ses propres jetons (accès 1 h, rafraîchissement par rotation) |
-| Assistant Claude | Endpoint MCP `/mcp` pour claude.ai et Claude Code, avec consentement à la première connexion ; outils pour lire et remplir tout le module Alimentation (aliments avec image par URL, recettes avec nutrition et coût, magasins, produits, prix, avis, tickets) ; accès révocables dans Réglages |
+| Assistant Claude | Endpoint MCP `/mcp` pour claude.ai et Claude Code, avec consentement à la première connexion ; outils pour lire et remplir tout le module Alimentation (aliments avec image par URL et classement, recettes avec nutrition et coût, magasins, produits, prix, avis, tickets) ; accès révocables dans Réglages |
 | Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion ; page Paramètres (profils, versions de l'interface et de l'API) |
-| Aliments | Fiches génériques avec photo, nutrition manuelle (base 100 g / 100 ml / 1 pièce, calories, protéines, glucides, lipides, fibres, FODMAP, NOVA), état « À compléter », prix relevés en lecture seule, archivage |
-| Recettes | Photo, ingrédients sur aliments en g, ml ou pièce (chaque ingrédient ouvre la fiche de l'aliment), rendement, étapes, durée, catégories, nutrition par portion marquée partielle si une valeur manque ; coût minimum–maximum tous magasins confondus, calculé à la lecture, avec le détail du produit, du magasin et du prix retenus |
+| Aliments | Fiches génériques avec photo, famille obligatoire, rôles dans l'assiette, conservation, mois de saison et étiquettes du foyer (classement modifiable sur ordinateur, lu sur téléphone) ; nutrition manuelle (base 100 g / 100 ml / 1 pièce, calories, protéines, glucides, lipides, fibres, FODMAP, NOVA), état « À compléter », prix relevés en lecture seule, archivage ; liste filtrable par famille, rôle, conservation, saison du mois et étiquette |
+| Recettes | Photo, ingrédients sur aliments en g, ml ou pièce (chaque ingrédient ouvre la fiche de l'aliment et affiche sa saison du mois, avec un message pour les ingrédients hors saison ; choix d'un ingrédient dans une liste filtrable, de saison d'abord), rendement, étapes, durée, catégories, nutrition par portion marquée partielle si une valeur manque ; coût minimum–maximum tous magasins confondus, calculé à la lecture, avec le détail du produit, du magasin et du prix retenus |
 | Avis | Note 0..10 et commentaire, par aliment ou recette, par profil |
 | Produits et prix | Produit toujours complet (aliment, nom, contenance) ; prix payé par conditionnement, par magasin et par date, ramené au kilo, au litre ou à la pièce ; tableau avec une colonne par magasin |
 | Magasins | Création, modification, suppression (refusée tant que des prix ou tickets y sont rattachés) |

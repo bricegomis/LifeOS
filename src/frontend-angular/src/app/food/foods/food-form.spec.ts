@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { FoodDto, ProductDto, StoreDto } from '../food.models.ts'
-import { buildFoodRequest, emptyFoodForm, foodFormFrom, foodPriceSummary, parseOptionalNumber, visibleFoods } from './food-form.ts'
-
-const food = (name: string, missing: string[] = [], archived = false) =>
-  ({ id: name, name, missingFields: missing, isArchived: archived }) as unknown as FoodDto
+import { buildFoodRequest, emptyFoodForm, foodFormFrom, foodPriceSummary, parseOptionalNumber } from './food-form.ts'
 
 describe('food form', () => {
   it('reads empty as unknown, zero as a value and accepts a decimal comma', () => {
@@ -23,17 +20,26 @@ describe('food form', () => {
     values.fodmap = 'moderate'
     values.nova = '1'
     values.digestiveNotes = '  '
+    values.family = 'legume'
+    values.roles = ['protein', 'starch']
+    values.seasonMonths = [12, 1]
+    values.tags = [' batch ', '']
     const result = buildFoodRequest(values)
     assert.ok(result.ok)
     assert.deepEqual(result.value, {
       name: 'Lentilles', referenceUnit: '100 g', fodmap: 'moderate', nova: 1, digestiveNotes: null,
+      family: 'legume', roles: ['protein', 'starch'], conservation: null, seasonMonths: [1, 12], tags: ['batch'],
       nutrition: { caloriesPerUnit: 0, proteinsPerUnit: null, carbsPerUnit: null, fatsPerUnit: null, fibersPerUnit: 11 },
     })
   })
 
-  it('refuses a missing name or an invalid number', () => {
+  it('refuses a missing name or family, an invalid number or too long a tag', () => {
     assert.equal(buildFoodRequest(emptyFoodForm(' ')).ok, false)
-    const values = emptyFoodForm('Riz')
+    const noFamily = buildFoodRequest(emptyFoodForm('Riz'))
+    assert.ok(!noFamily.ok && noFamily.error.includes('famille'))
+    const longTag = { ...emptyFoodForm('Riz'), family: 'grain' as const, tags: ['x'.repeat(51)] }
+    assert.equal(buildFoodRequest(longTag).ok, false)
+    const values = { ...emptyFoodForm('Riz'), family: 'grain' as const }
     values.nutrition.proteinsPerUnit = 'abc'
     const result = buildFoodRequest(values)
     assert.ok(!result.ok && result.error.startsWith('Protéines'))
@@ -42,18 +48,14 @@ describe('food form', () => {
   it('round-trips an existing food through the form', () => {
     const existing = {
       name: 'Riz', referenceUnit: '100 g', fodmap: 'low', nova: 1, digestiveNotes: null,
+      family: 'grain', roles: ['starch'], conservation: 'dry', seasonMonths: [], tags: ['batch'],
       nutrition: { caloriesPerUnit: 351, proteinsPerUnit: 8, carbsPerUnit: 78, fatsPerUnit: 0.6, fibersPerUnit: 1.4 },
     } as unknown as FoodDto
     const result = buildFoodRequest(foodFormFrom(existing))
     assert.ok(result.ok)
     assert.deepEqual(result.value.nutrition, existing.nutrition)
-  })
-
-  it('filters by name and by incompleteness, never showing archived foods', () => {
-    const foods = [food('Carotte'), food('Curry', ['Fibres']), food('Ancien', [], true)]
-    assert.deepEqual(visibleFoods(foods, '', 'all').map(f => f.name), ['Carotte', 'Curry'])
-    assert.deepEqual(visibleFoods(foods, '', 'todo').map(f => f.name), ['Curry'])
-    assert.deepEqual(visibleFoods(foods, 'car', 'all').map(f => f.name), ['Carotte'])
+    assert.deepEqual([result.value.family, result.value.roles, result.value.conservation, result.value.tags],
+      ['grain', ['starch'], 'dry', ['batch']])
   })
 
   it('summarises the latest prices as a range per comparison unit', () => {

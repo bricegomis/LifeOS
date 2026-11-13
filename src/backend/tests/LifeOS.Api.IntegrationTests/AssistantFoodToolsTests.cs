@@ -43,12 +43,13 @@ public sealed class AssistantFoodToolsTests(PostgresContainerFixture postgres)
 
             var rice = await Call(mcp, "create_food", new()
             {
-                ["name"] = "Riz basmati", ["referenceUnit"] = "100 g", ["calories"] = 350, ["proteins"] = 8,
+                ["name"] = "Riz basmati", ["family"] = "grain", ["referenceUnit"] = "100 g", ["calories"] = 350, ["proteins"] = 8,
                 ["carbs"] = 77, ["fats"] = 1, ["fibers"] = 2, ["fodmap"] = "low", ["nova"] = 1,
+                ["roles"] = new[] { "starch" }, ["conservation"] = "dry", ["tags"] = new[] { "batch" },
             });
             var riceId = rice.GetProperty("id").GetString();
             Assert.Empty(rice.GetProperty("missingFields").EnumerateArray());
-            var egg = await Call(mcp, "create_food", new() { ["name"] = "Œuf", ["referenceUnit"] = "1 pièce", ["calories"] = 70 });
+            var egg = await Call(mcp, "create_food", new() { ["name"] = "Œuf", ["family"] = "egg", ["referenceUnit"] = "1 pièce", ["calories"] = 70 });
             var eggId = egg.GetProperty("id").GetString();
 
             var withImage = await Call(mcp, "set_food_image_from_url", new() { ["foodId"] = riceId, ["url"] = "https://example.com/riz.png" });
@@ -57,6 +58,30 @@ public sealed class AssistantFoodToolsTests(PostgresContainerFixture postgres)
 
             var found = await Call(mcp, "search_foods", new() { ["query"] = "BASMATI" });
             Assert.Equal("Riz basmati", Assert.Single(found.EnumerateArray()).GetProperty("name").GetString());
+            var leek = await Call(mcp, "create_food", new()
+            {
+                ["name"] = "Poireau", ["family"] = "vegetable", ["roles"] = new[] { "vegetable" },
+                ["seasonMonths"] = new[] { 9, 10, 11, 12, 1, 2, 3, 4 },
+            });
+            Assert.Equal([1, 2, 3, 4, 9, 10, 11, 12], leek.GetProperty("seasonMonths").EnumerateArray().Select(m => m.GetInt32()));
+            var pepper = await Call(mcp, "create_food", new()
+            {
+                ["name"] = "Poivron", ["family"] = "vegetable", ["seasonMonths"] = new[] { 7, 8, 9, 10 },
+            });
+            // In December: in-season and non-seasonal foods only.
+            Assert.Equal(["Poireau", "Riz basmati", "Œuf"], (await Call(mcp, "search_foods", new() { ["availableInMonth"] = 12 }))
+                .EnumerateArray().Select(f => f.GetProperty("name").GetString()).Order(StringComparer.Ordinal));
+            Assert.Equal(["Poireau", "Poivron"], (await Call(mcp, "search_foods", new() { ["family"] = "vegetable" }))
+                .EnumerateArray().Select(f => f.GetProperty("name").GetString()));
+            Assert.Equal("Riz basmati", Assert.Single((await Call(mcp, "search_foods", new() { ["tag"] = "BATCH" })).EnumerateArray())
+                .GetProperty("name").GetString());
+            Assert.Equal("Riz basmati", Assert.Single((await Call(mcp, "search_foods", new() { ["role"] = "starch" })).EnumerateArray())
+                .GetProperty("name").GetString());
+            Assert.Equal("Poivron", (await Call(mcp, "update_food", new()
+            {
+                ["foodId"] = pepper.GetProperty("id").GetString(), ["name"] = "Poivron", ["family"] = "vegetable",
+                ["conservation"] = "frozen",
+            })).GetProperty("name").GetString());
 
             var store = await Call(mcp, "create_store", new() { ["name"] = "Biocoop", ["isOrganic"] = true });
             var product = await Call(mcp, "create_product", new()
@@ -122,10 +147,11 @@ public sealed class AssistantFoodToolsTests(PostgresContainerFixture postgres)
         await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
         await using var mcp = await Connect(factory, Guid.NewGuid());
 
-        Assert.Contains("NOVA", await Error(mcp, "create_food", new() { ["name"] = "Pain", ["nova"] = 7 }));
+        Assert.Contains("NOVA", await Error(mcp, "create_food", new() { ["name"] = "Pain", ["family"] = "grain", ["nova"] = 7 }));
+        Assert.Contains("Famille", await Error(mcp, "create_food", new() { ["name"] = "Pain", ["family"] = "pain" }));
         Assert.Contains("https", await Error(mcp, "set_food_image_from_url", new()
         {
-            ["foodId"] = (await Call(mcp, "create_food", new() { ["name"] = "Pain" })).GetProperty("id").GetString(),
+            ["foodId"] = (await Call(mcp, "create_food", new() { ["name"] = "Pain", ["family"] = "grain" })).GetProperty("id").GetString(),
             ["url"] = "http://example.com/pain.jpg",
         }));
         Assert.Contains("aliment actif", await Error(mcp, "create_recipe", new()

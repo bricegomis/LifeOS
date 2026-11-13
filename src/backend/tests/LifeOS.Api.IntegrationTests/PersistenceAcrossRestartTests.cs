@@ -25,7 +25,7 @@ public sealed class PersistenceAcrossRestartTests(PostgresContainerFixture postg
 
             var createResponse = await client.PostAsJsonAsync(
                 "/api/foods",
-                new FoodRequest("Riz", "100 g", null));
+                new FoodRequest("Riz", "100 g", null, Family: "grain"));
 
             createResponse.EnsureSuccessStatusCode();
             var created = await createResponse.Content.ReadFromJsonAsync<FoodItemDto>();

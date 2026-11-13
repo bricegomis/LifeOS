@@ -27,6 +27,8 @@
   --lifeos-warning-soft: #fbedc8;
   --lifeos-warning-line: #b97a00;
   --lifeos-danger: #8f2017;
+  --lifeos-offseason: #7a3412;
+  --lifeos-offseason-soft: #f6e3d8;
   --lifeos-radius: 14px;
   --lifeos-radius-sm: 10px;
   --lifeos-shadow: 0 18px 44px rgb(68 55 35 / 10%);
@@ -113,6 +115,8 @@ select.lifeos-input, select.text-input { padding: 0 10px; }
 .filter-bar input[type="search"] { flex: 1 1 240px; width: auto; }
 .filter-bar label { display: flex; align-items: center; gap: 8px; color: var(--lifeos-text-soft); }
 .filter-bar select { width: auto; }
+.filter-bar-stacked { flex-direction: column; align-items: stretch; }
+.filter-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pill {
   min-height: 44px; padding: 0 14px; border: 1px solid var(--lifeos-line-strong); border-radius: 999px;
   background: var(--lifeos-surface); color: var(--lifeos-accent-strong); font-weight: 600;
@@ -123,6 +127,11 @@ select.lifeos-input, select.text-input { padding: 0 10px; }
 .chip { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 .chip-ok { background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); }
 .chip-todo { background: var(--lifeos-warning-soft); color: var(--lifeos-warning); }
+/* Season of a food for the current month (ADR 0012) */
+.chip-season-in { background: var(--lifeos-accent-soft); color: var(--lifeos-accent-strong); }
+.chip-season-all { background: var(--lifeos-surface-muted); color: var(--lifeos-text-soft); }
+.chip-season-out { background: var(--lifeos-offseason-soft); color: var(--lifeos-offseason); }
+.notice-offseason { padding: 10px 12px; border-radius: var(--lifeos-radius-sm); background: var(--lifeos-offseason-soft); color: var(--lifeos-offseason); font-size: 14px; font-weight: 500; }
 .tag { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--lifeos-surface-muted); font-size: 12px; font-weight: 500; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 

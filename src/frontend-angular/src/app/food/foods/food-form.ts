@@ -1,5 +1,6 @@
-import type { Fodmap, FoodDto, FoodRequest, NutritionBase, ProductDto, StoreDto } from '../food.models'
-import { formatDate, formatEuro, matches } from '../shared/format.ts'
+import type { Conservation, Fodmap, FoodDto, FoodFamily, FoodRequest, FoodRole, NutritionBase, ProductDto, StoreDto } from '../food.models'
+import { FAMILY_LABELS, MAX_TAG_LENGTH, MAX_TAGS } from '../shared/classification.ts'
+import { formatDate, formatEuro } from '../shared/format.ts'
 
 export const NUTRITION_FIELDS = [
   { key: 'caloriesPerUnit', label: 'Calories (kcal)' },
@@ -19,6 +20,11 @@ export interface FoodFormValues {
   fodmap: Fodmap | ''
   nova: string
   digestiveNotes: string
+  family: FoodFamily | ''
+  roles: FoodRole[]
+  conservation: Conservation | ''
+  seasonMonths: number[]
+  tags: string[]
 }
 
 export type FormResult<T> = { ok: true; value: T } | { ok: false; error: string }
@@ -26,6 +32,7 @@ export type FormResult<T> = { ok: true; value: T } | { ok: false; error: string 
 export function emptyFoodForm(name = ''): FoodFormValues {
   return {
     name, referenceUnit: '', fodmap: '', nova: '', digestiveNotes: '',
+    family: '', roles: [], conservation: '', seasonMonths: [], tags: [],
     nutrition: { caloriesPerUnit: '', proteinsPerUnit: '', carbsPerUnit: '', fatsPerUnit: '', fibersPerUnit: '' },
   }
 }
@@ -43,6 +50,11 @@ export function foodFormFrom(food: FoodDto): FoodFormValues {
     fodmap: food.fodmap ?? '',
     nova: food.nova === null ? '' : String(food.nova),
     digestiveNotes: food.digestiveNotes ?? '',
+    family: food.family ?? '',
+    roles: [...(food.roles ?? [])],
+    conservation: food.conservation ?? '',
+    seasonMonths: [...(food.seasonMonths ?? [])],
+    tags: [...(food.tags ?? [])],
   }
 }
 
@@ -57,6 +69,10 @@ export function parseOptionalNumber(text: string): number | null {
 export function buildFoodRequest(values: FoodFormValues): FormResult<FoodRequest> {
   const name = values.name.trim()
   if (!name || name.length > 200) return { ok: false, error: 'Nom requis (200 caractères maximum).' }
+  if (!values.family || !(values.family in FAMILY_LABELS)) return { ok: false, error: 'Choisissez la famille de l’aliment.' }
+  const tags = values.tags.map(tag => tag.trim()).filter(Boolean)
+  if (tags.length > MAX_TAGS) return { ok: false, error: `${MAX_TAGS} étiquettes au plus.` }
+  if (tags.some(tag => tag.length > MAX_TAG_LENGTH)) return { ok: false, error: `Une étiquette fait au plus ${MAX_TAG_LENGTH} caractères.` }
   const nutrition = {} as Record<NutritionKey, number | null>
   for (const field of NUTRITION_FIELDS) {
     const value = parseOptionalNumber(values.nutrition[field.key])
@@ -70,15 +86,10 @@ export function buildFoodRequest(values: FoodFormValues): FormResult<FoodRequest
     value: {
       name, referenceUnit: values.referenceUnit, nutrition, fodmap: values.fodmap || null, nova,
       digestiveNotes: values.digestiveNotes.trim() || null,
+      family: values.family, roles: [...values.roles], conservation: values.conservation || null,
+      seasonMonths: [...values.seasonMonths].sort((a, b) => a - b), tags,
     },
   }
-}
-
-export type FoodFilter = 'all' | 'todo'
-
-export function visibleFoods(foods: readonly FoodDto[], search: string, filter: FoodFilter): FoodDto[] {
-  return foods.filter(food => !food.isArchived && matches(food.name, search)
-    && (filter === 'all' || food.missingFields.length > 0))
 }
 
 export interface FoodPriceLine {

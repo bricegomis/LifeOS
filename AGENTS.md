@@ -16,6 +16,7 @@
 - Read relevant documentation: `docs/PROJECT.md` (current state), `docs/01-roadmap.md`
   (step order), ADR 0006/0007 (current model), ADR 0010 (step 1 target food model),
   ADR 0011 (step 1 bis: MCP assistant, own OAuth server replacing Supabase),
+  ADR 0012 (food classification: family, roles, conservation, season, tags),
   ADR 0009 (target architecture and module boundary rules).
 - Prefer simple implementations; no unnecessary dependencies or speculative features.
 - Preserve household isolation and historical snapshots, IDs, aliases, sources and prices.

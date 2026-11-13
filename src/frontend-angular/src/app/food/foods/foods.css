@@ -1,5 +1,7 @@
-.foods-grid { grid-template-columns: 48px minmax(0, 2fr) 1fr 1fr 1fr 70px 130px; min-width: 700px; }
+.foods-grid { grid-template-columns: 48px minmax(0, 2fr) 1.4fr 110px 90px 80px 56px 120px; min-width: 880px; }
 .food-name { font-weight: 500; }
+.food-name-cell { display: flex; min-width: 0; flex-direction: column; }
+.filter-select { flex: 1 1 180px; }
 .food-hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; }
 .food-hero-text { display: flex; flex: 1 1 320px; min-width: 0; flex-direction: column; align-items: flex-start; gap: 10px; }
 .food-hero-text h1 { font-size: 30px; }
@@ -10,8 +12,27 @@
 .price-amount { font-weight: 600; white-space: nowrap; }
 .prices-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
 .prices-header h2 { margin-bottom: 4px; }
+.food-form { display: flex; flex-direction: column; gap: inherit; }
+.class-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 16px 0 0; padding: 0; border: 0; }
+.class-group legend { margin-bottom: 8px; padding: 0; color: var(--lifeos-text-soft); font-size: 13px; font-weight: 500; }
+.class-legend-row { display: flex; width: 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.month-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.month-toggle {
+  min-height: 44px; padding: 0 6px; border: 1px solid var(--lifeos-line-strong); border-radius: var(--lifeos-radius-sm);
+  background: var(--lifeos-surface); color: var(--lifeos-accent-strong); font-weight: 600;
+}
+.month-toggle[aria-pressed="true"] { border-color: var(--lifeos-accent); background: var(--lifeos-accent); color: var(--lifeos-surface); }
+.month-toggle.is-current { box-shadow: 0 0 0 2px var(--lifeos-offseason); }
+.tag-removable { display: inline-flex; align-items: center; padding-right: 0; font-size: 14px; }
+.tag-remove { min-width: 44px; min-height: 44px; border: 0; background: transparent; color: var(--lifeos-text-soft); font-size: 18px; }
+.tag-input { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-input input { flex: 1 1 200px; width: auto; }
+.pill-suggestion { border-style: dashed; font-weight: 500; }
+.class-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--lifeos-line); }
+.class-row span:last-child { font-weight: 500; text-align: right; }
 .form-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; }
 @media (max-width: 760px) {
   .foods-grid { grid-template-columns: 44px minmax(0, 1fr) auto auto; min-width: 0; }
+  .filter-select { flex-basis: 140px; }
   .food-hero-text h1 { font-size: 24px; }
 }

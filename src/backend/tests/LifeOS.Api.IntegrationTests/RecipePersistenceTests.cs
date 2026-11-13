@@ -17,7 +17,7 @@ public sealed class RecipePersistenceTests(PostgresContainerFixture postgres)
             using var client = factory.CreateClient().AsUser(userA);
             using var otherHousehold = factory.CreateClient().AsUser(Guid.NewGuid());
             var foodResponse = await client.PostAsJsonAsync("/api/foods",
-                new { name = "Lentilles", referenceUnit = "100 g", nutrition = (object?)null });
+                new { name = "Lentilles", family = "legume", referenceUnit = "100 g", nutrition = (object?)null });
             foodResponse.EnsureSuccessStatusCode();
             var food = (await foodResponse.Content.ReadFromJsonAsync<FoodItemDto>())!;
             var recipeResponse = await client.PostAsJsonAsync("/api/recipes",

@@ -27,14 +27,40 @@ public sealed class FoodsAndProductsTests(PostgresContainerFixture postgres)
         using var a = factory.CreateClient().AsUser(Guid.NewGuid());
         using var b = factory.CreateClient().AsUser(Guid.NewGuid());
         var food = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Riz", "100 g",
-            new NutritionDto { CaloriesPerUnit = 150, ProteinsPerUnit = 3, CarbsPerUnit = 30, FatsPerUnit = 1, FibersPerUnit = 1.4 }));
+            new NutritionDto { CaloriesPerUnit = 150, ProteinsPerUnit = 3, CarbsPerUnit = 30, FatsPerUnit = 1, FibersPerUnit = 1.4 }, Family: "grain"));
         Assert.Equal(1.4, food.Nutrition!.FibersPerUnit);
         var recipe = await Post<RecipeDto>(a, "/api/recipes", new CreateRecipeRequest("Bol", 2, 10));
         await Post<RecipeDto>(a, $"/api/recipes/{recipe.Id}/ingredients", new AddRecipeIngredientRequest(food.Id, 200, "g"));
-        Assert.Equal(HttpStatusCode.BadRequest, (await a.PostAsJsonAsync("/api/foods", new FoodRequest("Riz", "100g", null))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.PostAsJsonAsync("/api/foods", new FoodRequest("Riz", "100g", null, Family: "grain"))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await b.DeleteAsync($"/api/foods/{food.Id}")).StatusCode);
         (await a.DeleteAsync($"/api/foods/{food.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.BadRequest, (await a.PostAsJsonAsync($"/api/recipes/{recipe.Id}/ingredients", new AddRecipeIngredientRequest(food.Id, 1, "g"))).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_food_needs_a_family_and_keeps_its_classification()
+    {
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        using var a = factory.CreateClient().AsUser(Guid.NewGuid());
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.PostAsJsonAsync("/api/foods", new { name = "Tofu", referenceUnit = "100 g" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.PostAsJsonAsync("/api/foods", new FoodRequest("Tofu", "100 g", null, Family: "soja"))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.PostAsJsonAsync("/api/foods",
+            new FoodRequest("Tofu", "100 g", null, Family: "legume", SeasonMonths: [13]))).StatusCode);
+
+        var tofu = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Tofu", "100 g", null, Family: "legume",
+            Roles: ["protein"], Conservation: "fresh", Tags: ["wok", "WOK", "apéro"]));
+        Assert.Equal("legume", tofu.Family);
+        Assert.Equal(["protein"], tofu.Roles);
+        Assert.Equal(["wok", "apéro"], tofu.Tags);
+        Assert.Empty(tofu.SeasonMonths);
+
+        var updated = await Send<FoodItemDto>(a, HttpMethod.Put, $"/api/foods/{tofu.Id}", new FoodRequest("Tofu fumé", "100 g", null,
+            Family: "legume", Roles: ["protein", "fat"], Conservation: "frozen", SeasonMonths: [12, 1]));
+        var reloaded = (await a.GetFromJsonAsync<FoodItemDto>($"/api/foods/{updated.Id}"))!;
+        Assert.Equal(["protein", "fat"], reloaded.Roles);
+        Assert.Equal("frozen", reloaded.Conservation);
+        Assert.Equal([1, 12], reloaded.SeasonMonths);
+        Assert.Empty(reloaded.Tags);
     }
 
     [Fact]
@@ -43,7 +69,7 @@ public sealed class FoodsAndProductsTests(PostgresContainerFixture postgres)
         await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
         using var a = factory.CreateClient().AsUser(Guid.NewGuid());
         using var b = factory.CreateClient().AsUser(Guid.NewGuid());
-        var food = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Lait de coco", "100 ml", null));
+        var food = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Lait de coco", "100 ml", null, Family: "dairy"));
         var request = new ProductRequest(food.Id, "Lait de coco 400 ml", 400, "ml", "Marque");
         var first = await Post<ProductDto>(a, "/api/products", request);
         var second = await Post<ProductDto>(a, "/api/products", request);
@@ -66,7 +92,7 @@ public sealed class FoodsAndProductsTests(PostgresContainerFixture postgres)
         await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
         using var a = factory.CreateClient().AsUser(Guid.NewGuid());
         using var b = factory.CreateClient().AsUser(Guid.NewGuid());
-        var food = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Emmental râpé", "100 g", null));
+        var food = await Post<FoodItemDto>(a, "/api/foods", new FoodRequest("Emmental râpé", "100 g", null, Family: "dairy"));
         var leclerc = await Post<StoreDto>(a, "/api/stores", new StoreRequest("Leclerc", "", false, false));
         var foreignStore = await Post<StoreDto>(b, "/api/stores", new StoreRequest("Autre", "", false, false));
         var product = await Post<ProductDto>(a, "/api/products", new ProductRequest(food.Id, "Emmental 400 g", 400, "g"));

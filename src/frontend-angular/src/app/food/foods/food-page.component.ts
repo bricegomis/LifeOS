@@ -8,7 +8,11 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
 import { ReviewDraftsService } from '@/app/shared/reviews/review-drafts.service'
 import { FoodApiService } from '../food-api.service'
-import type { FoodDto, ProductDto, StoreDto } from '../food.models'
+import type { FoodDto, FoodRole, ProductDto, StoreDto } from '../food.models'
+import {
+  addTag, CONSERVATION_LABELS, conservationOptions, currentMonth, familyLabel, familyOptions, householdTags, MAX_TAG_LENGTH,
+  MONTH_NAMES, MONTH_SHORT, ROLE_LABELS, roleOptions, seasonRangeLabel, seasonStatus,
+} from '../shared/classification'
 import { FoodImageComponent } from '../shared/food-image.component'
 import { FODMAP_LABELS, NOVA_LABELS } from '../shared/format'
 import { buildFoodRequest, emptyFoodForm, foodFormFrom, foodPriceSummary, type FoodFormValues, NUTRITION_FIELDS } from './food-form'
@@ -42,6 +46,17 @@ export class FoodPageComponent implements OnInit {
   readonly imageBusy = signal(false)
   form: FoodFormValues = emptyFoodForm()
   private initial = formSnapshot(this.form)
+  /** Tags of the other foods of the household, offered as suggestions. */
+  readonly knownTags = signal<string[]>([])
+  tagDraft = ''
+
+  readonly month = currentMonth()
+  readonly monthName = MONTH_NAMES[this.month - 1]
+  readonly months = MONTH_SHORT.map((label, index) => ({ value: index + 1, label, name: MONTH_NAMES[index] }))
+  readonly familyOptions = familyOptions
+  readonly roleOptions = roleOptions
+  readonly conservationOptions = conservationOptions
+  readonly maxTagLength = MAX_TAG_LENGTH
 
   readonly fields = NUTRITION_FIELDS
   readonly fodmapOptions = Object.entries(FODMAP_LABELS)
@@ -55,12 +70,14 @@ export class FoodPageComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [food, products, stores, profiles] = await Promise.all([
+      const [food, products, stores, profiles, foods] = await Promise.all([
         firstValueFrom(this.api.food(this.id())),
         firstValueFrom(this.api.products(this.id())),
         firstValueFrom(this.api.stores()),
         firstValueFrom(this.api.profiles()),
+        firstValueFrom(this.api.foods()),
       ])
+      this.knownTags.set(householdTags(foods.filter(other => !other.isArchived)))
       this.show(food)
       this.products.set(products)
       this.stores.set(stores)
@@ -85,6 +102,50 @@ export class FoodPageComponent implements OnInit {
   }
 
   isMissing(text: string): boolean { return !text.trim() }
+
+  hasRole(role: FoodRole): boolean { return this.form.roles.includes(role) }
+
+  toggleRole(role: FoodRole): void {
+    const roles = this.hasRole(role) ? this.form.roles.filter(r => r !== role) : [...this.form.roles, role]
+    this.form.roles = roleOptions.map(([code]) => code).filter(code => roles.includes(code))
+  }
+
+  hasMonth(month: number): boolean { return this.form.seasonMonths.includes(month) }
+
+  toggleMonth(month: number): void {
+    this.form.seasonMonths = this.hasMonth(month)
+      ? this.form.seasonMonths.filter(m => m !== month)
+      : [...this.form.seasonMonths, month].sort((a, b) => a - b)
+  }
+
+  /** Season of the form being edited, for the current month. */
+  seasonNow(): { kind: string; text: string } {
+    const status = seasonStatus(this.form.seasonMonths, this.month)
+    return { kind: status.kind, text: status.kind === 'all' ? 'Pas saisonnier : disponible toute l’année' : `${status.label} en ${this.monthName}` }
+  }
+
+  addTag(typed = this.tagDraft): void {
+    this.form.tags = addTag(this.form.tags, typed, this.knownTags())
+    this.tagDraft = ''
+  }
+
+  removeTag(tag: string): void { this.form.tags = this.form.tags.filter(t => t !== tag) }
+
+  suggestions(): string[] {
+    const used = new Set(this.form.tags.map(tag => tag.toLocaleLowerCase('fr')))
+    return this.knownTags().filter(tag => !used.has(tag.toLocaleLowerCase('fr')))
+  }
+
+  /** Read-only summary for the phone, from the saved food. */
+  classRows(food: FoodDto): { label: string; value: string }[] {
+    return [
+      { label: 'Famille', value: familyLabel(food.family) },
+      { label: 'Rôles', value: food.roles.map(role => ROLE_LABELS[role]).join(', ') || '—' },
+      { label: 'Conservation', value: food.conservation ? CONSERVATION_LABELS[food.conservation] : 'Non précisée' },
+      { label: 'Saison', value: seasonRangeLabel(food.seasonMonths) },
+      { label: 'Étiquettes', value: food.tags.join(', ') || '—' },
+    ]
+  }
 
   async save(): Promise<void> {
     const food = this.food()

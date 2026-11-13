@@ -20,7 +20,7 @@ public sealed class FoodImagesTests(PostgresContainerFixture postgres)
             using var client = factory.CreateClient().AsUser(Guid.NewGuid());
             using var other = factory.CreateClient().AsUser(Guid.NewGuid());
 
-            using var create = await client.PostAsJsonAsync("/api/foods", new FoodRequest("Carotte", "", null));
+            using var create = await client.PostAsJsonAsync("/api/foods", new FoodRequest("Carotte", "", null, Family: "vegetable"));
             create.EnsureSuccessStatusCode();
             var food = await create.Content.ReadFromJsonAsync<JsonElement>();
             var foodId = food.GetProperty("id").GetGuid();
@@ -39,7 +39,7 @@ public sealed class FoodImagesTests(PostgresContainerFixture postgres)
             Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/foods/{foodId}/image")).StatusCode);
 
             using var update = await client.PutAsJsonAsync($"/api/foods/{foodId}",
-                new FoodRequest("Carotte orange", "", null));
+                new FoodRequest("Carotte orange", "", null, Family: "vegetable"));
             update.EnsureSuccessStatusCode();
             Assert.True((await update.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("hasImage").GetBoolean());
 
@@ -72,7 +72,7 @@ public sealed class FoodImagesTests(PostgresContainerFixture postgres)
         {
             await using var factory = new LifeOSApiFactory(postgres.ConnectionString, foodImageStoragePath: storagePath);
             using var client = factory.CreateClient().AsUser(Guid.NewGuid());
-            using var create = await client.PostAsJsonAsync("/api/foods", new FoodRequest("Poire", "", null));
+            using var create = await client.PostAsJsonAsync("/api/foods", new FoodRequest("Poire", "", null, Family: "fruit"));
             create.EnsureSuccessStatusCode();
             var food = await create.Content.ReadFromJsonAsync<JsonElement>();
 

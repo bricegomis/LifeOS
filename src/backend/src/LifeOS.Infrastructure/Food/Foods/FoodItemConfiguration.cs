@@ -14,6 +14,11 @@ internal sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
             t.HasCheckConstraint("ck_food_reference_unit", "reference_unit IN ('', '100 g', '100 ml', '1 pièce')");
             t.HasCheckConstraint("ck_food_fodmap", "fodmap IS NULL OR fodmap IN ('low', 'moderate', 'high')");
             t.HasCheckConstraint("ck_food_nova", "nova IS NULL OR nova BETWEEN 1 AND 4");
+            t.HasCheckConstraint("ck_food_family", $"family IN ({SqlList(FoodClassification.Families.Keys)})");
+            t.HasCheckConstraint("ck_food_roles", $"roles <@ ARRAY[{SqlList(FoodClassification.Roles.Keys)}]::text[]");
+            t.HasCheckConstraint("ck_food_conservation",
+                $"conservation IS NULL OR conservation IN ({SqlList(FoodClassification.Conservations.Keys)})");
+            t.HasCheckConstraint("ck_food_season_months", "season_months <@ ARRAY[1,2,3,4,5,6,7,8,9,10,11,12]");
         });
         b.HasKey(f => f.Id);
         b.Property(f => f.Id).HasColumnName("id").ValueGeneratedNever();
@@ -24,6 +29,11 @@ internal sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
         b.Property(f => f.Fodmap).HasColumnName("fodmap").HasMaxLength(10);
         b.Property(f => f.Nova).HasColumnName("nova");
         b.Property(f => f.DigestiveNotes).HasColumnName("digestive_notes").HasMaxLength(2000);
+        b.Property(f => f.Family).HasColumnName("family").HasMaxLength(20).IsRequired();
+        b.Property(f => f.Roles).HasColumnName("roles").IsRequired();
+        b.Property(f => f.Conservation).HasColumnName("conservation").HasMaxLength(10);
+        b.Property(f => f.SeasonMonths).HasColumnName("season_months").IsRequired();
+        b.Property(f => f.Tags).HasColumnName("tags").IsRequired();
         b.Property(f => f.ImagePath).HasColumnName("image_path").HasMaxLength(500);
         b.Property(f => f.ImageContentType).HasColumnName("image_content_type").HasMaxLength(100);
         b.Property(f => f.IsArchived).HasColumnName("is_archived");
@@ -42,4 +52,6 @@ internal sealed class FoodItemConfiguration : IEntityTypeConfiguration<FoodItem>
         b.HasOne<Household>().WithMany().HasForeignKey(f => f.HouseholdId).OnDelete(DeleteBehavior.Cascade);
         b.HasIndex(f => f.HouseholdId);
     }
+
+    private static string SqlList(IEnumerable<string> codes) => string.Join(", ", codes.Select(c => $"'{c}'"));
 }

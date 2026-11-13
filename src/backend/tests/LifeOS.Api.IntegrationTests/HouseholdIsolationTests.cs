@@ -54,7 +54,7 @@ public sealed class HouseholdIsolationTests(PostgresContainerFixture postgres) :
 
         var createResponse = await clientA.PostAsJsonAsync(
             "/api/foods",
-            new FoodRequest("Lait", "100 ml", null));
+            new FoodRequest("Lait", "100 ml", null, Family: "dairy"));
 
         createResponse.EnsureSuccessStatusCode();
         var createdArticle = await createResponse.Content.ReadFromJsonAsync<FoodItemDto>();
@@ -70,7 +70,7 @@ public sealed class HouseholdIsolationTests(PostgresContainerFixture postgres) :
         // Household B cannot fetch/update/delete household A's article directly by id either.
         var getByIdForB = await clientB.PutAsJsonAsync(
             $"/api/foods/{createdArticle!.Id}",
-            new FoodRequest("Hack", "", null));
+            new FoodRequest("Hack", "", null, Family: "other"));
         Assert.Equal(HttpStatusCode.NotFound, getByIdForB.StatusCode);
 
         var deleteForB = await clientB.DeleteAsync($"/api/foods/{createdArticle.Id}");
