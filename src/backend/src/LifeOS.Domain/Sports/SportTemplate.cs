@@ -2,6 +2,10 @@ using LifeOS.Domain.Common;
 
 namespace LifeOS.Domain.Sports;
 
+/// <summary>
+/// A reusable session (ADR 0013): its values are copied into a logged session, which keeps its
+/// own values. Editing a template never rewrites past sessions; templates are archived, not deleted.
+/// </summary>
 public sealed class SportTemplate : Entity
 {
     public Guid HouseholdId { get; private set; }
@@ -9,43 +13,30 @@ public sealed class SportTemplate : Entity
     public string Sport { get; private set; } = "";
     public int DurationMinutes { get; private set; }
     public decimal? DistanceKm { get; private set; }
-    public string Intensity { get; private set; } = "";
-    public decimal Calories { get; private set; }
+    /// <summary>Suggested calories, typed by hand; copied into the session, never computed.</summary>
+    public int Calories { get; private set; }
     public bool IsArchived { get; private set; }
 
     private SportTemplate() { }
 
     public static SportTemplate Create(Guid householdId, string name, string sport, int durationMinutes,
-        decimal? distanceKm, string intensity, decimal calories)
+        decimal? distanceKm, int calories)
     {
         if (householdId == Guid.Empty) throw new ArgumentException("Foyer obligatoire.");
         var template = new SportTemplate { Id = Guid.NewGuid(), HouseholdId = householdId };
-        template.Update(name, sport, durationMinutes, distanceKm, intensity, calories);
+        template.Update(name, sport, durationMinutes, distanceKm, calories);
         return template;
     }
 
-    public static void Validate(string name, string sport, int durationMinutes, decimal? distanceKm,
-        string intensity, decimal calories)
+    public void Update(string name, string sport, int durationMinutes, decimal? distanceKm, int calories)
     {
-        if (string.IsNullOrWhiteSpace(name) || name.Length > 200
-            || string.IsNullOrWhiteSpace(sport) || sport.Length > 50)
-            throw new ArgumentException("Nom et sport obligatoires (200 / 50 caractères maximum).");
-        if (durationMinutes <= 0 || durationMinutes > 1440) throw new ArgumentException("Durée : 1 à 1440 minutes.");
-        if (distanceKm < 0 || distanceKm > 1000000 || calories < 0 || calories > 10000000)
-            throw new ArgumentException("Distance entre 0 et 1000000 km ; calories entre 0 et 10000000 kcal.");
-        if (intensity is not ("low" or "moderate" or "high")) throw new ArgumentException("Intensité : low, moderate ou high.");
-    }
-
-    public void Update(string name, string sport, int durationMinutes, decimal? distanceKm,
-        string intensity, decimal calories)
-    {
-        Validate(name, sport, durationMinutes, distanceKm, intensity, calories);
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 200)
+            throw new ArgumentException("Nom obligatoire (200 caractères maximum).");
+        Sport = SportCatalog.Require(sport);
         Name = name.Trim();
-        Sport = sport.Trim();
-        DurationMinutes = durationMinutes;
-        DistanceKm = distanceKm;
-        Intensity = intensity;
-        Calories = calories;
+        DurationMinutes = SportCatalog.CheckDuration(durationMinutes);
+        DistanceKm = SportCatalog.CheckDistance(Sport, distanceKm);
+        Calories = SportCatalog.CheckCalories(calories) ?? 0;
     }
 
     public void Archive() => IsArchived = true;

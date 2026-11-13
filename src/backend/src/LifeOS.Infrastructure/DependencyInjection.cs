@@ -3,12 +3,14 @@ using LifeOS.Application.Food.Costs;
 using LifeOS.Application.Food.Products;
 using LifeOS.Application.Food.Receipts;
 using LifeOS.Application.Households;
+using LifeOS.Application.Sports.Contracts;
 using LifeOS.Infrastructure.Food.Costs;
 using LifeOS.Infrastructure.Food.Files;
 using LifeOS.Infrastructure.Food.Products;
 using LifeOS.Infrastructure.Food.Receipts;
 using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Persistence;
+using LifeOS.Infrastructure.Sports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +50,10 @@ public static class DependencyInjection
         services.AddScoped<IReceiptData, EfReceiptData>();
         services.AddScoped<ReceiptUseCases>();
         services.AddSingleton<IReceiptPhotoFiles>(sp => sp.GetRequiredService<ReceiptPhotoStorage>());
+
+        // Sport module: published read contract (ADR 0013)
+        services.AddScoped<ISportReadData, EfSportReadData>();
+        services.AddScoped<SportReadContract>();
 
         // Food module files
         services.Configure<FoodImageStorageOptions>(configuration.GetSection("FoodImages"));

@@ -36,6 +36,10 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
 
     // Sports module
     public DbSet<SportTemplate> SportTemplates => Set<SportTemplate>();
+    public DbSet<SportSession> SportSessions => Set<SportSession>();
+    public DbSet<WeeklyGoal> WeeklyGoals => Set<WeeklyGoal>();
+    public DbSet<DailyChallenge> DailyChallenges => Set<DailyChallenge>();
+    public DbSet<ChallengeEntry> ChallengeEntries => Set<ChallengeEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

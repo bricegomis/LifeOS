@@ -639,29 +639,173 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("users", "households");
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Sports.ChallengeEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ChallengeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("LoggedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChallengeId", "Date");
+
+                    b.HasIndex("ChallengeId", "HouseholdId");
+
+                    b.ToTable("challenge_entries", "sports", t =>
+                        {
+                            t.HasCheckConstraint("ck_challenge_entry_quantity", "\"Quantity\" > 0 AND \"Quantity\" <= 10000");
+                        });
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.DailyChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateOnly>("StartedOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("StoppedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "MemberProfileId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.ToTable("daily_challenges", "sports", t =>
+                        {
+                            t.HasCheckConstraint("ck_daily_challenge_period", "\"StoppedOn\" IS NULL OR \"StoppedOn\" >= \"StartedOn\"");
+
+                            t.HasCheckConstraint("ck_daily_challenge_unit", "\"Unit\" IN ('reps', 'minutes')");
+                        });
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.SportSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AverageHeartRate")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Calories")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<decimal?>("DistanceKm")
+                        .HasPrecision(8, 3)
+                        .HasColumnType("numeric(8,3)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Feeling")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("MaxHeartRate")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("Sport")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.HasIndex("TemplateId", "HouseholdId");
+
+                    b.HasIndex("HouseholdId", "MemberProfileId", "Date");
+
+                    b.ToTable("sport_sessions", "sports", t =>
+                        {
+                            t.HasCheckConstraint("ck_sport_session_duration", "\"DurationMinutes\" > 0 AND \"DurationMinutes\" <= 1440");
+
+                            t.HasCheckConstraint("ck_sport_session_source", "\"Source\" IN ('manual')");
+
+                            t.HasCheckConstraint("ck_sport_session_sport", "\"Sport\" IN ('running', 'walking', 'hiking', 'cycling', 'swimming', 'strength', 'crossfit', 'bodyweight', 'mobility', 'team_sport', 'racket', 'other')");
+
+                            t.HasCheckConstraint("ck_sport_session_values", "(\"Calories\" IS NULL OR \"Calories\" >= 0) AND (\"DistanceKm\" IS NULL OR \"DistanceKm\" >= 0) AND (\"Feeling\" IS NULL OR (\"Feeling\" >= 1 AND \"Feeling\" <= 10))");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Sports.SportTemplate", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("Calories")
-                        .HasPrecision(12, 2)
-                        .HasColumnType("numeric(12,2)");
+                    b.Property<int>("Calories")
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("DistanceKm")
-                        .HasPrecision(12, 3)
-                        .HasColumnType("numeric(12,3)");
+                        .HasPrecision(8, 3)
+                        .HasColumnType("numeric(8,3)");
 
                     b.Property<int>("DurationMinutes")
                         .HasColumnType("integer");
 
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Intensity")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
 
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
@@ -673,8 +817,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Sport")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
 
                     b.HasKey("Id");
 
@@ -684,7 +828,64 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_sport_duration", "\"DurationMinutes\" > 0 AND \"DurationMinutes\" <= 1440");
 
+                            t.HasCheckConstraint("ck_sport_template_sport", "\"Sport\" IN ('running', 'walking', 'hiking', 'cycling', 'swimming', 'strength', 'crossfit', 'bodyweight', 'mobility', 'team_sport', 'racket', 'other')");
+
                             t.HasCheckConstraint("ck_sport_values", "\"Calories\" >= 0 AND (\"DistanceKm\" IS NULL OR \"DistanceKm\" >= 0)");
+                        });
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.WeeklyGoal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sport")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<decimal>("Target")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Unit")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidUntil")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "MemberProfileId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.HasIndex("TemplateId", "HouseholdId");
+
+                    b.ToTable("weekly_goals", "sports", t =>
+                        {
+                            t.HasCheckConstraint("ck_weekly_goal_kind", "(\"Kind\" = 'template' AND \"TemplateId\" IS NOT NULL) OR (\"Kind\" = 'sport' AND \"Sport\" IN ('running', 'walking', 'hiking', 'cycling', 'swimming', 'strength', 'crossfit', 'bodyweight', 'mobility', 'team_sport', 'racket', 'other')) OR \"Kind\" = 'sessions' OR (\"Kind\" = 'volume' AND \"Unit\" IN ('kcal', 'km', 'hours'))");
+
+                            t.HasCheckConstraint("ck_weekly_goal_period", "\"ValidUntil\" IS NULL OR \"ValidUntil\" > \"ValidFrom\"");
+
+                            t.HasCheckConstraint("ck_weekly_goal_target", "\"Target\" > 0");
                         });
                 });
 
@@ -1093,6 +1294,83 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Sports.ChallengeEntry", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Sports.DailyChallenge", null)
+                        .WithMany()
+                        .HasForeignKey("ChallengeId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.DailyChallenge", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("LifeOS.Domain.Sports.ChallengeRule", "Rules", b1 =>
+                        {
+                            b1.Property<Guid>("ChallengeId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateOnly>("ValidFrom")
+                                .HasColumnType("date");
+
+                            b1.Property<int>("DailyTarget")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("JokersPerWeek")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("ChallengeId", "ValidFrom");
+
+                            b1.ToTable("daily_challenge_rules", "sports", t =>
+                                {
+                                    t.HasCheckConstraint("ck_challenge_rule_jokers", "\"JokersPerWeek\" >= 0 AND \"JokersPerWeek\" <= 2");
+
+                                    t.HasCheckConstraint("ck_challenge_rule_target", "\"DailyTarget\" > 0");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("ChallengeId");
+                        });
+
+                    b.Navigation("Rules");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.SportSession", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Sports.SportTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Sports.SportTemplate", b =>
                 {
                     b.HasOne("LifeOS.Domain.Households.Household", null)
@@ -1100,6 +1378,28 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasForeignKey("HouseholdId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.WeeklyGoal", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Sports.SportTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreAuthorization<System.Guid>", b =>

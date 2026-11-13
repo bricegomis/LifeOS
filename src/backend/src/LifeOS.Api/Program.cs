@@ -22,6 +22,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddFoodLibraries();
+builder.Services.AddSportLibraries();
 
 builder.AddLifeOSAuthentication();
 builder.AddLifeOSAssistant();
@@ -107,7 +108,7 @@ app.MapStoresEndpoints();
 app.MapProductsEndpoints();
 app.MapReceiptsEndpoints();
 // Sports module
-app.MapSportTemplatesEndpoints();
+app.MapSportEndpoints();
 
 app.Run();
 
