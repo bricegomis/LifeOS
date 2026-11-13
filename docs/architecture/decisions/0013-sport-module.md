@@ -1,9 +1,9 @@
 # ADR 0013 — Module Sport : séances, objectifs de la semaine et défis du jour
 
-Statut : accepté, 2026-11-13. Cadrage de l'étape 2 de la [roadmap](../../01-roadmap.md).
+Statut : accepté et livré, 2026-11-13. Cadrage de l'étape 2 de la [roadmap](../../01-roadmap.md).
 Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md) (module Sport,
 schéma `sport`) et l'[ADR 0011](0011-conversational-assistant-mcp.md) (outils de
-l'assistant). Maquette à valider avant tout code.
+l'assistant). Maquette validée le 2026-11-13 (canevas des maquettes, rangée « Étape 2 — Sport »).
 
 ## Contexte
 
@@ -22,7 +22,8 @@ tractions, dos, mobilité).
 Le module couvre trois choses, utilisables sans semainier : les **séances réalisées**,
 les **objectifs de la semaine** et les **défis du jour**. Tout porte un profil ; seul
 l'utilisateur principal est affiché à cette étape, ouvrir les autres profils ne
-demandera pas de migration.
+demandera pas de migration. Sans profil précisé, l'API et l'assistant utilisent le
+profil principal du foyer, son premier profil.
 
 ### Séances réalisées
 
@@ -41,9 +42,11 @@ maximale, notes. Elle porte aussi sa source, `manual` seulement pour l'instant.
   score). Pas de bibliothèque d'exercices ni de format AMRAP / EMOM à cette étape ;
   ils viendront dans un lot suivant si l'usage le demande.
 - **Sport : liste fixe** de codes stables, libellés français à l'écran, comme les
-  familles d'aliments (ADR 0012). Proposition à valider avec la maquette : course,
-  marche, randonnée, vélo, natation, musculation, crossfit, renforcement, mobilité,
-  sport collectif, sport de raquette, autre. Une liste fixe est nécessaire pour
+  familles d'aliments (ADR 0012) : `running` (Course), `walking` (Marche), `hiking`
+  (Randonnée), `cycling` (Vélo), `swimming` (Natation), `strength` (Musculation),
+  `crossfit`, `bodyweight` (Renforcement), `mobility` (Mobilité), `team_sport` (Sport
+  collectif), `racket` (Sport de raquette), `other` (Autre). Seuls les cinq premiers
+  acceptent une distance. Une liste fixe est nécessaire pour
   les objectifs par sport et pour le futur semainier.
 - **Pas d'heure obligatoire** : la date suffit. Les jours sont ceux de
   l'Europe/Paris ; la semaine va du lundi au dimanche.
@@ -84,8 +87,8 @@ par jour et un nombre de jokers par semaine (0 à 2).
 Gamification, toute calculée à la lecture :
 
 - **Série** : nombre de jours d'affilée où la cible est atteinte, avec le record.
-  Un jour manqué est couvert par un joker s'il en reste dans sa semaine ; sinon la
-  série repart à zéro. Le jour en cours ne casse jamais la série avant minuit.
+  Un jour manqué est couvert par un joker s'il en reste dans sa semaine : la série
+  continue sans compter ce jour. Sinon la série repart à zéro. Le jour en cours ne casse jamais la série avant minuit.
 - **Calendrier** : une case par jour, colorée selon le pourcentage de la cible
   atteint (0, moins de 50 %, moins de 100 %, atteint, joker).
 - **Totaux et paliers** : cumul depuis le début et sur l'année (« 12 400 pompes en
@@ -104,7 +107,11 @@ Gamification, toute calculée à la lecture :
 - **Progression** : par semaine, calories, nombre de séances, distance et durée,
   avec l'atteinte des objectifs ; par défi, calendrier, série, record, totaux et
   paliers.
-- **Réglages du sport** : séances types, objectifs, défis.
+- **Réglages du sport** : séances types (créées et modifiées sur ordinateur),
+  objectifs, défis.
+
+Sur téléphone, le Sport garde un seul onglet et ses quatre pages ont des sous-onglets ;
+sur ordinateur, le bloc Sport du menu les liste.
 
 ### Assistant
 
@@ -136,8 +143,8 @@ du jour.
   entrées de défi, toutes filtrées par foyer, avec des références composites vers
   le foyer et le profil.
 - La séance type passe à la liste fixe de sports. Les séances types existantes ne
-  peuvent pas être rattachées par leur nom : la migration les supprime, à confirmer
-  par l'utilisateur avant d'écrire la migration.
+  peuvent pas être rattachées par leur nom : la migration `SportModule` les supprime
+  (accord de l'utilisateur, 2026-11-13).
 - L'intensité de la séance type est retirée, car le ressenti de la séance réalisée
   la remplace.
 - Ajouter un sport demande une migration et la mise à jour des listes du domaine, du

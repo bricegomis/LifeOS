@@ -7,7 +7,7 @@
   (minimal API endpoints, DTOs, validation, auth, error handling).
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
-  templates). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  templates, logged sessions, weekly goals, daily challenges; ADR 0013). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -26,6 +26,11 @@
   durable volumes (`Infrastructure/Food/Files`), only served through authenticated,
   household-checked routes.
 - A receipt is only a stored photo (ADR 0010): no OCR, no lines, no purchases.
+- Sport (ADR 0013): every row carries a household profile (`SportProfiles` resolves the
+  main one, the household's first profile, when none is given). Reports are computed on
+  read by the published contract `Application/Sports/Contracts/SportReadContract`
+  (week reports, challenge streaks with jokers, sport days); "today" is the Paris day
+  (`SportClock`). Calories are typed, never computed.
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
@@ -64,7 +69,8 @@
   household with `AssistantRequest.HouseholdAsync` and call the same code as the
   endpoints: Application use cases, or the module's management class shared with the
   endpoints (`FoodLibrary`, `RecipeLibrary`, `StoreLibrary`, `ProductLibrary`,
-  `ReviewLibrary`, registered in `Api/Food/FoodModule.cs`). Never query the DbContext in
+  `ReviewLibrary`, registered in `Api/Food/FoodModule.cs`; the Sport libraries in
+  `Api/Sports/SportsModule.cs`). Never query the DbContext in
   a tool when an endpoint already does the same thing. `ArgumentException` and unique/FK
   violations reach the assistant as readable errors (call-tool filter in
   `AssistantSetup`); not found is `AssistantRequest.NotFound`. Images by URL go through

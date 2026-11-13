@@ -4,21 +4,6 @@ export interface BuildInfoDto extends BuildInfo {
   component: 'api'
 }
 
-export interface SportTemplateRequest {
-  name: string
-  sport: string
-  durationMinutes: number
-  distanceKm: number | null
-  intensity: 'low' | 'moderate' | 'high'
-  calories: number
-}
-
-export interface SportTemplateDto extends SportTemplateRequest {
-  id: string
-  householdId: string
-  isArchived: boolean
-}
-
 /** An assistant (Claude) allowed to act on LifeOS through the MCP endpoint (ADR 0011). */
 export interface AssistantConnectionDto {
   id: string

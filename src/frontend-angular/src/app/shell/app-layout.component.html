@@ -12,7 +12,7 @@
         <div class="menu-block">
           <div class="menu-block-title">{{ block.title }}</div>
           @for (item of block.items; track item.path) {
-            <a class="menu-item" [routerLink]="item.path" routerLinkActive="is-active">
+            <a class="menu-item" [routerLink]="item.path" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: item.exact ?? false }">
               <span>{{ item.label }}</span>
               @if (item.receiptsBadge && pendingReceipts()) {
                 <span class="badge" [attr.aria-label]="pendingReceipts() + ' à traiter'">{{ pendingReceipts() }}</span>

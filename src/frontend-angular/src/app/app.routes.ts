@@ -25,7 +25,8 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'recipes' },
       // Food module: recipes, foods, products and prices, stores, tickets.
       { path: '', loadChildren: () => import('@/app/food/food.routes').then(module => module.FOOD_ROUTES) },
-      { path: 'sports', loadComponent: () => import('@/app/sports/sports-page.component').then(module => module.SportsPageComponent) },
+      // Sport module: today, history, progress, settings (ADR 0013).
+      { path: 'sports', loadChildren: () => import('@/app/sports/sports.routes').then(module => module.SPORT_ROUTES) },
       { path: 'settings', loadComponent: () => import('@/app/household/settings-page.component').then(module => module.SettingsPageComponent) },
       // Old links keep working.
       { path: 'articles', pathMatch: 'full', redirectTo: 'products' },

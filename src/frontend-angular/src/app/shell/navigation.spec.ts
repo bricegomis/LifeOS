@@ -9,6 +9,12 @@ describe('navigation', () => {
     assert.ok(!MOBILE_TABS.some(tab => ['/products', '/stores'].includes(tab.path)))
   })
 
+  it('lists the sport sections on the desktop and keeps a single sport tab on the phone', () => {
+    assert.deepEqual(NAVIGATION_BLOCKS[1]!.items.map(item => item.path), ['/sports', '/sports/history', '/sports/progress', '/sports/settings'])
+    assert.equal(NAVIGATION_BLOCKS[1]!.items[0]!.exact, true)
+    assert.equal(MOBILE_TABS.filter(tab => tab.path.startsWith('/sports')).length, 1)
+  })
+
   it('remembers the menu state and survives an unavailable storage', () => {
     const values = new Map<string, string>()
     const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value) } }

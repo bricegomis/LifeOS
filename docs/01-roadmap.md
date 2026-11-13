@@ -159,12 +159,12 @@ l'application ; un autre foyer ne voit rien de tout cela (testé).
 
 1. **Cadrage fonctionnel.** Fait.
 2. **Maquette cliquable** : accueil Sport, saisie de séance, historique,
-   progression, réglages.
-3. **Séances réalisées** et liste fixe des sports (migration des séances types).
-4. **Objectifs de la semaine** et bilan.
-5. **Défis du jour** et gamification.
-6. **Outils de l'assistant** pour tout le module.
-7. **Progression** : graphiques par semaine et par défi.
+   progression, réglages. Validée le 2026-11-13.
+3. **Séances réalisées** et liste fixe des sports (migration des séances types). Fait.
+4. **Objectifs de la semaine** et bilan. Fait.
+5. **Défis du jour** et gamification. Fait.
+6. **Outils de l'assistant** pour tout le module. Fait.
+7. **Progression** : graphiques par semaine et par défi. Fait.
 
 **Terminé quand.** L'utilisateur enregistre ses séances pendant plusieurs semaines
 sans friction, tient ses défis du jour et lit son bilan hebdomadaire. Le module

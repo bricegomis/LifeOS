@@ -3,6 +3,8 @@ export interface NavigationItem {
   label: string
   /** Shows the number of receipts still to process. */
   receiptsBadge?: boolean
+  /** Active only on this exact path (a module home whose sub-pages have their own entries). */
+  exact?: boolean
 }
 
 export interface NavigationBlock {
@@ -22,7 +24,15 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
       { path: '/tickets', label: 'Tickets', receiptsBadge: true },
     ],
   },
-  { title: 'Sport', items: [{ path: '/sports', label: 'Séances types' }] },
+  {
+    title: 'Sport',
+    items: [
+      { path: '/sports', label: 'Aujourd’hui', exact: true },
+      { path: '/sports/history', label: 'Historique' },
+      { path: '/sports/progress', label: 'Progression' },
+      { path: '/sports/settings', label: 'Réglages' },
+    ],
+  },
 ]
 
 /** Phone tabs: everyday screens only; stores, products and prices are entered on a computer. */

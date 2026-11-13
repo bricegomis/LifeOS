@@ -5,7 +5,8 @@
 - Structure: `src/app/core` (api client, auth, native/Capacitor bridge), `shared`
   (dialog, household reviews, build version), `shell` (left burger menu with one block
   per domain, phone tab bar), `login`, and one folder per module: `food` (recipes,
-  foods, products and prices, stores, tickets), `sports`, `household` (settings:
+  foods, products and prices, stores, tickets), `sports` (today, history, progress,
+  settings; a sub-navigation on the phone, menu entries on the desktop), `household` (settings:
   profiles, versions, account).
 - A module folder holds its models, its API service (all HTTP calls), pure rules in
   plain `.ts` files with a `.spec.ts` (e.g. `food/foods/food-form.ts`,

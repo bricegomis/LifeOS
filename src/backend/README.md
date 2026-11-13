@@ -21,7 +21,11 @@ name and build provenance.
 | Recipes | /api/recipes, /api/recipes/{id}/ingredients | Food ingredients, yield, steps, duration, categories. |
 | Reviews | /api/reviews/foods/{id}, /api/reviews/recipes/{id} | Optional 0..10 score and/or comment, per member profile. |
 | Household | /api/households/current, /members, /profiles | Household auto-provisioned on first request; member profiles. |
-| Sport templates | /api/sport-templates | Session templates (name, sport, duration, distance, intensity, manual calories). |
+| Sport templates | /api/sport-templates | Session templates (name, sport from a fixed list, duration, distance for endurance sports, suggested calories); archived, never deleted. |
+| Sport sessions | /api/sport/sessions | Sessions done on a date by a profile (main profile by default): typed calories (null = unknown), distance, feeling 1..10, heart rates, notes, source. |
+| Weekly goals | /api/sport/goals | Per template, per sport, number of sessions or volume (kcal, km, hours); valid from a Monday, stopped or replaced from the current week. |
+| Daily challenges | /api/sport/challenges, /{id}/entries | Reps or minutes per day with jokers per week; cumulated sets; reports with streak, record, calendar, totals and milestones. |
+| Sport reports | /api/sport/catalog, /weeks, /days | Sport list and today (Europe/Paris), week reports with goal progress, sport days (published read contract). |
 | Version | /api/version | Public, no-store build provenance. |
 
 All data is household-scoped. Recipes refer to generic foods; commercial products
