@@ -8,11 +8,11 @@ public static class SportClock
     public static DateOnly Today(TimeProvider clock) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Zone).DateTime);
 
-    /// <summary>A local time of a sport day, as an instant.</summary>
+    /// <summary>A Paris time of a sport day, as a UTC instant (PostgreSQL stores timestamps with time zone in UTC only).</summary>
     public static DateTimeOffset At(DateOnly day, TimeOnly time)
     {
         var local = day.ToDateTime(time, DateTimeKind.Unspecified);
-        return new DateTimeOffset(local, Zone.GetUtcOffset(local));
+        return new DateTimeOffset(local, Zone.GetUtcOffset(local)).ToUniversalTime();
     }
 
     private static TimeZoneInfo FindZone()
