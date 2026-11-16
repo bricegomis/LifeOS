@@ -20,10 +20,14 @@
   loads authenticated images as blobs), a filter bar on top of every list page,
   prices secondary and read-only on everyday screens. Products, prices and stores
   are not in the phone tab bar.
-- UI: native HTML controls; tokens and shared blocks (buttons, fields, cards, filter bar,
-  chips, grid tables) in `src/styles.css`, page rules next to each page. Icons are
-  PrimeIcons classes (`pi pi-...`). No PrimeNG/PrimeUI or other UI libraries.
-- Dialogs: reuse `shared/dialog/lifeos-dialog.component.ts` (native modal
+- UI kit: Angular Material 3 with the LifeOS theme, Material Symbols icons and the
+  screen conventions of ADR 0016 (list items, add button, dialogs full screen on the
+  phone, dangerous action bottom left). New and migrated screens use Material
+  components and the LifeOS components built on them; don't add another UI library.
+  Screens not migrated yet keep native controls, the shared blocks of `src/styles.css`
+  and PrimeIcons (`pi pi-...`) until their turn.
+- Dialogs: migrated screens use `MatDialog` and keep the dirty-draft guard of
+  `dialog-guard.ts`. Screens not migrated yet reuse `shared/dialog/lifeos-dialog.component.ts` (native modal
   `<dialog>`, focus return, dirty-draft confirmation via `dialog-guard.ts`). Detail
   and review editors open as centered popups; closing a modified draft asks first,
   a pending request blocks closing, errors stay visible.

@@ -23,6 +23,12 @@ code, identifiers and code comments are English.
 - Step 2 extension: ADR 0014 (sport: household exercise library with image and
   instructions, daily routines per profile, one tick per exercise per day with the value
   and load really done, streak per routine, manual targets).
+- Sport rework (accepted, mockup validated 2026-11-16): ADR 0015 (one page per element with
+  edit popups, menu grouped by domain on desktop and phone, routine passes with one
+  counter tick per set, per-exercise effort and discomfort).
+- UI kit: ADR 0016 (Angular Material 3 with a LifeOS theme, Material Symbols, screen
+  conventions for lists, dialogs, add buttons and actions; Sport first, then Food
+  page by page).
 - Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly
@@ -77,7 +83,8 @@ code, identifiers and code comments are English.
   Planning is computed by an external agent; the API never calls an AI provider.
 - Health data is owned by a profile, not shared with the household, never sent to the agent.
 - Out of scope, don't reintroduce: stock, shopping list, planning computed inside the
-  API, OFF/external enrichment or name-based matching inside the API, Vue, PrimeNG runtime.
+  API, OFF/external enrichment or name-based matching inside the API, Vue. The UI kit is
+  Angular Material (ADR 0016); don't add another UI library.
 
 ## Verification
 - Frontend (from `src/frontend-angular`): `npm run type-check`, `npm test`,

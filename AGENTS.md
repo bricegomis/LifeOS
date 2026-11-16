@@ -1,7 +1,8 @@
 # LifeOS
 
 ## Stack and active scope
-- Angular 22 + TypeScript in `src/frontend-angular`, native LifeOS controls and PrimeIcons.
+- Angular 22 + TypeScript in `src/frontend-angular`, UI kit Angular Material 3 with the
+  LifeOS theme (ADR 0016); screens not yet migrated still use native controls and PrimeIcons.
 - ASP.NET Core / EF Core / PostgreSQL in `src/backend`.
 - The API signs users in with Google and is its own OAuth server (ADR 0011); no Supabase.
 - Generic foods, recipes, sport session templates and receipts kept as stored photos.
@@ -19,6 +20,8 @@
   ADR 0012 (food classification: family, roles, conservation, season, tags),
   ADR 0013 (step 2 sport module: sessions, weekly goals, daily challenges),
   ADR 0014 (sport: daily routines and exercise library),
+  ADR 0015 (sport rework: pages per element, routine passes, feeling),
+  ADR 0016 (UI kit: Angular Material and screen conventions),
   ADR 0009 (target architecture and module boundary rules).
 - Prefer simple implementations; no unnecessary dependencies or speculative features.
 - Preserve household isolation and historical snapshots, IDs, aliases, sources and prices.
