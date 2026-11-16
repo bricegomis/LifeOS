@@ -20,6 +20,9 @@ code, identifiers and code comments are English.
 - Food classification: ADR 0012 (family, roles, conservation, season months, tags).
 - Step 2 target: ADR 0013 (sport: logged sessions, weekly goals instead of dated
   expected sessions, daily challenges with streaks and jokers; Garmin import later).
+- Step 2 extension: ADR 0014 (sport: household exercise library with image and
+  instructions, daily routines per profile, one tick per exercise per day with the value
+  and load really done, streak per routine, manual targets).
 - Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly
@@ -97,8 +100,8 @@ code, identifiers and code comments are English.
 - Roadmap step 1 may drop existing data (user decision, 2026-11-11): a destructive
   migration is allowed there, once the user confirms what is reset.
 - Never run migrations against a shared/production database, reset user data, or
-  touch the VPS. The user backs up PostgreSQL **and** the `lifeos_receipts` /
-  `lifeos_food_images` volumes, then refreshes the containers themselves.
+  touch the VPS. The user backs up PostgreSQL **and** the `lifeos_receipts`,
+  `lifeos_food_images` and `lifeos_sport_images` volumes, then refreshes the containers themselves.
 - When behaviour changes, update the directly affected docs (ADR status/extension,
   `docs/PROJECT.md`, `docs/02-core-model.md`, the relevant README). Replace stale
   text instead of stacking "superseded" notes; don't keep history in the docs.

@@ -1,6 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
+import { RoutineProgressComponent } from './routine-progress.component'
 import { SportNavComponent } from './sport-nav.component'
 import { calendarWeeks, challengeAmount, dayLevel, dayMonth, decimal, duration, integer } from './sport-format'
 import { SportsApiService } from './sports-api.service'
@@ -21,7 +22,7 @@ const STATUS_LABELS: Record<string, string> = { reached: 'atteint', joker: 'joke
 @Component({
   selector: 'app-sport-progress-page',
   standalone: true,
-  imports: [SportNavComponent],
+  imports: [RoutineProgressComponent, SportNavComponent],
   template: `
     <div class="page">
       <app-sport-nav />
@@ -106,6 +107,7 @@ const STATUS_LABELS: Record<string, string> = { reached: 'atteint', joker: 'joke
             }
           </section>
         </div>
+        <app-routine-progress />
       }
     </div>
   `,

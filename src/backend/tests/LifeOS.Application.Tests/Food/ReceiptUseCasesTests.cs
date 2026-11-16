@@ -1,3 +1,4 @@
+using LifeOS.Application.Common.Files;
 using LifeOS.Application.Food.Receipts;
 using LifeOS.Domain.Food.Receipts;
 

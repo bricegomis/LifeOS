@@ -64,6 +64,57 @@ public sealed record ChallengeReportDto(
     int? NextMilestone, IReadOnlyList<int> Milestones, IReadOnlyList<ChallengeEntryDto> TodayEntries,
     IReadOnlyList<ChallengeDayDto> Calendar);
 
+/// <param name="Measure">hold (seconds) or reps.</param>
+/// <param name="MeasureLocked">The exercise has been done: its measure no longer changes.</param>
+public sealed record ExerciseDto(Guid Id, string Name, string? Instructions, string Measure, bool WithLoad, bool HasImage,
+    bool IsArchived, bool MeasureLocked)
+{
+    public static ExerciseDto From(Exercise e, bool measureLocked) =>
+        new(e.Id, e.Name, e.Instructions, e.Measure, e.WithLoad, e.HasImage, e.IsArchived, measureLocked);
+}
+
+/// <param name="Target">Seconds or repetitions per set.</param>
+public sealed record RoutineLineDto(Guid ExerciseId, string ExerciseName, string? Instructions, string Measure, bool WithLoad,
+    bool HasImage, int Sets, int Target, decimal? LoadKg);
+
+/// <param name="Days">Days of the week, 1 (Monday) to 7 (Sunday).</param>
+public sealed record RoutineDto(Guid Id, Guid MemberProfileId, string Name, IReadOnlyList<int> Days, int JokersPerWeek,
+    IReadOnlyList<RoutineLineDto> Lines, DateOnly StartedOn, DateOnly? StoppedOn, bool IsActive)
+{
+    public static RoutineDto From(Routine r, DateOnly today, IReadOnlyDictionary<Guid, Exercise> exercises)
+    {
+        var version = r.VersionOn(today);
+        return new(r.Id, r.MemberProfileId, r.Name,
+            Enumerable.Range(1, 7).Where(day => (version.Days & (1 << (day - 1))) != 0).ToList(), version.JokersPerWeek,
+            version.OrderedLines.Select(line =>
+            {
+                var e = exercises[line.ExerciseId];
+                return new RoutineLineDto(e.Id, e.Name, e.Instructions, e.Measure, e.WithLoad, e.HasImage, line.Sets, line.Target, line.LoadKg);
+            }).ToList(),
+            r.StartedOn, r.StoppedOn, r.IsActive);
+    }
+}
+
+public sealed record ExerciseCompletionDto(Guid ExerciseId, DateOnly Date, int Value, decimal? LoadKg, DateTimeOffset LoggedAt)
+{
+    public static ExerciseCompletionDto From(ExerciseCompletion c) => new(c.ExerciseId, c.Date, c.Value, c.LoadKg, c.LoggedAt);
+}
+
+/// <param name="Status">not_counted, not_planned, done, joker, missed or in_progress.</param>
+public sealed record RoutineDayDto(DateOnly Date, int Done, int Planned, int Percent, string Status);
+
+/// <param name="NextPlannedDay">Next day of the routine after today; null once stopped.</param>
+public sealed record RoutineReportDto(
+    RoutineDto Routine, DateOnly Today, bool PlannedToday, int DoneToday, int TotalToday, bool CompletedToday,
+    DateOnly? NextPlannedDay, int Streak, int Record, int JokersPerWeek, int JokersLeftThisWeek,
+    IReadOnlyList<ExerciseCompletionDto> TodayCompletions, IReadOnlyList<RoutineDayDto> Calendar);
+
+public sealed record ExerciseWeekDto(DateOnly Monday, int? BestValue, decimal? BestLoadKg);
+
+/// <summary>Follow-up of one exercise for a profile: records and the best of each week.</summary>
+public sealed record ExerciseProgressDto(Guid ExerciseId, int? BestValue, decimal? BestLoadKg, int DaysDone,
+    IReadOnlyList<ExerciseWeekDto> Weeks);
+
 /// <summary>Published read contract (ADR 0009): what one profile did in sport on one day.</summary>
 public sealed record SportDayDto(DateOnly Date, Guid MemberProfileId, IReadOnlyList<SportDaySessionDto> Sessions,
     int Calories, bool CaloriesComplete);

@@ -52,6 +52,7 @@ créer, tu valides dans la discussion. Il cherche lui-même les valeurs nutritio
 | Tickets | `list_receipts`, `get_receipt_photo` (Claude lit la photo), `update_receipt` (magasin, date, traité) |
 | Sport | `get_sport_catalog` (sports et date du jour), `list_sport_templates`, `create_sport_template`, `update_sport_template`, `archive_sport_template`, `list_sport_sessions`, `log_sport_session`, `update_sport_session`, `delete_sport_session`, `get_sport_weeks` (bilan et objectifs) |
 | Objectifs et défis | `list_weekly_goals`, `create_weekly_goal`, `change_weekly_goal`, `stop_weekly_goal`, `list_daily_challenges` (série, jokers, paliers), `create_daily_challenge`, `update_daily_challenge`, `stop_daily_challenge`, `add_challenge_entry` (« j'ai fait 30 pompes »), `remove_challenge_entry` |
+| Routines et exercices | `list_exercises`, `create_exercise`, `update_exercise`, `archive_exercise`, `set_exercise_image_from_url`, `remove_exercise_image`, `get_exercise_progress` (records, meilleure valeur et charge par semaine), `list_routines` (exercices, cibles, coches du jour, série, jokers), `create_routine`, `update_routine`, `stop_routine`, `complete_exercise` (« j'ai fait la chaise 60 s à 12 kg »), `uncomplete_exercise` |
 
 Images par URL : `https` uniquement, adresse publique (jamais le réseau local), JPEG,
 PNG ou WebP de 10 Mo au plus, téléchargées en 20 secondes au plus.

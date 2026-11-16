@@ -36,6 +36,7 @@ public sealed class LifeOSApiFactory(
                 ["LifeOS:BuildId"] = buildId,
                 ["Receipts:StoragePath"] = receiptStoragePath ?? Path.Combine(Path.GetTempPath(), $"lifeos-api-tests-{Guid.NewGuid():N}"),
                 ["FoodImages:StoragePath"] = foodImageStoragePath ?? Path.Combine(Path.GetTempPath(), $"lifeos-food-images-{Guid.NewGuid():N}"),
+                ["SportImages:StoragePath"] = Path.Combine(Path.GetTempPath(), $"lifeos-sport-images-{Guid.NewGuid():N}"),
             });
         });
     }

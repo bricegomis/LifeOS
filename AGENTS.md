@@ -18,6 +18,7 @@
   ADR 0011 (step 1 bis: MCP assistant, own OAuth server replacing Supabase),
   ADR 0012 (food classification: family, roles, conservation, season, tags),
   ADR 0013 (step 2 sport module: sessions, weekly goals, daily challenges),
+  ADR 0014 (sport: daily routines and exercise library),
   ADR 0009 (target architecture and module boundary rules).
 - Prefer simple implementations; no unnecessary dependencies or speculative features.
 - Preserve household isolation and historical snapshots, IDs, aliases, sources and prices.

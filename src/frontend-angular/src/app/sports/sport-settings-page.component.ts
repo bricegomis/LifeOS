@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { RoutineSettingsComponent } from './routine-settings.component'
 import { SportNavComponent } from './sport-nav.component'
 import { challengeUnitLabel, decimal, duration, integer } from './sport-format'
 import { SportsApiService } from './sports-api.service'
@@ -23,13 +24,14 @@ const emptyTemplate = (): SportTemplateRequest => ({ name: '', sport: 'running',
 @Component({
   selector: 'app-sport-settings-page',
   standalone: true,
-  imports: [FormsModule, LifeosDialogComponent, SportNavComponent],
+  imports: [FormsModule, LifeosDialogComponent, RoutineSettingsComponent, SportNavComponent],
   template: `
     <div class="page">
       <app-sport-nav />
       <div class="page-header"><h1>Réglages du sport</h1></div>
       @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
       @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
+      <app-routine-settings />
       @if (loading()) { <p class="status-text" role="status">Chargement…</p> } @else {
         <div class="week-grid">
           <section class="sport-section" aria-labelledby="settings-goals">

@@ -1,0 +1,73 @@
+using LifeOS.Domain.Common;
+
+namespace LifeOS.Domain.Sports;
+
+/// <summary>
+/// A card of the household's exercise library (ADR 0014): a name, an optional image and
+/// instructions, and what is measured — a hold in seconds or repetitions, with or without a load.
+/// Routines pick exercises; exercises are archived, not deleted.
+/// </summary>
+public sealed class Exercise : Entity
+{
+    public static readonly IReadOnlyDictionary<string, string> Measures = new Dictionary<string, string>
+    {
+        ["hold"] = "Tenue (secondes)",
+        ["reps"] = "Répétitions",
+    };
+
+    public const int MaxInstructionsLength = 2000;
+
+    public Guid HouseholdId { get; private set; }
+    public string Name { get; private set; } = "";
+    public string? Instructions { get; private set; }
+    public string Measure { get; private set; } = "";
+    /// <summary>The exercise is done with a load in kg (a weight on the thighs, a dumbbell).</summary>
+    public bool WithLoad { get; private set; }
+    public string? ImagePath { get; private set; }
+    public string? ImageContentType { get; private set; }
+    public bool IsArchived { get; private set; }
+    public bool HasImage => ImagePath is not null;
+
+    private Exercise() { }
+
+    public static Exercise Create(Guid householdId, string name, string? instructions, string measure, bool withLoad)
+    {
+        if (householdId == Guid.Empty) throw new ArgumentException("Foyer obligatoire.");
+        var exercise = new Exercise { Id = Guid.NewGuid(), HouseholdId = householdId };
+        exercise.Update(name, instructions, measure, withLoad, alreadyDone: false);
+        return exercise;
+    }
+
+    /// <param name="alreadyDone">The exercise has completions: its measure is frozen so its history stays comparable.</param>
+    public void Update(string name, string? instructions, string measure, bool withLoad, bool alreadyDone)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100)
+            throw new ArgumentException("Nom de l'exercice obligatoire (100 caractères maximum).");
+        var code = measure?.Trim() ?? "";
+        if (!Measures.ContainsKey(code)) throw new ArgumentException("Mesure : hold (tenue en secondes) ou reps (répétitions).");
+        if (alreadyDone && code != Measure)
+            throw new ArgumentException("La mesure d'un exercice déjà réalisé ne change pas ; créez un autre exercice.");
+        var text = string.IsNullOrWhiteSpace(instructions) ? null : instructions.Trim();
+        if (text?.Length > MaxInstructionsLength) throw new ArgumentException("Consigne : 2000 caractères maximum.");
+        Name = name.Trim();
+        Instructions = text;
+        Measure = code;
+        WithLoad = withLoad;
+    }
+
+    public void SetImage(string imagePath, string imageContentType)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath) || imagePath.Length > 500) throw new ArgumentException("Référence d'image invalide.");
+        if (imageContentType is not ("image/jpeg" or "image/png" or "image/webp")) throw new ArgumentException("Format d'image invalide.");
+        ImagePath = imagePath;
+        ImageContentType = imageContentType;
+    }
+
+    public void RemoveImage()
+    {
+        ImagePath = null;
+        ImageContentType = null;
+    }
+
+    public void Archive() => IsArchived = true;
+}

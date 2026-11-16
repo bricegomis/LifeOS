@@ -165,6 +165,9 @@ l'application ; un autre foyer ne voit rien de tout cela (testé).
 5. **Défis du jour** et gamification. Fait.
 6. **Outils de l'assistant** pour tout le module. Fait.
 7. **Progression** : graphiques par semaine et par défi. Fait.
+8. **Routines quotidiennes** et bibliothèque d'exercices (image, consigne, tenue ou
+   répétitions, charge), une série par routine et la progression par exercice.
+   Cadrage et maquette du 2026-11-16 : [ADR 0014](architecture/decisions/0014-sport-daily-routines.md). Fait.
 
 **Terminé quand.** L'utilisateur enregistre ses séances pendant plusieurs semaines
 sans friction, tient ses défis du jour et lit son bilan hebdomadaire. Le module

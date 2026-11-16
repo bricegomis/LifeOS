@@ -1,0 +1,49 @@
+/* Routines and exercises (ADR 0014, validated mockup). */
+.routine-rows { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.routine-rows li { display: flex; align-items: center; gap: 8px; }
+.routine-rows li.is-done { color: #1f4532; }
+.routine-row-name { flex: 1 1 auto; min-width: 0; }
+.routine-dot { flex: none; width: 18px; height: 18px; box-sizing: border-box; border: 2px solid #a89c88; border-radius: 999px; }
+.routine-rows li.is-done .routine-dot { border-color: var(--lifeos-accent); background: var(--lifeos-accent); }
+.routine-open { justify-content: center; min-height: 48px; text-decoration: none; }
+.routine-off { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 12px 16px; border: 1px dashed #cfc4b2; border-radius: var(--lifeos-radius); font-size: 14px; }
+
+.exercise-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--lifeos-line); border-radius: var(--lifeos-radius); background: var(--lifeos-surface); }
+.exercise-card.is-done { border-color: #a9c8b3; background: #eef5ef; }
+.exercise-head { display: flex; gap: 12px; }
+.exercise-text { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+.exercise-text strong { font-size: 17px; line-height: 1.25; }
+.exercise-target { color: var(--lifeos-accent-strong); font-weight: 600; }
+.exercise-toggle { align-self: flex-start; }
+.exercise-instructions { margin: 0; padding: 10px 12px; border-radius: var(--lifeos-radius-sm); background: var(--lifeos-surface-soft); font-size: 14px; white-space: pre-line; }
+.tick-actions { display: flex; gap: 8px; }
+.tick-actions .lifeos-button { min-height: 52px; }
+.tick-main { flex: 1 1 auto; justify-content: center; font-size: 16px; }
+.tick-done { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tick-done-text { flex: 1 1 auto; color: #1f4532; font-weight: 700; }
+.tick-done .lifeos-button { min-height: 44px; }
+.tick-editor { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: var(--lifeos-surface-soft); }
+.stepper-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 600; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper button { width: 48px; height: 48px; border: 1px solid #cfc4b2; border-radius: 12px; background: var(--lifeos-surface); color: var(--lifeos-accent-strong); font-size: 22px; font-weight: 700; }
+.stepper output { min-width: 76px; font-size: 20px; font-weight: 700; text-align: center; }
+
+.cell-off { border: 1px dashed #cfc4b2; background: transparent; }
+.exercise-chart { display: flex; flex-direction: column; gap: 8px; }
+.mini-chart { display: flex; align-items: flex-end; gap: 6px; height: 96px; }
+.mini-col { display: flex; flex: 1 1 0; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; min-width: 0; height: 100%; font-size: 10px; }
+
+.day-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.day-grid .pill { justify-content: center; min-height: 44px; padding: 0; }
+.line-editor { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--lifeos-line); border-radius: 12px; background: var(--lifeos-surface); }
+.line-editor-head { display: flex; align-items: center; gap: 6px; }
+.line-editor-head strong { flex: 1 1 auto; min-width: 0; }
+.line-editor-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.icon-button { width: 44px; height: 44px; border: 1px solid #cfc4b2; border-radius: var(--lifeos-radius-sm); background: var(--lifeos-surface); color: var(--lifeos-accent-strong); }
+.icon-button:disabled { opacity: 0.4; }
+.exercise-row { flex-direction: row !important; align-items: center; gap: 12px; }
+.exercise-row > span { display: flex; flex-direction: column; }
+.exercise-photo { display: flex; align-items: center; gap: 12px; }
+.exercise-photo-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.check-row { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 500; }
+.check-row input { width: 22px; height: 22px; accent-color: var(--lifeos-accent); }

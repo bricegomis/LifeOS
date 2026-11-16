@@ -3,10 +3,12 @@
 - Angular 22 standalone components, signals (`input()`, `output()`, `signal`,
   `inject()`), new control flow (`@if`, `@for`). Templates are mostly inline.
 - Structure: `src/app/core` (api client, auth, native/Capacitor bridge), `shared`
-  (dialog, household reviews, build version), `shell` (left burger menu with one block
+  (dialog, household reviews, build version, picture reduction before upload), `shell` (left burger menu with one block
   per domain, phone tab bar), `login`, and one folder per module: `food` (recipes,
   foods, products and prices, stores, tickets), `sports` (today, history, progress,
-  settings; a sub-navigation on the phone, menu entries on the desktop), `household` (settings:
+  settings, and the routine page `sports/routine/:id`; a sub-navigation on the phone,
+  menu entries on the desktop; routine screens are their own components embedded in
+  those pages, with rules in `sports/routine-format.ts`), `household` (settings:
   profiles, versions, account).
 - A module folder holds its models, its API service (all HTTP calls), pure rules in
   plain `.ts` files with a `.spec.ts` (e.g. `food/foods/food-form.ts`,

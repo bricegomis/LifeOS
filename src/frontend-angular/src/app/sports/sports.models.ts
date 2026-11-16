@@ -128,3 +128,80 @@ export interface ChallengeReportDto {
   todayEntries: ChallengeEntryDto[]
   calendar: ChallengeDayDto[]
 }
+
+/** Routines and exercises (ADR 0014). */
+export type ExerciseMeasure = 'hold' | 'reps'
+
+export interface ExerciseRequest {
+  name: string
+  instructions: string | null
+  measure: ExerciseMeasure
+  withLoad: boolean
+}
+
+export interface ExerciseDto extends ExerciseRequest {
+  id: string
+  hasImage: boolean
+  isArchived: boolean
+  /** Already done: the measure no longer changes. */
+  measureLocked: boolean
+}
+
+export interface RoutineLineRequest { exerciseId: string, sets: number, target: number, loadKg: number | null }
+
+export interface RoutineRequest {
+  name: string
+  /** 1 (Monday) to 7 (Sunday). */
+  days: number[]
+  jokersPerWeek: number
+  lines: RoutineLineRequest[]
+}
+
+export interface RoutineLineDto extends RoutineLineRequest {
+  exerciseName: string
+  instructions: string | null
+  measure: ExerciseMeasure
+  withLoad: boolean
+  hasImage: boolean
+}
+
+export interface RoutineDto {
+  id: string
+  name: string
+  days: number[]
+  jokersPerWeek: number
+  lines: RoutineLineDto[]
+  startedOn: string
+  stoppedOn: string | null
+  isActive: boolean
+}
+
+export interface ExerciseCompletionDto { exerciseId: string, date: string, value: number, loadKg: number | null, loggedAt: string }
+
+export type RoutineDayStatus = 'not_counted' | 'not_planned' | 'done' | 'joker' | 'missed' | 'in_progress'
+export interface RoutineDayDto { date: string, done: number, planned: number, percent: number, status: RoutineDayStatus }
+
+export interface RoutineReportDto {
+  routine: RoutineDto
+  today: string
+  plannedToday: boolean
+  doneToday: number
+  totalToday: number
+  completedToday: boolean
+  nextPlannedDay: string | null
+  streak: number
+  record: number
+  jokersPerWeek: number
+  jokersLeftThisWeek: number
+  todayCompletions: ExerciseCompletionDto[]
+  calendar: RoutineDayDto[]
+}
+
+export interface ExerciseWeekDto { monday: string, bestValue: number | null, bestLoadKg: number | null }
+export interface ExerciseProgressDto {
+  exerciseId: string
+  bestValue: number | null
+  bestLoadKg: number | null
+  daysDone: number
+  weeks: ExerciseWeekDto[]
+}

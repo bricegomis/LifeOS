@@ -5,19 +5,23 @@ namespace LifeOS.Api.Sports;
 
 public static class SportsModule
 {
-    /// <summary>Management code shared by the Sport endpoints and the assistant tools (ADR 0011, ADR 0013).</summary>
+    /// <summary>Management code shared by the Sport endpoints and the assistant tools (ADR 0011, ADR 0013, ADR 0014).</summary>
     public static IServiceCollection AddSportLibraries(this IServiceCollection services) => services
         .AddScoped<SportProfiles>()
         .AddScoped<SportTemplateLibrary>()
         .AddScoped<SportSessionLibrary>()
         .AddScoped<WeeklyGoalLibrary>()
-        .AddScoped<DailyChallengeLibrary>();
+        .AddScoped<DailyChallengeLibrary>()
+        .AddScoped<ExerciseLibrary>()
+        .AddScoped<RoutineLibrary>();
 
     public static IEndpointRouteBuilder MapSportEndpoints(this IEndpointRouteBuilder app) => app
         .MapSportTemplatesEndpoints()
         .MapSportSessionsEndpoints()
         .MapWeeklyGoalsEndpoints()
         .MapDailyChallengesEndpoints()
+        .MapExercisesEndpoints()
+        .MapRoutinesEndpoints()
         .MapSportOverviewEndpoints();
 }
 

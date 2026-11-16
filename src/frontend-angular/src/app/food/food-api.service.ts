@@ -5,7 +5,7 @@ import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import type {
   FoodDto, FoodRequest, PriceRequest, ProductDto, ProductRequest, ReceiptDto, StoreDto, StoreRequest, UpdateReceiptRequest,
 } from './food.models'
-import { LIBRARY_IMAGE, RECEIPT_PHOTO, reduceImage } from './shared/image-reduction'
+import { LIBRARY_IMAGE, RECEIPT_PHOTO, reduceImage } from '@/app/shared/image-reduction'
 
 const id = (value: string) => encodeURIComponent(value)
 

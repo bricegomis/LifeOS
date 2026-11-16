@@ -40,6 +40,9 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<WeeklyGoal> WeeklyGoals => Set<WeeklyGoal>();
     public DbSet<DailyChallenge> DailyChallenges => Set<DailyChallenge>();
     public DbSet<ChallengeEntry> ChallengeEntries => Set<ChallengeEntry>();
+    public DbSet<Exercise> Exercises => Set<Exercise>();
+    public DbSet<Routine> Routines => Set<Routine>();
+    public DbSet<ExerciseCompletion> ExerciseCompletions => Set<ExerciseCompletion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-13 (module Sport). Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-16 (routines quotidiennes). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -14,8 +14,10 @@ la connexion Google par l'API (sans Supabase), l'endpoint MCP et les outils de t
 module Alimentation sont livrés, ainsi que le classement des aliments
 ([ADR 0012](architecture/decisions/0012-food-classification.md)). Pour connecter Claude : [assistant-claude.md](assistant-claude.md).
 Étape 2, « Sport », livrée en code le 2026-11-13 ([ADR 0013](architecture/decisions/0013-sport-module.md)) :
-séances réalisées, objectifs de la semaine, défis du jour et outils de l'assistant ; reste
-l'usage réel pendant quelques semaines.
+séances réalisées, objectifs de la semaine, défis du jour et outils de l'assistant ; routines
+quotidiennes et bibliothèque d'exercices ajoutées le 2026-11-16
+([ADR 0014](architecture/decisions/0014-sport-daily-routines.md)) ; reste l'usage réel pendant
+quelques semaines.
 
 ## Ce qui existe
 
@@ -30,7 +32,7 @@ l'usage réel pendant quelques semaines.
 | Produits et prix | Produit toujours complet (aliment, nom, contenance) ; prix payé par conditionnement, par magasin et par date, ramené au kilo, au litre ou à la pièce ; tableau avec une colonne par magasin |
 | Magasins | Création, modification, suppression (refusée tant que des prix ou tickets y sont rattachés) |
 | Tickets | Photo conservée, allégée dans l'appli avant l'envoi (JPEG, 2560 px au plus ; 1600 px pour les photos d'aliments et de recettes), magasin et date d'achat facultatifs, état à traiter ou traité ; sur ordinateur, saisie des prix à côté de la photo ; aucune lecture automatique |
-| Sport | Séances types (sport d'une liste fixe, durée, distance, calories proposées) ; séances réalisées à une date par profil (calories saisies, inconnues = total partiel, distance, ressenti, fréquence cardiaque, notes) ; objectifs de la semaine (par séance type, par sport, nombre de séances ou volume) ; défis du jour en répétitions ou minutes, remplis par séries, avec série de jours, jokers, calendrier, totaux et paliers ; pages Aujourd'hui, Historique, Progression et Réglages. Seul le profil principal est affiché |
+| Sport | Séances types (sport d'une liste fixe, durée, distance, calories proposées) ; séances réalisées à une date par profil (calories saisies, inconnues = total partiel, distance, ressenti, fréquence cardiaque, notes) ; objectifs de la semaine (par séance type, par sport, nombre de séances ou volume) ; défis du jour en répétitions ou minutes, remplis par séries, avec série de jours, jokers, calendrier, totaux et paliers ; exercices du foyer (photo, consigne, tenue en secondes ou répétitions, avec ou sans charge) ; routines quotidiennes par profil (jours de la semaine, exercices ordonnés avec leur cible, une coche par exercice et par jour avec la valeur et la charge réellement faites, série et jokers par routine, calendrier, progression par exercice) ; pages Aujourd'hui, Historique, Progression et Réglages. Seul le profil principal est affiché |
 
 Navigation : sur ordinateur, menu à gauche repliable avec un bloc par domaine,
 Paramètres et compte en bas ; sur téléphone, onglets Recettes, Aliments, Sport,

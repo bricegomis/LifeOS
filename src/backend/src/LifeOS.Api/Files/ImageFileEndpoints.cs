@@ -1,7 +1,7 @@
-using LifeOS.Application.Food.Receipts;
-using LifeOS.Infrastructure.Food.Files;
+using LifeOS.Application.Common.Files;
+using LifeOS.Infrastructure.Files;
 
-namespace LifeOS.Api.Food.Files;
+namespace LifeOS.Api.Files;
 
 /// <summary>HTTP glue for <see cref="ImageFileStorage"/>: multipart upload and private download.</summary>
 public static class ImageFileEndpoints

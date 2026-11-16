@@ -712,6 +712,134 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Sports.Exercise", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImageContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Measure")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("WithLoad")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId");
+
+                    b.ToTable("exercises", "sports", t =>
+                        {
+                            t.HasCheckConstraint("ck_exercise_image", "(\"ImagePath\" IS NULL) = (\"ImageContentType\" IS NULL)");
+
+                            t.HasCheckConstraint("ck_exercise_measure", "\"Measure\" IN ('hold', 'reps')");
+                        });
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.ExerciseCompletion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("LoadKg")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)");
+
+                    b.Property<DateTimeOffset>("LoggedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RoutineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Value")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExerciseId", "HouseholdId");
+
+                    b.HasIndex("HouseholdId", "ExerciseId");
+
+                    b.HasIndex("RoutineId", "HouseholdId");
+
+                    b.HasIndex("RoutineId", "ExerciseId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("exercise_completions", "sports", t =>
+                        {
+                            t.HasCheckConstraint("ck_exercise_completion_load", "\"LoadKg\" IS NULL OR (\"LoadKg\" >= 0 AND \"LoadKg\" <= 500)");
+
+                            t.HasCheckConstraint("ck_exercise_completion_value", "\"Value\" >= 1 AND \"Value\" <= 10000");
+                        });
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.Routine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateOnly>("StartedOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("StoppedOn")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "MemberProfileId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.ToTable("routines", "sports", t =>
+                        {
+                            t.HasCheckConstraint("ck_routine_period", "\"StoppedOn\" IS NULL OR \"StoppedOn\" >= \"StartedOn\"");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Sports.SportSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1347,6 +1475,130 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Rules");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.Exercise", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.ExerciseCompletion", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Sports.Exercise", null)
+                        .WithMany()
+                        .HasForeignKey("ExerciseId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Sports.Routine", null)
+                        .WithMany()
+                        .HasForeignKey("RoutineId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.Routine", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("LifeOS.Domain.Sports.RoutineVersion", "Versions", b1 =>
+                        {
+                            b1.Property<Guid>("RoutineId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateOnly>("ValidFrom")
+                                .HasColumnType("date");
+
+                            b1.Property<int>("Days")
+                                .HasColumnType("integer");
+
+                            b1.Property<int>("JokersPerWeek")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("RoutineId", "ValidFrom");
+
+                            b1.ToTable("routine_versions", "sports", t =>
+                                {
+                                    t.HasCheckConstraint("ck_routine_version_days", "\"Days\" >= 1 AND \"Days\" <= 127");
+
+                                    t.HasCheckConstraint("ck_routine_version_jokers", "\"JokersPerWeek\" >= 0 AND \"JokersPerWeek\" <= 2");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("RoutineId");
+
+                            b1.OwnsMany("LifeOS.Domain.Sports.RoutineLine", "Lines", b2 =>
+                                {
+                                    b2.Property<Guid>("RoutineId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<DateOnly>("ValidFrom")
+                                        .HasColumnType("date");
+
+                                    b2.Property<Guid>("ExerciseId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<Guid>("HouseholdId")
+                                        .HasColumnType("uuid");
+
+                                    b2.Property<decimal?>("LoadKg")
+                                        .HasPrecision(5, 1)
+                                        .HasColumnType("numeric(5,1)");
+
+                                    b2.Property<int>("Position")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<int>("Sets")
+                                        .HasColumnType("integer");
+
+                                    b2.Property<int>("Target")
+                                        .HasColumnType("integer");
+
+                                    b2.HasKey("RoutineId", "ValidFrom", "ExerciseId");
+
+                                    b2.HasIndex("ExerciseId", "HouseholdId");
+
+                                    b2.ToTable("routine_lines", "sports", t =>
+                                        {
+                                            t.HasCheckConstraint("ck_routine_line_load", "\"LoadKg\" IS NULL OR (\"LoadKg\" >= 0 AND \"LoadKg\" <= 500)");
+
+                                            t.HasCheckConstraint("ck_routine_line_sets", "\"Sets\" >= 1 AND \"Sets\" <= 20");
+
+                                            t.HasCheckConstraint("ck_routine_line_target", "\"Target\" >= 1 AND \"Target\" <= 10000");
+                                        });
+
+                                    b2.HasOne("LifeOS.Domain.Sports.Exercise", null)
+                                        .WithMany()
+                                        .HasForeignKey("ExerciseId", "HouseholdId")
+                                        .HasPrincipalKey("Id", "HouseholdId")
+                                        .OnDelete(DeleteBehavior.Restrict)
+                                        .IsRequired();
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("RoutineId", "ValidFrom");
+                                });
+
+                            b1.Navigation("Lines");
+                        });
+
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Sports.SportSession", b =>

@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace LifeOS.Infrastructure.Food.Files;
+namespace LifeOS.Infrastructure.Files;
 
 /// <summary>An image fetched from the web: its bytes and the type read from its signature.</summary>
 public sealed record DownloadedImage(byte[] Bytes, string ContentType);

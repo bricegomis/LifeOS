@@ -15,11 +15,17 @@ public interface ISportReadData
     /// <summary>Sum of the entries per challenge and per day.</summary>
     Task<IReadOnlyDictionary<Guid, Dictionary<DateOnly, int>>> DayTotalsAsync(Guid householdId, IReadOnlyCollection<Guid> challengeIds, CancellationToken ct);
     Task<IReadOnlyList<ChallengeEntry>> EntriesAsync(Guid householdId, IReadOnlyCollection<Guid> challengeIds, DateOnly day, CancellationToken ct);
+    Task<IReadOnlyList<Routine>> RoutinesAsync(Guid householdId, Guid profileId, bool activeOnly, CancellationToken ct);
+    /// <summary>Every exercise of the household by id, archived ones included.</summary>
+    Task<IReadOnlyDictionary<Guid, Exercise>> ExercisesAsync(Guid householdId, CancellationToken ct);
+    Task<IReadOnlyList<ExerciseCompletion>> CompletionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct);
+    /// <summary>Completions of one exercise in the routines of a profile.</summary>
+    Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct);
 }
 
 /// <summary>
-/// Published read contract of the Sport module (ADR 0009, ADR 0013): week reports, challenge
-/// reports and sport days, all computed on read. The screens, the assistant and the future
+/// Published read contract of the Sport module (ADR 0009, ADR 0013, ADR 0014): week reports, challenge
+/// and routine reports and sport days, all computed on read. The screens, the assistant and the future
 /// planner read the module through it.
 /// </summary>
 public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
@@ -55,6 +61,38 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
             entries.Where(e => e.ChallengeId == challenge.Id).OrderBy(e => e.LoggedAt).ToList(), today)).ToList();
     }
 
+    /// <summary>Running routines (or all of them) with today's ticks, streak and a calendar of <paramref name="calendarWeeks"/> weeks.</summary>
+    public async Task<IReadOnlyList<RoutineReportDto>> RoutinesAsync(Guid householdId, Guid profileId, int calendarWeeks,
+        bool includeStopped, CancellationToken ct)
+    {
+        if (calendarWeeks is < 0 or > 53) throw new ArgumentException("Calendrier : 0 à 53 semaines.");
+        var today = Today();
+        var routines = await data.RoutinesAsync(householdId, profileId, !includeStopped, ct);
+        var exercises = await data.ExercisesAsync(householdId, ct);
+        var completions = (await data.CompletionsAsync(householdId, routines.Select(r => r.Id).ToList(), ct)).ToLookup(c => c.RoutineId);
+        var calendarFrom = calendarWeeks == 0 ? today : SportWeek.Monday(today).AddDays(-7 * (calendarWeeks - 1));
+        return routines.Select(routine =>
+        {
+            var own = completions[routine.Id].ToList();
+            var doneByDay = own.GroupBy(c => c.Date).ToDictionary(g => g.Key, g => g.Select(c => c.ExerciseId).ToHashSet());
+            var p = RoutineProgress.Compute(routine, doneByDay, today, calendarFrom);
+            return new RoutineReportDto(RoutineDto.From(routine, today, exercises), today, p.PlannedToday, p.DoneToday, p.TotalToday,
+                p.PlannedToday && p.DoneToday == p.TotalToday, p.NextPlannedDay, p.Streak, p.Record, p.JokersPerWeek, p.JokersLeftThisWeek,
+                own.Where(c => c.Date == today).OrderBy(c => c.LoggedAt).Select(ExerciseCompletionDto.From).ToList(),
+                p.Calendar.Select(d => new RoutineDayDto(d.Date, d.Done, d.Planned, d.Percent, Status(d.Status))).ToList());
+        }).ToList();
+    }
+
+    /// <summary>Records of one exercise and its best value and load of each of the last <paramref name="weeks"/> weeks.</summary>
+    public async Task<ExerciseProgressDto> ExerciseProgressAsync(Guid householdId, Guid profileId, Guid exerciseId, int weeks,
+        CancellationToken ct)
+    {
+        if (weeks is < 1 or > 104) throw new ArgumentException("Nombre de semaines : 1 à 104.");
+        var p = ExerciseProgress.Compute(await data.ExerciseCompletionsAsync(householdId, profileId, exerciseId, ct), Today(), weeks);
+        return new ExerciseProgressDto(exerciseId, p.BestValue, p.BestLoadKg, p.DaysDone,
+            p.Weeks.Select(w => new ExerciseWeekDto(w.Monday, w.BestValue, w.BestLoadKg)).ToList());
+    }
+
     /// <summary>Sessions per day and per profile, for the future planner.</summary>
     public async Task<IReadOnlyList<SportDayDto>> DaysAsync(Guid householdId, DateOnly from, DateOnly to, CancellationToken ct)
     {
@@ -86,6 +124,16 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
         ChallengeDayStatus.Joker => "joker",
         ChallengeDayStatus.Missed => "missed",
         ChallengeDayStatus.InProgress => "in_progress",
+        _ => "not_counted",
+    };
+
+    private static string Status(RoutineDayStatus status) => status switch
+    {
+        RoutineDayStatus.NotPlanned => "not_planned",
+        RoutineDayStatus.Done => "done",
+        RoutineDayStatus.Joker => "joker",
+        RoutineDayStatus.Missed => "missed",
+        RoutineDayStatus.InProgress => "in_progress",
         _ => "not_counted",
     };
 }

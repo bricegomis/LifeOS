@@ -43,4 +43,25 @@ internal sealed class EfSportReadData(LifeOSDbContext db) : ISportReadData
         await db.ChallengeEntries.AsNoTracking()
             .Where(e => e.HouseholdId == householdId && challengeIds.Contains(e.ChallengeId) && e.Date == day)
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Routine>> RoutinesAsync(Guid householdId, Guid profileId, bool activeOnly, CancellationToken ct) =>
+        await db.Routines.AsNoTracking()
+            .Where(r => r.HouseholdId == householdId && r.MemberProfileId == profileId)
+            .Where(r => !activeOnly || r.StoppedOn == null)
+            .OrderBy(r => r.StartedOn).ThenBy(r => r.Name)
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyDictionary<Guid, Exercise>> ExercisesAsync(Guid householdId, CancellationToken ct) =>
+        await db.Exercises.AsNoTracking().Where(e => e.HouseholdId == householdId).ToDictionaryAsync(e => e.Id, ct);
+
+    public async Task<IReadOnlyList<ExerciseCompletion>> CompletionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct) =>
+        await db.ExerciseCompletions.AsNoTracking()
+            .Where(c => c.HouseholdId == householdId && routineIds.Contains(c.RoutineId))
+            .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct) =>
+        await db.ExerciseCompletions.AsNoTracking()
+            .Where(c => c.HouseholdId == householdId && c.ExerciseId == exerciseId)
+            .Where(c => db.Routines.Any(r => r.Id == c.RoutineId && r.MemberProfileId == profileId))
+            .ToListAsync(ct);
 }

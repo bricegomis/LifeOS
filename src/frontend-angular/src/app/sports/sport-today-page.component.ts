@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms'
 import { RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
+import { RoutinesTodayComponent } from './routines-today.component'
 import { SessionEditorComponent } from './session-editor.component'
 import { SportNavComponent } from './sport-nav.component'
 import {
@@ -12,11 +13,11 @@ import {
 import { SportsApiService } from './sports-api.service'
 import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto, WeekReportDto } from './sports.models'
 
-/** Sport home (validated mockup): today's challenges first, then the current week. */
+/** Sport home (validated mockups): today's routines and challenges first, then the current week. */
 @Component({
   selector: 'app-sport-today-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, SessionEditorComponent, SportNavComponent],
+  imports: [FormsModule, RouterLink, RoutinesTodayComponent, SessionEditorComponent, SportNavComponent],
   template: `
     <div class="page">
       <app-sport-nav />
@@ -30,6 +31,7 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
       }
       @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
       @if (loading()) { <p class="status-text" role="status">Chargement…</p> } @else {
+        <app-routines-today />
         <section class="sport-section" aria-labelledby="sport-challenges">
           <div class="sport-section-head"><h2 id="sport-challenges">Défis du jour</h2>
             <a class="link-button" routerLink="/sports/settings">Gérer les défis</a></div>

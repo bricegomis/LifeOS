@@ -36,6 +36,35 @@ public sealed class AssistantSportToolsTests(PostgresContainerFixture postgres)
         Assert.Empty((await Call(neighbour, "list_sport_templates", new())).EnumerateArray());
     }
 
+    [Fact]
+    public async Task The_assistant_builds_a_routine_and_ticks_its_exercises_for_its_household_only()
+    {
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        await using var mcp = await Connect(factory, Guid.NewGuid());
+        await using var neighbour = await Connect(factory, Guid.NewGuid());
+
+        var exercise = await Call(mcp, "create_exercise", new() { ["name"] = "Chaise contre le mur", ["measure"] = "hold", ["withLoad"] = true, ["instructions"] = "Dos plaqué au mur." });
+        var exerciseId = exercise.GetProperty("id").GetString();
+        var routine = await Call(mcp, "create_routine", new()
+        {
+            ["name"] = "Tendons", ["jokersPerWeek"] = 1,
+            ["lines"] = new[] { new Dictionary<string, object?> { ["exerciseId"] = exerciseId, ["sets"] = 2, ["target"] = 45, ["loadKg"] = 10 } },
+        });
+        var routineId = routine.GetProperty("routine").GetProperty("id").GetString();
+        Assert.Equal(7, routine.GetProperty("routine").GetProperty("days").GetArrayLength());
+
+        var report = await Call(mcp, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId, ["value"] = 60, ["loadKg"] = 12 });
+        Assert.True(report.GetProperty("completedToday").GetBoolean());
+        Assert.Equal(1, report.GetProperty("streak").GetInt32());
+        Assert.Equal(60, (await Call(mcp, "get_exercise_progress", new() { ["exerciseId"] = exerciseId })).GetProperty("bestValue").GetInt32());
+        Assert.False((await Call(mcp, "uncomplete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId })).GetProperty("completedToday").GetBoolean());
+
+        Assert.Contains("Mesure", await Error(mcp, "create_exercise", new() { ["name"] = "Yoga", ["measure"] = "minutes" }));
+        Assert.Contains("introuvable", await Error(neighbour, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId }));
+        Assert.Empty((await Call(neighbour, "list_routines", new())).EnumerateArray());
+        Assert.Empty((await Call(neighbour, "list_exercises", new())).EnumerateArray());
+    }
+
     private static async Task<McpClient> Connect(WebApplicationFactory<Program> factory, Guid user)
     {
         var http = factory.CreateClient().AsUser(user);

@@ -1,3 +1,4 @@
+using LifeOS.Infrastructure.Files;
 using LifeOS.Application.Common.Interfaces;
 using LifeOS.Application.Food.Costs;
 using LifeOS.Application.Food.Products;
@@ -58,6 +59,8 @@ public static class DependencyInjection
         // Food module files
         services.Configure<FoodImageStorageOptions>(configuration.GetSection("FoodImages"));
         services.AddSingleton<FoodImageStorage>();
+        services.Configure<SportImageStorageOptions>(configuration.GetSection("SportImages"));
+        services.AddSingleton<SportImageStorage>();
         services.Configure<ReceiptPhotoStorageOptions>(configuration.GetSection("Receipts"));
         services.AddSingleton<ReceiptPhotoStorage>();
         // Images found by the assistant (ADR 0011): https only, public addresses only.

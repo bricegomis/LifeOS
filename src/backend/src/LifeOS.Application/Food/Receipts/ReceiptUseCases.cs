@@ -1,9 +1,7 @@
+using LifeOS.Application.Common.Files;
 using LifeOS.Domain.Food.Receipts;
 
 namespace LifeOS.Application.Food.Receipts;
-
-/// <summary>A file written by the storage: server-generated name, checked type, SHA-256 of the bytes.</summary>
-public sealed record StoredFile(string FileName, string ContentType, string Sha256);
 
 /// <summary>Durable storage of receipt photos (volume <c>lifeos_receipts</c>).</summary>
 public interface IReceiptPhotoFiles

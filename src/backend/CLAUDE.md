@@ -7,7 +7,8 @@
   (minimal API endpoints, DTOs, validation, auth, error handling).
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
-  templates, logged sessions, weekly goals, daily challenges; ADR 0013). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  templates, logged sessions, weekly goals, daily challenges; ADR 0013; exercises and
+  daily routines; ADR 0014). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -22,15 +23,22 @@
   module, when a module endpoint resolves the household by hand, or when
   Domain/Application reference EF or HTTP. Add a new module's name to its list when
   you create the folder.
-- Files (receipt photos `/data/receipts`, food and recipe images `/data/foods`) live on
-  durable volumes (`Infrastructure/Food/Files`), only served through authenticated,
-  household-checked routes.
+- Files (receipt photos `/data/receipts`, food and recipe images `/data/foods`, exercise
+  images `/data/sports`) live on durable volumes, only served through authenticated,
+  household-checked routes. The storage code is shared, outside the modules
+  (`Infrastructure/Files`, `Api/Files`); each module declares its own storage class
+  (`FoodImageStorage`, `ReceiptPhotoStorage`, `SportImageStorage`).
 - A receipt is only a stored photo (ADR 0010): no OCR, no lines, no purchases.
 - Sport (ADR 0013): every row carries a household profile (`SportProfiles` resolves the
   main one, the household's first profile, when none is given). Reports are computed on
   read by the published contract `Application/Sports/Contracts/SportReadContract`
   (week reports, challenge streaks with jokers, sport days); "today" is the Paris day
   (`SportClock`). Calories are typed, never computed.
+- Routines (ADR 0014): a `Routine` owns dated versions (days of the week as bits, jokers,
+  ordered lines with targets); a change applies from today and past days are judged with
+  the version they had. One `ExerciseCompletion` per routine, exercise and day; a routine
+  day is done when every line of that day's version is ticked. Days that are not planned
+  are skipped by the streak.
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
