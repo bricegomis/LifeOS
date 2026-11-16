@@ -34,7 +34,8 @@ porte :
 - une image facultative, aux mêmes règles que les images d'aliments ;
 - une consigne facultative en texte libre (position, points d'attention) ;
 - une mesure : `hold` (tenue, en secondes) ou `reps` (répétitions) ;
-- « avec charge » ou non ; la charge se saisit en kg, par pas de 0,5.
+- une charge habituelle facultative en kg, par pas de 0,5 ; vide ou 0 veut dire au
+  poids du corps ([ADR 0015](0015-sport-pages-and-routine-sessions.md)).
 
 La mesure d'un exercice ne change plus une fois qu'il a été réalisé, pour que son
 historique reste comparable. Un exercice peut être archivé ; son historique reste.
@@ -49,7 +50,8 @@ plusieurs routines.
 
 Chaque ligne de routine fixe la cible du moment pour un exercice : un nombre de
 séries (1 par défaut), une valeur par série (secondes ou répétitions) et, si
-l'exercice est avec charge, un poids. Exemple : « Chaise, 2 × 45 s à 10 kg ».
+besoin, une charge (la charge habituelle de l'exercice par défaut). Exemple : « Chaise,
+2 × 45 s à 10 kg ».
 
 - **La cible se règle à la main.** L'application ne propose pas de l'augmenter.
 - Une cible, une liste d'exercices ou des jours modifiés valent à partir du jour
@@ -58,17 +60,17 @@ l'exercice est avec charge, un poids. Exemple : « Chaise, 2 × 45 s à 10 kg »
 
 ### Réalisation du jour
 
-Une ligne par exercice et par jour, pas de saisie série par série.
+Depuis l'[ADR 0015](0015-sport-pages-and-routine-sessions.md), une routine se fait en
+**passages**, plusieurs par jour si besoin, un seul en cours à la fois. Dans un passage,
+chaque exercice se coche **série par série** avec un bouton compteur ; une coche
+enregistre la valeur et la charge de la cible (l'API et l'assistant peuvent les
+corriger). Le passage est terminé quand chaque exercice a toutes ses séries ; il ne se
+rouvre pas, on le supprime.
 
-- **Cocher** un exercice l'enregistre avec les valeurs de la cible. La valeur et
-  la charge réellement faites sont modifiables (« 60 s à 12 kg ») ; le nombre de
-  séries n'est pas ressaisi.
-- Décocher supprime la réalisation. Un jour passé prévu peut être complété ou corrigé
-  par l'API et l'assistant ; l'écran ne coche que le jour même. Un jour non prévu
-  ne se coche pas.
-- **La routine est faite quand tous ses exercices du jour sont cochés.** Une valeur
-  inférieure à la cible compte quand même : c'est la coche qui valide, les chiffres
-  servent au suivi.
+- Un jour passé prévu peut être complété ou corrigé par l'API et l'assistant ; l'écran
+  ne fait que le jour même. Un jour non prévu ne se fait pas.
+- **La routine est faite pour le jour dès qu'un passage est terminé.** Les passages
+  suivants sont comptés sans rien changer à la série ni aux jokers.
 - Pas de calories ; la routine n'est pas une séance et ne compte pas dans les
   objectifs de la semaine.
 
@@ -79,7 +81,8 @@ Une ligne par exercice et par jour, pas de saisie série par série.
   prévu manqué est couvert par un joker s'il en reste dans sa semaine, comme pour
   les défis ; le jour en cours ne casse jamais la série avant minuit.
 - **Calendrier par routine** : une case par jour, colorée selon la part d'exercices
-  cochés (0, moins de 50 %, moins de 100 %, faite, joker), grisée les jours non prévus.
+  faits dans le meilleur passage (0, moins de 50 %, moins de 100 %, faite, joker),
+  grisée les jours non prévus, avec le nombre de passages quand il dépasse 1.
 - **Progression par exercice** : courbe de la valeur et de la charge dans le temps,
   toutes routines confondues, avec le record de valeur et le record de charge. Rien
   n'est combiné : pas de score « secondes × kg ».
@@ -110,12 +113,14 @@ exercices faits sur prévus).
 
 ## Hors périmètre
 
-- Saisie série par série, temps de repos, chronomètre intégré.
+- Valeur, charge ou ressenti différents d'une série à l'autre, temps de repos,
+  chronomètre intégré.
 - Progression automatique ou suggérée de la cible.
 - Programmes à durée fixe (« 6 semaines, puis phase 2 »).
 - Rappels et notifications (étape 6).
-- Diagnostic, douleur ou suivi médical : ils relèvent du module Santé, propre au
-  profil. La consigne d'un exercice reste une donnée de sport.
+- Diagnostic, soins ou suivi médical : ils relèvent du module Santé, propre au
+  profil. La consigne d'un exercice et la gêne notée en fin de passage
+  ([ADR 0015](0015-sport-pages-and-routine-sessions.md)) restent des données de sport.
 
 ## Conséquences
 

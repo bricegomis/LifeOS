@@ -2,7 +2,6 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { SessionEditorComponent } from './session-editor.component'
-import { SportNavComponent } from './sport-nav.component'
 import { dayMonth, decimal, duration, integer, sessionCalories, sessionDetails, sessionTitle, shortDay } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { SportOption, SportSessionDto, SportTemplateDto, WeekReportDto } from './sports.models'
@@ -13,10 +12,9 @@ const STEP = 6
 @Component({
   selector: 'app-sport-history-page',
   standalone: true,
-  imports: [SessionEditorComponent, SportNavComponent],
+  imports: [SessionEditorComponent],
   template: `
     <div class="page">
-      <app-sport-nav />
       <div class="page-header">
         <h1>Historique</h1>
         <button type="button" class="lifeos-button" [disabled]="!today()" (click)="openEditor(null)"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter une séance</button>

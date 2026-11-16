@@ -129,14 +129,15 @@ export interface ChallengeReportDto {
   calendar: ChallengeDayDto[]
 }
 
-/** Routines and exercises (ADR 0014). */
+/** Routines, their passes and exercises (ADR 0014, ADR 0015). */
 export type ExerciseMeasure = 'hold' | 'reps'
 
 export interface ExerciseRequest {
   name: string
   instructions: string | null
   measure: ExerciseMeasure
-  withLoad: boolean
+  /** Usual load in kg, offered as the target in a routine; null means bodyweight. */
+  defaultLoadKg: number | null
 }
 
 export interface ExerciseDto extends ExerciseRequest {
@@ -147,6 +148,7 @@ export interface ExerciseDto extends ExerciseRequest {
   measureLocked: boolean
 }
 
+/** A load of null (or 0) means bodyweight. */
 export interface RoutineLineRequest { exerciseId: string, sets: number, target: number, loadKg: number | null }
 
 export interface RoutineRequest {
@@ -161,7 +163,6 @@ export interface RoutineLineDto extends RoutineLineRequest {
   exerciseName: string
   instructions: string | null
   measure: ExerciseMeasure
-  withLoad: boolean
   hasImage: boolean
 }
 
@@ -176,24 +177,52 @@ export interface RoutineDto {
   isActive: boolean
 }
 
-export interface ExerciseCompletionDto { exerciseId: string, date: string, value: number, loadKg: number | null, loggedAt: string }
+export interface ExerciseCompletionDto {
+  sessionId: string
+  exerciseId: string
+  date: string
+  setsDone: number
+  value: number
+  loadKg: number | null
+  /** 1 to 10; null when not noted. */
+  effort: number | null
+  /** 0 (none) to 10; null when not noted. */
+  discomfort: number | null
+  loggedAt: string
+}
+
+/** One pass of a routine: finished when every exercise has all its sets. */
+export interface RoutineSessionDto {
+  id: string
+  date: string
+  startedAt: string
+  finishedAt: string | null
+  finished: boolean
+  exercisesDone: number
+  exercisesTotal: number
+  comment: string | null
+  completions: ExerciseCompletionDto[]
+}
 
 export type RoutineDayStatus = 'not_counted' | 'not_planned' | 'done' | 'joker' | 'missed' | 'in_progress'
-export interface RoutineDayDto { date: string, done: number, planned: number, percent: number, status: RoutineDayStatus }
+export interface RoutineDayDto { date: string, done: number, planned: number, percent: number, status: RoutineDayStatus, passes: number }
 
 export interface RoutineReportDto {
   routine: RoutineDto
   today: string
   plannedToday: boolean
+  /** Exercises done in today's best pass. */
   doneToday: number
   totalToday: number
   completedToday: boolean
+  passesToday: number
   nextPlannedDay: string | null
   streak: number
   record: number
   jokersPerWeek: number
   jokersLeftThisWeek: number
-  todayCompletions: ExerciseCompletionDto[]
+  /** Today's passes, oldest first; at most one unfinished. */
+  todaySessions: RoutineSessionDto[]
   calendar: RoutineDayDto[]
 }
 
@@ -204,4 +233,9 @@ export interface ExerciseProgressDto {
   bestLoadKg: number | null
   daysDone: number
   weeks: ExerciseWeekDto[]
+  /** Latest ticks first, with their feeling. */
+  recent: ExerciseCompletionDto[]
 }
+
+export interface ExerciseFeeling { exerciseId: string, effort: number | null, discomfort: number | null }
+export interface SportSettingsDto { memberProfileId: string, defaultEffort: number, defaultDiscomfort: number }

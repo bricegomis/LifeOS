@@ -1,6 +1,6 @@
 # ADR 0015 — Sport : une page par élément, passages de routine et ressenti
 
-Statut : accepté, 2026-11-16. Cadrage d'un lot ajouté à l'étape 2 de la
+Statut : accepté et livré en code, 2026-11-16. Cadrage d'un lot ajouté à l'étape 2 de la
 [roadmap](../../01-roadmap.md). Maquette validée le 2026-11-16 (canevas des maquettes,
 rangée « Sport — pages par élément, passages et ressenti »). Étend
 l'[ADR 0013](0013-sport-module.md) et l'[ADR 0014](0014-sport-daily-routines.md).

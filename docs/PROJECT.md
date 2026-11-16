@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-16 (routines quotidiennes). Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-16 (passages de routine, une page par élément, Angular Material). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -16,8 +16,9 @@ module Alimentation sont livrés, ainsi que le classement des aliments
 Étape 2, « Sport », livrée en code le 2026-11-13 ([ADR 0013](architecture/decisions/0013-sport-module.md)) :
 séances réalisées, objectifs de la semaine, défis du jour et outils de l'assistant ; routines
 quotidiennes et bibliothèque d'exercices ajoutées le 2026-11-16
-([ADR 0014](architecture/decisions/0014-sport-daily-routines.md)) ; reste l'usage réel pendant
-quelques semaines.
+([ADR 0014](architecture/decisions/0014-sport-daily-routines.md)), puis passages de routine,
+ressenti et une page par élément le même jour ([ADR 0015](architecture/decisions/0015-sport-pages-and-routine-sessions.md)) ;
+reste l'usage réel pendant quelques semaines.
 
 ## Ce qui existe
 
@@ -32,11 +33,15 @@ quelques semaines.
 | Produits et prix | Produit toujours complet (aliment, nom, contenance) ; prix payé par conditionnement, par magasin et par date, ramené au kilo, au litre ou à la pièce ; tableau avec une colonne par magasin |
 | Magasins | Création, modification, suppression (refusée tant que des prix ou tickets y sont rattachés) |
 | Tickets | Photo conservée, allégée dans l'appli avant l'envoi (JPEG, 2560 px au plus ; 1600 px pour les photos d'aliments et de recettes), magasin et date d'achat facultatifs, état à traiter ou traité ; sur ordinateur, saisie des prix à côté de la photo ; aucune lecture automatique |
-| Sport | Séances types (sport d'une liste fixe, durée, distance, calories proposées) ; séances réalisées à une date par profil (calories saisies, inconnues = total partiel, distance, ressenti, fréquence cardiaque, notes) ; objectifs de la semaine (par séance type, par sport, nombre de séances ou volume) ; défis du jour en répétitions ou minutes, remplis par séries, avec série de jours, jokers, calendrier, totaux et paliers ; exercices du foyer (photo, consigne, tenue en secondes ou répétitions, avec ou sans charge) ; routines quotidiennes par profil (jours de la semaine, exercices ordonnés avec leur cible, une coche par exercice et par jour avec la valeur et la charge réellement faites, série et jokers par routine, calendrier, progression par exercice) ; pages Aujourd'hui, Historique, Progression et Réglages. Seul le profil principal est affiché |
+| Sport | Séances types (sport d'une liste fixe, durée, distance, calories proposées) ; séances réalisées à une date par profil (calories saisies, inconnues = total partiel, distance, ressenti, fréquence cardiaque, notes) ; objectifs de la semaine (par séance type, par sport, nombre de séances ou volume) ; défis du jour en répétitions ou minutes, remplis par séries, avec série de jours, jokers, calendrier, totaux et paliers ; exercices du foyer (photo choisie dès la création, consigne, tenue en secondes ou répétitions, charge habituelle facultative, vide = poids du corps) ; routines quotidiennes par profil (jours de la semaine, exercices ordonnés avec leur cible) faites en passages, plusieurs par jour, une coche par série par un bouton compteur, effort et gêne notés en fin de passage à partir de valeurs proposées réglables, série et jokers par routine (jour fait dès un passage terminé), calendrier avec le nombre de passages, progression par exercice avec les dernières coches ; une page par élément (Exercices, Routines, Défis, Objectifs modifiables, Séances types) avec une fenêtre de modification, plein écran sur téléphone ; pages Aujourd'hui, Historique et Progression. Seul le profil principal est affiché |
 
-Navigation : sur ordinateur, menu à gauche repliable avec un bloc par domaine,
-Paramètres et compte en bas ; sur téléphone, onglets Recettes, Aliments, Sport,
-Tickets, Réglages, et des sous-onglets en haut des pages Sport. Chaque liste commence par une zone de filtre.
+Navigation : un menu à gauche avec un groupe par domaine (Alimentation, Sport) qui s'ouvre sur
+ses pages, Paramètres et compte en bas ; sur ordinateur il reste affiché (repliable), sur
+téléphone il s'ouvre en panneau depuis la barre du haut, qui rappelle la page affichée. Plus
+d'onglets en bas. Les écrans du Sport et le menu utilisent Angular Material 3 avec le thème
+LifeOS ([ADR 0016](architecture/decisions/0016-angular-material-ui-kit.md)) ; ceux de
+l'Alimentation gardent leurs contrôles natifs jusqu'à leur migration. Chaque liste commence
+par une zone de filtre.
 
 Modèle : [02-core-model.md](02-core-model.md). Code découpé en modules (ADR 0009) :
 Foyer, Alimentation et Sport, chacun avec son schéma PostgreSQL ; tests d'architecture

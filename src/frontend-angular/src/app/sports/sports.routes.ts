@@ -1,15 +1,23 @@
 import type { Routes } from '@angular/router'
+import { ExercisesPageComponent } from './exercises-page.component'
+import { ChallengesPageComponent, GoalsPageComponent, TemplatesPageComponent } from './library-pages.component'
+import { RoutinesPageComponent } from './routines-page.component'
 import { SportHistoryPageComponent } from './sport-history-page.component'
 import { SportProgressPageComponent } from './sport-progress-page.component'
 import { SportRoutinePageComponent } from './sport-routine-page.component'
-import { SportSettingsPageComponent } from './sport-settings-page.component'
 import { SportTodayPageComponent } from './sport-today-page.component'
 
-/** Sport module pages (ADR 0013, ADR 0014), loaded on demand from app.routes.ts. */
+/** Sport module pages (ADR 0013, ADR 0014, ADR 0015): one page per element, loaded on demand from app.routes.ts. */
 export const SPORT_ROUTES: Routes = [
   { path: '', component: SportTodayPageComponent },
   { path: 'routine/:id', component: SportRoutinePageComponent },
   { path: 'history', component: SportHistoryPageComponent },
   { path: 'progress', component: SportProgressPageComponent },
-  { path: 'settings', component: SportSettingsPageComponent },
+  { path: 'routines', component: RoutinesPageComponent },
+  { path: 'exercises', component: ExercisesPageComponent },
+  { path: 'challenges', component: ChallengesPageComponent },
+  { path: 'goals', component: GoalsPageComponent },
+  { path: 'templates', component: TemplatesPageComponent },
+  // The former settings page was split into the pages above.
+  { path: 'settings', pathMatch: 'full', redirectTo: 'routines' },
 ]

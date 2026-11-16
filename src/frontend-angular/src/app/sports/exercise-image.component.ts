@@ -1,21 +1,34 @@
 import { Component, DestroyRef, effect, inject, input, signal } from '@angular/core'
+import { MatIconModule } from '@angular/material/icon'
 import { firstValueFrom } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 
-/** An exercise photo served by the API (authenticated, so loaded as a blob); a hatched square without one. */
+/**
+ * An exercise photo served by the API (authenticated, so loaded as a blob); an image icon without one
+ * (ADR 0015: the photo goes with the exercise everywhere). With `fill`, it takes the full height of its card.
+ */
 @Component({
   selector: 'app-exercise-image',
   standalone: true,
+  imports: [MatIconModule],
+  host: { class: 'lo-media', '[class.is-fill]': 'fill()', '[style.width.px]': 'size()', '[style.height.px]': 'fill() ? null : size()' },
   template: `
     @if (url(); as source) {
-      <img class="thumb" [src]="source" [alt]="alt()" [style.width.px]="size()" [style.height.px]="size()" />
+      <img [src]="source" [alt]="alt()" />
     } @else {
-      <span class="thumb exercise-placeholder" aria-hidden="true" [style.width.px]="size()" [style.height.px]="size()"></span>
+      <span class="placeholder" role="img" [attr.aria-label]="alt() ? 'Pas de photo' : null" [attr.aria-hidden]="alt() ? null : true">
+        <mat-icon svgIcon="image" />
+      </span>
     }
   `,
   styles: [`
-    :host { display: contents; }
-    .exercise-placeholder { border: 1px solid #d8ccb8; background: repeating-linear-gradient(135deg, #ece4d6 0 8px, #f4eddf 8px 16px); }
+    :host { display: block; overflow: hidden; flex: 0 0 auto; border-radius: 8px; }
+    :host(.is-fill) { min-height: 100%; align-self: stretch; border-radius: 0; }
+    img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .placeholder {
+      display: flex; width: 100%; height: 100%; min-height: inherit; align-items: center; justify-content: center;
+      background: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface-variant);
+    }
   `],
 })
 export class ExerciseImageComponent {
@@ -25,7 +38,9 @@ export class ExerciseImageComponent {
   /** Changes when the image was replaced, to reload it. */
   readonly version = input(0)
   readonly alt = input('')
-  readonly size = input(84)
+  readonly size = input(56)
+  /** Full height of a card, `size` wide. */
+  readonly fill = input(false)
   readonly url = signal<string | null>(null)
   private loadId = 0
 

@@ -1,66 +1,81 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core'
-import { RouterLink } from '@angular/router'
+import { MatButtonModule } from '@angular/material/button'
+import { MatIconModule } from '@angular/material/icon'
+import { MatSnackBar } from '@angular/material/snack-bar'
+import { Router, RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import {
-  doneText, nextDayLabel, routineAction, routineChip, routineJokerLine, routinePercent, routineStreakLine, targetText,
+  nextDayLabel, openPass, passesLine, routineAction, routineChip, routineJokerLine, routinePercent, routineStreakLine,
 } from './routine-format'
 import { SportsApiService } from './sports-api.service'
-import type { RoutineLineDto, RoutineReportDto } from './sports.models'
+import type { RoutineReportDto } from './sports.models'
 
-/** Today's routines on the sport home (ADR 0014): one card per planned routine, above the challenges. */
+/** Today's routines on the sport home (ADR 0014, ADR 0015): one card per planned routine with its passes of the day. */
 @Component({
   selector: 'app-routines-today',
   standalone: true,
-  imports: [RouterLink],
+  imports: [MatButtonModule, MatIconModule, RouterLink],
   template: `
-    @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
+    @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
     @if (loaded() && (routines().length || !error())) {
-      <section class="sport-section" aria-labelledby="sport-routines">
-        <div class="sport-section-head"><h2 id="sport-routines">Routines du jour</h2>
-          <a class="link-button" routerLink="/sports/settings">Gérer les routines</a></div>
+      <section class="lo-section" aria-labelledby="sport-routines">
+        <div class="lo-section-head"><h2 id="sport-routines">Routines du jour</h2>
+          <a mat-button routerLink="/sports/routines"><mat-icon svgIcon="tune" />Gérer</a></div>
         @if (!routines().length) {
-          <p class="empty-state">Aucune routine. Créez vos exercices puis une routine quotidienne dans les réglages du sport.</p>
+          <p class="lo-muted">Aucune routine. Créez vos exercices puis une routine quotidienne, sur les pages Exercices et Routines.</p>
         }
-        <div class="challenge-grid">
+        <div class="cards">
           @for (report of planned(); track report.routine.id) {
-            <article class="challenge-card" [attr.aria-labelledby]="'routine-' + report.routine.id">
-              <div class="challenge-head">
-                <div><strong [id]="'routine-' + report.routine.id">{{ report.routine.name }}</strong>
-                  <span class="muted small">{{ routineStreakLine(report) }}</span></div>
-                <span class="chip" [class.chip-done]="report.completedToday" [class.chip-neutral]="!report.completedToday">{{ routineChip(report) }}</span>
+            <article class="lo-card routine-card" [attr.aria-labelledby]="'routine-' + report.routine.id">
+              <div class="card-head">
+                <div class="lo-page-title"><strong [id]="'routine-' + report.routine.id" class="card-title">{{ report.routine.name }}</strong>
+                  <span class="lo-muted">{{ routineStreakLine(report) }}</span></div>
+                <span class="lo-tag" [class.is-done]="report.completedToday">{{ routineChip(report) }}</span>
               </div>
-              <div class="challenge-count"><strong>{{ report.doneToday }}</strong><span class="muted">/ {{ report.totalToday }} exercices</span></div>
-              <div class="progress" role="progressbar" [attr.aria-valuenow]="routinePercent(report)" aria-valuemin="0" aria-valuemax="100"
-                [attr.aria-label]="'Avancement de la routine ' + report.routine.name">
-                <span [style.width.%]="routinePercent(report)" [class.is-done]="report.completedToday"></span></div>
-              <ul class="routine-rows">
-                @for (line of report.routine.lines; track line.exerciseId) {
-                  <li [class.is-done]="isDone(report, line)">
-                    <i class="routine-dot" aria-hidden="true"></i>
-                    <span class="routine-row-name">{{ line.exerciseName }}</span>
-                    <span class="small">{{ lineValue(report, line) }}</span>
-                    <span class="sr-only">{{ isDone(report, line) ? '(fait)' : '(à faire)' }}</span>
-                  </li>
-                }
-              </ul>
-              <a class="lifeos-button routine-open" [routerLink]="['/sports/routine', report.routine.id]">{{ routineAction(report) }}</a>
-              <span class="muted small">{{ routineJokerLine(report) }}</span>
+              <span>{{ passesLine(report) }}</span>
+              @if (openPass(report); as pass) {
+                <div class="progress-block">
+                  <div class="bar" role="progressbar" [attr.aria-valuenow]="routinePercent(report)" aria-valuemin="0" aria-valuemax="100"
+                    [attr.aria-label]="'Avancement du passage en cours de ' + report.routine.name"><span [style.width.%]="routinePercent(report)"></span></div>
+                  <span class="lo-muted">Passage en cours · {{ pass.exercisesDone }} / {{ pass.exercisesTotal }} exercices</span>
+                </div>
+              }
+              <div class="card-actions">
+                <span class="lo-muted small">{{ routineJokerLine(report) }}</span>
+                <button mat-flat-button type="button" [class.tonal]="report.completedToday && !openPass(report)" [disabled]="pending() === report.routine.id"
+                  (click)="go(report)"><mat-icon svgIcon="play_arrow" />{{ routineAction(report) }}</button>
+              </div>
             </article>
           }
         </div>
         @for (report of off(); track report.routine.id) {
-          <div class="routine-off"><strong>{{ report.routine.name }}</strong><span class="muted">{{ nextDayLabel(report.today, report.nextPlannedDay) }}</span></div>
+          <div class="routine-off"><strong>{{ report.routine.name }}</strong><span class="lo-muted">{{ nextDayLabel(report.today, report.nextPlannedDay) }}</span></div>
         }
       </section>
     }
   `,
-  styleUrls: ['./sports.css', './routines.css'],
+  styles: [`
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .routine-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+    .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .card-title { font: var(--mat-sys-title-medium); }
+    .progress-block { display: flex; flex-direction: column; gap: 6px; }
+    .bar { height: 4px; overflow: hidden; border-radius: 2px; background: var(--mat-sys-secondary-container); }
+    .bar span { display: block; height: 100%; background: var(--mat-sys-primary); }
+    .card-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+    .small { font-size: 13px; }
+    .tonal { --mat-button-filled-container-color: var(--mat-sys-secondary-container); --mat-button-filled-label-text-color: var(--mat-sys-on-secondary-container); }
+    .routine-off { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 12px 16px; border: 1px dashed var(--mat-sys-outline-variant); border-radius: 12px; }
+  `],
 })
 export class RoutinesTodayComponent implements OnInit {
   private readonly api = inject(SportsApiService)
+  private readonly router = inject(Router)
+  private readonly snack = inject(MatSnackBar)
   readonly loaded = signal(false)
   readonly error = signal('')
+  readonly pending = signal('')
   readonly routines = signal<RoutineReportDto[]>([])
   readonly planned = computed(() => this.routines().filter(report => report.plannedToday))
   readonly off = computed(() => this.routines().filter(report => !report.plannedToday))
@@ -71,6 +86,8 @@ export class RoutinesTodayComponent implements OnInit {
   readonly routineAction = routineAction
   readonly routineJokerLine = routineJokerLine
   readonly nextDayLabel = nextDayLabel
+  readonly passesLine = passesLine
+  readonly openPass = openPass
 
   async ngOnInit(): Promise<void> {
     try { this.routines.set(await firstValueFrom(this.api.routines(1))) }
@@ -78,11 +95,13 @@ export class RoutinesTodayComponent implements OnInit {
     finally { this.loaded.set(true) }
   }
 
-  isDone(report: RoutineReportDto, line: RoutineLineDto): boolean {
-    return report.todayCompletions.some(completion => completion.exerciseId === line.exerciseId)
-  }
-  lineValue(report: RoutineReportDto, line: RoutineLineDto): string {
-    const completion = report.todayCompletions.find(item => item.exerciseId === line.exerciseId)
-    return completion ? doneText(line, completion) : targetText(line)
+  /** Continues the open pass, or opens a new one, then goes to the routine. */
+  async go(report: RoutineReportDto): Promise<void> {
+    this.pending.set(report.routine.id)
+    try {
+      if (!openPass(report)) await firstValueFrom(this.api.startSession(report.routine.id))
+      await this.router.navigate(['/sports/routine', report.routine.id])
+    } catch (error) { this.snack.open(apiErrorMessage(error), 'OK', { duration: 6000 }) }
+    finally { this.pending.set('') }
   }
 }

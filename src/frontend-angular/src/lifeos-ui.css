@@ -1,0 +1,66 @@
+/*
+ * LifeOS screen conventions on Angular Material 3 (ADR 0016): library pages, list rows with a
+ * picture or icon on the left, cards with a full-height picture, the floating add button and the
+ * full-screen dialog of the phone. Shared by every migrated module.
+ */
+.lo-page { display: flex; max-width: 1080px; flex-direction: column; gap: 16px; }
+.lo-page-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.lo-page-head h1, .lo-page h1 { margin: 0; font: var(--mat-sys-headline-medium); }
+.lo-page-title { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.lo-intro, .lo-muted { margin: 0; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-medium); }
+.lo-section { display: flex; flex-direction: column; gap: 12px; }
+.lo-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.lo-section-head h2, .lo-section > h2 { margin: 0; font: var(--mat-sys-title-medium); font-weight: 600; }
+
+.lo-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.lo-search {
+  display: flex; min-width: 0; flex: 1 1 260px; height: 56px; box-sizing: border-box; align-items: center; gap: 12px;
+  padding: 0 16px; border-radius: 28px; background: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface-variant);
+}
+.lo-search input { min-width: 0; flex: 1 1 auto; border: 0; background: transparent; color: var(--mat-sys-on-surface); font: var(--mat-sys-body-large); outline: none; }
+.lo-filter-chip, .lo-chip {
+  display: inline-flex; min-height: 32px; align-items: center; gap: 6px; padding: 0 12px; border: 1px solid var(--mat-sys-outline);
+  border-radius: 8px; background: transparent; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-large);
+}
+.lo-filter-chip.is-on, .lo-chip.is-on { border-color: var(--mat-sys-secondary-container); background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container); }
+.lo-filter-chip mat-icon, .lo-chip mat-icon { width: 18px; height: 18px; }
+.lo-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.lo-field-label { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-medium); }
+.lo-field-group { display: flex; flex-direction: column; gap: 6px; }
+
+.lo-list { overflow: hidden; border: 1px solid var(--mat-sys-outline-variant); border-radius: 12px; background: var(--mat-sys-surface); }
+.lo-row { display: flex; align-items: center; }
+.lo-row + .lo-row { border-top: 1px solid var(--mat-sys-outline-variant); }
+.lo-row-main {
+  display: flex; min-width: 0; min-height: 72px; flex: 1 1 auto; align-items: center; gap: 16px; padding: 8px 16px;
+  border: 0; background: transparent; color: var(--mat-sys-on-surface); text-align: left;
+}
+.lo-row-main:hover { background: color-mix(in srgb, var(--mat-sys-on-surface) 6%, transparent); }
+.lo-row-text { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; }
+.lo-row-title { font: var(--mat-sys-body-large); }
+.lo-row-sub { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-medium); }
+.lo-row-action { flex: 0 0 auto; padding-right: 12px; }
+.lo-lead-icon {
+  display: inline-flex; width: 40px; height: 40px; flex: 0 0 40px; align-items: center; justify-content: center;
+  border-radius: 20px; background: var(--mat-sys-secondary-container); color: var(--mat-sys-on-secondary-container);
+}
+.lo-tag {
+  display: inline-flex; height: 24px; align-items: center; padding: 0 8px; border-radius: 8px;
+  background: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-medium); white-space: nowrap;
+}
+.lo-tag.is-done { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); }
+.lo-empty { margin: 0; padding: 24px 16px; color: var(--mat-sys-on-surface-variant); text-align: center; }
+
+.lo-card { overflow: hidden; border: 1px solid var(--mat-sys-outline-variant); border-radius: 12px; background: var(--mat-sys-surface); }
+.lo-media-card { display: flex; align-items: stretch; }
+.lo-media-card > .lo-media { flex: 0 0 auto; align-self: stretch; }
+.lo-media-body { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; justify-content: center; gap: 4px; padding: 12px 16px; }
+
+.lo-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 5; }
+
+.lo-fullscreen-dialog .mat-mdc-dialog-surface { border-radius: 0; }
+.lo-fullscreen-dialog .mat-mdc-dialog-content { max-height: none; flex: 1 1 auto; }
+.lo-form { display: flex; flex-direction: column; gap: 4px; }
+.lo-form-row { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.lo-form-row > * { flex: 1 1 180px; }
+.lo-help { margin: 0; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); }

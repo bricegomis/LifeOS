@@ -1,30 +1,37 @@
-<div class="shell" [class.menu-closed]="!menuOpen()">
-  <nav class="side-menu" aria-label="Navigation principale">
-    <div class="side-menu-top">
-      <button type="button" class="burger" (click)="toggleMenu()" [attr.aria-expanded]="menuOpen()"
-        [attr.aria-label]="menuOpen() ? 'Fermer le menu' : 'Ouvrir le menu'">
-        <i class="pi pi-bars" aria-hidden="true"></i>
-      </button>
-      @if (menuOpen()) { <span class="brand">LifeOS</span> }
-    </div>
-    @if (menuOpen()) {
-      @for (block of blocks; track block.title) {
+<mat-sidenav-container class="shell">
+  <mat-sidenav class="side-menu" [mode]="handset() ? 'over' : 'side'" [opened]="menuOpened()" (closed)="menuClosed()"
+    [fixedInViewport]="handset()" aria-label="Navigation principale">
+    <nav class="menu" aria-label="Navigation principale">
+      <div class="menu-top">
+        <span class="brand">LifeOS</span>
+        <button mat-icon-button type="button" (click)="closeMenu()" aria-label="Fermer le menu">
+          <mat-icon [svgIcon]="handset() ? 'close' : 'menu'" />
+        </button>
+      </div>
+      @for (block of blocks; track block.id) {
         <div class="menu-block">
-          <div class="menu-block-title">{{ block.title }}</div>
-          @for (item of block.items; track item.path) {
-            <a class="menu-item" [routerLink]="item.path" routerLinkActive="is-active" [routerLinkActiveOptions]="{ exact: item.exact ?? false }">
-              <span>{{ item.label }}</span>
-              @if (item.receiptsBadge && pendingReceipts()) {
-                <span class="badge" [attr.aria-label]="pendingReceipts() + ' à traiter'">{{ pendingReceipts() }}</span>
-              }
-            </a>
+          <button type="button" class="menu-group" [attr.aria-expanded]="isOpen(block.id)" (click)="toggleBlock(block.id)">
+            <mat-icon [svgIcon]="block.icon" />
+            <span class="menu-group-title">{{ block.title }}</span>
+            <mat-icon class="menu-chevron" [class.is-open]="isOpen(block.id)" svgIcon="keyboard_arrow_down" />
+          </button>
+          @if (isOpen(block.id)) {
+            @for (item of block.items; track item.path) {
+              <a class="menu-item" [routerLink]="item.path" routerLinkActive="is-active" ariaCurrentWhenActive="page"
+                [routerLinkActiveOptions]="{ exact: item.exact ?? false }">
+                <span>{{ item.label }}</span>
+                @if (item.receiptsBadge && pendingReceipts()) {
+                  <span class="badge" [attr.aria-label]="pendingReceipts() + ' à traiter'">{{ pendingReceipts() }}</span>
+                }
+              </a>
+            }
           }
         </div>
       }
-    }
-    <div class="side-menu-bottom">
-      @if (menuOpen()) {
-        <a class="menu-item" routerLink="/settings" routerLinkActive="is-active">Paramètres</a>
+      <div class="menu-bottom">
+        <a class="menu-group" routerLink="/settings" routerLinkActive="is-active" ariaCurrentWhenActive="page">
+          <mat-icon svgIcon="settings" /><span class="menu-group-title">Paramètres</span>
+        </a>
         <div class="account">
           <span class="avatar" aria-hidden="true">{{ initial() }}</span>
           <span class="account-text">
@@ -33,18 +40,25 @@
           </span>
         </div>
         @if (signOutError()) { <p class="error-text small" role="alert">{{ signOutError() }}</p> }
-        <button type="button" class="lifeos-button lifeos-button-secondary sign-out" (click)="signOut()">Déconnexion</button>
-      } @else {
-        <span class="avatar" role="img" [attr.aria-label]="'Compte ' + email()">{{ initial() }}</span>
-      }
-    </div>
-  </nav>
-  <main class="shell-main">
-    <router-outlet />
-  </main>
-  <nav class="tab-bar" aria-label="Navigation mobile">
-    @for (tab of tabs; track tab.path) {
-      <a class="tab" [routerLink]="tab.path" routerLinkActive="is-active">{{ tab.label }}</a>
+        <button mat-stroked-button type="button" class="sign-out" (click)="signOut()"><mat-icon svgIcon="logout" />Déconnexion</button>
+      </div>
+    </nav>
+  </mat-sidenav>
+  <mat-sidenav-content class="shell-content">
+    @if (handset()) {
+      <mat-toolbar class="top-bar">
+        <button mat-icon-button type="button" (click)="openMenu()" [attr.aria-expanded]="menuOpened()" aria-label="Ouvrir le menu">
+          <mat-icon svgIcon="menu" />
+        </button>
+        <span class="top-title">{{ title() }}</span>
+      </mat-toolbar>
+    } @else if (!menuOpened()) {
+      <button mat-icon-button type="button" class="menu-reopen" (click)="openMenu()" aria-label="Ouvrir le menu">
+        <mat-icon svgIcon="menu" />
+      </button>
     }
-  </nav>
-</div>
+    <main class="shell-main">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

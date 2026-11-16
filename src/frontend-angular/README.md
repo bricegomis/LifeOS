@@ -1,8 +1,10 @@
 # LifeOS Angular frontend
 
 The frontend is a standalone Angular 22 + TypeScript single-page application,
-built with the Angular CLI and styled with native HTML controls and the existing
-LifeOS CSS tokens. PrimeIcons (MIT) supplies the icons; no PrimeNG/PrimeUI runtime. It is the only, API-backed
+built with the Angular CLI. The menu and the Sport screens use Angular Material 3 with
+the LifeOS theme (`src/theme.scss`, ADR 0016) and Material Symbols bundled as SVG; the
+Food screens still use native controls, the LifeOS CSS tokens and PrimeIcons until their
+migration. It is the only, API-backed
 frontend, published by the Docker delivery workflow for VPS deployments and
 packaged for iPhone with Capacitor (see [docs/ios-v1.md](../../docs/ios-v1.md)).
 

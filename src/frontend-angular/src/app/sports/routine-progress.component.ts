@@ -2,12 +2,12 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
-import { daysLabel, exerciseCharts, kilos, measureUnit, routineDayLevel, routineDayTitle } from './routine-format'
+import { daysLabel, exerciseCharts, hasLoad, kilos, measureUnit, routineDayLevel, routineDayTitle } from './routine-format'
 import { calendarWeeks, dayMonth } from './sport-format'
 import { SportsApiService } from './sports-api.service'
-import type { ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto } from './sports.models'
+import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto } from './sports.models'
 
-/** Follow-up of routines (calendar, streak, record) and of each exercise (value and load per week), ADR 0014. */
+/** Follow-up of routines (calendar with passes, streak, record) and of each exercise (value, load, feeling), ADR 0014, ADR 0015. */
 @Component({
   selector: 'app-routine-progress',
   standalone: true,
@@ -40,7 +40,7 @@ import type { ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto 
                     <div class="calendar-week">
                       @for (day of week; track $index) {
                         @if (day) {
-                          <span [class]="'cell cell-' + level(day)" [class.is-today]="day.date === report.today" [title]="cellTitle(day)"></span>
+                          <span [class]="'cell cell-' + level(day)" [class.is-today]="day.date === report.today" [title]="cellTitle(day)">{{ day.passes > 1 ? day.passes : '' }}</span>
                         } @else { <span class="cell cell-none"></span> }
                       }
                     </div>
@@ -52,6 +52,7 @@ import type { ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto 
                 <span><i class="cell cell-high"></i>&lt; 100 %</span><span><i class="cell cell-full"></i>Faite</span>
                 <span><i class="cell cell-joker"></i>Joker</span><span><i class="cell cell-off"></i>Non prévu</span>
               </div>
+              <p class="muted small">Un chiffre dans une case : nombre de passages terminés ce jour-là.</p>
             }
           }
         </section>
@@ -85,7 +86,20 @@ import type { ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto 
                       </div>
                     </div>
                   }
-                  <p class="muted small">Meilleure valeur de chaque semaine sur 12 semaines, toutes routines confondues.</p>
+                  <p class="muted small">Meilleure valeur de chaque semaine sur 12 semaines, toutes routines et tous passages confondus.</p>
+                  @if (data.recent.length) {
+                    <table class="recent">
+                      <caption>Dernières fois</caption>
+                      <thead><tr><th scope="col">Jour</th><th scope="col">Fait</th><th scope="col">Effort</th><th scope="col">Gêne</th></tr></thead>
+                      <tbody>
+                        @for (tick of data.recent; track tick.sessionId) {
+                          <tr><td>{{ dayMonth(tick.date) }}</td><td>{{ doneLine(item, tick) }}</td>
+                            <td>{{ tick.effort ?? '—' }}</td><td>{{ tick.discomfort ?? '—' }}</td></tr>
+                        }
+                      </tbody>
+                    </table>
+                    <p class="muted small">« — » : non noté. La cible se règle à la main dans la routine.</p>
+                  }
                 }
               } @else if (!error()) { <p class="status-text" role="status">Chargement…</p> }
             }
@@ -95,6 +109,13 @@ import type { ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto 
     }
   `,
   styleUrls: ['./sports.css', './routines.css'],
+  styles: [`
+    .calendar .cell { display: grid; place-items: center; color: var(--lifeos-surface); font-size: 11px; font-weight: 700; }
+    .recent { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .recent caption { padding-bottom: 6px; text-align: left; font-weight: 700; }
+    .recent th { color: var(--lifeos-text-soft); font-size: 12px; font-weight: 600; text-align: left; }
+    .recent th, .recent td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--lifeos-line); }
+  `],
 })
 export class RoutineProgressComponent implements OnInit {
   private readonly api = inject(SportsApiService)
@@ -138,5 +159,11 @@ export class RoutineProgressComponent implements OnInit {
   }
 
   level(day: RoutineDayDto): string { return routineDayLevel(day) }
+  readonly dayMonth = dayMonth
+  /** "4 séries × 45 s à 10 kg". */
+  doneLine(exercise: ExerciseDto, tick: ExerciseCompletionDto): string {
+    const load = hasLoad(tick.loadKg) ? ` à ${kilos(tick.loadKg)} kg` : ''
+    return `${tick.setsDone} série${tick.setsDone > 1 ? 's' : ''} × ${tick.value} ${measureUnit(exercise.measure)}${load}`
+  }
   cellTitle(day: RoutineDayDto): string { return routineDayTitle(day, dayMonth(day.date)) }
 }

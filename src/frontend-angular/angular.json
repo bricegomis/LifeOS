@@ -24,10 +24,15 @@
               }
             ],
             "styles": [
+              "src/theme.scss",
               "node_modules/primeicons/primeicons.css",
-              "src/styles.css"
+              "src/styles.css",
+              "src/lifeos-ui.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "loader": {
+              ".svg": "text"
+            }
           },
           "configurations": {
             "production": {

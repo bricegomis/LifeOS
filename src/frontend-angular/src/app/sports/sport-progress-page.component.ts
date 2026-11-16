@@ -2,7 +2,6 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { RoutineProgressComponent } from './routine-progress.component'
-import { SportNavComponent } from './sport-nav.component'
 import { calendarWeeks, challengeAmount, dayLevel, dayMonth, decimal, duration, integer } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { ChallengeDayDto, ChallengeReportDto, WeekReportDto } from './sports.models'
@@ -22,10 +21,9 @@ const STATUS_LABELS: Record<string, string> = { reached: 'atteint', joker: 'joke
 @Component({
   selector: 'app-sport-progress-page',
   standalone: true,
-  imports: [RoutineProgressComponent, SportNavComponent],
+  imports: [RoutineProgressComponent],
   template: `
     <div class="page">
-      <app-sport-nav />
       <div class="page-header"><h1>Progression</h1></div>
       @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
       @if (loading()) { <p class="status-text" role="status">Chargement…</p> } @else {

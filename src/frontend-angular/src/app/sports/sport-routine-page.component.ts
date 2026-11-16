@@ -1,176 +1,245 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core'
+import { MatButtonModule } from '@angular/material/button'
+import { MatDialog } from '@angular/material/dialog'
+import { MatIconModule } from '@angular/material/icon'
+import { MatSnackBar } from '@angular/material/snack-bar'
 import { ActivatedRoute, RouterLink } from '@angular/router'
-import { firstValueFrom } from 'rxjs'
+import { firstValueFrom, type Observable } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
+import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { ExerciseImageComponent } from './exercise-image.component'
+import { RoutineDialogComponent, type RoutineDialogData, type RoutineDialogResult } from './routine-dialog.component'
+import { RoutineFeelingDialogComponent, type FeelingDialogData } from './routine-feeling-dialog.component'
 import {
-  daysLabel, doneText, kilos, measureUnit, nextDayLabel, routineCelebration, stepLoad, stepValue, targetText, valueStep,
+  clockTime, daysLabel, nextDayLabel, openPass, routineCelebration, setButton, setsDone, targetText,
 } from './routine-format'
 import { SportsApiService } from './sports-api.service'
-import type { ExerciseCompletionDto, RoutineLineDto, RoutineReportDto } from './sports.models'
+import type { RoutineLineDto, RoutineReportDto, RoutineSessionDto, SportSettingsDto } from './sports.models'
 
-interface TickDraft { exerciseId: string, value: number, loadKg: number | null }
-
-/** Doing a routine (ADR 0014): each exercise with its photo, instructions and target; one tick per exercise. */
+/**
+ * Doing a routine (ADR 0014, ADR 0015): today's open pass with one "Série faite" button per exercise
+ * that fills set after set, the passes of the day, and the feeling window when a pass ends.
+ */
 @Component({
   selector: 'app-sport-routine-page',
   standalone: true,
-  imports: [RouterLink, ExerciseImageComponent],
+  imports: [ExerciseImageComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
-    <div class="page page-narrow">
-      <a class="back-link" routerLink="/sports"><i class="pi pi-arrow-left" aria-hidden="true"></i> Sport</a>
-      @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p class="status-text" role="status">Chargement…</p> }
+    <div class="lo-page routine-page">
+      @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
+      @if (loading()) { <p class="lo-muted" role="status">Chargement…</p> }
       @else if (report(); as report) {
-        <div class="page-header">
-          <div><h1>{{ report.routine.name }}</h1>
-            <p class="muted">{{ daysLabel(report.routine.days) }} · série {{ report.streak }} j</p></div>
-          @if (report.plannedToday) {
-            <span class="chip" [class.chip-done]="report.completedToday" [class.chip-neutral]="!report.completedToday">{{ report.doneToday }} / {{ report.totalToday }}</span>
+        <header class="head">
+          <a mat-icon-button routerLink="/sports" aria-label="Retour à l’accueil du sport"><mat-icon svgIcon="arrow_back" /></a>
+          <div class="lo-page-title">
+            <h1>{{ report.routine.name }}</h1>
+            <span class="lo-muted">{{ daysLabel(report.routine.days) }} · série de {{ report.streak }} jour{{ report.streak > 1 ? 's' : '' }} · record {{ report.record }}</span>
+          </div>
+          @if (report.routine.isActive) {
+            <button mat-flat-button type="button" class="tonal" (click)="editRoutine(report)"><mat-icon svgIcon="edit" />Modifier la routine</button>
           }
-        </div>
-        @if (banner()) { <div class="celebration" role="status"><i class="pi pi-check" aria-hidden="true"></i><span>{{ banner() }}</span></div> }
-        @if (!report.plannedToday) {
-          <p class="notice" role="status">Cette routine n'est pas prévue aujourd'hui. {{ nextDayLabel(report.today, report.nextPlannedDay) }}</p>
-        }
-        @for (line of report.routine.lines; track line.exerciseId; let index = $index) {
-          <article class="exercise-card" [class.is-done]="!!completion(line)" [attr.aria-labelledby]="'exercise-' + line.exerciseId">
-            <div class="exercise-head">
-              <app-exercise-image [exerciseId]="line.exerciseId" [hasImage]="line.hasImage" [alt]="'Photo : ' + line.exerciseName" />
-              <div class="exercise-text">
-                <span class="muted small">Exercice {{ index + 1 }} sur {{ report.routine.lines.length }}</span>
-                <strong [id]="'exercise-' + line.exerciseId">{{ line.exerciseName }}</strong>
-                <span class="exercise-target">Cible : {{ targetText(line) }}</span>
-              </div>
+        </header>
+
+        @if (pass(); as current) {
+          <section class="lo-section" aria-labelledby="open-pass">
+            <div class="lo-section-head">
+              <h2 id="open-pass">Passage de {{ clockTime(current.startedAt) }}</h2>
+              <span class="lo-muted">{{ current.exercisesDone }} / {{ current.exercisesTotal }} exercices</span>
             </div>
-            @if (line.instructions) {
-              <button type="button" class="link-button exercise-toggle" [attr.aria-expanded]="open().has(line.exerciseId)" (click)="toggle(line)">
-                {{ open().has(line.exerciseId) ? 'Masquer la consigne' : 'Voir la consigne' }}</button>
-              @if (open().has(line.exerciseId)) { <p class="exercise-instructions">{{ line.instructions }}</p> }
-            }
-            @if (report.plannedToday) {
-              @if (draft()?.exerciseId === line.exerciseId) {
-                <div class="tick-editor">
-                  <div class="stepper-row"><span>{{ line.measure === 'hold' ? 'Tenue' : 'Répétitions' }}</span>
-                    <div class="stepper">
-                      <button type="button" [attr.aria-label]="'Moins ' + valueStep(line.measure)" (click)="stepValue(line, -1)">−</button>
-                      <output aria-live="polite">{{ draft()!.value }} {{ measureUnit(line.measure) }}</output>
-                      <button type="button" [attr.aria-label]="'Plus ' + valueStep(line.measure)" (click)="stepValue(line, 1)">+</button>
-                    </div></div>
-                  @if (line.withLoad) {
-                    <div class="stepper-row"><span>Charge</span>
-                      <div class="stepper">
-                        <button type="button" aria-label="Moins 0,5 kg" (click)="stepLoad(-1)">−</button>
-                        <output aria-live="polite">{{ kilos(draft()!.loadKg ?? 0) }} kg</output>
-                        <button type="button" aria-label="Plus 0,5 kg" (click)="stepLoad(1)">+</button>
-                      </div></div>
-                  }
-                  <div class="tick-actions">
-                    <button type="button" class="lifeos-button tick-main" [disabled]="pending()" (click)="saveDraft()">Valider</button>
-                    <button type="button" class="lifeos-button lifeos-button-secondary" (click)="draft.set(null)">Annuler</button>
+            @for (line of report.routine.lines; track line.exerciseId) {
+              @let button = buttonOf(line);
+              <article class="lo-card lo-media-card exercise" [class.is-done]="button.full">
+                <app-exercise-image [exerciseId]="line.exerciseId" [hasImage]="line.hasImage" [size]="photoSize" [fill]="true" [alt]="'Photo : ' + line.exerciseName" />
+                <div class="exercise-body">
+                  <div class="exercise-text">
+                    <strong class="exercise-name">{{ line.exerciseName }}</strong>
+                    <span class="exercise-target">{{ targetText(line) }}</span>
+                    @if (line.instructions) { <span class="lo-muted">{{ line.instructions }}</span> }
+                  </div>
+                  <div class="exercise-actions">
+                    <button type="button" class="set-button" [class.is-full]="button.full" [disabled]="button.full || pending() === line.exerciseId"
+                      [style.--fill.%]="button.percent" [attr.aria-label]="button.aria" (click)="setSets(line, 1)">
+                      <span>{{ button.label }}</span><span class="set-counter">{{ button.counter }}</span>
+                    </button>
+                    <button mat-icon-button type="button" class="undo" [disabled]="!done(line) || pending() === line.exerciseId"
+                      [attr.aria-label]="'Retirer la dernière série de ' + line.exerciseName" [attr.title]="'Retirer la dernière série'" (click)="setSets(line, -1)">
+                      <mat-icon svgIcon="undo" />
+                    </button>
                   </div>
                 </div>
-              } @else if (completion(line); as done) {
-                <div class="tick-done">
-                  <span class="tick-done-text"><i class="pi pi-check" aria-hidden="true"></i> {{ doneText(line, done) }}</span>
-                  <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="pending()" (click)="edit(line, done)"
-                    [attr.aria-label]="'Modifier ' + line.exerciseName">Modifier</button>
-                  <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="pending()" (click)="untick(line)"
-                    [attr.aria-label]="'Décocher ' + line.exerciseName">Décocher</button>
-                </div>
-              } @else {
-                <div class="tick-actions">
-                  <button type="button" class="lifeos-button tick-main" [disabled]="pending()" (click)="tick(line)"
-                    [attr.aria-label]="'Fait : ' + line.exerciseName"><i class="pi pi-check" aria-hidden="true"></i> Fait</button>
-                  <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="pending()" (click)="edit(line, null)"
-                    [attr.aria-label]="'Autre valeur pour ' + line.exerciseName">Autre valeur</button>
+              </article>
+            }
+            <p class="lo-help">Un appui par série faite, avec la cible ; la flèche retire la dernière. Le passage se termine à la dernière série.</p>
+          </section>
+        } @else if (report.plannedToday && report.routine.isActive) {
+          <div><button mat-flat-button type="button" class="start" [disabled]="pending() === 'start'" (click)="start()">
+            <mat-icon svgIcon="play_arrow" />{{ report.completedToday ? 'Nouveau passage' : 'Commencer un passage' }}</button></div>
+        } @else if (report.routine.isActive) {
+          <p class="lo-muted">Pas prévue aujourd’hui. {{ nextDayLabel(report.today, report.nextPlannedDay) }}</p>
+        }
+
+        <section class="lo-section" aria-labelledby="passes">
+          <h2 id="passes">Passages du jour</h2>
+          @if (report.todaySessions.length) {
+            <div class="lo-list">
+              @for (session of report.todaySessions; track session.id) {
+                <div class="lo-row pass">
+                  <span class="lo-lead-icon" aria-hidden="true"><mat-icon svgIcon="schedule" /></span>
+                  <span class="lo-row-text">
+                    <span class="lo-row-title">{{ passTime(session) }} · {{ session.finished ? 'Terminé' : 'En cours, ' + session.exercisesDone + ' / ' + session.exercisesTotal }}</span>
+                    @if (session.finished) { <span class="lo-row-sub">{{ feelingLine(session) }}</span> }
+                  </span>
+                  @if (session.finished) {
+                    <button mat-icon-button type="button" (click)="openFeeling(report, session)" [attr.aria-label]="hasFeeling(session) ? 'Modifier le ressenti' : 'Noter le ressenti'"
+                      [attr.title]="hasFeeling(session) ? 'Modifier le ressenti' : 'Noter le ressenti'"><mat-icon svgIcon="rate_review" /></button>
+                  }
+                  <button mat-icon-button type="button" class="delete" (click)="deletePass(session)" aria-label="Supprimer le passage" title="Supprimer le passage">
+                    <mat-icon svgIcon="delete" />
+                  </button>
                 </div>
               }
-            }
-          </article>
-        }
-        @if (report.plannedToday) {
-          <p class="muted small">Cocher valide l'exercice avec la cible. Une valeur plus basse compte quand même : les chiffres servent au suivi.</p>
-        }
+            </div>
+          } @else { <p class="lo-muted">Aucun passage aujourd’hui.</p> }
+        </section>
       } @else if (!error()) {
-        <p class="empty-state">Routine introuvable ou arrêtée.</p>
+        <p class="lo-empty">Routine introuvable. <a routerLink="/sports/routines">Voir les routines</a></p>
       }
     </div>
   `,
-  styleUrls: ['./sports.css', './routines.css'],
+  styles: [`
+    .routine-page { max-width: 960px; }
+    .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .head .lo-page-title { flex: 1 1 200px; }
+    .tonal, .start { --mat-button-filled-container-color: var(--mat-sys-secondary-container); --mat-button-filled-label-text-color: var(--mat-sys-on-secondary-container); }
+    .start { --mat-button-filled-container-color: var(--mat-sys-primary); --mat-button-filled-label-text-color: var(--mat-sys-on-primary); min-height: 48px; }
+    .exercise { min-height: 112px; }
+    .exercise.is-done { border-color: var(--mat-sys-primary); }
+    .exercise-body { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; }
+    .exercise-text { display: flex; min-width: 0; flex: 1 1 220px; flex-direction: column; gap: 2px; }
+    .exercise-name { font: var(--mat-sys-title-medium); }
+    .exercise-target { color: var(--mat-sys-primary); font: var(--mat-sys-label-large); }
+    .exercise-actions { display: flex; flex: 1 1 260px; align-items: center; justify-content: flex-end; gap: 4px; }
+    .set-button {
+      display: flex; min-width: 0; min-height: 48px; flex: 1 1 auto; max-width: 260px; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 0 20px; border: 1px solid var(--mat-sys-primary); border-radius: 24px; color: var(--mat-sys-primary); font: var(--mat-sys-label-large);
+      background: linear-gradient(to right, var(--mat-sys-primary-container) var(--fill, 0%), var(--mat-sys-surface) var(--fill, 0%));
+    }
+    .set-button.is-full { background: var(--mat-sys-primary); color: var(--mat-sys-on-primary); opacity: 1; }
+    .set-counter { font: var(--mat-sys-title-medium); }
+    .undo { border: 1px solid var(--mat-sys-outline); }
+    .pass { gap: 12px; padding: 8px 8px 8px 16px; min-height: 72px; }
+    .delete { color: var(--mat-sys-error); }
+    @media (max-width: 760px) {
+      .head .tonal { display: none; }
+      .exercise-actions { flex-basis: 100%; }
+      .set-button { max-width: none; }
+    }
+  `],
 })
 export class SportRoutinePageComponent implements OnInit {
   private readonly api = inject(SportsApiService)
   private readonly route = inject(ActivatedRoute)
+  private readonly dialog = inject(MatDialog)
+  private readonly snack = inject(MatSnackBar)
   readonly loading = signal(true)
   readonly error = signal('')
-  readonly banner = signal('')
-  readonly pending = signal(false)
+  readonly pending = signal('')
   readonly report = signal<RoutineReportDto | null>(null)
-  readonly open = signal(new Set<string>())
-  readonly draft = signal<TickDraft | null>(null)
-  private readonly completions = computed(() => new Map((this.report()?.todayCompletions ?? []).map(item => [item.exerciseId, item])))
+  readonly pass = computed(() => { const report = this.report(); return report ? openPass(report) : null })
+  private settings: SportSettingsDto = { memberProfileId: '', defaultEffort: 7, defaultDiscomfort: 2 }
+  readonly photoSize = globalThis.matchMedia?.('(max-width: 760px)').matches ? 96 : 128
 
   readonly daysLabel = daysLabel
   readonly targetText = targetText
-  readonly doneText = doneText
+  readonly clockTime = clockTime
   readonly nextDayLabel = nextDayLabel
-  readonly measureUnit = measureUnit
-  readonly valueStep = valueStep
-  readonly kilos = kilos
 
   async ngOnInit(): Promise<void> {
-    const id = this.route.snapshot.paramMap.get('id')
-    try { this.report.set((await firstValueFrom(this.api.routines(1))).find(item => item.routine.id === id) ?? null) }
-    catch (error) { this.error.set(apiErrorMessage(error)) }
+    try {
+      await this.reload()
+      try { this.settings = await firstValueFrom(this.api.settings()) } catch { /* 7 and 2 */ }
+    } catch (error) { this.error.set(apiErrorMessage(error)) }
     finally { this.loading.set(false) }
   }
 
-  completion(line: RoutineLineDto): ExerciseCompletionDto | null { return this.completions().get(line.exerciseId) ?? null }
-
-  toggle(line: RoutineLineDto): void {
-    this.open.update(current => {
-      const next = new Set(current)
-      if (!next.delete(line.exerciseId)) next.add(line.exerciseId)
-      return next
-    })
+  done(line: RoutineLineDto): number { return setsDone(this.pass(), line.exerciseId) }
+  buttonOf(line: RoutineLineDto) { return setButton(line, this.done(line)) }
+  passTime(session: RoutineSessionDto): string {
+    return session.finishedAt ? `${clockTime(session.startedAt)} – ${clockTime(session.finishedAt)}` : clockTime(session.startedAt)
+  }
+  hasFeeling(session: RoutineSessionDto): boolean {
+    return !!session.comment || session.completions.some(item => item.effort !== null || item.discomfort !== null)
+  }
+  feelingLine(session: RoutineSessionDto): string {
+    if (!this.hasFeeling(session)) return 'Ressenti non noté'
+    const efforts = session.completions.flatMap(item => item.effort === null ? [] : [item.effort])
+    const discomforts = session.completions.flatMap(item => item.discomfort === null ? [] : [item.discomfort])
+    const effort = efforts.length ? `effort jusqu’à ${Math.max(...efforts)}` : 'effort non noté'
+    const discomfort = discomforts.length ? `gêne jusqu’à ${Math.max(...discomforts)}` : 'gêne non notée'
+    return `Ressenti : ${effort} · ${discomfort}`
   }
 
-  edit(line: RoutineLineDto, done: ExerciseCompletionDto | null): void {
-    this.draft.set({
-      exerciseId: line.exerciseId, value: done?.value ?? line.target,
-      loadKg: line.withLoad ? done?.loadKg ?? line.loadKg ?? 0 : null,
-    })
-  }
-  stepValue(line: RoutineLineDto, direction: 1 | -1): void {
-    this.draft.update(draft => draft && { ...draft, value: stepValue(draft.value, line.measure, direction) })
-  }
-  stepLoad(direction: 1 | -1): void {
-    this.draft.update(draft => draft && { ...draft, loadKg: stepLoad(draft.loadKg ?? 0, direction) })
+  async start(): Promise<void> {
+    const report = this.report()
+    if (report) await this.call('start', this.api.startSession(report.routine.id))
   }
 
-  async tick(line: RoutineLineDto): Promise<void> {
-    await this.update(routineId => this.api.completeExercise(routineId, line.exerciseId))
-  }
-  async saveDraft(): Promise<void> {
-    const draft = this.draft()
-    if (!draft) return
-    if (await this.update(routineId => this.api.completeExercise(routineId, draft.exerciseId, draft.value, draft.loadKg))) this.draft.set(null)
-  }
-  async untick(line: RoutineLineDto): Promise<void> {
-    await this.update(routineId => this.api.uncompleteExercise(routineId, line.exerciseId))
+  /** One more set, or one less (0 unticks the exercise). */
+  async setSets(line: RoutineLineDto, direction: 1 | -1): Promise<void> {
+    const report = this.report(), pass = this.pass()
+    if (!report || !pass) return
+    const before = report
+    const after = await this.call(line.exerciseId, this.api.setSets(report.routine.id, pass.id, line.exerciseId, Math.max(0, this.done(line) + direction)))
+    if (!after) return
+    const finished = after.todaySessions.find(session => session.id === pass.id)
+    if (finished?.finished) {
+      const message = routineCelebration(before, after)
+      if (message) this.snack.open(message, undefined, { duration: 5000 })
+      await this.openFeeling(after, finished)
+    }
   }
 
-  private async update(call: (routineId: string) => ReturnType<SportsApiService['completeExercise']>): Promise<boolean> {
-    const before = this.report()
-    if (!before || this.pending()) return false
-    this.pending.set(true); this.error.set('')
+  async openFeeling(report: RoutineReportDto, session: RoutineSessionDto): Promise<void> {
+    const saved = await firstValueFrom(openEditor<RoutineFeelingDialogComponent, FeelingDialogData, RoutineReportDto>(
+      this.dialog, RoutineFeelingDialogComponent, { report, session, settings: this.settings }).afterClosed())
+    if (saved) {
+      this.report.set(saved)
+      this.snack.open('Ressenti enregistré', undefined, { duration: 4000 })
+    }
+  }
+
+  async deletePass(session: RoutineSessionDto): Promise<void> {
+    const report = this.report()
+    if (!report || !globalThis.confirm(`Supprimer le passage de ${clockTime(session.startedAt)} et ses coches ?`)) return
+    if (await this.call(session.id, this.api.deletePass(report.routine.id, session.id))) this.snack.open('Passage supprimé', undefined, { duration: 4000 })
+  }
+
+  async editRoutine(report: RoutineReportDto): Promise<void> {
+    let exercises
+    try { exercises = await firstValueFrom(this.api.exercises(true)) }
+    catch (error) { this.snack.open(apiErrorMessage(error), 'OK', { duration: 6000 }); return }
+    const result = await firstValueFrom(openEditor<RoutineDialogComponent, RoutineDialogData, RoutineDialogResult>(
+      this.dialog, RoutineDialogComponent, { routine: report.routine, exercises }).afterClosed())
+    if (!result) return
+    this.snack.open(result.message, undefined, { duration: 4000 })
+    await this.reload()
+  }
+
+  private async reload(): Promise<void> {
+    const id = this.route.snapshot.paramMap.get('id')
+    this.report.set((await firstValueFrom(this.api.routines(1, true))).find(item => item.routine.id === id) ?? null)
+  }
+
+  private async call(key: string, request: Observable<RoutineReportDto>): Promise<RoutineReportDto | null> {
+    if (this.pending()) return null
+    this.pending.set(key); this.error.set('')
     try {
-      const after = await firstValueFrom(call(before.routine.id))
-      this.report.set(after)
-      this.banner.set(after.completedToday ? routineCelebration(before, after) || this.banner() : '')
-      return true
-    } catch (error) { this.error.set(apiErrorMessage(error)); return false }
-    finally { this.pending.set(false) }
+      const report = await firstValueFrom(request)
+      this.report.set(report)
+      return report
+    } catch (error) {
+      this.snack.open(apiErrorMessage(error), 'OK', { duration: 6000 })
+      return null
+    } finally { this.pending.set('') }
   }
 }

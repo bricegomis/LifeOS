@@ -3,13 +3,15 @@
 - Angular 22 standalone components, signals (`input()`, `output()`, `signal`,
   `inject()`), new control flow (`@if`, `@for`). Templates are mostly inline.
 - Structure: `src/app/core` (api client, auth, native/Capacitor bridge), `shared`
-  (dialog, household reviews, build version, picture reduction before upload), `shell` (left burger menu with one block
-  per domain, phone tab bar), `login`, and one folder per module: `food` (recipes,
-  foods, products and prices, stores, tickets), `sports` (today, history, progress,
-  settings, and the routine page `sports/routine/:id`; a sub-navigation on the phone,
-  menu entries on the desktop; routine screens are their own components embedded in
-  those pages, with rules in `sports/routine-format.ts`), `household` (settings:
-  profiles, versions, account).
+  (dialog, household reviews, build version, picture reduction before upload, and
+  `shared/ui`: Material building blocks of ADR 0016 — icon registry, list page,
+  editor window frame, stepper, breakpoints), `shell` (Material side menu with one
+  foldable group per domain; on the phone a panel opened from the top bar, no tab
+  bar), `login`, and one folder per module: `food` (recipes, foods, products and prices,
+  stores, tickets), `sports` (today, history, progress, one page per element —
+  routines, exercises, challenges, goals, templates — with their windows, and the
+  routine page `sports/routine/:id` with its passes; rules in `sports/routine-format.ts`),
+  `household` (settings: profiles, versions, account).
 - A module folder holds its models, its API service (all HTTP calls), pure rules in
   plain `.ts` files with a `.spec.ts` (e.g. `food/foods/food-form.ts`,
   `food/recipes/recipe-nutrition.ts`), pages with their `.html`/`.css`, and lazy routes
@@ -18,11 +20,12 @@
   `food/shared`.
 - Screens follow the validated step 1 mockup: photos everywhere (`food/shared/food-image.component.ts`
   loads authenticated images as blobs), a filter bar on top of every list page,
-  prices secondary and read-only on everyday screens. Products, prices and stores
-  are not in the phone tab bar.
-- UI kit: Angular Material 3 with the LifeOS theme, Material Symbols icons and the
-  screen conventions of ADR 0016 (list items, add button, dialogs full screen on the
-  phone, dangerous action bottom left). New and migrated screens use Material
+  prices secondary and read-only on everyday screens.
+- UI kit: Angular Material 3 with the LifeOS theme (`src/theme.scss`), Material Symbols
+  as SVG (`<mat-icon svgIcon="name" />`; add the icon to `shared/ui/icons.ts` first) and
+  the screen conventions of ADR 0016 (classes `lo-*` in `src/lifeos-ui.css`: list page
+  via `app-list-page`, rows with a picture or icon on the left, windows through
+  `openEditor` + `app-editor-frame`, full screen on the phone, dangerous action bottom left). New and migrated screens use Material
   components and the LifeOS components built on them; don't add another UI library.
   Screens not migrated yet keep native controls, the shared blocks of `src/styles.css`
   and PrimeIcons (`pi pi-...`) until their turn.

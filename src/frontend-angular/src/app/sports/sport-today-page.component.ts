@@ -5,7 +5,6 @@ import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { RoutinesTodayComponent } from './routines-today.component'
 import { SessionEditorComponent } from './session-editor.component'
-import { SportNavComponent } from './sport-nav.component'
 import {
   celebration, challengePercent, entryTime, goalPercent, goalProgressText, integer, jokerLine, longDay, quickSteps,
   sessionCalories, sessionDetails, sessionTitle, shortDay, streakLine, weekRange, decimal, duration,
@@ -17,10 +16,9 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
 @Component({
   selector: 'app-sport-today-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, RoutinesTodayComponent, SessionEditorComponent, SportNavComponent],
+  imports: [FormsModule, RouterLink, RoutinesTodayComponent, SessionEditorComponent],
   template: `
     <div class="page">
-      <app-sport-nav />
       <div class="page-header">
         <div><h1>Sport</h1>@if (today()) { <p class="muted">{{ longDay(today()) }}</p> }</div>
         <button type="button" class="lifeos-button" [disabled]="!today()" (click)="openEditor(null)"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter une séance</button>
@@ -34,9 +32,9 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
         <app-routines-today />
         <section class="sport-section" aria-labelledby="sport-challenges">
           <div class="sport-section-head"><h2 id="sport-challenges">Défis du jour</h2>
-            <a class="link-button" routerLink="/sports/settings">Gérer les défis</a></div>
+            <a class="link-button" routerLink="/sports/challenges">Gérer les défis</a></div>
           @if (!challenges().length) {
-            <p class="empty-state">Aucun défi. Ajoutez par exemple « 100 pompes par jour » dans les réglages du sport.</p>
+            <p class="empty-state">Aucun défi. Ajoutez par exemple « 100 pompes par jour » sur la page Défis.</p>
           }
           <div class="challenge-grid">
             @for (report of challenges(); track report.challenge.id) {

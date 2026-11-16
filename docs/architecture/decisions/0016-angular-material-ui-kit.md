@@ -54,9 +54,11 @@ thème pendant la migration, pour que les écrans pas encore migrés restent ass
 
 ### Icônes
 
-**Material Symbols** (arrondis), embarquées dans l'application et non chargées
-depuis Google, pour fonctionner aussi dans l'app iPhone. PrimeIcons est retiré une
-fois le dernier écran migré.
+**Material Symbols** (arrondis), embarquées en SVG une par une
+(`@material-symbols/svg-400`, registre `shared/ui/icons.ts`) : seules les icônes
+utilisées sont livrées, rien n'est chargé depuis Google, et l'app iPhone fonctionne
+sans réseau. La police complète (plus de 5 Mo) a été écartée pour cette raison.
+PrimeIcons est retiré une fois le dernier écran migré.
 
 ### Conventions d'écran
 
@@ -90,7 +92,9 @@ icônes modifier et supprimer, vignette d'image chargée par l'API.
 
 ## Conséquences
 
-- Nouvelles dépendances : `@angular/material`, `@angular/cdk`, les Material Symbols.
+- Nouvelles dépendances : `@angular/material`, `@angular/cdk`, `@material-symbols/svg-400`.
+- Le mode sombre attend la migration de l'Alimentation : le thème est en clair seul
+  tant que des écrans gardent les couleurs fixes de `src/styles.css`.
   Taille de l'application en hausse, limitée par le chargement à la demande des modules.
 - Les règles « contrôles natifs, aucune bibliothèque d'interface » sont retirées de
   `CLAUDE.md`, `AGENTS.md` et `src/frontend-angular/CLAUDE.md`. Le README du frontend

@@ -1,6 +1,6 @@
 import type {
-  ExerciseCompletionDto, ExerciseDto, ExerciseMeasure, ExerciseProgressDto, ExerciseRequest, RoutineDayDto, RoutineDto, RoutineLineDto,
-  RoutineReportDto, RoutineRequest,
+  ExerciseCompletionDto, ExerciseDto, ExerciseFeeling, ExerciseMeasure, ExerciseProgressDto, ExerciseRequest, RoutineDayDto, RoutineDto,
+  RoutineLineDto, RoutineReportDto, RoutineRequest, RoutineSessionDto, SportSettingsDto,
 } from './sports.models.ts'
 
 const SHORT_DAYS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.']
@@ -12,20 +12,23 @@ export const DAY_NAMES = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Sa
 export function kilos(value: number): string { return String(value).replace('.', ',') }
 export function measureUnit(measure: ExerciseMeasure): string { return measure === 'hold' ? 's' : 'rép.' }
 export function measureLabel(measure: ExerciseMeasure): string { return measure === 'hold' ? 'Tenue en secondes' : 'Répétitions' }
+/** A load is optional (ADR 0015): none or 0 means bodyweight. */
+export function hasLoad(loadKg: number | null | undefined): loadKg is number { return loadKg !== null && loadKg !== undefined && loadKg > 0 }
 export function exerciseSummary(exercise: ExerciseDto): string {
-  return measureLabel(exercise.measure) + (exercise.withLoad ? ' · avec charge' : '')
+  return measureLabel(exercise.measure) + (hasLoad(exercise.defaultLoadKg) ? ` · ${kilos(exercise.defaultLoadKg)} kg` : ' · poids du corps')
 }
 
 /** "2 × 45 s · 10 kg": the target of a routine line. */
 export function targetText(line: RoutineLineDto): string {
   const sets = line.sets > 1 ? `${line.sets} × ` : ''
-  const load = line.withLoad && line.loadKg !== null ? ` · ${kilos(line.loadKg)} kg` : ''
+  const load = hasLoad(line.loadKg) ? ` · ${kilos(line.loadKg)} kg` : ''
   return `${sets}${line.target} ${measureUnit(line.measure)}${load}`
 }
-/** "60 s à 12 kg": what was really done. */
+/** "3 × 60 s à 12 kg": what was done in a pass. */
 export function doneText(line: RoutineLineDto, completion: ExerciseCompletionDto): string {
-  const load = line.withLoad && completion.loadKg !== null ? ` à ${kilos(completion.loadKg)} kg` : ''
-  return `${completion.value} ${measureUnit(line.measure)}${load}`
+  const sets = completion.setsDone > 1 ? `${completion.setsDone} × ` : ''
+  const load = hasLoad(completion.loadKg) ? ` à ${kilos(completion.loadKg)} kg` : ''
+  return `${sets}${completion.value} ${measureUnit(line.measure)}${load}`
 }
 
 export function daysLabel(days: number[]): string {
@@ -47,24 +50,73 @@ export function routineSummary(routine: RoutineDto): string {
 export function routineStreakLine(report: RoutineReportDto): string {
   return `Série : ${report.streak} jour${report.streak > 1 ? 's' : ''} · record ${report.record}`
 }
-export function routineChip(report: RoutineReportDto): string {
-  return report.completedToday ? 'Faite' : report.doneToday ? 'En cours' : 'À faire'
+/** The unfinished pass of today, if any: one at a time per routine. */
+export function openPass(report: RoutineReportDto): RoutineSessionDto | null {
+  return report.todaySessions.find(session => !session.finished) ?? null
 }
+/** "9 h 12": a time of the day, in Paris. */
+export function clockTime(iso: string): string {
+  const parts = new Intl.DateTimeFormat('fr-FR', { hour: 'numeric', minute: '2-digit', timeZone: 'Europe/Paris' }).formatToParts(new Date(iso))
+  const part = (type: string) => parts.find(item => item.type === type)?.value ?? ''
+  return `${Number(part('hour'))} h ${part('minute')}`
+}
+/** "2 passages : 9 h 12, 14 h 40" for the passes finished today. */
+export function passesLine(report: RoutineReportDto): string {
+  const finished = report.todaySessions.filter(session => session.finished)
+  if (!finished.length) return 'Aucun passage terminé aujourd’hui'
+  return `${finished.length} passage${finished.length > 1 ? 's' : ''} : ${finished.map(session => clockTime(session.startedAt)).join(', ')}`
+}
+export function routineChip(report: RoutineReportDto): string {
+  return report.completedToday ? 'Faite' : openPass(report) ? 'En cours' : 'À faire'
+}
+/** Share of the open pass done; 100 once the day is done without an open pass. */
 export function routinePercent(report: RoutineReportDto): number {
-  return report.totalToday ? Math.round(report.doneToday * 100 / report.totalToday) : 0
+  const pass = openPass(report)
+  if (pass) return pass.exercisesTotal ? Math.round(pass.exercisesDone * 100 / pass.exercisesTotal) : 0
+  return report.completedToday ? 100 : 0
 }
 export function routineAction(report: RoutineReportDto): string {
-  return report.completedToday ? 'Revoir la routine' : report.doneToday ? 'Continuer' : 'Commencer'
+  return openPass(report) ? 'Continuer le passage' : report.completedToday ? 'Nouveau passage' : 'Commencer'
 }
 export function routineJokerLine(report: RoutineReportDto): string {
   if (!report.jokersPerWeek) return 'Sans joker'
   const left = report.jokersLeftThisWeek
   return `Jokers cette semaine : ${left} sur ${report.jokersPerWeek} restant${left > 1 ? 's' : ''}`
 }
-/** Message shown when the last exercise of the day is ticked; empty otherwise. */
+/** Message shown when a tick finishes a pass; empty otherwise. */
 export function routineCelebration(before: RoutineReportDto, after: RoutineReportDto): string {
-  if (before.completedToday || !after.completedToday) return ''
-  return `${after.routine.name} : routine faite. Série de ${after.streak} jour${after.streak > 1 ? 's' : ''}.`
+  if (after.passesToday <= before.passesToday) return ''
+  if (after.passesToday === 1) return `${after.routine.name} : routine faite. Série de ${after.streak} jour${after.streak > 1 ? 's' : ''}.`
+  return `${after.routine.name} : passage terminé, ${after.passesToday} aujourd’hui.`
+}
+
+/** Sets ticked for an exercise in a pass. */
+export function setsDone(session: RoutineSessionDto | null, exerciseId: string): number {
+  return session?.completions.find(completion => completion.exerciseId === exerciseId)?.setsDone ?? 0
+}
+export interface SetButton { label: string, counter: string, percent: number, full: boolean, aria: string }
+/** The "Série faite" button of an exercise: its counter fills the button until every set is done. */
+export function setButton(line: RoutineLineDto, done: number): SetButton {
+  const full = done >= line.sets
+  return {
+    label: full ? 'Exercice fait' : 'Série faite', counter: `${Math.min(done, line.sets)} / ${line.sets}`,
+    percent: Math.round(Math.min(done, line.sets) * 100 / line.sets), full,
+    aria: full ? `${line.exerciseName} : toutes les séries sont faites` : `Série faite pour ${line.exerciseName}, ${done} sur ${line.sets} pour l’instant`,
+  }
+}
+
+/** Feeling to show when a pass ends: what was noted, else the profile's values. */
+export interface FeelingDraft extends ExerciseFeeling { effort: number, discomfort: number }
+export function feelingDrafts(session: RoutineSessionDto, settings: Pick<SportSettingsDto, 'defaultEffort' | 'defaultDiscomfort'>): FeelingDraft[] {
+  return session.completions.map(completion => ({
+    exerciseId: completion.exerciseId,
+    effort: completion.effort ?? settings.defaultEffort,
+    discomfort: completion.discomfort ?? settings.defaultDiscomfort,
+  }))
+}
+/** A − / + step within bounds. */
+export function stepWithin(value: number, direction: 1 | -1, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value + direction))
 }
 
 /** Calendar cell level of a routine day, from the share of exercises ticked. */
@@ -82,17 +134,8 @@ const ROUTINE_STATUS: Record<string, string> = {
 }
 export function routineDayTitle(day: RoutineDayDto, dayLabel: string): string {
   const count = day.planned ? ` : ${day.done} / ${day.planned}` : ''
-  return `${dayLabel}${count} (${ROUTINE_STATUS[day.status]})`
-}
-
-/** Steps of the +/− buttons: 5 seconds for a hold, 1 repetition, 0.5 kg. */
-export function valueStep(measure: ExerciseMeasure): number { return measure === 'hold' ? 5 : 1 }
-export function stepValue(value: number, measure: ExerciseMeasure, direction: 1 | -1): number {
-  const step = valueStep(measure)
-  return Math.max(1, Math.min(10_000, value + direction * step))
-}
-export function stepLoad(loadKg: number, direction: 1 | -1): number {
-  return Math.max(0, Math.min(500, Math.round((loadKg + direction * 0.5) * 2) / 2))
+  const passes = day.passes > 1 ? `, ${day.passes} passages` : ''
+  return `${dayLabel}${count} (${ROUTINE_STATUS[day.status]}${passes})`
 }
 
 export interface ProgressBar { label: string, title: string, height: number, current: boolean }
@@ -116,7 +159,7 @@ export function exerciseCharts(exercise: ExerciseDto, progress: ExerciseProgress
     }
   }
   const charts = [chart(exercise.measure === 'hold' ? 'Tenue' : 'Répétitions', progress.weeks.map(week => week.bestValue), value => `${value} ${unit}`)]
-  if (exercise.withLoad || progress.bestLoadKg !== null) {
+  if (hasLoad(exercise.defaultLoadKg) || progress.bestLoadKg !== null) {
     charts.push(chart('Charge', progress.weeks.map(week => week.bestLoadKg), value => `${kilos(value)} kg`))
   }
   return charts
@@ -133,7 +176,7 @@ export function draftFromRoutine(routine: RoutineDto): RoutineDraft {
   }
 }
 export function newLine(exercise: ExerciseDto): RoutineLineDraft {
-  return { exerciseId: exercise.id, sets: 1, target: exercise.measure === 'hold' ? 30 : 10, loadKg: exercise.withLoad ? 0 : null }
+  return { exerciseId: exercise.id, sets: 1, target: exercise.measure === 'hold' ? 30 : 10, loadKg: hasLoad(exercise.defaultLoadKg) ? exercise.defaultLoadKg : null }
 }
 export function moveLine(lines: RoutineLineDraft[], index: number, direction: 1 | -1): RoutineLineDraft[] {
   const target = index + direction
@@ -154,18 +197,30 @@ export function routineRequest(draft: RoutineDraft, exercises: ExerciseDto[]): R
   for (const line of draft.lines) {
     const exercise = exercises.find(item => item.id === line.exerciseId)
     if (!exercise) return 'Un exercice de la routine est introuvable.'
-    const sets = Number(line.sets), target = Number(line.target), load = Number(line.loadKg ?? 0)
+    const sets = Number(line.sets), target = Number(line.target)
     if (!Number.isInteger(sets) || sets < 1 || sets > 20) return `${exercise.name} : 1 à 20 séries.`
     if (!Number.isInteger(target) || target < 1 || target > 10_000) return `${exercise.name} : la cible va de 1 à 10 000.`
-    if (exercise.withLoad && (load < 0 || load > 500 || !Number.isInteger(load * 2))) return `${exercise.name} : charge de 0 à 500 kg, par pas de 0,5.`
-    lines.push({ exerciseId: exercise.id, sets, target, loadKg: exercise.withLoad ? load : null })
+    const load = optionalLoad(line.loadKg)
+    if (load === undefined) return `${exercise.name} : charge de 0 à 500 kg, par pas de 0,5.`
+    // 0 is sent as such: bodyweight, rather than the exercise's usual load.
+    lines.push({ exerciseId: exercise.id, sets, target, loadKg: load ?? 0 })
   }
   return { name, days, jokersPerWeek: draft.jokersPerWeek, lines }
 }
 
-export function emptyExerciseDraft(): ExerciseRequest { return { name: '', instructions: '', measure: 'hold', withLoad: false } }
+/** An optional load from a form field: null when empty or 0 (bodyweight), undefined when invalid. */
+export function optionalLoad(value: number | string | null | undefined): number | null | undefined {
+  if (value === null || value === undefined || value === '') return null
+  const load = Number(value)
+  if (!Number.isFinite(load) || load < 0 || load > 500 || !Number.isInteger(load * 2)) return undefined
+  return load === 0 ? null : load
+}
+
+export function emptyExerciseDraft(): ExerciseRequest { return { name: '', instructions: '', measure: 'hold', defaultLoadKg: null } }
 export function exerciseRequest(draft: ExerciseRequest): ExerciseRequest | string {
   const name = draft.name.trim()
   if (!name) return 'Donnez un nom à l’exercice.'
-  return { name, instructions: draft.instructions?.trim() || null, measure: draft.measure, withLoad: draft.withLoad }
+  const load = optionalLoad(draft.defaultLoadKg)
+  if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.'
+  return { name, instructions: draft.instructions?.trim() || null, measure: draft.measure, defaultLoadKg: load }
 }

@@ -3,8 +3,8 @@ import { from, switchMap, type Observable } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LIBRARY_IMAGE, reduceImage } from '@/app/shared/image-reduction'
 import type {
-  ChallengeReportDto, DailyChallengeDto, DailyChallengeRequest, ExerciseDto, ExerciseProgressDto, ExerciseRequest, RoutineReportDto,
-  RoutineRequest, SportCatalog, SportSessionDto, SportSessionRequest,
+  ChallengeReportDto, DailyChallengeDto, DailyChallengeRequest, ExerciseDto, ExerciseFeeling, ExerciseProgressDto, ExerciseRequest,
+  RoutineReportDto, RoutineRequest, SportCatalog, SportSessionDto, SportSessionRequest, SportSettingsDto,
   SportTemplateDto, SportTemplateRequest, WeekReportDto, WeeklyGoalDto, WeeklyGoalRequest,
 } from './sports.models'
 
@@ -35,6 +35,10 @@ export class SportsApiService {
 
   goals(): Observable<WeeklyGoalDto[]> { return this.api.get<WeeklyGoalDto[]>('/sport/goals') }
   createGoal(request: WeeklyGoalRequest): Observable<WeeklyGoalDto> { return this.api.post<WeeklyGoalDto>('/sport/goals', request) }
+  /** Changes the target from the current week; past weeks keep the goal they had. */
+  updateGoal(goalId: string, request: WeeklyGoalRequest): Observable<WeeklyGoalDto> {
+    return this.api.put<WeeklyGoalDto>(`/sport/goals/${id(goalId)}`, request)
+  }
   stopGoal(goalId: string): Observable<void> { return this.api.delete(`/sport/goals/${id(goalId)}`) }
 
   challenges(calendarWeeks = 1, includeStopped = false): Observable<ChallengeReportDto[]> {
@@ -81,11 +85,23 @@ export class SportsApiService {
     return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}`, request)
   }
   stopRoutine(routineId: string): Observable<void> { return this.api.delete(`/sport/routines/${id(routineId)}`) }
-  /** Ticks an exercise for today; without values the API records the target. */
-  completeExercise(routineId: string, exerciseId: string, value: number | null = null, loadKg: number | null = null): Observable<RoutineReportDto> {
-    return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}/completions`, { exerciseId, value, loadKg })
+  /** Opens a pass for today; refused while another pass of the day is unfinished. */
+  startSession(routineId: string): Observable<RoutineReportDto> {
+    return this.api.post<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions`, { date: null })
   }
-  uncompleteExercise(routineId: string, exerciseId: string): Observable<RoutineReportDto> {
-    return this.api.delete<RoutineReportDto>(`/sport/routines/${id(routineId)}/completions/${id(exerciseId)}`)
+  /** Sets done for an exercise in a pass, with the target's value and load; 0 unticks it. */
+  setSets(routineId: string, sessionId: string, exerciseId: string, setsDone: number): Observable<RoutineReportDto> {
+    return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}/exercises/${id(exerciseId)}`, { setsDone })
+  }
+  setFeeling(routineId: string, sessionId: string, comment: string | null, exercises: ExerciseFeeling[]): Observable<RoutineReportDto> {
+    return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}/feeling`, { comment, exercises })
+  }
+  deletePass(routineId: string, sessionId: string): Observable<RoutineReportDto> {
+    return this.api.delete<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}`)
+  }
+
+  settings(): Observable<SportSettingsDto> { return this.api.get<SportSettingsDto>('/sport/settings') }
+  saveSettings(defaultEffort: number, defaultDiscomfort: number): Observable<SportSettingsDto> {
+    return this.api.put<SportSettingsDto>('/sport/settings', { defaultEffort, defaultDiscomfort })
   }
 }
