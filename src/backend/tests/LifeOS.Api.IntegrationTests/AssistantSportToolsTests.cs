@@ -43,21 +43,39 @@ public sealed class AssistantSportToolsTests(PostgresContainerFixture postgres)
         await using var mcp = await Connect(factory, Guid.NewGuid());
         await using var neighbour = await Connect(factory, Guid.NewGuid());
 
-        var exercise = await Call(mcp, "create_exercise", new() { ["name"] = "Chaise contre le mur", ["measure"] = "hold", ["withLoad"] = true, ["instructions"] = "Dos plaqué au mur." });
+        var exercise = await Call(mcp, "create_exercise", new() { ["name"] = "Chaise contre le mur", ["measure"] = "hold", ["defaultLoadKg"] = 10, ["instructions"] = "Dos plaqué au mur." });
         var exerciseId = exercise.GetProperty("id").GetString();
+        Assert.Equal(10m, exercise.GetProperty("defaultLoadKg").GetDecimal());
         var routine = await Call(mcp, "create_routine", new()
         {
             ["name"] = "Tendons", ["jokersPerWeek"] = 1,
-            ["lines"] = new[] { new Dictionary<string, object?> { ["exerciseId"] = exerciseId, ["sets"] = 2, ["target"] = 45, ["loadKg"] = 10 } },
+            ["lines"] = new[] { new Dictionary<string, object?> { ["exerciseId"] = exerciseId, ["sets"] = 2, ["target"] = 45 } },
         });
         var routineId = routine.GetProperty("routine").GetProperty("id").GetString();
         Assert.Equal(7, routine.GetProperty("routine").GetProperty("days").GetArrayLength());
+        Assert.Equal(10m, routine.GetProperty("routine").GetProperty("lines")[0].GetProperty("loadKg").GetDecimal());
 
-        var report = await Call(mcp, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId, ["value"] = 60, ["loadKg"] = 12 });
+        // One set first: the pass stays open, then the second set finishes it.
+        var report = await Call(mcp, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId, ["setsDone"] = 1 });
+        Assert.False(report.GetProperty("completedToday").GetBoolean());
+        Assert.False((await Call(mcp, "uncomplete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId })).GetProperty("completedToday").GetBoolean());
+        report = await Call(mcp, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId, ["value"] = 60, ["loadKg"] = 12, ["effort"] = 8, ["discomfort"] = 1 });
         Assert.True(report.GetProperty("completedToday").GetBoolean());
         Assert.Equal(1, report.GetProperty("streak").GetInt32());
-        Assert.Equal(60, (await Call(mcp, "get_exercise_progress", new() { ["exerciseId"] = exerciseId })).GetProperty("bestValue").GetInt32());
-        Assert.False((await Call(mcp, "uncomplete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId })).GetProperty("completedToday").GetBoolean());
+        var progress = await Call(mcp, "get_exercise_progress", new() { ["exerciseId"] = exerciseId });
+        Assert.Equal(60, progress.GetProperty("bestValue").GetInt32());
+        Assert.Equal(8, progress.GetProperty("recent")[0].GetProperty("effort").GetInt32());
+        Assert.Contains("terminé", await Error(mcp, "uncomplete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId }));
+
+        report = await Call(mcp, "log_routine_session", new()
+        {
+            ["routineId"] = routineId, ["time"] = "18:30",
+            ["exercises"] = new[] { new Dictionary<string, object?> { ["exerciseId"] = exerciseId, ["discomfort"] = 0 } },
+        });
+        Assert.Equal(2, report.GetProperty("passesToday").GetInt32());
+        var sessionId = report.GetProperty("todaySessions")[1].GetProperty("id").GetString();
+        report = await Call(mcp, "delete_routine_session", new() { ["routineId"] = routineId, ["sessionId"] = sessionId });
+        Assert.Equal(1, report.GetProperty("passesToday").GetInt32());
 
         Assert.Contains("Mesure", await Error(mcp, "create_exercise", new() { ["name"] = "Yoga", ["measure"] = "minutes" }));
         Assert.Contains("introuvable", await Error(neighbour, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId }));

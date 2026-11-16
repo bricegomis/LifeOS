@@ -8,7 +8,7 @@
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
   templates, logged sessions, weekly goals, daily challenges; ADR 0013; exercises and
-  daily routines; ADR 0014). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  daily routines and their passes; ADR 0014, ADR 0015). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -34,11 +34,15 @@
   read by the published contract `Application/Sports/Contracts/SportReadContract`
   (week reports, challenge streaks with jokers, sport days); "today" is the Paris day
   (`SportClock`). Calories are typed, never computed.
-- Routines (ADR 0014): a `Routine` owns dated versions (days of the week as bits, jokers,
-  ordered lines with targets); a change applies from today and past days are judged with
-  the version they had. One `ExerciseCompletion` per routine, exercise and day; a routine
-  day is done when every line of that day's version is ticked. Days that are not planned
-  are skipped by the streak.
+- Routines (ADR 0014, ADR 0015): a `Routine` owns dated versions (days of the week as bits,
+  jokers, ordered lines with targets and an optional load, null = bodyweight); a change
+  applies from today and past days are judged with the version they had. A routine is done
+  in passes (`RoutineSession`, several per day, one unfinished at a time); an
+  `ExerciseCompletion` is one exercise in one pass with its sets done and optional effort
+  (1-10) and discomfort (0-10). A pass is finished, never stored, when every line of that
+  day has all its sets; a finished pass is not reopened. A day is done once one pass is
+  finished. Days that are not planned are skipped by the streak. Profile feeling defaults
+  live in `SportProfileSettings`.
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless

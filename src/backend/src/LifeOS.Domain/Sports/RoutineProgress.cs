@@ -14,20 +14,24 @@ public enum RoutineDayStatus
     InProgress,
 }
 
-public sealed record RoutineDay(DateOnly Date, int Done, int Planned, RoutineDayStatus Status)
+/// <param name="Done">Exercises done in the best pass of the day.</param>
+/// <param name="Passes">Passes finished that day.</param>
+public sealed record RoutineDay(DateOnly Date, int Done, int Planned, RoutineDayStatus Status, int Passes = 0)
 {
     public int Percent => Planned <= 0 ? 0 : Math.Min(100, Done * 100 / Planned);
 }
 
 /// <summary>
-/// Streak, record and calendar of a routine, computed on read (ADR 0014). A planned day is done
-/// when every exercise it had that day is ticked. A missed planned day uses a joker of its week
-/// when one is left; otherwise the streak restarts. Days that are not planned are skipped.
+/// Streak, record and calendar of a routine, computed on read (ADR 0014, ADR 0015). A planned day is
+/// done when one of its passes has every exercise of that day with all its sets; more passes are
+/// counted but change nothing else. A missed planned day uses a joker of its week when one is left;
+/// otherwise the streak restarts. Days that are not planned are skipped.
 /// </summary>
 public sealed record RoutineProgress(
     bool PlannedToday,
     int DoneToday,
     int TotalToday,
+    int PassesToday,
     int Streak,
     int Record,
     int JokersPerWeek,
@@ -35,10 +39,10 @@ public sealed record RoutineProgress(
     DateOnly? NextPlannedDay,
     IReadOnlyList<RoutineDay> Calendar)
 {
-    /// <param name="doneByDay">Exercises ticked per day.</param>
+    /// <param name="passesByDay">Per day, the sets done per exercise in each pass.</param>
     /// <param name="calendarFrom">First day returned in <see cref="Calendar"/>.</param>
-    public static RoutineProgress Compute(Routine routine, IReadOnlyDictionary<DateOnly, HashSet<Guid>> doneByDay,
-        DateOnly today, DateOnly calendarFrom)
+    public static RoutineProgress Compute(Routine routine,
+        IReadOnlyDictionary<DateOnly, IReadOnlyList<IReadOnlyDictionary<Guid, int>>> passesByDay, DateOnly today, DateOnly calendarFrom)
     {
         var lastDay = routine.StoppedOn is { } stopped && stopped < today ? stopped : today;
         var days = new Dictionary<DateOnly, RoutineDay>();
@@ -52,10 +56,11 @@ public sealed record RoutineProgress(
                 days[day] = new RoutineDay(day, 0, 0, RoutineDayStatus.NotPlanned);
                 continue;
             }
-            var ticked = doneByDay.GetValueOrDefault(day);
-            var done = ticked is null ? 0 : version.Lines.Count(line => ticked.Contains(line.ExerciseId));
+            var passes = (passesByDay.GetValueOrDefault(day) ?? []).Select(sets => RoutineSession.ExercisesDone(routine, day, sets)).ToList();
+            var done = passes.Count == 0 ? 0 : passes.Max();
+            var finished = passes.Count(count => count == version.Lines.Count);
             RoutineDayStatus status;
-            if (done == version.Lines.Count) { streak++; status = RoutineDayStatus.Done; }
+            if (finished > 0) { streak++; status = RoutineDayStatus.Done; }
             else if (day == today) status = RoutineDayStatus.InProgress;
             else
             {
@@ -65,7 +70,7 @@ public sealed record RoutineProgress(
                 else { streak = 0; status = RoutineDayStatus.Missed; }
             }
             record = Math.Max(record, streak);
-            days[day] = new RoutineDay(day, done, version.Lines.Count, status);
+            days[day] = new RoutineDay(day, done, version.Lines.Count, status, finished);
         }
 
         var calendar = new List<RoutineDay>();
@@ -82,6 +87,7 @@ public sealed record RoutineProgress(
             PlannedToday: todayDay is { Status: not RoutineDayStatus.NotPlanned },
             DoneToday: todayDay?.Done ?? 0,
             TotalToday: todayDay?.Planned ?? 0,
+            PassesToday: todayDay?.Passes ?? 0,
             Streak: running ? streak : 0,
             Record: record,
             JokersPerWeek: current.JokersPerWeek,
@@ -96,10 +102,14 @@ public sealed record ExerciseWeek(DateOnly Monday, int? BestValue, decimal? Best
 
 /// <summary>
 /// Follow-up of one exercise (ADR 0014): its best value and best load per week and since the
-/// start, all routines together. Value and load are never combined into a score.
+/// start, all routines and passes together. Value and load are never combined into a score.
 /// </summary>
-public sealed record ExerciseProgress(int? BestValue, decimal? BestLoadKg, int DaysDone, IReadOnlyList<ExerciseWeek> Weeks)
+/// <param name="Recent">Latest ticks first, with their feeling (ADR 0015).</param>
+public sealed record ExerciseProgress(int? BestValue, decimal? BestLoadKg, int DaysDone, IReadOnlyList<ExerciseWeek> Weeks,
+    IReadOnlyList<ExerciseCompletion> Recent)
 {
+    public const int RecentCount = 10;
+
     public static ExerciseProgress Compute(IReadOnlyCollection<ExerciseCompletion> completions, DateOnly today, int weeks)
     {
         var firstMonday = SportWeek.Monday(today).AddDays(-7 * (weeks - 1));
@@ -112,6 +122,7 @@ public sealed record ExerciseProgress(int? BestValue, decimal? BestLoadKg, int D
                 .Select(monday => new ExerciseWeek(monday,
                     byWeek[monday].Any() ? byWeek[monday].Max(c => c.Value) : null,
                     byWeek[monday].Max(c => c.LoadKg)))
-                .ToList());
+                .ToList(),
+            completions.OrderByDescending(c => c.Date).ThenByDescending(c => c.LoggedAt).Take(RecentCount).ToList());
     }
 }

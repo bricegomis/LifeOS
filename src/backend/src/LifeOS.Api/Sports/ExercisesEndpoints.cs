@@ -13,11 +13,12 @@ using Microsoft.EntityFrameworkCore;
 namespace LifeOS.Api.Sports;
 
 /// <param name="Measure">hold (seconds) or reps; frozen once the exercise has been done.</param>
+/// <param name="DefaultLoadKg">Usual load in kg, by steps of 0.5, offered as the target in a routine; none or 0 means bodyweight.</param>
 public sealed record ExerciseRequest(
     [property: Required, StringLength(100)] string Name,
     [property: StringLength(Exercise.MaxInstructionsLength)] string? Instructions,
     [property: Required] string Measure,
-    bool WithLoad);
+    decimal? DefaultLoadKg = null);
 
 public static class ExercisesEndpoints
 {
@@ -82,7 +83,7 @@ public sealed class ExerciseLibrary(LifeOSDbContext db, SportImageStorage images
 
     public async Task<ExerciseDto> CreateAsync(Guid householdId, ExerciseRequest r, CancellationToken ct)
     {
-        var exercise = Exercise.Create(householdId, r.Name, r.Instructions, r.Measure, r.WithLoad);
+        var exercise = Exercise.Create(householdId, r.Name, r.Instructions, r.Measure, r.DefaultLoadKg);
         db.Exercises.Add(exercise);
         await db.SaveChangesAsync(ct);
         return ExerciseDto.From(exercise, measureLocked: false);
@@ -93,7 +94,7 @@ public sealed class ExerciseLibrary(LifeOSDbContext db, SportImageStorage images
         var exercise = await FindAsync(householdId, id, ct);
         if (exercise is null) return null;
         var done = await IsDoneAsync(exercise, ct);
-        exercise.Update(r.Name, r.Instructions, r.Measure, r.WithLoad, done);
+        exercise.Update(r.Name, r.Instructions, r.Measure, r.DefaultLoadKg, done);
         await db.SaveChangesAsync(ct);
         return ExerciseDto.From(exercise, done);
     }

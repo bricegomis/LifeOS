@@ -23,6 +23,8 @@ public sealed class SportReadContractTests
         public List<Routine> Routines { get; } = [];
         public List<Exercise> Exercises { get; } = [];
         public List<ExerciseCompletion> Completions { get; } = [];
+        public List<RoutineSession> Passes { get; } = [];
+        public SportProfileSettings? Settings { get; set; }
 
         public Task<IReadOnlyList<SportSession>> SessionsAsync(Guid householdId, Guid? profileId, DateOnly from, DateOnly to, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<SportSession>>(Sessions.Where(s => s.HouseholdId == householdId && (profileId == null || s.MemberProfileId == profileId)
@@ -44,6 +46,10 @@ public sealed class SportReadContractTests
             Task.FromResult<IReadOnlyDictionary<Guid, Exercise>>(Exercises.ToDictionary(e => e.Id));
         public Task<IReadOnlyList<ExerciseCompletion>> CompletionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<ExerciseCompletion>>(Completions.Where(c => routineIds.Contains(c.RoutineId)).ToList());
+        public Task<IReadOnlyList<RoutineSession>> RoutineSessionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<RoutineSession>>(Passes.Where(p => routineIds.Contains(p.RoutineId)).ToList());
+        public Task<SportProfileSettings?> SettingsAsync(Guid householdId, Guid profileId, CancellationToken ct) =>
+            Task.FromResult(Settings is { } s && s.MemberProfileId == profileId ? s : null);
         public Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<ExerciseCompletion>>(Completions.Where(c => c.ExerciseId == exerciseId
                 && Routines.Any(r => r.Id == c.RoutineId && r.MemberProfileId == profileId)).ToList());
@@ -118,8 +124,8 @@ public sealed class SportReadContractTests
     public async Task Routine_reports_are_per_profile_with_todays_ticks_and_the_exercise_follow_up()
     {
         var data = new FakeData();
-        var wallSit = Exercise.Create(Household, "Chaise contre le mur", "Dos plaqué au mur.", "hold", true);
-        var bridge = Exercise.Create(Household, "Pont fessier", null, "reps", false);
+        var wallSit = Exercise.Create(Household, "Chaise contre le mur", "Dos plaqué au mur.", "hold", 10);
+        var bridge = Exercise.Create(Household, "Pont fessier", null, "reps", null);
         data.Exercises.AddRange([wallSit, bridge]);
         var start = Friday.AddDays(-2);
         var routine = Routine.Create(Household, Profile, "Tendons", Routine.EveryDay, 1,
@@ -127,12 +133,26 @@ public sealed class SportReadContractTests
         data.Routines.Add(routine);
         data.Routines.Add(Routine.Create(Household, Other, "Dos", Routine.EveryDay, 0, [new RoutineLineInput(bridge, 1, 10, null)], start));
         var now = LateEvening.GetUtcNow();
+        RoutineSession Pass(DateOnly day, DateTimeOffset at)
+        {
+            var pass = RoutineSession.Start(routine, day, at, Friday, false);
+            data.Passes.Add(pass);
+            return pass;
+        }
         foreach (var day in new[] { start, start.AddDays(1) })
         {
-            data.Completions.Add(ExerciseCompletion.Create(routine, wallSit, day, null, null, Friday, now));
-            data.Completions.Add(ExerciseCompletion.Create(routine, bridge, day, null, null, Friday, now));
+            var pass = Pass(day, now.AddDays(day.DayNumber - Friday.DayNumber));
+            data.Completions.Add(ExerciseCompletion.Create(routine, pass, wallSit.Id, 2, null, null, now, false));
+            data.Completions.Add(ExerciseCompletion.Create(routine, pass, bridge.Id, 2, null, null, now, false));
         }
-        data.Completions.Add(ExerciseCompletion.Create(routine, wallSit, Friday, 60, 12, Friday, now));
+        // Today: a finished pass, then a second one with one set of the wall sit.
+        var morning = Pass(Friday, now.AddHours(-10));
+        data.Completions.Add(ExerciseCompletion.Create(routine, morning, wallSit.Id, 2, null, null, now.AddHours(-9), false));
+        data.Completions.Add(ExerciseCompletion.Create(routine, morning, bridge.Id, 2, null, null, now.AddHours(-9), false));
+        var evening = Pass(Friday, now);
+        var tick = ExerciseCompletion.Create(routine, evening, wallSit.Id, 1, 60, 12, now, false);
+        tick.SetFeeling(8, 1);
+        data.Completions.Add(tick);
         var contract = new SportReadContract(data, LateEvening);
 
         var report = Assert.Single(await contract.RoutinesAsync(Household, Profile, 1, false, CancellationToken.None));
@@ -141,17 +161,31 @@ public sealed class SportReadContractTests
         Assert.Equal([1, 2, 3, 4, 5, 6, 7], report.Routine.Days);
         Assert.Equal(["Chaise contre le mur", "Pont fessier"], report.Routine.Lines.Select(line => line.ExerciseName));
         Assert.True(report.PlannedToday);
-        Assert.Equal((1, 2), (report.DoneToday, report.TotalToday));
-        Assert.False(report.CompletedToday);
-        Assert.Equal(2, report.Streak);
-        Assert.Equal(60, Assert.Single(report.TodayCompletions).Value);
+        Assert.Equal((2, 2, 1), (report.DoneToday, report.TotalToday, report.PassesToday));
+        Assert.True(report.CompletedToday);
+        Assert.Equal(3, report.Streak);
+        Assert.Equal(2, report.TodaySessions.Count);
+        Assert.True(report.TodaySessions[0].Finished);
+        Assert.Equal(now.AddHours(-9), report.TodaySessions[0].FinishedAt);
+        var open = report.TodaySessions[1];
+        Assert.False(open.Finished);
+        Assert.Equal((0, 2), (open.ExercisesDone, open.ExercisesTotal));
+        var ticked = Assert.Single(open.Completions);
+        Assert.Equal((1, 60, 8, 1), (ticked.SetsDone, ticked.Value, ticked.Effort, ticked.Discomfort));
         Assert.Equal(5, report.Calendar.Count);
-        Assert.Equal(["not_counted", "not_counted", "done", "done", "in_progress"], report.Calendar.Select(day => day.Status));
+        Assert.Equal(["not_counted", "not_counted", "done", "done", "done"], report.Calendar.Select(day => day.Status));
+        Assert.Equal(1, report.Calendar[^1].Passes);
 
         var progress = await contract.ExerciseProgressAsync(Household, Profile, wallSit.Id, 2, CancellationToken.None);
         Assert.Equal(60, progress.BestValue);
         Assert.Equal(12m, progress.BestLoadKg);
         Assert.Equal(3, progress.DaysDone);
+        Assert.Equal(8, progress.Recent[0].Effort);
         Assert.Null((await contract.ExerciseProgressAsync(Household, Other, wallSit.Id, 2, CancellationToken.None)).BestValue);
+
+        Assert.Equal((7, 2), ((await contract.SettingsAsync(Household, Profile, CancellationToken.None)) is var d ? (d.DefaultEffort, d.DefaultDiscomfort) : default));
+        data.Settings = SportProfileSettings.Create(Household, Profile);
+        data.Settings.Change(6, 0);
+        Assert.Equal(6, (await contract.SettingsAsync(Household, Profile, CancellationToken.None)).DefaultEffort);
     }
 }

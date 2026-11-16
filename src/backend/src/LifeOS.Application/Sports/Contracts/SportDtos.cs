@@ -65,16 +65,18 @@ public sealed record ChallengeReportDto(
     IReadOnlyList<ChallengeDayDto> Calendar);
 
 /// <param name="Measure">hold (seconds) or reps.</param>
+/// <param name="DefaultLoadKg">Usual load offered as the target in a routine; null means bodyweight.</param>
 /// <param name="MeasureLocked">The exercise has been done: its measure no longer changes.</param>
-public sealed record ExerciseDto(Guid Id, string Name, string? Instructions, string Measure, bool WithLoad, bool HasImage,
+public sealed record ExerciseDto(Guid Id, string Name, string? Instructions, string Measure, decimal? DefaultLoadKg, bool HasImage,
     bool IsArchived, bool MeasureLocked)
 {
     public static ExerciseDto From(Exercise e, bool measureLocked) =>
-        new(e.Id, e.Name, e.Instructions, e.Measure, e.WithLoad, e.HasImage, e.IsArchived, measureLocked);
+        new(e.Id, e.Name, e.Instructions, e.Measure, e.DefaultLoadKg, e.HasImage, e.IsArchived, measureLocked);
 }
 
 /// <param name="Target">Seconds or repetitions per set.</param>
-public sealed record RoutineLineDto(Guid ExerciseId, string ExerciseName, string? Instructions, string Measure, bool WithLoad,
+/// <param name="LoadKg">Null means bodyweight.</param>
+public sealed record RoutineLineDto(Guid ExerciseId, string ExerciseName, string? Instructions, string Measure,
     bool HasImage, int Sets, int Target, decimal? LoadKg);
 
 /// <param name="Days">Days of the week, 1 (Monday) to 7 (Sunday).</param>
@@ -89,31 +91,50 @@ public sealed record RoutineDto(Guid Id, Guid MemberProfileId, string Name, IRea
             version.OrderedLines.Select(line =>
             {
                 var e = exercises[line.ExerciseId];
-                return new RoutineLineDto(e.Id, e.Name, e.Instructions, e.Measure, e.WithLoad, e.HasImage, line.Sets, line.Target, line.LoadKg);
+                return new RoutineLineDto(e.Id, e.Name, e.Instructions, e.Measure, e.HasImage, line.Sets, line.Target, line.LoadKg);
             }).ToList(),
             r.StartedOn, r.StoppedOn, r.IsActive);
     }
 }
 
-public sealed record ExerciseCompletionDto(Guid ExerciseId, DateOnly Date, int Value, decimal? LoadKg, DateTimeOffset LoggedAt)
+/// <param name="SetsDone">Sets ticked, each at <paramref name="Value"/> and <paramref name="LoadKg"/>.</param>
+/// <param name="Effort">Perceived effort 1 to 10; null when not noted.</param>
+/// <param name="Discomfort">Discomfort 0 (none) to 10; null when not noted.</param>
+public sealed record ExerciseCompletionDto(Guid SessionId, Guid ExerciseId, DateOnly Date, int SetsDone, int Value, decimal? LoadKg,
+    int? Effort, int? Discomfort, DateTimeOffset LoggedAt)
 {
-    public static ExerciseCompletionDto From(ExerciseCompletion c) => new(c.ExerciseId, c.Date, c.Value, c.LoadKg, c.LoggedAt);
+    public static ExerciseCompletionDto From(ExerciseCompletion c) =>
+        new(c.SessionId, c.ExerciseId, c.Date, c.SetsDone, c.Value, c.LoadKg, c.Effort, c.Discomfort, c.LoggedAt);
 }
 
-/// <param name="Status">not_counted, not_planned, done, joker, missed or in_progress.</param>
-public sealed record RoutineDayDto(DateOnly Date, int Done, int Planned, int Percent, string Status);
+/// <summary>One pass of a routine (ADR 0015); finished when every exercise has all its sets.</summary>
+/// <param name="FinishedAt">Time of the last tick once finished; null while in progress.</param>
+public sealed record RoutineSessionDto(Guid Id, DateOnly Date, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt, bool Finished,
+    int ExercisesDone, int ExercisesTotal, string? Comment, IReadOnlyList<ExerciseCompletionDto> Completions);
 
+/// <param name="Done">Exercises done in the best pass of the day.</param>
+/// <param name="Passes">Passes finished that day.</param>
+/// <param name="Status">not_counted, not_planned, done, joker, missed or in_progress.</param>
+public sealed record RoutineDayDto(DateOnly Date, int Done, int Planned, int Percent, string Status, int Passes);
+
+/// <param name="DoneToday">Exercises done in today's best pass.</param>
+/// <param name="CompletedToday">At least one pass finished today.</param>
+/// <param name="PassesToday">Passes finished today.</param>
+/// <param name="TodaySessions">Today's passes, oldest first; at most one in progress.</param>
 /// <param name="NextPlannedDay">Next day of the routine after today; null once stopped.</param>
 public sealed record RoutineReportDto(
-    RoutineDto Routine, DateOnly Today, bool PlannedToday, int DoneToday, int TotalToday, bool CompletedToday,
+    RoutineDto Routine, DateOnly Today, bool PlannedToday, int DoneToday, int TotalToday, bool CompletedToday, int PassesToday,
     DateOnly? NextPlannedDay, int Streak, int Record, int JokersPerWeek, int JokersLeftThisWeek,
-    IReadOnlyList<ExerciseCompletionDto> TodayCompletions, IReadOnlyList<RoutineDayDto> Calendar);
+    IReadOnlyList<RoutineSessionDto> TodaySessions, IReadOnlyList<RoutineDayDto> Calendar);
 
 public sealed record ExerciseWeekDto(DateOnly Monday, int? BestValue, decimal? BestLoadKg);
 
-/// <summary>Follow-up of one exercise for a profile: records and the best of each week.</summary>
+/// <summary>Follow-up of one exercise for a profile: records, the best of each week and the latest ticks with their feeling.</summary>
 public sealed record ExerciseProgressDto(Guid ExerciseId, int? BestValue, decimal? BestLoadKg, int DaysDone,
-    IReadOnlyList<ExerciseWeekDto> Weeks);
+    IReadOnlyList<ExerciseWeekDto> Weeks, IReadOnlyList<ExerciseCompletionDto> Recent);
+
+/// <summary>Effort and discomfort offered when a pass ends (ADR 0015).</summary>
+public sealed record SportSettingsDto(Guid MemberProfileId, int DefaultEffort, int DefaultDiscomfort);
 
 /// <summary>Published read contract (ADR 0009): what one profile did in sport on one day.</summary>
 public sealed record SportDayDto(DateOnly Date, Guid MemberProfileId, IReadOnlyList<SportDaySessionDto> Sessions,

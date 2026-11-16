@@ -2,13 +2,16 @@ using LifeOS.Domain.Common;
 
 namespace LifeOS.Domain.Sports;
 
-/// <summary>One exercise of a routine with its target of the moment: "2 × 45 s à 10 kg".</summary>
+/// <summary>
+/// One exercise of a routine with its target of the moment: "2 × 45 s à 10 kg". Without a load, the
+/// exercise's usual load is taken; 0 means bodyweight.
+/// </summary>
 public sealed record RoutineLineInput(Exercise Exercise, int Sets, int Target, decimal? LoadKg);
 
 /// <summary>
 /// A daily routine of a profile (ADR 0014): an ordered list of exercises with their targets, done
 /// on its days of the week. Its days, jokers and exercises change from a given day, so past days
-/// are judged with the routine they had. Done when every exercise of the day is ticked.
+/// are judged with the routine they had. Done on a day when one of its passes has every exercise done (ADR 0015).
 /// </summary>
 public sealed class Routine : Entity
 {
@@ -70,21 +73,28 @@ public sealed class Routine : Entity
         if (IsActive) StoppedOn = today < StartedOn ? StartedOn : today;
     }
 
-    /// <summary>
-    /// Ticks an exercise on a planned day. Without values, the target of that day is recorded; a
-    /// lower value still counts: ticking validates, the numbers are for the follow-up.
-    /// </summary>
-    public (int Value, decimal? LoadKg) CheckCompletion(DateOnly day, Exercise exercise, int? value, decimal? loadKg, DateOnly today)
+    /// <summary>A day the routine can be done on: planned, running, not before its start and not in the future.</summary>
+    public void CheckDay(DateOnly day, DateOnly today)
     {
         if (!IsActive) throw new ArgumentException("Cette routine est arrêtée.");
-        if (day > today) throw new ArgumentException("Impossible de cocher un exercice dans le futur.");
+        if (day > today) throw new ArgumentException("Impossible de faire une routine dans le futur.");
         if (day < StartedOn) throw new ArgumentException("Ce jour est avant le début de la routine.");
-        var version = VersionOn(day);
-        if (!version.IsPlanned(day)) throw new ArgumentException("La routine n'est pas prévue ce jour-là.");
-        var line = version.Lines.SingleOrDefault(l => l.ExerciseId == exercise.Id)
-            ?? throw new ArgumentException("Cet exercice ne fait pas partie de la routine ce jour-là.");
-        var done = value ?? line.Target;
-        return (RoutineLine.CheckTarget(done), exercise.WithLoad ? RoutineLine.CheckLoad(loadKg ?? line.LoadKg ?? 0) : null);
+        if (!VersionOn(day).IsPlanned(day)) throw new ArgumentException("La routine n'est pas prévue ce jour-là.");
+    }
+
+    /// <summary>The line of an exercise in the routine of a day.</summary>
+    public RoutineLine LineOn(DateOnly day, Guid exerciseId) =>
+        VersionOn(day).Lines.SingleOrDefault(l => l.ExerciseId == exerciseId)
+        ?? throw new ArgumentException("Cet exercice ne fait pas partie de la routine ce jour-là.");
+
+    /// <summary>
+    /// What a tick records: the target of that day unless other values are given. A lower value still
+    /// counts: ticking validates, the numbers are for the follow-up. A load of 0 means bodyweight.
+    /// </summary>
+    public (int Value, decimal? LoadKg) CheckCompletion(DateOnly day, Guid exerciseId, int? value, decimal? loadKg)
+    {
+        var line = LineOn(day, exerciseId);
+        return (RoutineLine.CheckTarget(value ?? line.Target), RoutineLine.NormalizeLoad(loadKg ?? line.LoadKg));
     }
 }
 
@@ -160,7 +170,7 @@ public sealed class RoutineLine
         {
             HouseholdId = householdId, ExerciseId = input.Exercise.Id, Position = position, Sets = input.Sets,
             Target = CheckTarget(input.Target),
-            LoadKg = input.Exercise.WithLoad ? CheckLoad(input.LoadKg ?? 0) : null,
+            LoadKg = NormalizeLoad(input.LoadKg ?? input.Exercise.DefaultLoadKg),
         };
     }
 
@@ -180,36 +190,7 @@ public sealed class RoutineLine
         loadKg is < 0 or > 500 || loadKg * 2 != decimal.Truncate(loadKg * 2)
             ? throw new ArgumentException("Charge : 0 à 500 kg, par pas de 0,5.")
             : loadKg;
-}
 
-/// <summary>An exercise ticked in a routine on a day, with what was really done. One per exercise and per day.</summary>
-public sealed class ExerciseCompletion : Entity
-{
-    public Guid HouseholdId { get; private set; }
-    public Guid RoutineId { get; private set; }
-    public Guid ExerciseId { get; private set; }
-    public DateOnly Date { get; private set; }
-    public int Value { get; private set; }
-    public decimal? LoadKg { get; private set; }
-    public DateTimeOffset LoggedAt { get; private set; }
-
-    private ExerciseCompletion() { }
-
-    public static ExerciseCompletion Create(Routine routine, Exercise exercise, DateOnly day, int? value, decimal? loadKg,
-        DateOnly today, DateTimeOffset now)
-    {
-        var done = routine.CheckCompletion(day, exercise, value, loadKg, today);
-        return new ExerciseCompletion
-        {
-            Id = Guid.NewGuid(), HouseholdId = routine.HouseholdId, RoutineId = routine.Id, ExerciseId = exercise.Id,
-            Date = day, Value = done.Value, LoadKg = done.LoadKg, LoggedAt = now,
-        };
-    }
-
-    /// <summary>Corrects what was done that day.</summary>
-    public void Change(Routine routine, Exercise exercise, int? value, decimal? loadKg, DateOnly today, DateTimeOffset now)
-    {
-        (Value, LoadKg) = routine.CheckCompletion(Date, exercise, value, loadKg, today);
-        LoggedAt = now;
-    }
+    /// <summary>An optional load (ADR 0015): none or 0 means bodyweight and is stored as null.</summary>
+    public static decimal? NormalizeLoad(decimal? loadKg) => loadKg is null or 0 ? null : CheckLoad(loadKg.Value);
 }

@@ -19,6 +19,10 @@ public interface ISportReadData
     /// <summary>Every exercise of the household by id, archived ones included.</summary>
     Task<IReadOnlyDictionary<Guid, Exercise>> ExercisesAsync(Guid householdId, CancellationToken ct);
     Task<IReadOnlyList<ExerciseCompletion>> CompletionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct);
+    /// <summary>Passes of the given routines, all days.</summary>
+    Task<IReadOnlyList<RoutineSession>> RoutineSessionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct);
+    /// <summary>The profile's sport settings; null when never changed.</summary>
+    Task<SportProfileSettings?> SettingsAsync(Guid householdId, Guid profileId, CancellationToken ct);
     /// <summary>Completions of one exercise in the routines of a profile.</summary>
     Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct);
 }
@@ -61,7 +65,7 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
             entries.Where(e => e.ChallengeId == challenge.Id).OrderBy(e => e.LoggedAt).ToList(), today)).ToList();
     }
 
-    /// <summary>Running routines (or all of them) with today's ticks, streak and a calendar of <paramref name="calendarWeeks"/> weeks.</summary>
+    /// <summary>Running routines (or all of them) with today's passes, streak and a calendar of <paramref name="calendarWeeks"/> weeks.</summary>
     public async Task<IReadOnlyList<RoutineReportDto>> RoutinesAsync(Guid householdId, Guid profileId, int calendarWeeks,
         bool includeStopped, CancellationToken ct)
     {
@@ -69,19 +73,39 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
         var today = Today();
         var routines = await data.RoutinesAsync(householdId, profileId, !includeStopped, ct);
         var exercises = await data.ExercisesAsync(householdId, ct);
-        var completions = (await data.CompletionsAsync(householdId, routines.Select(r => r.Id).ToList(), ct)).ToLookup(c => c.RoutineId);
+        var ids = routines.Select(r => r.Id).ToList();
+        var completions = (await data.CompletionsAsync(householdId, ids, ct)).ToLookup(c => c.SessionId);
+        var sessions = (await data.RoutineSessionsAsync(householdId, ids, ct)).ToLookup(s => s.RoutineId);
         var calendarFrom = calendarWeeks == 0 ? today : SportWeek.Monday(today).AddDays(-7 * (calendarWeeks - 1));
         return routines.Select(routine =>
         {
-            var own = completions[routine.Id].ToList();
-            var doneByDay = own.GroupBy(c => c.Date).ToDictionary(g => g.Key, g => g.Select(c => c.ExerciseId).ToHashSet());
-            var p = RoutineProgress.Compute(routine, doneByDay, today, calendarFrom);
+            var own = sessions[routine.Id].ToList();
+            IReadOnlyDictionary<Guid, int> Sets(RoutineSession s) => completions[s.Id].ToDictionary(c => c.ExerciseId, c => c.SetsDone);
+            var passesByDay = own.GroupBy(s => s.Date).ToDictionary(g => g.Key,
+                g => (IReadOnlyList<IReadOnlyDictionary<Guid, int>>)g.Select(Sets).ToList());
+            var p = RoutineProgress.Compute(routine, passesByDay, today, calendarFrom);
             return new RoutineReportDto(RoutineDto.From(routine, today, exercises), today, p.PlannedToday, p.DoneToday, p.TotalToday,
-                p.PlannedToday && p.DoneToday == p.TotalToday, p.NextPlannedDay, p.Streak, p.Record, p.JokersPerWeek, p.JokersLeftThisWeek,
-                own.Where(c => c.Date == today).OrderBy(c => c.LoggedAt).Select(ExerciseCompletionDto.From).ToList(),
-                p.Calendar.Select(d => new RoutineDayDto(d.Date, d.Done, d.Planned, d.Percent, Status(d.Status))).ToList());
+                p.PassesToday > 0, p.PassesToday, p.NextPlannedDay, p.Streak, p.Record, p.JokersPerWeek, p.JokersLeftThisWeek,
+                own.Where(s => s.Date == today).OrderBy(s => s.StartedAt).Select(s => Session(routine, s, completions[s.Id].ToList())).ToList(),
+                p.Calendar.Select(d => new RoutineDayDto(d.Date, d.Done, d.Planned, d.Percent, Status(d.Status), d.Passes)).ToList());
         }).ToList();
     }
+
+    /// <summary>A pass with its ticks; finished when every exercise of that day has all its sets.</summary>
+    public static RoutineSessionDto Session(Routine routine, RoutineSession session, IReadOnlyList<ExerciseCompletion> ticks)
+    {
+        var done = RoutineSession.ExercisesDone(routine, session.Date, ticks.ToDictionary(t => t.ExerciseId, t => t.SetsDone));
+        var total = routine.VersionOn(session.Date).Lines.Count;
+        var finished = done == total;
+        return new RoutineSessionDto(session.Id, session.Date, session.StartedAt, finished ? ticks.Max(t => t.LoggedAt) : null, finished,
+            done, total, session.Comment, ticks.OrderBy(t => t.LoggedAt).Select(ExerciseCompletionDto.From).ToList());
+    }
+
+    /// <summary>The effort and discomfort offered at the end of a pass; 7 and 2 until changed.</summary>
+    public async Task<SportSettingsDto> SettingsAsync(Guid householdId, Guid profileId, CancellationToken ct) =>
+        await data.SettingsAsync(householdId, profileId, ct) is { } s
+            ? new SportSettingsDto(profileId, s.DefaultEffort, s.DefaultDiscomfort)
+            : new SportSettingsDto(profileId, SportProfileSettings.DefaultEffortValue, SportProfileSettings.DefaultDiscomfortValue);
 
     /// <summary>Records of one exercise and its best value and load of each of the last <paramref name="weeks"/> weeks.</summary>
     public async Task<ExerciseProgressDto> ExerciseProgressAsync(Guid householdId, Guid profileId, Guid exerciseId, int weeks,
@@ -90,7 +114,8 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
         if (weeks is < 1 or > 104) throw new ArgumentException("Nombre de semaines : 1 à 104.");
         var p = ExerciseProgress.Compute(await data.ExerciseCompletionsAsync(householdId, profileId, exerciseId, ct), Today(), weeks);
         return new ExerciseProgressDto(exerciseId, p.BestValue, p.BestLoadKg, p.DaysDone,
-            p.Weeks.Select(w => new ExerciseWeekDto(w.Monday, w.BestValue, w.BestLoadKg)).ToList());
+            p.Weeks.Select(w => new ExerciseWeekDto(w.Monday, w.BestValue, w.BestLoadKg)).ToList(),
+            p.Recent.Select(ExerciseCompletionDto.From).ToList());
     }
 
     /// <summary>Sessions per day and per profile, for the future planner.</summary>

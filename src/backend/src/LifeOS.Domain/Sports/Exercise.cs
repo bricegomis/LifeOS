@@ -4,7 +4,8 @@ namespace LifeOS.Domain.Sports;
 
 /// <summary>
 /// A card of the household's exercise library (ADR 0014): a name, an optional image and
-/// instructions, and what is measured — a hold in seconds or repetitions, with or without a load.
+/// instructions, what is measured — a hold in seconds or repetitions — and an optional usual load
+/// (ADR 0015), offered as the target when the exercise is added to a routine. No load means bodyweight.
 /// Routines pick exercises; exercises are archived, not deleted.
 /// </summary>
 public sealed class Exercise : Entity
@@ -21,8 +22,8 @@ public sealed class Exercise : Entity
     public string Name { get; private set; } = "";
     public string? Instructions { get; private set; }
     public string Measure { get; private set; } = "";
-    /// <summary>The exercise is done with a load in kg (a weight on the thighs, a dumbbell).</summary>
-    public bool WithLoad { get; private set; }
+    /// <summary>Usual load in kg (a weight on the thighs, a dumbbell); null means bodyweight.</summary>
+    public decimal? DefaultLoadKg { get; private set; }
     public string? ImagePath { get; private set; }
     public string? ImageContentType { get; private set; }
     public bool IsArchived { get; private set; }
@@ -30,16 +31,16 @@ public sealed class Exercise : Entity
 
     private Exercise() { }
 
-    public static Exercise Create(Guid householdId, string name, string? instructions, string measure, bool withLoad)
+    public static Exercise Create(Guid householdId, string name, string? instructions, string measure, decimal? defaultLoadKg)
     {
         if (householdId == Guid.Empty) throw new ArgumentException("Foyer obligatoire.");
         var exercise = new Exercise { Id = Guid.NewGuid(), HouseholdId = householdId };
-        exercise.Update(name, instructions, measure, withLoad, alreadyDone: false);
+        exercise.Update(name, instructions, measure, defaultLoadKg, alreadyDone: false);
         return exercise;
     }
 
     /// <param name="alreadyDone">The exercise has completions: its measure is frozen so its history stays comparable.</param>
-    public void Update(string name, string? instructions, string measure, bool withLoad, bool alreadyDone)
+    public void Update(string name, string? instructions, string measure, decimal? defaultLoadKg, bool alreadyDone)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100)
             throw new ArgumentException("Nom de l'exercice obligatoire (100 caractères maximum).");
@@ -52,7 +53,7 @@ public sealed class Exercise : Entity
         Name = name.Trim();
         Instructions = text;
         Measure = code;
-        WithLoad = withLoad;
+        DefaultLoadKg = RoutineLine.NormalizeLoad(defaultLoadKg);
     }
 
     public void SetImage(string imagePath, string imageContentType)

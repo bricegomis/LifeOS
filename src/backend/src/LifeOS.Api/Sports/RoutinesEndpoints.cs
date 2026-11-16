@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace LifeOS.Api.Sports;
 
 /// <param name="Target">Seconds or repetitions per set, following the exercise's measure.</param>
-/// <param name="LoadKg">Only for an exercise with a load; 0 when omitted.</param>
+/// <param name="LoadKg">Load in kg by steps of 0.5; the exercise's usual load when omitted, 0 for bodyweight.</param>
 public sealed record RoutineLineRequest(Guid ExerciseId, int Sets, int Target, decimal? LoadKg);
 
 /// <param name="MemberProfileId">The main profile when omitted. Ignored on update.</param>
@@ -23,10 +23,46 @@ public sealed record RoutineRequest(
     [property: Range(0, 2)] int JokersPerWeek,
     [property: Required] IReadOnlyList<RoutineLineRequest> Lines);
 
-/// <param name="Value">Seconds or repetitions really done; the target of the day when omitted.</param>
-/// <param name="LoadKg">Load really used; the target's load when omitted.</param>
+/// <param name="Date">Day of the pass; today when omitted.</param>
+public sealed record RoutineSessionStartRequest(DateOnly? Date);
+
+/// <param name="SetsDone">Sets done, 0 (untick) to the sets of the target.</param>
+public sealed record ExerciseSetsRequest([property: Range(0, 20)] int SetsDone);
+
+/// <param name="Effort">Perceived effort 1 to 10; null when not noted.</param>
+/// <param name="Discomfort">Discomfort 0 (none) to 10; null when not noted.</param>
+public sealed record ExerciseFeelingRequest(Guid ExerciseId, [property: Range(1, 10)] int? Effort, [property: Range(0, 10)] int? Discomfort);
+
+/// <param name="Exercises">Feeling per exercise of the pass; exercises left out keep theirs.</param>
+public sealed record RoutineSessionFeelingRequest(
+    [property: StringLength(RoutineSession.MaxCommentLength)] string? Comment,
+    IReadOnlyList<ExerciseFeelingRequest>? Exercises);
+
+/// <param name="SetsDone">Sets done; all the sets of the target when omitted.</param>
+/// <param name="Value">Seconds or repetitions per set; the target when omitted.</param>
+/// <param name="LoadKg">Load per set; the target's when omitted, 0 for bodyweight.</param>
+public sealed record SessionExerciseRequest(Guid ExerciseId, [property: Range(1, 20)] int? SetsDone, int? Value, decimal? LoadKg,
+    [property: Range(1, 10)] int? Effort, [property: Range(0, 10)] int? Discomfort);
+
+/// <param name="Date">Day of the pass; today when omitted.</param>
+/// <param name="Time">Start time (Europe/Paris); now, or noon for a past day, when omitted.</param>
+public sealed record RoutineSessionLogRequest(DateOnly? Date, TimeOnly? Time,
+    [property: StringLength(RoutineSession.MaxCommentLength)] string? Comment,
+    [property: Required] IReadOnlyList<SessionExerciseRequest> Exercises);
+
+/// <summary>Ticks an exercise in the open pass of the day (opening one if needed), or in a given pass.</summary>
+/// <param name="SetsDone">Sets done; all the sets of the target when omitted.</param>
+/// <param name="Value">Seconds or repetitions per set really done; the target when omitted.</param>
+/// <param name="LoadKg">Load really used; the target's when omitted, 0 for bodyweight.</param>
 /// <param name="Date">Day done; today when omitted.</param>
-public sealed record ExerciseCompletionRequest(Guid ExerciseId, int? Value, decimal? LoadKg, DateOnly? Date);
+/// <param name="SessionId">The pass to tick in; the open pass of the day (or a new one) when omitted.</param>
+public sealed record ExerciseCompletionRequest(Guid ExerciseId, [property: Range(1, 20)] int? SetsDone, int? Value, decimal? LoadKg,
+    [property: Range(1, 10)] int? Effort, [property: Range(0, 10)] int? Discomfort, DateOnly? Date, Guid? SessionId);
+
+/// <param name="DefaultEffort">Effort offered when a pass ends, 1 to 10.</param>
+/// <param name="DefaultDiscomfort">Discomfort offered when a pass ends, 0 to 10.</param>
+public sealed record SportSettingsRequest(Guid? MemberProfileId, [property: Range(1, 10)] int DefaultEffort,
+    [property: Range(0, 10)] int DefaultDiscomfort);
 
 public static class RoutinesEndpoints
 {
@@ -52,15 +88,43 @@ public static class RoutinesEndpoints
         g.MapPut("/{id:guid}/completions", async (Guid id, ExerciseCompletionRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
             await routines.CompleteAsync(household.HouseholdId, id, request, ct) is { } report ? Results.Ok(report) : Results.NotFound())
             .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
-        g.MapDelete("/{id:guid}/completions/{exerciseId:guid}", async (Guid id, Guid exerciseId, DateOnly? date, HouseholdContext household,
-                RoutineLibrary routines, CancellationToken ct) =>
-            await routines.UncompleteAsync(household.HouseholdId, id, exerciseId, date, ct) is { } report ? Results.Ok(report) : Results.NotFound())
+        g.MapDelete("/{id:guid}/completions/{exerciseId:guid}", async (Guid id, Guid exerciseId, Guid? sessionId, DateOnly? date,
+                HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
+            await routines.UncompleteAsync(household.HouseholdId, id, exerciseId, sessionId, date, ct) is { } report ? Results.Ok(report) : Results.NotFound())
+            .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
+        g.MapPost("/{id:guid}/sessions", async (Guid id, RoutineSessionStartRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
+            await routines.StartSessionAsync(household.HouseholdId, id, request.Date, ct) is { } report ? Results.Ok(report) : Results.NotFound())
+            .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
+        g.MapPost("/{id:guid}/sessions/log", async (Guid id, RoutineSessionLogRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
+            await routines.LogSessionAsync(household.HouseholdId, id, request, ct) is { } report ? Results.Ok(report) : Results.NotFound())
+            .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
+        g.MapPut("/{id:guid}/sessions/{sessionId:guid}/exercises/{exerciseId:guid}", async (Guid id, Guid sessionId, Guid exerciseId,
+                ExerciseSetsRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
+            await routines.SetSetsAsync(household.HouseholdId, id, sessionId, exerciseId, request.SetsDone, ct) is { } report ? Results.Ok(report) : Results.NotFound())
+            .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
+        g.MapPut("/{id:guid}/sessions/{sessionId:guid}/feeling", async (Guid id, Guid sessionId, RoutineSessionFeelingRequest request,
+                HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
+            await routines.SetFeelingAsync(household.HouseholdId, id, sessionId, request, ct) is { } report ? Results.Ok(report) : Results.NotFound())
+            .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
+        g.MapDelete("/{id:guid}/sessions/{sessionId:guid}", async (Guid id, Guid sessionId, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
+            await routines.DeleteSessionAsync(household.HouseholdId, id, sessionId, ct) is { } report ? Results.Ok(report) : Results.NotFound())
             .Produces<RoutineReportDto>().ProducesProblem(StatusCodes.Status404NotFound);
+
+        var settings = app.MapGroup("/api/sport/settings").RequireAuthorization().WithTags("Sport").AddRequestValidation();
+        settings.MapGet("/", async (Guid? profileId, HouseholdContext household, SportProfiles profiles, SportReadContract contract, CancellationToken ct) =>
+            Results.Ok(await contract.SettingsAsync(household.HouseholdId, await profiles.ResolveAsync(household.HouseholdId, profileId, ct), ct)))
+            .Produces<SportSettingsDto>();
+        settings.MapPut("/", async (SportSettingsRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
+            Results.Ok(await routines.ChangeSettingsAsync(household.HouseholdId, request, ct)))
+            .Produces<SportSettingsDto>().ProducesValidationProblem();
         return app;
     }
 }
 
-/// <summary>Daily routines and their ticks (ADR 0014), shared by the endpoints and the assistant tools; rules in <see cref="Routine"/>.</summary>
+/// <summary>
+/// Daily routines, their passes and ticks (ADR 0014, ADR 0015), shared by the endpoints and the assistant tools;
+/// rules in <see cref="Routine"/> and <see cref="RoutineSession"/>.
+/// </summary>
 public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, SportReadContract contract, TimeProvider clock)
 {
     public async Task<RoutineReportDto> CreateAsync(Guid householdId, RoutineRequest r, CancellationToken ct)
@@ -93,38 +157,187 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         return true;
     }
 
-    /// <summary>Ticks an exercise, or corrects what was done that day, and returns the routine's report.</summary>
-    public async Task<RoutineReportDto?> CompleteAsync(Guid householdId, Guid id, ExerciseCompletionRequest r, CancellationToken ct)
-    {
-        var routine = await FindAsync(householdId, id, ct);
-        if (routine is null) return null;
-        var exercise = await db.Exercises.SingleOrDefaultAsync(e => e.Id == r.ExerciseId && e.HouseholdId == householdId, ct)
-            ?? throw new ArgumentException("Exercice introuvable dans votre foyer.");
-        var today = SportClock.Today(clock);
-        var day = r.Date ?? today;
-        var existing = await db.ExerciseCompletions.SingleOrDefaultAsync(
-            c => c.RoutineId == id && c.ExerciseId == exercise.Id && c.Date == day && c.HouseholdId == householdId, ct);
-        if (existing is null) db.ExerciseCompletions.Add(ExerciseCompletion.Create(routine, exercise, day, r.Value, r.LoadKg, today, clock.GetUtcNow()));
-        else existing.Change(routine, exercise, r.Value, r.LoadKg, today, clock.GetUtcNow());
-        await db.SaveChangesAsync(ct);
-        return await ReportAsync(routine, ct);
-    }
-
-    /// <summary>Unticks an exercise; nothing happens when it was not ticked.</summary>
-    public async Task<RoutineReportDto?> UncompleteAsync(Guid householdId, Guid id, Guid exerciseId, DateOnly? date, CancellationToken ct)
+    /// <summary>Opens a pass on a day (today by default); refused while another pass of that day is unfinished.</summary>
+    public async Task<RoutineReportDto?> StartSessionAsync(Guid householdId, Guid id, DateOnly? date, CancellationToken ct)
     {
         var routine = await FindAsync(householdId, id, ct);
         if (routine is null) return null;
         var day = date ?? SportClock.Today(clock);
-        var existing = await db.ExerciseCompletions.SingleOrDefaultAsync(
-            c => c.RoutineId == id && c.ExerciseId == exerciseId && c.Date == day && c.HouseholdId == householdId, ct);
-        if (existing is not null)
-        {
-            db.ExerciseCompletions.Remove(existing);
-            await db.SaveChangesAsync(ct);
-        }
+        await StartAsync(routine, day, clock.GetUtcNow(), ct);
+        await db.SaveChangesAsync(ct);
         return await ReportAsync(routine, ct);
     }
+
+    /// <summary>Sets how many sets of an exercise are done in a pass; 0 unticks it. A finished pass is not reopened.</summary>
+    public async Task<RoutineReportDto?> SetSetsAsync(Guid householdId, Guid id, Guid sessionId, Guid exerciseId, int setsDone, CancellationToken ct)
+    {
+        var routine = await FindAsync(householdId, id, ct);
+        if (routine is null) return null;
+        var session = await FindSessionAsync(routine, sessionId, ct);
+        if (session is null) return null;
+        var ticks = await TicksAsync(session, ct);
+        var finished = session.IsFinished(routine, ticks);
+        var tick = ticks.SingleOrDefault(t => t.ExerciseId == exerciseId);
+        var now = clock.GetUtcNow();
+        if (setsDone == 0)
+        {
+            if (tick is not null)
+            {
+                if (finished) throw new ArgumentException("Ce passage est terminé ; supprimez-le pour le refaire.");
+                db.ExerciseCompletions.Remove(tick);
+            }
+        }
+        else if (tick is null) db.ExerciseCompletions.Add(ExerciseCompletion.Create(routine, session, exerciseId, setsDone, null, null, now, finished));
+        else tick.SetSets(routine, setsDone, now, finished);
+        await db.SaveChangesAsync(ct);
+        return await ReportAsync(routine, ct);
+    }
+
+    /// <summary>Notes the effort and discomfort of the exercises of a pass, and its comment.</summary>
+    public async Task<RoutineReportDto?> SetFeelingAsync(Guid householdId, Guid id, Guid sessionId, RoutineSessionFeelingRequest r, CancellationToken ct)
+    {
+        var routine = await FindAsync(householdId, id, ct);
+        if (routine is null) return null;
+        var session = await FindSessionAsync(routine, sessionId, ct);
+        if (session is null) return null;
+        var ticks = await TicksAsync(session, ct);
+        session.SetComment(r.Comment);
+        foreach (var feeling in r.Exercises ?? [])
+        {
+            var tick = ticks.SingleOrDefault(t => t.ExerciseId == feeling.ExerciseId)
+                ?? throw new ArgumentException("Cet exercice n'est pas coché dans ce passage.");
+            tick.SetFeeling(feeling.Effort, feeling.Discomfort);
+        }
+        await db.SaveChangesAsync(ct);
+        return await ReportAsync(routine, ct);
+    }
+
+    /// <summary>Deletes a pass with its ticks.</summary>
+    public async Task<RoutineReportDto?> DeleteSessionAsync(Guid householdId, Guid id, Guid sessionId, CancellationToken ct)
+    {
+        var routine = await FindAsync(householdId, id, ct);
+        if (routine is null) return null;
+        var session = await FindSessionAsync(routine, sessionId, ct);
+        if (session is null) return null;
+        db.ExerciseCompletions.RemoveRange(await TicksAsync(session, ct));
+        db.RoutineSessions.Remove(session);
+        await db.SaveChangesAsync(ct);
+        return await ReportAsync(routine, ct);
+    }
+
+    /// <summary>Records a whole pass in one call (the assistant): each exercise with its sets, values and feeling.</summary>
+    public async Task<RoutineReportDto?> LogSessionAsync(Guid householdId, Guid id, RoutineSessionLogRequest r, CancellationToken ct)
+    {
+        var routine = await FindAsync(householdId, id, ct);
+        if (routine is null) return null;
+        if (r.Exercises is not { Count: > 0 }) throw new ArgumentException("Indiquez au moins un exercice du passage.");
+        if (r.Exercises.Select(e => e.ExerciseId).Distinct().Count() != r.Exercises.Count) throw new ArgumentException("Un exercice ne figure qu'une fois dans un passage.");
+        var today = SportClock.Today(clock);
+        var day = r.Date ?? today;
+        var startedAt = r.Time is { } time ? SportClock.At(day, time) : day == today ? clock.GetUtcNow() : SportClock.At(day, new TimeOnly(12, 0));
+        var session = await StartAsync(routine, day, startedAt, ct);
+        session.SetComment(r.Comment);
+        foreach (var e in r.Exercises)
+        {
+            var tick = ExerciseCompletion.Create(routine, session, e.ExerciseId, e.SetsDone ?? routine.LineOn(day, e.ExerciseId).Sets,
+                e.Value, e.LoadKg, startedAt, passFinished: false);
+            tick.SetFeeling(e.Effort, e.Discomfort);
+            db.ExerciseCompletions.Add(tick);
+        }
+        await db.SaveChangesAsync(ct);
+        return await ReportAsync(routine, ct);
+    }
+
+    /// <summary>
+    /// Ticks an exercise (the assistant): in the given pass, or the open pass of the day, or a new one. Sets,
+    /// values and feeling given are recorded; the target is used otherwise.
+    /// </summary>
+    public async Task<RoutineReportDto?> CompleteAsync(Guid householdId, Guid id, ExerciseCompletionRequest r, CancellationToken ct)
+    {
+        var routine = await FindAsync(householdId, id, ct);
+        if (routine is null) return null;
+        var today = SportClock.Today(clock);
+        var now = clock.GetUtcNow();
+        RoutineSession session;
+        if (r.SessionId is { } sessionId) session = await FindSessionAsync(routine, sessionId, ct) ?? throw new ArgumentException("Passage introuvable pour cette routine.");
+        else
+        {
+            var day = r.Date ?? today;
+            session = await OpenSessionAsync(routine, day, ct) ?? await StartAsync(routine, day, day == today ? now : SportClock.At(day, new TimeOnly(12, 0)), ct);
+        }
+        var ticks = db.Entry(session).State == EntityState.Added ? [] : await TicksAsync(session, ct);
+        var finished = ticks.Count > 0 && session.IsFinished(routine, ticks);
+        var sets = r.SetsDone ?? routine.LineOn(session.Date, r.ExerciseId).Sets;
+        var tick = ticks.SingleOrDefault(t => t.ExerciseId == r.ExerciseId);
+        if (tick is null)
+        {
+            tick = ExerciseCompletion.Create(routine, session, r.ExerciseId, sets, r.Value, r.LoadKg, now, finished);
+            db.ExerciseCompletions.Add(tick);
+        }
+        else
+        {
+            if (tick.SetsDone != sets) tick.SetSets(routine, sets, now, finished);
+            tick.Correct(routine, r.Value, r.LoadKg);
+        }
+        if (r.Effort is not null || r.Discomfort is not null) tick.SetFeeling(r.Effort ?? tick.Effort, r.Discomfort ?? tick.Discomfort);
+        await db.SaveChangesAsync(ct);
+        return await ReportAsync(routine, ct);
+    }
+
+    /// <summary>Unticks an exercise in a pass (by default the latest pass of the day where it is ticked); a finished pass is not reopened.</summary>
+    public async Task<RoutineReportDto?> UncompleteAsync(Guid householdId, Guid id, Guid exerciseId, Guid? sessionId, DateOnly? date, CancellationToken ct)
+    {
+        var routine = await FindAsync(householdId, id, ct);
+        if (routine is null) return null;
+        RoutineSession? session;
+        if (sessionId is { } sid) session = await FindSessionAsync(routine, sid, ct) ?? throw new ArgumentException("Passage introuvable pour cette routine.");
+        else
+        {
+            var day = date ?? SportClock.Today(clock);
+            session = await db.RoutineSessions
+                .Where(s => s.RoutineId == id && s.HouseholdId == householdId && s.Date == day)
+                .Where(s => db.ExerciseCompletions.Any(c => c.SessionId == s.Id && c.ExerciseId == exerciseId))
+                .OrderByDescending(s => s.StartedAt).FirstOrDefaultAsync(ct);
+        }
+        if (session is null) return await ReportAsync(routine, ct);
+        return await SetSetsAsync(householdId, id, session.Id, exerciseId, 0, ct);
+    }
+
+    public async Task<SportSettingsDto> ChangeSettingsAsync(Guid householdId, SportSettingsRequest r, CancellationToken ct)
+    {
+        var profile = await profiles.ResolveAsync(householdId, r.MemberProfileId, ct);
+        var settings = await db.SportProfileSettings.SingleOrDefaultAsync(s => s.HouseholdId == householdId && s.MemberProfileId == profile, ct);
+        if (settings is null)
+        {
+            settings = SportProfileSettings.Create(householdId, profile);
+            db.SportProfileSettings.Add(settings);
+        }
+        settings.Change(r.DefaultEffort, r.DefaultDiscomfort);
+        await db.SaveChangesAsync(ct);
+        return new SportSettingsDto(profile, settings.DefaultEffort, settings.DefaultDiscomfort);
+    }
+
+    private async Task<RoutineSession> StartAsync(Routine routine, DateOnly day, DateTimeOffset startedAt, CancellationToken ct)
+    {
+        var session = RoutineSession.Start(routine, day, startedAt, SportClock.Today(clock), await OpenSessionAsync(routine, day, ct) is not null);
+        db.RoutineSessions.Add(session);
+        return session;
+    }
+
+    /// <summary>The unfinished pass of a day, if any.</summary>
+    private async Task<RoutineSession?> OpenSessionAsync(Routine routine, DateOnly day, CancellationToken ct)
+    {
+        var sessions = await db.RoutineSessions.Where(s => s.RoutineId == routine.Id && s.HouseholdId == routine.HouseholdId && s.Date == day).ToListAsync(ct);
+        foreach (var session in sessions.OrderByDescending(s => s.StartedAt))
+            if (!session.IsFinished(routine, await TicksAsync(session, ct))) return session;
+        return null;
+    }
+
+    private Task<RoutineSession?> FindSessionAsync(Routine routine, Guid sessionId, CancellationToken ct) =>
+        db.RoutineSessions.SingleOrDefaultAsync(s => s.Id == sessionId && s.RoutineId == routine.Id && s.HouseholdId == routine.HouseholdId, ct);
+
+    private async Task<List<ExerciseCompletion>> TicksAsync(RoutineSession session, CancellationToken ct) =>
+        await db.ExerciseCompletions.Where(c => c.SessionId == session.Id && c.HouseholdId == session.HouseholdId).ToListAsync(ct);
 
     private static int DayBits(IReadOnlyList<int>? days)
     {
