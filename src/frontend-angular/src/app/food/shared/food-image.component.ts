@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, effect, inject, input, signal } from '@angular/core'
+import { Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core'
 import { firstValueFrom } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { tintFor } from './tint'
@@ -44,7 +44,8 @@ export class FoodImageComponent {
   constructor() {
     effect(() => {
       const path = this.path(); const hasImage = this.hasImage(); this.version()
-      void this.load(path, hasImage)
+      // Untracked: load() reads `url` synchronously, which would otherwise rerun this effect forever.
+      untracked(() => void this.load(path, hasImage))
     })
     inject(DestroyRef).onDestroy(() => this.release())
   }
