@@ -29,7 +29,7 @@ import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleRecei
     <div class="lo-page is-wide">
       <header class="lo-page-head">
         <div class="lo-page-title">
-          <h1>Tickets</h1>
+          <h1 class="lo-bar-title">Tickets</h1>
           <p class="lo-intro">La photo est allégée avant l’envoi, sans perdre la lisibilité ; rien n’est lu automatiquement. Les prix se saisissent sur ordinateur, à côté de la photo.</p>
         </div>
         <div class="lo-actions">

@@ -33,7 +33,7 @@
     with a picture or icon on the left (`lo-list`, `lo-row`, `lo-row-main`), `lo-panel` for the
     sections of a detail page, `lo-table` for grids, `lo-stat`, `lo-tag` (`is-ok`, `is-warn`,
     `is-off`, `is-done`), `lo-chip` / `lo-filter-chip`, `lo-notice`, `lo-error`, `lo-status`,
-    `lo-desktop-only` / `lo-phone-only`. Library pages use `app-list-page`.
+    `lo-desktop-only` / `lo-phone-only`, `lo-bar-title` on a page `h1` the phone top bar already shows. Library pages use `app-list-page`; on the phone, adding is always the floating `lo-fab`.
   - Colours only from theme variables (`var(--mat-sys-*)`): no hex value, no `--lifeos-*`
     token (they are gone). The theme follows the system light/dark setting (each variable is
     a `light-dark()` value), so a screen must read well in both schemes.

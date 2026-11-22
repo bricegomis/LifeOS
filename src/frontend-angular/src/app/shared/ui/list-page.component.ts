@@ -19,7 +19,7 @@ import { HANDSET_QUERY } from './breakpoints'
     <div class="lo-page">
       <header class="lo-page-head" [class.is-phone]="handset()">
         <div class="lo-page-title">
-          <h1 [class.sr-only]="handset()">{{ heading() }}</h1>
+          <h1 class="lo-bar-title">{{ heading() }}</h1>
           @if (intro()) { <p class="lo-intro">{{ intro() }}</p> }
         </div>
         <div class="lo-actions">

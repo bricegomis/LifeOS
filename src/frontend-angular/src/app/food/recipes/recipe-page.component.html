@@ -39,10 +39,10 @@
           @if (!recipe.ingredients.length) {
             <p class="lo-muted">Aucun ingrédient. Ajoutez-en pour calculer la nutrition et le coût.</p>
           } @else {
-            <div class="lo-table">
+            <div class="lo-table ingredients">
               <div class="ingredient-row lo-table-head" aria-hidden="true">
-                <span></span><span>Aliment</span><span>Quantité</span><span class="lo-desktop-only">Saison</span>
-                <span class="lo-desktop-only">FODMAP</span><span class="lo-desktop-only">NOVA</span><span></span>
+                <span></span><span>Aliment</span><span>Quantité</span><span class="wide-only">Saison</span>
+                <span class="wide-only">FODMAP</span><span class="wide-only">NOVA</span><span></span>
               </div>
               @for (ingredient of recipe.ingredients; track ingredient.id) {
                 @let food = this.food(ingredient.foodItemId);
@@ -52,12 +52,12 @@
                     [version]="food?.updatedAt ?? ''" [name]="food?.name ?? ''" width="44px" height="44px" />
                   <span class="ingredient-name-cell">
                     <span class="ingredient-name">{{ food?.name ?? 'Aliment indisponible' }}</span>
-                    <span class="lo-phone-only"><span class="lo-tag" [class]="seasonTagClass(status.kind)">{{ status.label }}</span></span>
+                    <span class="narrow-only"><span class="lo-tag" [class]="seasonTagClass(status.kind)">{{ status.label }}</span></span>
                   </span>
                   <span>{{ quantity(ingredient) }}</span>
-                  <span class="lo-desktop-only"><span class="lo-tag" [class]="seasonTagClass(status.kind)">{{ status.label }}</span></span>
-                  <span class="lo-desktop-only">{{ fodmapLabel(food?.fodmap ?? null) }}</span>
-                  <span class="lo-desktop-only">{{ food?.nova ?? '—' }}</span>
+                  <span class="wide-only"><span class="lo-tag" [class]="seasonTagClass(status.kind)">{{ status.label }}</span></span>
+                  <span class="wide-only">{{ fodmapLabel(food?.fodmap ?? null) }}</span>
+                  <span class="wide-only">{{ food?.nova ?? '—' }}</span>
                   <mat-icon class="chevron" svgIcon="chevron_right" aria-hidden="true" />
                 </a>
               }

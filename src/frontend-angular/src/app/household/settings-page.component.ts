@@ -24,7 +24,7 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
   imports: [BuildVersionComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   template: `
     <div class="lo-page is-narrow">
-      <header class="lo-page-head"><h1>Paramètres</h1></header>
+      <header class="lo-page-head"><h1 class="lo-bar-title">Paramètres</h1></header>
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
 
       <section class="lo-panel" aria-labelledby="profiles-title">

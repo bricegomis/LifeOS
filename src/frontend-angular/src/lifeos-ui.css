@@ -21,6 +21,13 @@ h1, h2, h3 { line-height: 1.2; }
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 @media (max-width: 760px) { .lo-desktop-only { display: none !important; } }
+/* A page title the phone's top bar already shows: kept for screen readers only. */
+@media (max-width: 760px) {
+  .lo-bar-title {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+}
 @media (min-width: 761px) { .lo-phone-only { display: none !important; } }
 
 .lo-page { display: flex; max-width: 1080px; flex-direction: column; gap: 16px; }

@@ -21,8 +21,10 @@ const STEP = 6
   template: `
     <div class="lo-page">
       <header class="lo-page-head">
-        <h1>Historique</h1>
-        <button mat-flat-button type="button" [disabled]="!today()" (click)="openEditor(null)"><mat-icon svgIcon="add" />Ajouter une séance</button>
+        <h1 class="lo-bar-title">Historique</h1>
+        <button mat-flat-button type="button" class="lo-desktop-only" [disabled]="!today()" (click)="openEditor(null)"><mat-icon svgIcon="add" />Ajouter une séance</button>
+        <button mat-fab type="button" class="lo-fab lo-phone-only" [disabled]="!today()" (click)="openEditor(null)"
+          aria-label="Ajouter une séance" title="Ajouter une séance"><mat-icon svgIcon="add" /></button>
       </header>
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (loading() && !weeks().length) { <p class="lo-status" role="status">Chargement…</p> }

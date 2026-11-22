@@ -26,8 +26,10 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
   template: `
     <div class="lo-page">
       <header class="lo-page-head">
-        <div class="lo-page-title"><h1>Sport</h1>@if (today()) { <p class="lo-intro">{{ longDay(today()) }}</p> }</div>
-        <button mat-flat-button type="button" [disabled]="!today()" (click)="openEditor(null)"><mat-icon svgIcon="add" />Ajouter une séance</button>
+        <div class="lo-page-title"><h1 class="lo-bar-title">Sport</h1>@if (today()) { <p class="lo-intro">{{ longDay(today()) }}</p> }</div>
+        <button mat-flat-button type="button" class="lo-desktop-only" [disabled]="!today()" (click)="openEditor(null)"><mat-icon svgIcon="add" />Ajouter une séance</button>
+        <button mat-fab type="button" class="lo-fab lo-phone-only" [disabled]="!today()" (click)="openEditor(null)"
+          aria-label="Ajouter une séance" title="Ajouter une séance"><mat-icon svgIcon="add" /></button>
       </header>
       @if (banner()) {
         <div class="celebration" role="status"><mat-icon svgIcon="trophy" /><span>{{ banner() }}</span>
