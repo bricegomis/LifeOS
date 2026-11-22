@@ -29,6 +29,10 @@ code, identifiers and code comments are English.
 - Step 3 target: ADR 0017 (tasks: todos with due date, duration, priority, image or
   initial, checklist, tags; household routines on fixed dates or a delay after the last
   time, with history and streak; projects as plain groups; an all-tasks page with text search; no inbox).
+- Step 5 target (brought before the planner): ADR 0018 (health: supplements with daily
+  dose, period and monthly cost, one tick per supplement per day; symptom journal; blood
+  markers with lab range, personal target, frequency and panels; body measures; documents
+  and appointments; per-profile privacy, encrypted files, the assistant reads documents).
 - UI kit: ADR 0016 (Angular Material 3 with a LifeOS theme, Material Symbols, screen
   conventions for lists, dialogs, add buttons and actions). Applied to every screen;
   any new or changed Angular screen uses it (see `src/frontend-angular/CLAUDE.md`).
