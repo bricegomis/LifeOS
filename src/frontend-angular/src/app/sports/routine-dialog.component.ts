@@ -106,8 +106,8 @@ export interface RoutineDialogResult { routineId: string, message: string }
     .line { min-height: 96px; }
     .line + .line { margin-top: 8px; }
     .line-body { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; justify-content: center; gap: 12px; padding: 10px 12px; }
-    .line-fields { display: flex; flex-wrap: wrap; gap: 8px; }
-    .small { width: 96px; }
+    .line-fields { display: flex; flex-wrap: wrap; gap: 12px 8px; }
+    .small { width: 104px; }
     .load { width: 136px; }
     .line-actions { display: flex; flex: 0 0 auto; align-items: center; padding: 4px; }
     .remove { color: var(--mat-sys-error); }

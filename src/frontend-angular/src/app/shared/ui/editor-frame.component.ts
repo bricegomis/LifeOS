@@ -49,7 +49,8 @@ import { HANDSET_QUERY } from './breakpoints'
     .frame-bar { display: flex; align-items: center; gap: 4px; min-height: 64px; padding: 0 8px 0 4px; padding-top: env(safe-area-inset-top); }
     .frame-bar-title.mat-mdc-dialog-title { flex: 1 1 auto; min-width: 0; margin: 0; padding: 0 0 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .frame-bar-title.mat-mdc-dialog-title::before { display: none; }
-    .frame-content { display: flex; flex-direction: column; gap: 20px; padding-top: 12px; }
+    /* Doubled class: Material removes the top padding after a title, which clips the first field's label. */
+    .frame-content.frame-content { display: flex; flex-direction: column; gap: 20px; padding-top: 12px; }
     .frame-error { display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 16px; border-radius: 12px;
       background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); font-weight: 600; }
     .frame-actions { flex-wrap: wrap; gap: 8px; }

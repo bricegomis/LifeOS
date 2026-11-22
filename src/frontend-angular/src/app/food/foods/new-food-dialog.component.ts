@@ -23,7 +23,7 @@ import { familyOptions } from '../shared/classification'
           <mat-label>Nom</mat-label>
           <input matInput name="name" maxlength="200" required [(ngModel)]="name" />
         </mat-form-field>
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Famille</mat-label>
           <mat-select name="family" required [(ngModel)]="family">
             @for (option of familyOptions; track option[0]) { <mat-option [value]="option[0]">{{ option[1] }}</mat-option> }

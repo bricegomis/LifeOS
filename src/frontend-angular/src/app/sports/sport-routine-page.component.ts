@@ -36,7 +36,9 @@ import type { RoutineLineDto, RoutineReportDto, RoutineSessionDto, SportSettings
             <span class="lo-muted">{{ daysLabel(report.routine.days) }} · série de {{ report.streak }} jour{{ report.streak > 1 ? 's' : '' }} · record {{ report.record }}</span>
           </div>
           @if (report.routine.isActive) {
-            <button mat-flat-button type="button" class="tonal" (click)="editRoutine(report)"><mat-icon svgIcon="edit" />Modifier la routine</button>
+            <button mat-flat-button type="button" class="tonal lo-desktop-only" (click)="editRoutine(report)"><mat-icon svgIcon="edit" />Modifier la routine</button>
+            <button mat-icon-button type="button" class="lo-phone-only" (click)="editRoutine(report)" aria-label="Modifier la routine"
+              title="Modifier la routine"><mat-icon svgIcon="edit" /></button>
           }
         </header>
 
@@ -130,7 +132,6 @@ import type { RoutineLineDto, RoutineReportDto, RoutineSessionDto, SportSettings
     .pass { gap: 12px; padding: 8px 8px 8px 16px; min-height: 72px; }
     .delete { color: var(--mat-sys-error); }
     @media (max-width: 760px) {
-      .head .tonal { display: none; }
       .exercise-actions { flex-basis: 100%; }
       .set-button { max-width: none; }
     }
