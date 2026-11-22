@@ -14,8 +14,7 @@ aura besoin (échéance, durée, priorité).
 ## Décision
 
 Le module Tâches porte trois notions : les **todos**, les **routines** et les
-**projets**, plus deux aides : la **saisie rapide** (tâches à trier) et les
-**étiquettes**. Toutes les données sont dans le schéma `tasks`, filtrées par foyer.
+**projets**, plus les **étiquettes**. Toutes les données sont dans le schéma `tasks`, filtrées par foyer.
 
 ### Todos
 
@@ -38,14 +37,6 @@ Un todo est une chose à faire une fois. Il porte :
 Un todo ouvert dont l'échéance est passée est **en retard**. Il reste visible
 jusqu'à ce qu'on le fasse, le reporte (nouvelle échéance) ou l'abandonne. Rien ne
 glisse tout seul. Un todo fait peut être rouvert.
-
-### Saisie rapide et tâches à trier
-
-La saisie rapide ne demande qu'un titre. Le todo créé est marqué **à trier**. Il
-apparaît en tête de « Toutes les tâches », pas dans « Aujourd'hui ». Il n'y a pas
-de page « Boîte de réception » séparée. Le trier, c'est
-l'ouvrir et l'enregistrer depuis sa fiche (échéance, projet, etc., même vides) :
-la marque disparaît. Un todo à trier peut aussi être fait ou abandonné directement.
 
 ### Routines
 
@@ -108,12 +99,11 @@ Menu « Tâches » dans la navigation, avec :
   routine). Une coche marque fait ; la routine propose aussi « sauter ». Filtre
   par étiquette. Les todos ouverts sans échéance sont dans une section repliée
   « Sans échéance » ;
-- **Toutes les tâches** : champ de saisie rapide en haut, puis todos et routines
-  dans une seule liste, avec un champ de recherche (titre, notes, étiquettes, projet, sous-tâches, sans tenir compte des
+- **Toutes les tâches** : todos et routines dans une seule liste, avec un champ de
+  recherche (titre, notes, étiquettes, projet, sous-tâches, sans tenir compte des
   accents ni des majuscules) et des filtres : type (todos, routines), état (ouverts,
-  à trier, faits, abandonnés ou arrêtés, tous) et étiquette. Les tâches à trier
-  viennent en tête, avec un bouton « Trier », et leur nombre s'affiche dans le menu.
-  Puis tri par échéance, sans échéance ensuite, faits à la fin ;
+  faits, abandonnés ou arrêtés, tous) et étiquette. Tri par échéance, sans
+  échéance ensuite, faits à la fin ;
 - **Routines** : liste, puis une page par routine (récurrence, prochaine
   échéance, série, historique) ;
 - **Projets** : liste avec avancement, puis une page par projet avec ses todos ;
@@ -124,8 +114,7 @@ Les écrans sont pensés pour l'ordinateur et le smartphone.
 ### Assistant
 
 Le module livre ses outils MCP (ADR 0011), en lecture et en écriture : lister,
-créer, modifier, faire, rouvrir, abandonner un todo et sa checklist ; saisie
-rapide ; créer, modifier, faire, sauter, mettre en pause et arrêter une routine ;
+créer, modifier, faire, rouvrir, abandonner un todo et sa checklist ; créer, modifier, faire, sauter, mettre en pause et arrêter une routine ;
 créer, modifier et clore un projet ; image par URL.
 
 ### Contrat de lecture
@@ -141,4 +130,5 @@ passages faits par jour et par profil.
 - Aucune dépendance vers les autres modules ; le test d'architecture le vérifie.
 - Durée et priorité ne servent qu'à l'affichage et au tri jusqu'au semainier.
 - Hors périmètre : rappels et notifications (étape 6), tâches des enfants,
-  dépendances entre tâches, checklist de routine, partage avec d'autres adultes.
+  dépendances entre tâches, checklist de routine, boîte de réception et saisie
+  rapide (un todo sans échéance suffit), partage avec d'autres adultes.

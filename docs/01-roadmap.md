@@ -187,19 +187,18 @@ avancement des objectifs et des défis).
 - Routines du foyer à date fixe ou à délai après la dernière fois, avec historique
   des passages et série.
 - Projets : simple regroupement de todos avec avancement.
-- Saisie rapide de tâches à trier ; étiquettes libres du foyer.
+- Étiquettes libres du foyer. Pas de boîte de réception ni de saisie rapide.
 - Un profil sur chaque tâche ; seul l'utilisateur principal est proposé.
 - Écran principal « Aujourd'hui » : en retard, aujourd'hui, 7 prochains jours ;
-  page « Toutes les tâches » avec saisie rapide, tâches à trier, recherche
-  texte et filtres.
+  page « Toutes les tâches » avec recherche texte et filtres.
 
 **Déroulé.**
 
 1. **Cadrage fonctionnel.** Fait.
-2. **Maquette cliquable** : Aujourd'hui, toutes les tâches (saisie rapide,
-   recherche), todo, routines,
+2. **Maquette cliquable** : Aujourd'hui, toutes les tâches avec recherche,
+   todo, routines,
    projets (ordinateur et smartphone).
-3. **Todos**, saisie rapide, étiquettes et checklist.
+3. **Todos**, étiquettes et checklist.
 4. **Routines** : récurrence, passages, série.
 5. **Projets.**
 6. **Outils de l'assistant** pour tout le module.
