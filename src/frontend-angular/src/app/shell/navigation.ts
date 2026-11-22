@@ -55,6 +55,7 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
       { path: '/tasks', label: 'Aujourd’hui', exact: true },
       { path: '/tasks/all', label: 'Toutes les tâches' },
       { path: '/tasks/routines', label: 'Routines' },
+      { path: '/tasks/projects', label: 'Projets' },
     ],
   },
 ]

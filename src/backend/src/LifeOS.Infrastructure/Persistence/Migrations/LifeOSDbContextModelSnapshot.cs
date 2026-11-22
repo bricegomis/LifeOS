@@ -1100,6 +1100,57 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Tasks.TaskProject", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("DueOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImageContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "State");
+
+                    b.ToTable("projects", "tasks", t =>
+                        {
+                            t.HasCheckConstraint("ck_task_project_image", "(\"ImagePath\" IS NULL) = (\"ImageContentType\" IS NULL)");
+
+                            t.HasCheckConstraint("ck_task_project_state", "\"State\" IN ('active', 'done', 'abandoned')");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Tasks.TaskRoutine", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1266,6 +1317,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -1289,6 +1343,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasAlternateKey("Id", "HouseholdId");
 
                     b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.HasIndex("ProjectId", "HouseholdId");
 
                     b.HasIndex("HouseholdId", "State", "DueOn");
 
@@ -1976,6 +2032,15 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Tasks.TaskProject", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Tasks.TaskRoutine", b =>
                 {
                     b.HasOne("LifeOS.Domain.Households.Household", null)
@@ -2044,6 +2109,12 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("Id", "HouseholdId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Tasks.TaskProject", null)
+                        .WithMany()
+                        .HasForeignKey("ProjectId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.OwnsMany("LifeOS.Domain.Tasks.ChecklistItem", "Checklist", b1 =>
                         {

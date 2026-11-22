@@ -57,7 +57,9 @@ export class TodoCardComponent {
   readonly todo = input.required<TodoDto>()
   readonly today = input.required<string>()
   readonly showDue = input(false)
+  /** Hidden on the project's own page. */
+  readonly showProject = input(true)
   readonly busy = input(false)
   readonly tick = output<TodoDto>()
-  readonly meta = computed(() => todoMeta(this.todo(), this.today(), this.showDue()))
+  readonly meta = computed(() => todoMeta(this.todo(), this.today(), this.showDue(), this.showProject()))
 }

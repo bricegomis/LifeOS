@@ -1,4 +1,6 @@
 import type { Routes } from '@angular/router'
+import { ProjectPageComponent } from './project-page.component'
+import { ProjectsPageComponent } from './projects-page.component'
 import { RoutinePageComponent } from './routine-page.component'
 import { RoutinesPageComponent } from './routines-page.component'
 import { TasksAllPageComponent } from './tasks-all-page.component'
@@ -12,4 +14,6 @@ export const TASK_ROUTES: Routes = [
   { path: 'todo/:id', component: TodoPageComponent },
   { path: 'routines', component: RoutinesPageComponent },
   { path: 'routine/:id', component: RoutinePageComponent },
+  { path: 'projects', component: ProjectsPageComponent },
+  { path: 'project/:id', component: ProjectPageComponent },
 ]

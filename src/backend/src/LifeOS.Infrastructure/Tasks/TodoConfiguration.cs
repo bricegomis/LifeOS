@@ -34,6 +34,9 @@ internal sealed class TodoConfiguration : IEntityTypeConfiguration<Todo>
         builder.HasOne<MemberProfile>().WithMany().HasForeignKey(t => new { t.MemberProfileId, t.HouseholdId })
             .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(t => new { t.HouseholdId, t.State, t.DueOn });
+        // A todo's project is in the same household (nullable composite key: no project, no check).
+        builder.HasOne<TaskProject>().WithMany().HasForeignKey(t => new { t.ProjectId, t.HouseholdId })
+            .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
         builder.OwnsMany(t => t.Checklist, items =>
         {
             items.ToTable("todo_checklist_items", TasksSchema.Name);

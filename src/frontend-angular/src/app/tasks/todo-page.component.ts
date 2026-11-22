@@ -67,6 +67,8 @@ import { TodoDialogComponent, type TodoDialogData, type TodoDialogResult } from 
           <div class="detail"><mat-icon svgIcon="timer" /><div><span class="lo-field-label">Durée estimée</span>
             <span>{{ duration(t.durationMinutes) || 'Non renseignée' }}</span></div></div>
           <div class="detail"><mat-icon svgIcon="flag" /><div><span class="lo-field-label">Priorité</span><span>{{ priority(t.priority) }}</span></div></div>
+          <div class="detail"><mat-icon svgIcon="folder" /><div><span class="lo-field-label">Projet</span>
+            @if (t.projectId) { <a [routerLink]="['/tasks/project', t.projectId]">{{ t.projectTitle }}</a> } @else { <span>Aucun</span> }</div></div>
           <div class="detail"><mat-icon svgIcon="sell" /><div><span class="lo-field-label">Étiquettes</span><span>{{ t.tags.join(', ') || 'Aucune' }}</span></div></div>
           @if (t.notes) {
             <div class="detail"><mat-icon svgIcon="notes" /><div><span class="lo-field-label">Notes</span><span class="notes">{{ t.notes }}</span></div></div>

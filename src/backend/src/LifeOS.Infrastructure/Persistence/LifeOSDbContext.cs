@@ -50,6 +50,7 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     // Tasks module (ADR 0017)
     public DbSet<Todo> Todos => Set<Todo>();
     public DbSet<TaskRoutine> TaskRoutines => Set<TaskRoutine>();
+    public DbSet<TaskProject> TaskProjects => Set<TaskProject>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

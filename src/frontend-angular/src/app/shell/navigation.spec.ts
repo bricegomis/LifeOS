@@ -9,7 +9,7 @@ describe('navigation', () => {
     assert.deepEqual(NAVIGATION_BLOCKS[1]!.items.map(item => item.label),
       ['Aujourd’hui', 'Historique', 'Progression', 'Routines', 'Exercices', 'Défis', 'Objectifs', 'Séances types'])
     assert.equal(NAVIGATION_BLOCKS[1]!.items[0]!.exact, true)
-    assert.deepEqual(NAVIGATION_BLOCKS[2]!.items.map(item => item.path), ['/tasks', '/tasks/all', '/tasks/routines'])
+    assert.deepEqual(NAVIGATION_BLOCKS[2]!.items.map(item => item.path), ['/tasks', '/tasks/all', '/tasks/routines', '/tasks/projects'])
   })
 
   it('finds the block and page of a URL for the open block and the phone title', () => {

@@ -56,14 +56,15 @@ export function initial(title: string): string {
   return (title.trim().charAt(0) || '?').toLocaleUpperCase('fr')
 }
 
-/** Second line of a card: due day (when asked), duration and sub-tasks. */
-export function todoMeta(todo: TodoDto, today: string, showDue: boolean): string {
+/** Second line of a card: due day (when asked), duration, project (unless on its page) and sub-tasks. */
+export function todoMeta(todo: TodoDto, today: string, showDue: boolean, showProject = true): string {
   const bits: string[] = []
   if (showDue && todo.state === 'open' && todo.dueOn) bits.push(todo.isLate ? `En retard · ${dayLabel(todo.dueOn, today)}` : dayLabel(todo.dueOn, today))
   if (todo.state === 'done' && todo.doneOn) bits.push(`Fait ${dayLabel(todo.doneOn, today).toLocaleLowerCase('fr')}`)
   if (todo.state === 'abandoned') bits.push('Abandonné')
   const duration = durationLabel(todo.durationMinutes)
   if (duration) bits.push(duration)
+  if (todo.projectTitle && showProject) bits.push(todo.projectTitle)
   if (todo.checklist.length) bits.push(`${todo.checklist.filter(i => i.done).length}/${todo.checklist.length} sous-tâches`)
   return bits.join(' · ')
 }
@@ -147,12 +148,13 @@ export interface TodoDraft {
   durationMinutes: number | string | null
   priority: TodoPriority
   tags: string[]
+  projectId: string
 }
 
-export function draftOf(todo: TodoDto | null, dueOn = ''): TodoDraft {
+export function draftOf(todo: TodoDto | null, dueOn = '', projectId = ''): TodoDraft {
   return todo
-    ? { title: todo.title, notes: todo.notes ?? '', dueOn: todo.dueOn ?? '', durationMinutes: todo.durationMinutes, priority: todo.priority, tags: [...todo.tags] }
-    : { title: '', notes: '', dueOn, durationMinutes: null, priority: 'normal', tags: [] }
+    ? { title: todo.title, notes: todo.notes ?? '', dueOn: todo.dueOn ?? '', durationMinutes: todo.durationMinutes, priority: todo.priority, tags: [...todo.tags], projectId: todo.projectId ?? '' }
+    : { title: '', notes: '', dueOn, durationMinutes: null, priority: 'normal', tags: [], projectId }
 }
 
 /** The request of a draft, or the message to show. */
@@ -168,6 +170,7 @@ export function todoRequest(draft: TodoDraft): TodoRequest | string {
     durationMinutes: raw,
     priority: draft.priority,
     tags: draft.tags,
+    projectId: draft.projectId || null,
   }
 }
 
@@ -180,5 +183,10 @@ export function withTag(tags: string[], tag: string): string[] {
 
 /** The request that keeps a todo as it is, with another due day (postpone). */
 export function postponed(todo: TodoDto, dueOn: string | null): TodoRequest {
-  return { title: todo.title, notes: todo.notes, dueOn, durationMinutes: todo.durationMinutes, priority: todo.priority, tags: todo.tags }
+  return { title: todo.title, notes: todo.notes, dueOn, durationMinutes: todo.durationMinutes, priority: todo.priority, tags: todo.tags, projectId: todo.projectId }
+}
+
+/** "3 / 7 faits" and the bar width of a project. */
+export function projectProgress(done: number, total: number): { label: string, percent: number } {
+  return { label: `${done} / ${total} fait${done > 1 ? 's' : ''}`, percent: total ? Math.round(100 * done / total) : 0 }
 }
