@@ -178,17 +178,29 @@ avancement des objectifs et des défis).
 
 **But.** Sortir de la tête ce qu'il y a à faire, récurrent ou ponctuel.
 
-**Contenu prévu.** Routines récurrentes du foyer, todos ponctuels avec échéance,
-projets regroupant des tâches. Chaque tâche porte un profil responsable.
+**Décisions prises.** Cadrage fait le 2026-11-22 :
+[ADR 0017](architecture/decisions/0017-tasks-module.md).
 
-**À cadrer.**
+- Todos ponctuels : échéance, durée estimée, priorité, image facultative (initiale
+  sinon), checklist, étiquettes, projet. En retard tant qu'ils ne sont ni faits, ni
+  reportés, ni abandonnés.
+- Routines du foyer à date fixe ou à délai après la dernière fois, avec historique
+  des passages et série.
+- Projets : simple regroupement de todos avec avancement.
+- Étiquettes libres du foyer. Pas de boîte de réception ni de saisie rapide.
+- Un profil sur chaque tâche ; seul l'utilisateur principal est proposé.
+- Écran principal « Aujourd'hui » : en retard, aujourd'hui, 7 prochains jours ;
+  page « Toutes les tâches » avec recherche texte et filtres.
 
-- Routines : fréquence fixe (tous les lundis) ou relative (7 jours après la dernière fois) ?
-- Projets : simple regroupement, ou étapes, dépendances et jalons ?
-- Durée estimée et priorité : nécessaires pour que le semainier place les tâches ?
-- Tâches des enfants : dès cette étape ou plus tard ?
-- Quelle vue en attendant le semainier : liste du jour, par projet, en retard ?
-- Que devient une tâche non faite : reportée, signalée, abandonnée ?
+**Déroulé.**
+
+1. **Cadrage fonctionnel.** Fait.
+2. **Maquette cliquable** : Aujourd'hui, toutes les tâches avec recherche,
+   todo, routines, projets (ordinateur et smartphone). Validée le 2026-11-22.
+3. **Todos**, étiquettes et checklist. Fait.
+4. **Routines** : récurrence, passages, série.
+5. **Projets**, et le projet d'un todo.
+6. **Outils de l'assistant** pour tout le module.
 
 **Terminé quand.** Routines et todos sont suivis dans LifeOS au quotidien. Le
 module publie son contrat de lecture (tâches à placer, durée, échéance, état).

@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-22 (toute l’interface en Angular Material, mode sombre). Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-22 (module Tâches : todos). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -19,6 +19,9 @@ quotidiennes et bibliothèque d'exercices ajoutées le 2026-11-16
 ([ADR 0014](architecture/decisions/0014-sport-daily-routines.md)), puis passages de routine,
 ressenti et une page par élément le même jour ([ADR 0015](architecture/decisions/0015-sport-pages-and-routine-sessions.md)) ;
 reste l'usage réel pendant quelques semaines.
+Étape 3, « Tâches », commencée le 2026-11-22 ([ADR 0017](architecture/decisions/0017-tasks-module.md)) :
+maquette validée, todos livrés en code ; restent les routines du foyer, les projets et les
+outils de l'assistant.
 
 ## Ce qui existe
 
@@ -34,11 +37,12 @@ reste l'usage réel pendant quelques semaines.
 | Magasins | Création, modification, suppression (refusée tant que des prix ou tickets y sont rattachés) |
 | Tickets | Photo conservée, allégée dans l'appli avant l'envoi (JPEG, 2560 px au plus ; 1600 px pour les photos d'aliments et de recettes), magasin et date d'achat facultatifs, état à traiter ou traité ; sur ordinateur, saisie des prix à côté de la photo ; aucune lecture automatique |
 | Sport | Séances types (sport d'une liste fixe, durée, distance, calories proposées) ; séances réalisées à une date par profil (calories saisies, inconnues = total partiel, distance, ressenti, fréquence cardiaque, notes) ; objectifs de la semaine (par séance type, par sport, nombre de séances ou volume) ; défis du jour en répétitions ou minutes, remplis par séries, avec série de jours, jokers, calendrier, totaux et paliers ; exercices du foyer (photo choisie dès la création, consigne, tenue en secondes ou répétitions, charge habituelle facultative, vide = poids du corps) ; routines quotidiennes par profil (jours de la semaine, exercices ordonnés avec leur cible) faites en passages, plusieurs par jour, une coche par série par un bouton compteur, effort et gêne notés en fin de passage à partir de valeurs proposées réglables, série et jokers par routine (jour fait dès un passage terminé), calendrier avec le nombre de passages, progression par exercice avec les dernières coches ; une page par élément (Exercices, Routines, Défis, Objectifs modifiables, Séances types) avec une fenêtre de modification, plein écran sur téléphone ; pages Aujourd'hui, Historique et Progression. Seul le profil principal est affiché |
+| Tâches | Todos du profil principal : titre, photo facultative (sinon l'initiale du titre), échéance facultative, durée estimée, priorité (haute, normale, basse), étiquettes libres du foyer, notes et checklist de sous-tâches ; un todo ouvert dont l'échéance est passée est en retard jusqu'à ce qu'il soit fait, reporté ou abandonné ; fait, rouvert, abandonné. Page Aujourd'hui (en retard, aujourd'hui, 7 prochains jours, « Sans échéance » replié, filtre par étiquette), page Toutes les tâches (recherche texte sans accents ni majuscules, filtres par état et étiquette), une page par todo |
 
-Navigation : un menu à gauche avec un groupe par domaine (Alimentation, Sport) qui s'ouvre sur
+Navigation : un menu à gauche avec un groupe par domaine (Alimentation, Sport, Tâches) qui s'ouvre sur
 ses pages, Paramètres et compte en bas. Une barre du haut fixe porte le bouton menu : sur
 ordinateur le menu reste affiché (repliable par ce bouton), sur téléphone il s'ouvre en panneau
-et la barre rappelle la page affichée. Seul le contenu de la page défile. Plus d'onglets en bas. Tous les écrans (Alimentation, Sport, Paramètres, connexion) utilisent
+et la barre rappelle la page affichée. Seul le contenu de la page défile. Plus d'onglets en bas. Tous les écrans (Alimentation, Sport, Tâches, Paramètres, connexion) utilisent
 Angular Material 3 avec le thème LifeOS et les icônes Material Symbols
 ([ADR 0016](architecture/decisions/0016-angular-material-ui-kit.md)) : chaque liste commence
 par une zone de recherche et de filtres, chaque création ou modification s'ouvre dans une
@@ -46,13 +50,13 @@ fenêtre, plein écran sur téléphone. L'interface passe en mode sombre quand l
 (ordinateur ou iPhone) l'est.
 
 Modèle : [02-core-model.md](02-core-model.md). Code découpé en modules (ADR 0009) :
-Foyer, Alimentation et Sport, chacun avec son schéma PostgreSQL ; tests d'architecture
+Foyer, Alimentation, Sport et Tâches, chacun avec son schéma PostgreSQL ; tests d'architecture
 côté backend et Angular.
 
 ## Ce qui n'existe pas
 
 Semainier (retiré, [ADR 0008](architecture/decisions/0008-remove-week-planner.md)),
-import Garmin ou Strava, tâches, santé, propositions, agent IA, agenda externe, mode hors
+import Garmin ou Strava, routines du foyer et projets (tâches), santé, propositions, agent IA, agenda externe, mode hors
 ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 
 ## Écarts connus avec la cible

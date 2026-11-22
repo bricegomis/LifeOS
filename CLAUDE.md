@@ -26,6 +26,9 @@ code, identifiers and code comments are English.
 - Sport rework (accepted, mockup validated 2026-11-16): ADR 0015 (one page per element with
   edit popups, menu grouped by domain on desktop and phone, routine passes with one
   counter tick per set, per-exercise effort and discomfort).
+- Step 3 target: ADR 0017 (tasks: todos with due date, duration, priority, image or
+  initial, checklist, tags; household routines on fixed dates or a delay after the last
+  time, with history and streak; projects as plain groups; an all-tasks page with text search; no inbox).
 - UI kit: ADR 0016 (Angular Material 3 with a LifeOS theme, Material Symbols, screen
   conventions for lists, dialogs, add buttons and actions). Applied to every screen;
   any new or changed Angular screen uses it (see `src/frontend-angular/CLAUDE.md`).
@@ -108,7 +111,7 @@ code, identifiers and code comments are English.
   migration is allowed there, once the user confirms what is reset.
 - Never run migrations against a shared/production database, reset user data, or
   touch the VPS. The user backs up PostgreSQL **and** the `lifeos_receipts`,
-  `lifeos_food_images` and `lifeos_sport_images` volumes, then refreshes the containers themselves.
+  `lifeos_food_images`, `lifeos_sport_images` and `lifeos_task_images` volumes, then refreshes the containers themselves.
 - When behaviour changes, update the directly affected docs (ADR status/extension,
   `docs/PROJECT.md`, `docs/02-core-model.md`, the relevant README). Replace stale
   text instead of stacking "superseded" notes; don't keep history in the docs.

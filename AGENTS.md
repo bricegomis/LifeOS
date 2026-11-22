@@ -24,6 +24,7 @@
   ADR 0014 (sport: daily routines and exercise library),
   ADR 0015 (sport rework: pages per element, routine passes, feeling),
   ADR 0016 (UI kit: Angular Material and screen conventions),
+  ADR 0017 (step 3 tasks module: todos, routines, projects, all-tasks page),
   ADR 0009 (target architecture and module boundary rules).
 - Prefer simple implementations; no unnecessary dependencies or speculative features.
 - Preserve household isolation and historical snapshots, IDs, aliases, sources and prices.

@@ -8,7 +8,7 @@
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
   templates, logged sessions, weekly goals, daily challenges; ADR 0013; exercises and
-  daily routines and their passes; ADR 0014, ADR 0015). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist; ADR 0017). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -24,10 +24,10 @@
   Domain/Application reference EF or HTTP. Add a new module's name to its list when
   you create the folder.
 - Files (receipt photos `/data/receipts`, food and recipe images `/data/foods`, exercise
-  images `/data/sports`) live on durable volumes, only served through authenticated,
+  images `/data/sports`, todo images `/data/tasks`) live on durable volumes, only served through authenticated,
   household-checked routes. The storage code is shared, outside the modules
   (`Infrastructure/Files`, `Api/Files`); each module declares its own storage class
-  (`FoodImageStorage`, `ReceiptPhotoStorage`, `SportImageStorage`).
+  (`FoodImageStorage`, `ReceiptPhotoStorage`, `SportImageStorage`, `TaskImageStorage`).
 - A receipt is only a stored photo (ADR 0010): no OCR, no lines, no purchases.
 - Sport (ADR 0013): every row carries a household profile (`SportProfiles` resolves the
   main one, the household's first profile, when none is given). Reports are computed on
@@ -43,11 +43,18 @@
   day has all its sets; a finished pass is not reopened. A day is done once one pass is
   finished. Days that are not planned are skipped by the streak. Profile feeling defaults
   live in `SportProfileSettings`.
+- Tasks (ADR 0017): a `Todo` belongs to a household profile (`TaskProfiles`, main profile by
+  default) and is `open`, `done` (with its day) or `abandoned`; an open todo is late after its
+  due day until it is done, postponed (an update with a new due day) or abandoned, nothing slides
+  by itself. Its checklist is an owned, ordered list; ticking every sub-task does not complete
+  it. "Today" is the Paris day (`TaskClock`). Search (`TodoLibrary.SearchAsync`) runs in memory
+  over the household's todos, ignoring case and accents. Management code is `TodoLibrary`
+  (registered in `Api/Tasks/TasksModule.cs`).
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
   `SkipDatabaseMigration=true`. Each module owns a PostgreSQL schema (`households`,
-  `food`, `sports`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
+  `food`, `sports`, `tasks`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
 - `FoodModuleReset` (roadmap step 1, ADR 0010) replaced the whole previous history:
   it drops every table of `public` with its data. Never edit it; add a new migration:
   `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api --output-dir Persistence/Migrations`

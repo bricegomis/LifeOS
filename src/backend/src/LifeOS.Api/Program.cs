@@ -10,6 +10,7 @@ using LifeOS.Api.Food.Reviews;
 using LifeOS.Api.Food.Stores;
 using LifeOS.Api.Households;
 using LifeOS.Api.Sports;
+using LifeOS.Api.Tasks;
 using LifeOS.Infrastructure;
 using LifeOS.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,7 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddFoodLibraries();
 builder.Services.AddSportLibraries();
+builder.Services.AddTaskLibraries();
 
 builder.AddLifeOSAuthentication();
 builder.AddLifeOSAssistant();
@@ -109,6 +111,8 @@ app.MapProductsEndpoints();
 app.MapReceiptsEndpoints();
 // Sports module
 app.MapSportEndpoints();
+// Tasks module
+app.MapTaskEndpoints();
 
 app.Run();
 

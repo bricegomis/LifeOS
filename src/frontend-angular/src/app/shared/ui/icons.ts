@@ -50,6 +50,11 @@ import AddAPhotoIcon from '@material-symbols/svg-400/rounded/add_a_photo.svg'
 import PersonIcon from '@material-symbols/svg-400/rounded/person.svg'
 import LinkOffIcon from '@material-symbols/svg-400/rounded/link_off.svg'
 import SyncIcon from '@material-symbols/svg-400/rounded/sync.svg'
+import TaskAltIcon from '@material-symbols/svg-400/rounded/task_alt.svg'
+import RadioButtonUncheckedIcon from '@material-symbols/svg-400/rounded/radio_button_unchecked.svg'
+import TimerIcon from '@material-symbols/svg-400/rounded/timer.svg'
+import NotesIcon from '@material-symbols/svg-400/rounded/notes.svg'
+import BlockIcon from '@material-symbols/svg-400/rounded/block.svg'
 
 /**
  * Material Symbols used by the app (ADR 0016), bundled as SVG so only these icons ship and nothing is
@@ -105,6 +110,11 @@ export const ICONS: Record<string, string> = {
   person: PersonIcon,
   link_off: LinkOffIcon,
   sync: SyncIcon,
+  task_alt: TaskAltIcon,
+  radio_button_unchecked: RadioButtonUncheckedIcon,
+  timer: TimerIcon,
+  notes: NotesIcon,
+  block: BlockIcon,
 }
 
 export function provideLifeosIcons() {

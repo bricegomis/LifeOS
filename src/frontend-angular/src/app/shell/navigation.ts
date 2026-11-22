@@ -47,6 +47,15 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
       { path: '/sports/templates', label: 'Séances types' },
     ],
   },
+  {
+    id: 'tasks',
+    title: 'Tâches',
+    icon: 'task_alt',
+    items: [
+      { path: '/tasks', label: 'Aujourd’hui', exact: true },
+      { path: '/tasks/all', label: 'Toutes les tâches' },
+    ],
+  },
 ]
 
 /** The menu entry of a URL: the longest matching path, so `/sports/routine/42` belongs to Sport. */
