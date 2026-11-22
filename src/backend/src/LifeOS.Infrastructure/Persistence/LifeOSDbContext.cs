@@ -55,6 +55,13 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
 
     // Health module (ADR 0018): private per account and profile
     public DbSet<Supplement> Supplements => Set<Supplement>();
+    public DbSet<SymptomType> SymptomTypes => Set<SymptomType>();
+    public DbSet<SymptomEntry> SymptomEntries => Set<SymptomEntry>();
+    public DbSet<CalmDay> CalmDays => Set<CalmDay>();
+    public DbSet<Marker> Markers => Set<Marker>();
+    public DbSet<Analysis> Analyses => Set<Analysis>();
+    public DbSet<MeasureType> MeasureTypes => Set<MeasureType>();
+    public DbSet<Measurement> Measurements => Set<Measurement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

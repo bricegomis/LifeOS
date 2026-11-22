@@ -65,6 +65,9 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
     items: [
       { path: '/health', label: 'Aujourd’hui', exact: true },
       { path: '/health/supplements', label: 'Compléments' },
+      { path: '/health/symptoms', label: 'Symptômes' },
+      { path: '/health/analyses', label: 'Analyses' },
+      { path: '/health/measures', label: 'Mesures' },
     ],
   },
 ]

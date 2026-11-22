@@ -9,10 +9,14 @@ public static class HealthModule
     /// <summary>Management code shared by the Health endpoints and the assistant tools (ADR 0018).</summary>
     public static IServiceCollection AddHealthLibraries(this IServiceCollection services) => services
         .AddScoped<HealthOwners>()
-        .AddScoped<SupplementLibrary>();
+        .AddScoped<SupplementLibrary>()
+        .AddScoped<SymptomLibrary>()
+        .AddScoped<AnalysisLibrary>();
 
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder app) => app
-        .MapSupplementsEndpoints();
+        .MapSupplementsEndpoints()
+        .MapSymptomsEndpoints()
+        .MapAnalysesEndpoints();
 }
 
 /// <summary>

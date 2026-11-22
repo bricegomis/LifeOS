@@ -259,8 +259,8 @@ semainier, qui viendra quand le reste aura servi.
 2. **Maquette cliquable** des quatre parties (ordinateur et smartphone). Validée le
    2026-11-22.
 3. **Compléments.** Fait.
-4. **Symptômes.**
-5. **Analyses et mesures.**
+4. **Symptômes.** Fait.
+5. **Analyses et mesures.** Fait.
 6. **Documents et rendez-vous**, fichiers chiffrés.
 7. **Outils de l'assistant** pour tout le module.
 

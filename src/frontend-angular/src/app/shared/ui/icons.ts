@@ -16,6 +16,8 @@ import DeleteIcon from '@material-symbols/svg-400/rounded/delete.svg'
 import ArchiveIcon from '@material-symbols/svg-400/rounded/archive.svg'
 import SearchIcon from '@material-symbols/svg-400/rounded/search.svg'
 import CheckIcon from '@material-symbols/svg-400/rounded/check.svg'
+import BiotechIcon from '@material-symbols/svg-400/rounded/biotech.svg'
+import DescriptionIcon from '@material-symbols/svg-400/rounded/description.svg'
 import ImageIcon from '@material-symbols/svg-400/rounded/image.svg'
 import UndoIcon from '@material-symbols/svg-400/rounded/undo.svg'
 import PlayArrowIcon from '@material-symbols/svg-400/rounded/play_arrow.svg'
@@ -61,6 +63,8 @@ import FolderIcon from '@material-symbols/svg-400/rounded/folder.svg'
 import FavoriteIcon from '@material-symbols/svg-400/rounded/favorite.svg'
 import MedicationIcon from '@material-symbols/svg-400/rounded/medication.svg'
 import ShoppingCartIcon from '@material-symbols/svg-400/rounded/shopping_cart.svg'
+import ChecklistIcon from '@material-symbols/svg-400/rounded/checklist.svg'
+import SentimentSatisfiedIcon from '@material-symbols/svg-400/rounded/sentiment_satisfied.svg'
 
 /**
  * Material Symbols used by the app (ADR 0016), bundled as SVG so only these icons ship and nothing is
@@ -82,6 +86,8 @@ export const ICONS: Record<string, string> = {
   archive: ArchiveIcon,
   search: SearchIcon,
   check: CheckIcon,
+  biotech: BiotechIcon,
+  description: DescriptionIcon,
   image: ImageIcon,
   undo: UndoIcon,
   play_arrow: PlayArrowIcon,
@@ -127,6 +133,8 @@ export const ICONS: Record<string, string> = {
   favorite: FavoriteIcon,
   medication: MedicationIcon,
   shopping_cart: ShoppingCartIcon,
+  checklist: ChecklistIcon,
+  sentiment_satisfied: SentimentSatisfiedIcon,
 }
 
 export function provideLifeosIcons() {
