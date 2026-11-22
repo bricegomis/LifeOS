@@ -13,6 +13,8 @@
   routine page `sports/routine/:id` with its passes; rules in `sports/routine-format.ts`),
   `tasks` (today, all tasks with search, routines, projects, one page per todo `tasks/todo/:id`, routine
   `tasks/routine/:id` and project `tasks/project/:id`, their windows; rules in `tasks/task-format.ts` and `tasks/routine-rules.ts`),
+  `health` (private health: today, supplements and one page per supplement; images through
+  `health/health-image.component.ts`; rules in `health/supplement-rules.ts`),
   `household` (settings: profiles, versions, account).
 - A module folder holds its models, its API service (all HTTP calls), pure rules in
   plain `.ts` files with a `.spec.ts` (e.g. `food/foods/food-form.ts`,

@@ -526,6 +526,131 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("stores", "food");
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Health.Supplement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Dose")
+                        .HasPrecision(10, 3)
+                        .HasColumnType("numeric(10,3)");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImageContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsStopped")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Moment")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PackageContent")
+                        .HasPrecision(12, 3)
+                        .HasColumnType("numeric(12,3)");
+
+                    b.Property<decimal?>("PackagePrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("Shop")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Period", "LifeOS.Domain.Health.Supplement.Period#SupplementPeriod", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<int>("CureLength")
+                                .HasColumnType("integer")
+                                .HasColumnName("CureLength");
+
+                            b1.Property<string>("CureUnit")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("CureUnit");
+
+                            b1.Property<string>("Kind")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("PeriodKind");
+
+                            b1.Property<int>("PauseLength")
+                                .HasColumnType("integer")
+                                .HasColumnName("PauseLength");
+
+                            b1.Property<string>("PauseUnit")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("PauseUnit");
+
+                            b1.Property<DateOnly>("StartOn")
+                                .HasColumnType("date")
+                                .HasColumnName("PeriodStartOn");
+                        });
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("HouseholdId", "OwnerUserId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.ToTable("supplements", "health", t =>
+                        {
+                            t.HasCheckConstraint("ck_supplement_dose", "\"Dose\" > 0 AND \"PackageContent\" > 0");
+
+                            t.HasCheckConstraint("ck_supplement_image", "(\"ImagePath\" IS NULL) = (\"ImageContentType\" IS NULL)");
+
+                            t.HasCheckConstraint("ck_supplement_moment", "\"Moment\" IN ('matin', 'midi', 'soir', 'choix')");
+
+                            t.HasCheckConstraint("ck_supplement_period", "\"PeriodKind\" IN ('year', 'cure')");
+
+                            t.HasCheckConstraint("ck_supplement_price", "\"PackagePrice\" IS NULL OR \"PackagePrice\" >= 0");
+
+                            t.HasCheckConstraint("ck_supplement_unit", "\"Unit\" IN ('gelule', 'comprime', 'g', 'ml', 'goutte', 'dose')");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Households.Household", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1741,6 +1866,77 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasForeignKey("HouseholdId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Health.Supplement", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("LifeOS.Domain.Health.SupplementIntake", "Intakes", b1 =>
+                        {
+                            b1.Property<Guid>("SupplementId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateOnly>("Day")
+                                .HasColumnType("date");
+
+                            b1.HasKey("SupplementId", "Day");
+
+                            b1.ToTable("supplement_intakes", "health");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SupplementId");
+                        });
+
+                    b.OwnsMany("LifeOS.Domain.Health.SupplementLink", "Links", b1 =>
+                        {
+                            b1.Property<Guid>("SupplementId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("Position")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("integer");
+
+                            NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b1.Property<int>("Position"));
+
+                            b1.Property<string>("Label")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)");
+
+                            b1.Property<string>("Url")
+                                .IsRequired()
+                                .HasMaxLength(1000)
+                                .HasColumnType("character varying(1000)");
+
+                            b1.HasKey("SupplementId", "Position");
+
+                            b1.ToTable("supplement_links", "health");
+
+                            b1.WithOwner()
+                                .HasForeignKey("SupplementId");
+                        });
+
+                    b.Navigation("Intakes");
+
+                    b.Navigation("Links");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Households.HouseholdMember", b =>

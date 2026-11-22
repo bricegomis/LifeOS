@@ -12,7 +12,7 @@ téléphone, sans toucher à la production. Elle suit la branche `integration`
 | Images | `lifeos-api:latest`, `lifeos-web:latest` | `lifeos-api:integration`, `lifeos-web:integration` |
 | Fichier compose | `docker-compose.yaml` | `docker-compose.integration.yaml` |
 | Containers | `lifeos-api`, `lifeos-web` | `lifeos-integration-api`, `lifeos-integration-web` |
-| Volumes | `lifeos_receipts`, `lifeos_food_images`, `lifeos_sport_images`, `lifeos_task_images` | `lifeos_integration_receipts`, `lifeos_integration_food_images`, `lifeos_integration_sport_images`, `lifeos_integration_task_images` |
+| Volumes | `lifeos_receipts`, `lifeos_food_images`, `lifeos_sport_images`, `lifeos_task_images`, `lifeos_health_files` | `lifeos_integration_receipts`, `lifeos_integration_food_images`, `lifeos_integration_sport_images`, `lifeos_integration_task_images`, `lifeos_integration_health_files` |
 | Base | base de production | **base séparée** |
 
 Chaque fusion sur `integration` publie les images `:integration`. Watchtower les
@@ -34,7 +34,7 @@ l'API d'intégration.
    - `POSTGRES_CONNECTION_STRING` : la base d'intégration ;
    - `FRONTEND_URL` : l'adresse de l'interface d'intégration ;
    - `LIFEOS_API_URL` : l'adresse de l'API d'intégration ;
-   - clés des jetons propres à l'intégration ; client Google avec l'URI
+   - clés des jetons propres à l'intégration, et sa propre clé `HEALTH_FILES_KEY` ; client Google avec l'URI
      `https://<api-d-integration>/signin-google` (voir [le guide](google-oauth.md)).
 4. Démarrer la pile après la première publication des images `:integration`.
 

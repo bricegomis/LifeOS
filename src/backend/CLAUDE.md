@@ -8,7 +8,7 @@
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
   templates, logged sessions, weekly goals, daily challenges; ADR 0013; exercises and
-  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines, projects; ADR 0017). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines, projects; ADR 0017), `Health` (supplements; ADR 0018). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -24,7 +24,8 @@
   Domain/Application reference EF or HTTP. Add a new module's name to its list when
   you create the folder.
 - Files (receipt photos `/data/receipts`, food and recipe images `/data/foods`, exercise
-  images `/data/sports`, todo images `/data/tasks`) live on durable volumes, only served through authenticated,
+  images `/data/sports`, todo images `/data/tasks`, health files `/data/health`, encrypted at rest with `HealthFiles:EncryptionKey`
+  through `EncryptedFileStorage`) live on durable volumes, only served through authenticated,
   household-checked routes. The storage code is shared, outside the modules
   (`Infrastructure/Files`, `Api/Files`); each module declares its own storage class
   (`FoodImageStorage`, `ReceiptPhotoStorage`, `SportImageStorage`, `TaskImageStorage`).
@@ -56,11 +57,19 @@
   over todos not abandoned) and closing it never touches its todos; a todo only joins a project in
   progress. Management code is `TodoLibrary`, `TaskRoutineLibrary` and `TaskProjectLibrary`
   (registered in `Api/Tasks/TasksModule.cs`).
+- Health (ADR 0018): private to an account, not only a household. Every row carries
+  `HouseholdId`, `OwnerUserId` and `MemberProfileId` (`HealthOwners` resolves them from the
+  caller) and every query filters on household **and** account, so another member of the same
+  household sees nothing (tested). Files and images go to `HealthFileStorage` (AES-GCM, key
+  from the configuration, never in the database); without the key, uploads are refused. A
+  `Supplement` has a daily dose and unit, a package, purchase links and a `SupplementPeriod`
+  (all year, or a cure repeated after a pause; a week is 7 days, a month 30); one
+  `SupplementIntake` per day taken; monthly cost and streak are computed on read.
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
   `SkipDatabaseMigration=true`. Each module owns a PostgreSQL schema (`households`,
-  `food`, `sports`, `tasks`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
+  `food`, `sports`, `tasks`, `health`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
 - `FoodModuleReset` (roadmap step 1, ADR 0010) replaced the whole previous history:
   it drops every table of `public` with its data. Never edit it; add a new migration:
   `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api --output-dir Persistence/Migrations`

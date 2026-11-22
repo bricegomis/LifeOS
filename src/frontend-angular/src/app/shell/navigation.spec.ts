@@ -4,7 +4,7 @@ import { currentEntry, NAVIGATION_BLOCKS, pageTitle, readMenuOpen, writeMenuOpen
 
 describe('navigation', () => {
   it('groups every page in one block per domain', () => {
-    assert.deepEqual(NAVIGATION_BLOCKS.map(block => block.title), ['Alimentation', 'Sport', 'Tâches'])
+    assert.deepEqual(NAVIGATION_BLOCKS.map(block => block.title), ['Alimentation', 'Sport', 'Tâches', 'Santé'])
     assert.deepEqual(NAVIGATION_BLOCKS[0]!.items.map(item => item.path), ['/recipes', '/foods', '/products', '/stores', '/tickets'])
     assert.deepEqual(NAVIGATION_BLOCKS[1]!.items.map(item => item.label),
       ['Aujourd’hui', 'Historique', 'Progression', 'Routines', 'Exercices', 'Défis', 'Objectifs', 'Séances types'])
@@ -26,6 +26,8 @@ describe('navigation', () => {
     assert.equal(currentEntry('/tasks/todo/7')?.block.id, 'tasks')
     assert.equal(pageTitle('/tasks/todo/7'), 'Tâches')
     assert.equal(currentEntry('/tasks/routine/3')?.block.id, 'tasks')
+    assert.equal(pageTitle('/health/supplements'), 'Santé · Compléments')
+    assert.equal(currentEntry('/health/supplement/4')?.block.id, 'health')
   })
 
   it('remembers the menu state and survives an unavailable storage', () => {

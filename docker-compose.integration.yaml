@@ -37,6 +37,11 @@ services:
       # Durable storage for optional todo images
       TaskImages__StoragePath: /data/tasks
       TaskImages__MaxFileBytes: 10485760
+      # Health files (documents, photos), encrypted at rest. The key (32 bytes, base64:
+      # `openssl rand -base64 32`) is backed up apart: without it the files are unreadable.
+      HealthFiles__StoragePath: /data/health
+      HealthFiles__MaxFileBytes: 20971520
+      HealthFiles__EncryptionKey: ${HEALTH_FILES_KEY:-}
       # Public frontend URL
       Cors__AllowedOrigins__0: ${FRONTEND_URL}
       Cors__AllowedOrigins__1: ${GITHUB_PAGES_URL:-}
@@ -51,6 +56,7 @@ services:
       - food_images:/data/foods
       - sport_images:/data/sports
       - task_images:/data/tasks
+      - health_files:/data/health
   web:
     image: ghcr.io/bricegomis/lifeos-web:integration
     container_name: lifeos-integration-web
@@ -75,3 +81,5 @@ volumes:
     name: lifeos_integration_sport_images
   task_images:
     name: lifeos_integration_task_images
+  health_files:
+    name: lifeos_integration_health_files

@@ -58,6 +58,15 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
       { path: '/tasks/projects', label: 'Projets' },
     ],
   },
+  {
+    id: 'health',
+    title: 'Santé',
+    icon: 'favorite',
+    items: [
+      { path: '/health', label: 'Aujourd’hui', exact: true },
+      { path: '/health/supplements', label: 'Compléments' },
+    ],
+  },
 ]
 
 /** The menu entry of a URL: the longest matching path, so `/sports/routine/42` belongs to Sport. */

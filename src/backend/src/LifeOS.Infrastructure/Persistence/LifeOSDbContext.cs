@@ -6,6 +6,7 @@ using LifeOS.Domain.Food.Reviews;
 using LifeOS.Domain.Food.Stores;
 using LifeOS.Domain.Households;
 using LifeOS.Domain.Sports;
+using LifeOS.Domain.Health;
 using LifeOS.Domain.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,6 +52,9 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<Todo> Todos => Set<Todo>();
     public DbSet<TaskRoutine> TaskRoutines => Set<TaskRoutine>();
     public DbSet<TaskProject> TaskProjects => Set<TaskProject>();
+
+    // Health module (ADR 0018): private per account and profile
+    public DbSet<Supplement> Supplements => Set<Supplement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

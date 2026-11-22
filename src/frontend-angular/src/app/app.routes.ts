@@ -29,6 +29,8 @@ export const routes: Routes = [
       { path: 'sports', loadChildren: () => import('@/app/sports/sports.routes').then(module => module.SPORT_ROUTES) },
       // Tasks module: today, all tasks, one page per todo (ADR 0017).
       { path: 'tasks', loadChildren: () => import('@/app/tasks/tasks.routes').then(module => module.TASK_ROUTES) },
+      // Health module: private to its account (ADR 0018).
+      { path: 'health', loadChildren: () => import('@/app/health/health.routes').then(module => module.HEALTH_ROUTES) },
       { path: 'settings', loadComponent: () => import('@/app/household/settings-page.component').then(module => module.SettingsPageComponent) },
       // Old links keep working.
       { path: 'articles', pathMatch: 'full', redirectTo: 'products' },

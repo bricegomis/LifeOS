@@ -58,6 +58,9 @@ import BlockIcon from '@material-symbols/svg-400/rounded/block.svg'
 import RedoIcon from '@material-symbols/svg-400/rounded/redo.svg'
 import PauseIcon from '@material-symbols/svg-400/rounded/pause.svg'
 import FolderIcon from '@material-symbols/svg-400/rounded/folder.svg'
+import FavoriteIcon from '@material-symbols/svg-400/rounded/favorite.svg'
+import MedicationIcon from '@material-symbols/svg-400/rounded/medication.svg'
+import ShoppingCartIcon from '@material-symbols/svg-400/rounded/shopping_cart.svg'
 
 /**
  * Material Symbols used by the app (ADR 0016), bundled as SVG so only these icons ship and nothing is
@@ -121,6 +124,9 @@ export const ICONS: Record<string, string> = {
   redo: RedoIcon,
   pause: PauseIcon,
   folder: FolderIcon,
+  favorite: FavoriteIcon,
+  medication: MedicationIcon,
+  shopping_cart: ShoppingCartIcon,
 }
 
 export function provideLifeosIcons() {

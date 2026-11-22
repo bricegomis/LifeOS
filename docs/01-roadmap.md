@@ -237,22 +237,39 @@ d'ajustement des repas.
 
 **But.** Tenir le dossier de santé au même endroit et en tenir compte dans le planning.
 
-**Contenu prévu.** Mesures corporelles, symptômes quotidiens, rendez-vous,
-traitements et prises, ordonnances et résultats d'analyse en documents. Données
-privées par personne ; le semainier et l'agent ne reçoivent qu'un résumé.
+**Décisions prises.** Cadrage fait le 2026-11-22 :
+[ADR 0018](architecture/decisions/0018-health-module.md). Étape avancée avant le
+semainier, qui viendra quand le reste aura servi.
 
-**À cadrer.**
+- Compléments : dose par jour, moment, conditionnement, prix, magasin et liens
+  d'achat, à l'année ou en cure ; une coche par complément et par jour ; coût par mois calculé.
+- Symptômes physiques et mentaux : saisie à tout moment (intensité 1 à 10) et bilan du
+  jour facultatif ; un journal, les corrélations viendront du semainier.
+- Analyses : marqueurs avec unité, plage du labo, cible personnelle, fréquence et
+  bilans ; valeurs par analyse, tendance, marqueurs à refaire. Mesures corporelles.
+- Documents (ordonnances, comptes rendus, résultats, bilans) et rendez-vous, avec un
+  lien de prise de rendez-vous (Doctolib…) ; les rendez-vous sont remplis par Claude
+  depuis les emails ou l'agenda, LifeOS ne se connecte pas à Doctolib.
+- Données privées par profil ; fichiers chiffrés sur le disque ; l'assistant lit les
+  documents et propose les valeurs, l'API ne lit rien elle-même.
 
-- Ordre de priorité entre mesures, symptômes, traitements et documents.
-- Documents : simple archivage, ou extraction des valeurs d'analyse ?
-- Lien symptômes digestifs ↔ aliments FODMAP : simple journal, ou analyse ?
-- Imports Apple Santé ou Garmin (ADR dédiée).
-- Chiffrement des documents et des champs sensibles : à réexaminer ici.
-- Ce que contient exactement le résumé transmis au semainier et à l'agent.
+**Déroulé.**
 
-**Terminé quand.** Le suivi quotidien et les documents sont dans LifeOS,
-rendez-vous et prises apparaissent dans le semainier, et l'objectif calorique peut
-venir du module Santé.
+1. **Cadrage fonctionnel.** Fait.
+2. **Maquette cliquable** des quatre parties (ordinateur et smartphone). Validée le
+   2026-11-22.
+3. **Compléments.** Fait.
+4. **Symptômes.**
+5. **Analyses et mesures.**
+6. **Documents et rendez-vous**, fichiers chiffrés.
+7. **Outils de l'assistant** pour tout le module.
+
+**Reste à cadrer à l'étape 4.** Ce que contient le résumé transmis au semainier et à
+l'agent ; le lien symptômes ↔ repas et sport ; l'objectif calorique.
+
+**Terminé quand.** Compléments, symptômes, analyses et documents sont suivis dans
+LifeOS au quotidien. Le lien avec le semainier (rendez-vous, prises, objectif
+calorique) se fait quand le semainier existe.
 
 ## Étape 6 — iPhone natif
 
