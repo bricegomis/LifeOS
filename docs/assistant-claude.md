@@ -56,9 +56,21 @@ créer, tu valides dans la discussion. Il cherche lui-même les valeurs nutritio
 | Todos | `get_tasks_today` (en retard, aujourd'hui, 7 jours, sans échéance, routines du foyer), `search_todos` (texte, état, étiquette, projet), `get_todo`, `get_task_tags`, `create_todo` (avec sous-tâches, projet et image par URL), `update_todo` (reporter = nouvelle échéance), `complete_todo`, `reopen_todo`, `abandon_todo`, `add_checklist_item`, `update_checklist_item`, `remove_checklist_item`, `set_todo_image_from_url` |
 | Routines du foyer | `list_task_routines` (prochaine échéance, retard, série), `get_task_routine` (passages), `create_task_routine` (date fixe ou délai), `update_task_routine`, `complete_task_routine` (« j'ai changé les draps hier »), `skip_task_routine`, `remove_task_routine_pass`, `pause_task_routine` (et reprise), `stop_task_routine`, `set_task_routine_image_from_url` |
 | Projets | `list_projects` (avancement), `get_project` (ses todos), `create_project`, `update_project`, `close_project` (terminer, abandonner, rouvrir), `set_project_image_from_url` |
+| Santé : compléments | `list_supplements` (coût par mois, coche du jour, série), `create_supplement` (dose, moment, conditionnement, liens d'achat, cure), `update_supplement`, `set_supplement_taken` (« j'ai pris ma vitamine D »), `stop_supplement` (et reprise) |
+| Santé : symptômes | `get_symptom_journal` (journal et liste suivie), `create_symptom_type`, `log_symptom` (« j'ai mal au ventre, 6/10 »), `delete_symptom_entry`, `save_symptom_checkin` (bilan du jour, « rien à signaler ») |
+| Santé : analyses et mesures | `list_markers` (position, tendance, à refaire), `create_marker`, `update_marker`, `list_analyses`, `create_analysis` (valeurs lues d'un document, après confirmation), `update_analysis`, `delete_analysis`, `list_body_measures`, `create_body_measure_type`, `add_body_measure`, `delete_body_measure` |
+| Santé : documents et rendez-vous | `list_health_documents`, `get_health_document_file` (Claude lit la photo ou le PDF), `create_health_document`, `update_health_document`, `list_appointments`, `create_appointment` (depuis un e-mail de confirmation ou l'agenda), `update_appointment` (rendez-vous déplacé, compte rendu), `delete_appointment` |
 
 Images par URL : `https` uniquement, adresse publique (jamais le réseau local), JPEG,
 PNG ou WebP de 10 Mo au plus, téléchargées en 20 secondes au plus.
+
+Santé : Claude ne voit que la santé du compte connecté. Un document (ordonnance, résultat…)
+se photographie ou s'envoie en PDF dans l'application ; ensuite, par exemple : « Lis mon
+dernier bilan sanguin et saisis les valeurs ». Claude lit le fichier, propose les marqueurs
+et valeurs, saisit l'analyse reliée au document après ta confirmation. Rendez-vous, avec les
+connecteurs Gmail ou Google Agenda de Claude : « Cherche mes confirmations Doctolib des 30
+derniers jours et mets à jour mes rendez-vous LifeOS (sans doublon, montre-moi d'abord) ».
+LifeOS ne se connecte jamais à Doctolib.
 
 Tickets : la photo se prend toujours dans l'application. Ensuite, par exemple : « Traite
 mon dernier ticket ». Claude lit la photo, propose un produit pour chaque ligne, saisit
