@@ -199,7 +199,7 @@ avancement des objectifs et des défis).
    todo, routines, projets (ordinateur et smartphone). Validée le 2026-11-22.
 3. **Todos**, étiquettes et checklist. Fait.
 4. **Routines** : récurrence, passages, série. Fait.
-5. **Projets**, et le projet d'un todo.
+5. **Projets**, et le projet d'un todo. Fait.
 6. **Outils de l'assistant** pour tout le module.
 
 **Terminé quand.** Routines et todos sont suivis dans LifeOS au quotidien. Le

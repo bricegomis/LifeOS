@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  addDays, dayLabel, draftOf, type TaskItem, durationLabel, initial, postponeChoices, postponed, tagsOf, todaySections, todoMeta, todoRequest, withTag,
+  addDays, dayLabel, draftOf, projectProgress, type TaskItem, durationLabel, initial, postponeChoices, postponed, tagsOf, todaySections, todoMeta, todoRequest, withTag,
 } from './task-format.ts'
 import type { TaskRoutineDto, TodoDto } from './tasks.models.ts'
 
@@ -10,7 +10,7 @@ const today = '2026-11-22' // a Sunday
 function todo(title: string, more: Partial<TodoDto> = {}): TodoDto {
   return {
     id: title, memberProfileId: 'p', title, notes: null, dueOn: null, durationMinutes: null, priority: 'normal', tags: [],
-    state: 'open', doneOn: null, isLate: false, hasImage: false, checklist: [], updatedAt: '', ...more,
+    state: 'open', doneOn: null, isLate: false, hasImage: false, checklist: [], updatedAt: '', projectId: null, projectTitle: null, ...more,
   }
 }
 
@@ -47,6 +47,11 @@ describe('todo cards', () => {
     assert.equal(todoMeta(late, today, true), 'En retard · ven. 20 nov. · 30 min · 1/2 sous-tâches')
     assert.equal(todoMeta(late, today, false), '30 min · 1/2 sous-tâches')
     assert.equal(todoMeta(todo('B', { state: 'done', doneOn: today }), today, true), 'Fait aujourd’hui')
+    const inProject = todo('C', { durationMinutes: 15, projectId: 'p', projectTitle: 'Chambre de Léa' })
+    assert.equal(todoMeta(inProject, today, false), '15 min · Chambre de Léa')
+    assert.equal(todoMeta(inProject, today, false, false), '15 min')
+    assert.deepEqual(projectProgress(3, 7), { label: '3 / 7 faits', percent: 43 })
+    assert.deepEqual(projectProgress(0, 0), { label: '0 / 0 fait', percent: 0 })
   })
 })
 
@@ -87,13 +92,13 @@ describe('todo form', () => {
     assert.equal(todoRequest({ ...draftOf(null), title: '  ' }), 'Le titre est obligatoire.')
     assert.match(String(todoRequest({ ...draftOf(null), title: 'A', durationMinutes: 2.5 })), /Durée/)
     assert.deepEqual(todoRequest({ ...draftOf(null, today), title: ' A ', notes: ' ', durationMinutes: '15' }),
-      { title: 'A', notes: null, dueOn: today, durationMinutes: 15, priority: 'normal', tags: [] })
+      { title: 'A', notes: null, dueOn: today, durationMinutes: 15, priority: 'normal', tags: [], projectId: null })
   })
 
   it('adds a tag once and postpones without touching the rest', () => {
     assert.deepEqual(withTag(['Maison'], ' maison '), ['Maison'])
     assert.deepEqual(withTag(['Maison'], 'voiture'), ['Maison', 'voiture'])
     const t = todo('A', { dueOn: '2026-11-20', priority: 'high', tags: ['x'] })
-    assert.deepEqual(postponed(t, null), { title: 'A', notes: null, dueOn: null, durationMinutes: null, priority: 'high', tags: ['x'] })
+    assert.deepEqual(postponed(t, null), { title: 'A', notes: null, dueOn: null, durationMinutes: null, priority: 'high', tags: ['x'], projectId: null })
   })
 })

@@ -18,6 +18,7 @@ namespace LifeOS.Api.Tasks;
 /// <param name="DueOn">Due day; none means "Sans échéance". Postponing is an update with a new due day.</param>
 /// <param name="DurationMinutes">Estimated duration, 1 to 1440 minutes.</param>
 /// <param name="Priority">high, normal (default) or low.</param>
+/// <param name="ProjectId">A project of the household that is in progress (or the todo's current one); none for a loose todo.</param>
 public sealed record TodoRequest(
     Guid? MemberProfileId,
     [property: Required, StringLength(Todo.MaxTitleLength)] string Title,
@@ -25,7 +26,8 @@ public sealed record TodoRequest(
     DateOnly? DueOn,
     [property: Range(1, Todo.MaxDurationMinutes)] int? DurationMinutes,
     string? Priority,
-    IReadOnlyList<string>? Tags);
+    IReadOnlyList<string>? Tags,
+    Guid? ProjectId = null);
 
 /// <param name="DoneOn">Day it was done; today when omitted, never in the future.</param>
 public sealed record TodoCompleteRequest(DateOnly? DoneOn);
@@ -43,8 +45,8 @@ public static class TodosEndpoints
         g.MapGet("/tags", async (HouseholdContext household, TodoLibrary todos, CancellationToken ct) =>
             Results.Ok(await todos.TagsAsync(household.HouseholdId, ct)))
             .Produces<List<string>>();
-        g.MapGet("/todos", async (string? state, string? q, string? tag, HouseholdContext household, TodoLibrary todos, CancellationToken ct) =>
-            Results.Ok(await todos.SearchAsync(household.HouseholdId, state, q, tag, ct)))
+        g.MapGet("/todos", async (string? state, string? q, string? tag, Guid? projectId, HouseholdContext household, TodoLibrary todos,
+            CancellationToken ct) => Results.Ok(await todos.SearchAsync(household.HouseholdId, state, q, tag, ct, projectId)))
             .Produces<List<TodoDto>>().ProducesValidationProblem();
         g.MapGet("/todos/{id:guid}", async (Guid id, HouseholdContext household, TodoLibrary todos, CancellationToken ct) =>
             await todos.GetAsync(household.HouseholdId, id, ct) is { } todo ? Results.Ok(todo) : Results.NotFound())
@@ -116,20 +118,24 @@ public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRe
         var todos = await Query(householdId)
             .Where(t => (t.State == "open" && (t.DueOn == null || t.DueOn <= horizon)) || (t.State == "done" && t.DoneOn == today))
             .ToListAsync(ct);
-        return new TaskTodayDto(today, Ordered(todos).Select(t => TodoDto.From(t, today)).ToList(), await routines.DueSoonAsync(householdId, ct));
+        return new TaskTodayDto(today, await DtosAsync(householdId, Ordered(todos), ct), await routines.DueSoonAsync(householdId, ct));
     }
 
     /// <summary>
-    /// The "Toutes les tâches" list: filtered by state (open by default, done, abandoned or all) and tag,
-    /// searched in title, notes, tags and sub-tasks, ignoring case and accents; every word must match.
+    /// The "Toutes les tâches" list: filtered by state (open by default, done, abandoned or all), tag and
+    /// project, searched in title, notes, tags, sub-tasks and project name, ignoring case and accents;
+    /// every word must match.
     /// </summary>
-    public async Task<List<TodoDto>> SearchAsync(Guid householdId, string? state, string? q, string? tag, CancellationToken ct)
+    public async Task<List<TodoDto>> SearchAsync(Guid householdId, string? state, string? q, string? tag, CancellationToken ct,
+        Guid? projectId = null)
     {
         var code = string.IsNullOrWhiteSpace(state) ? "open" : state.Trim();
         if (code != "all" && !Todo.States.ContainsKey(code)) throw new ArgumentException("État : open, done, abandoned ou all.");
         var query = Query(householdId);
         if (code != "all") query = query.Where(t => t.State == code);
+        if (projectId is { } project) query = query.Where(t => t.ProjectId == project);
         var todos = await query.ToListAsync(ct);
+        var titles = await ProjectTitlesAsync(householdId, ct);
         if (!string.IsNullOrWhiteSpace(tag))
             todos = todos.Where(t => t.Tags.Contains(tag.Trim(), StringComparer.OrdinalIgnoreCase)).ToList();
         var words = Normalize(q ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -137,12 +143,13 @@ public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRe
         {
             todos = todos.Where(t =>
             {
-                var text = Normalize(string.Join(' ', new[] { t.Title, t.Notes ?? "" }.Concat(t.Tags).Concat(t.Checklist.Select(i => i.Label))));
+                var text = Normalize(string.Join(' ', new[] { t.Title, t.Notes ?? "", TitleOf(titles, t) ?? "" }
+                    .Concat(t.Tags).Concat(t.Checklist.Select(i => i.Label))));
                 return words.All(text.Contains);
             }).ToList();
         }
         var today = Today;
-        return Ordered(todos).Select(t => TodoDto.From(t, today)).ToList();
+        return Ordered(todos).Select(t => TodoDto.From(t, today, TitleOf(titles, t))).ToList();
     }
 
     /// <summary>The tags used by the household's todos and routines, to suggest them.</summary>
@@ -154,19 +161,29 @@ public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRe
     }
 
     public async Task<TodoDto?> GetAsync(Guid householdId, Guid id, CancellationToken ct) =>
-        await FindAsync(householdId, id, ct) is { } todo ? TodoDto.From(todo, Today) : null;
+        await FindAsync(householdId, id, ct) is { } todo ? await DtoAsync(todo, ct) : null;
 
     public async Task<TodoDto> CreateAsync(Guid householdId, TodoRequest r, CancellationToken ct)
     {
         var profile = await profiles.ResolveAsync(householdId, r.MemberProfileId, ct);
+        var project = await ProjectAsync(householdId, r.ProjectId, null, ct);
         var todo = Todo.Create(householdId, profile, r.Title, r.Notes, r.DueOn, r.DurationMinutes, r.Priority, r.Tags, clock.GetUtcNow());
+        todo.MoveToProject(project, clock.GetUtcNow());
         db.Todos.Add(todo);
         await db.SaveChangesAsync(ct);
-        return TodoDto.From(todo, Today);
+        return await DtoAsync(todo, ct);
     }
 
-    public Task<TodoDto?> UpdateAsync(Guid householdId, Guid id, TodoRequest r, CancellationToken ct) =>
-        ChangeAsync(householdId, id, t => t.Update(r.Title, r.Notes, r.DueOn, r.DurationMinutes, r.Priority, r.Tags, clock.GetUtcNow()), ct);
+    public async Task<TodoDto?> UpdateAsync(Guid householdId, Guid id, TodoRequest r, CancellationToken ct)
+    {
+        var todo = await FindAsync(householdId, id, ct);
+        if (todo is null) return null;
+        var project = await ProjectAsync(householdId, r.ProjectId, todo.ProjectId, ct);
+        todo.Update(r.Title, r.Notes, r.DueOn, r.DurationMinutes, r.Priority, r.Tags, clock.GetUtcNow());
+        todo.MoveToProject(project, clock.GetUtcNow());
+        await db.SaveChangesAsync(ct);
+        return await DtoAsync(todo, ct);
+    }
 
     public Task<TodoDto?> CompleteAsync(Guid householdId, Guid id, DateOnly? doneOn, CancellationToken ct) =>
         ChangeAsync(householdId, id, t => t.Complete(doneOn ?? Today, Today, clock.GetUtcNow()), ct);
@@ -197,7 +214,7 @@ public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRe
         if (todo is null) return null;
         await images.ReplaceImageAsync(content, length, contentType, todo.ImagePath,
             stored => todo.SetImage(stored.FileName, stored.ContentType), () => db.SaveChangesAsync(ct), logger, ct);
-        return TodoDto.From(todo, Today);
+        return await DtoAsync(todo, ct);
     }
 
     /// <summary>Downloads an image found by the assistant, then stores it like an upload.</summary>
@@ -217,7 +234,7 @@ public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRe
         todo.RemoveImage();
         await db.SaveChangesAsync(ct);
         images.DeleteQuietly(oldPath, e => logger.LogError(e, "Unable to remove deleted todo image"));
-        return TodoDto.From(todo, Today);
+        return await DtoAsync(todo, ct);
     }
 
     private async Task<TodoDto?> ChangeAsync(Guid householdId, Guid id, Action<Todo> change, CancellationToken ct)
@@ -226,16 +243,42 @@ public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRe
         if (todo is null) return null;
         change(todo);
         await db.SaveChangesAsync(ct);
-        return TodoDto.From(todo, Today);
+        return await DtoAsync(todo, ct);
     }
 
     private IQueryable<Todo> Query(Guid householdId) => db.Todos.Where(t => t.HouseholdId == householdId);
+
+    /// <summary>A project of the household in progress, or the todo's current project (even closed); none when null.</summary>
+    private async Task<Guid?> ProjectAsync(Guid householdId, Guid? projectId, Guid? current, CancellationToken ct)
+    {
+        if (projectId is not { } id || id == Guid.Empty) return null;
+        if (id == current) return id;
+        return await db.TaskProjects.AnyAsync(p => p.Id == id && p.HouseholdId == householdId && p.State == "active", ct)
+            ? id
+            : throw new ArgumentException("Projet introuvable ou déjà clos dans votre foyer.");
+    }
+
+    private Task<Dictionary<Guid, string>> ProjectTitlesAsync(Guid householdId, CancellationToken ct) =>
+        db.TaskProjects.Where(p => p.HouseholdId == householdId).ToDictionaryAsync(p => p.Id, p => p.Title, ct);
+
+    private static string? TitleOf(Dictionary<Guid, string> titles, Todo todo) =>
+        todo.ProjectId is { } id && titles.TryGetValue(id, out var title) ? title : null;
+
+    /// <summary>Todos as DTOs with the name of their project.</summary>
+    public async Task<List<TodoDto>> DtosAsync(Guid householdId, IEnumerable<Todo> todos, CancellationToken ct)
+    {
+        var titles = await ProjectTitlesAsync(householdId, ct);
+        var today = Today;
+        return todos.Select(t => TodoDto.From(t, today, TitleOf(titles, t))).ToList();
+    }
+
+    private async Task<TodoDto> DtoAsync(Todo todo, CancellationToken ct) => (await DtosAsync(todo.HouseholdId, [todo], ct))[0];
 
     private Task<Todo?> FindAsync(Guid householdId, Guid id, CancellationToken ct) =>
         db.Todos.SingleOrDefaultAsync(t => t.Id == id && t.HouseholdId == householdId, ct);
 
     /// <summary>Open first, by due day (none last), high priority first, then title.</summary>
-    private static IEnumerable<Todo> Ordered(IEnumerable<Todo> todos) => todos
+    public static IEnumerable<Todo> Ordered(IEnumerable<Todo> todos) => todos
         .OrderBy(t => t.IsOpen ? 0 : 1)
         .ThenBy(t => t.DueOn ?? DateOnly.MaxValue)
         .ThenBy(t => t.Priority == "high" ? 0 : t.Priority == "normal" ? 1 : 2)

@@ -6,6 +6,7 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatIconModule } from '@angular/material/icon'
 import { MatInputModule } from '@angular/material/input'
+import { MatSelectModule } from '@angular/material/select'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
@@ -15,17 +16,18 @@ import { draftOf, initial, PRIORITIES, todoRequest, withTag } from './task-forma
 import { TasksApiService } from './tasks-api.service'
 import type { TodoDto } from './tasks.models'
 
-export interface TodoDialogData { todo: TodoDto | null, dueOn?: string, tags: string[] }
+/** `projectId`: the project of a new todo (from its project page). */
+export interface TodoDialogData { todo: TodoDto | null, dueOn?: string, tags: string[], projectId?: string }
 export interface TodoDialogResult { todo: TodoDto, message: string }
 
 /**
  * Creates or edits a todo (ADR 0017): optional photo (else the initial), title, due day, estimated
- * duration, priority, free tags and notes. An open todo is abandoned from here (second click).
+ * duration, priority, project, free tags and notes. An open todo is abandoned from here (second click).
  */
 @Component({
   selector: 'app-todo-dialog',
   standalone: true,
-  imports: [EditorFrameComponent, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, TaskImageComponent],
+  imports: [EditorFrameComponent, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, TaskImageComponent],
   template: `
     <app-editor-frame [heading]="todo ? 'Modifier le todo' : 'Nouveau todo'" formId="todo-form" [saveLabel]="todo ? 'Enregistrer' : 'Ajouter'"
       [busy]="busy()" [dirty]="dirty()" [error]="error()" [dangerLabel]="todo?.state === 'open' ? 'Abandonner le todo' : ''" dangerIcon="block"
@@ -76,6 +78,13 @@ export interface TodoDialogResult { todo: TodoDto, message: string }
             @for (p of priorities; track p.value) { <mat-button-toggle [value]="p.value">{{ p.label }}</mat-button-toggle> }
           </mat-button-toggle-group>
         </div>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="project">
+          <mat-label>Projet</mat-label>
+          <mat-select name="project" [(ngModel)]="draft.projectId">
+            <mat-option value="">Aucun</mat-option>
+            @for (project of projects(); track project.id) { <mat-option [value]="project.id">{{ project.title }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
         <div class="lo-field-group">
           <span class="lo-field-label">Étiquettes</span>
           <div class="lo-chips" role="group" aria-label="Étiquettes">
@@ -117,6 +126,7 @@ export interface TodoDialogResult { todo: TodoDto, message: string }
     .photo-delete { color: var(--mat-sys-error); }
     .tag-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
     .tag-add mat-form-field { flex: 1 1 200px; max-width: 320px; }
+    .project { max-width: 360px; }
   `],
 })
 export class TodoDialogComponent {
@@ -129,7 +139,9 @@ export class TodoDialogComponent {
   readonly error = signal('')
   readonly preview = signal<string | null>(null)
   readonly removePhoto = signal(false)
-  readonly draft = draftOf(this.todo, this.data.dueOn)
+  readonly draft = draftOf(this.todo, this.data.dueOn, this.data.projectId)
+  /** Projects in progress, plus the todo's current one even when closed. */
+  readonly projects = signal<{ id: string, title: string }[]>(this.todo?.projectId ? [{ id: this.todo.projectId, title: this.todo.projectTitle ?? 'Projet' }] : [])
   readonly choices = signal([...this.data.tags, ...this.draft.tags.filter(t => !this.data.tags.includes(t))])
   newTag = ''
   private file: File | null = null
@@ -137,6 +149,15 @@ export class TodoDialogComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.releasePreview())
+    void this.loadProjects()
+  }
+
+  private async loadProjects(): Promise<void> {
+    try {
+      const active = await firstValueFrom(this.api.projects('active'))
+      const current = this.projects().filter(p => !active.some(a => a.id === p.id))
+      this.projects.set([...active.map(p => ({ id: p.id, title: p.title })), ...current])
+    } catch { /* the select keeps the current project */ }
   }
 
   letter(): string { return initial(this.draft.title) }

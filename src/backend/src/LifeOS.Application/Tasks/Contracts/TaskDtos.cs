@@ -6,15 +6,34 @@ public sealed record ChecklistItemDto(Guid Id, string Label, bool Done);
 
 /// <param name="State">open, done or abandoned.</param>
 /// <param name="IsLate">Open with a due day before today (Paris).</param>
+/// <param name="ProjectTitle">Name of its project, when it has one.</param>
 public sealed record TodoDto(Guid Id, Guid MemberProfileId, string Title, string? Notes, DateOnly? DueOn, int? DurationMinutes,
     string Priority, IReadOnlyList<string> Tags, string State, DateOnly? DoneOn, bool IsLate, bool HasImage,
-    IReadOnlyList<ChecklistItemDto> Checklist, DateTimeOffset UpdatedAt)
+    IReadOnlyList<ChecklistItemDto> Checklist, DateTimeOffset UpdatedAt, Guid? ProjectId, string? ProjectTitle)
 {
-    public static TodoDto From(Todo t, DateOnly today) =>
+    public static TodoDto From(Todo t, DateOnly today, string? projectTitle = null) =>
         new(t.Id, t.MemberProfileId, t.Title, t.Notes, t.DueOn, t.DurationMinutes, t.Priority, t.Tags, t.State, t.DoneOn,
             t.IsLate(today), t.HasImage, t.OrderedChecklist.Select(i => new ChecklistItemDto(i.Id, i.Label, i.Done)).ToList(),
-            t.UpdatedAt);
+            t.UpdatedAt, t.ProjectId, t.ProjectId is null ? null : projectTitle);
 }
+
+/// <param name="State">active, done or abandoned.</param>
+/// <param name="Done">Its done todos.</param>
+/// <param name="Total">Its todos that are not abandoned: progress is <paramref name="Done"/> / <paramref name="Total"/>.</param>
+public sealed record TaskProjectDto(Guid Id, string Title, string? Notes, DateOnly? DueOn, string State, bool HasImage,
+    DateTimeOffset UpdatedAt, int Done, int Total)
+{
+    public int Open => Total - Done;
+
+    public static TaskProjectDto From(TaskProject p, IEnumerable<Todo> todos)
+    {
+        var counted = todos.Where(t => t.ProjectId == p.Id && t.State != "abandoned").ToList();
+        return new(p.Id, p.Title, p.Notes, p.DueOn, p.State, p.HasImage, p.UpdatedAt, counted.Count(t => t.State == "done"), counted.Count);
+    }
+}
+
+/// <summary>A project with all its todos (open first by due day, then done and abandoned).</summary>
+public sealed record TaskProjectDetailDto(TaskProjectDto Project, IReadOnlyList<TodoDto> Todos);
 
 /// <summary>
 /// The "Aujourd'hui" page (ADR 0017): open todos due up to <paramref name="Today"/> + 7 days (late ones

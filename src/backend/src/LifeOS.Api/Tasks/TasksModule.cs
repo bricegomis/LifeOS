@@ -9,11 +9,13 @@ public static class TasksModule
     public static IServiceCollection AddTaskLibraries(this IServiceCollection services) => services
         .AddScoped<TaskProfiles>()
         .AddScoped<TodoLibrary>()
-        .AddScoped<TaskRoutineLibrary>();
+        .AddScoped<TaskRoutineLibrary>()
+        .AddScoped<TaskProjectLibrary>();
 
     public static IEndpointRouteBuilder MapTaskEndpoints(this IEndpointRouteBuilder app) => app
         .MapTodosEndpoints()
-        .MapTaskRoutinesEndpoints();
+        .MapTaskRoutinesEndpoints()
+        .MapTaskProjectsEndpoints();
 }
 
 /// <summary>

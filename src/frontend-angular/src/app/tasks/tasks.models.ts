@@ -19,6 +19,9 @@ export interface TodoDto {
   hasImage: boolean
   checklist: ChecklistItemDto[]
   updatedAt: string
+  projectId: string | null
+  /** Name of its project, when it has one. */
+  projectTitle: string | null
 }
 
 export interface TodoRequest {
@@ -29,7 +32,28 @@ export interface TodoRequest {
   durationMinutes: number | null
   priority: TodoPriority
   tags: string[]
+  /** A project in progress (or the todo's current one); null for a loose todo. */
+  projectId: string | null
 }
+
+export type ProjectState = 'active' | 'done' | 'abandoned'
+
+/** `done` / `total`: done todos over the todos that are not abandoned. */
+export interface TaskProjectDto {
+  id: string
+  title: string
+  notes: string | null
+  dueOn: string | null
+  state: ProjectState
+  hasImage: boolean
+  updatedAt: string
+  done: number
+  total: number
+  open: number
+}
+
+export interface TaskProjectDetailDto { project: TaskProjectDto, todos: TodoDto[] }
+export interface TaskProjectRequest { title: string, notes: string | null, dueOn: string | null }
 
 export type RecurrenceKind = 'fixed' | 'delay'
 export type RecurrenceUnit = 'day' | 'week' | 'month'

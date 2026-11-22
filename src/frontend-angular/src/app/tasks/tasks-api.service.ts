@@ -3,7 +3,7 @@ import { from, switchMap, type Observable } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LIBRARY_IMAGE, reduceImage } from '@/app/shared/image-reduction'
 import type {
-  RoutineStateFilter, TaskRoutineDetailDto, TaskRoutineDto, TaskRoutineRequest, TaskTodayDto, TodoDto, TodoRequest, TodoStateFilter,
+  RoutineStateFilter, TaskProjectDetailDto, TaskProjectDto, TaskProjectRequest, TaskRoutineDetailDto, TaskRoutineDto, TaskRoutineRequest, TaskTodayDto, TodoDto, TodoRequest, TodoStateFilter,
 } from './tasks.models'
 
 const id = (value: string) => encodeURIComponent(value)
@@ -77,4 +77,25 @@ export class TasksApiService {
     }))
   }
   removeRoutineImage(routineId: string): Observable<void> { return this.api.delete(`/tasks/routines/${id(routineId)}/image`) }
+
+  /** In progress by default, `closed` (done or abandoned) or `all`. */
+  projects(state: 'active' | 'closed' | 'all' = 'active'): Observable<TaskProjectDto[]> { return this.api.get<TaskProjectDto[]>('/tasks/projects', { state }) }
+  project(projectId: string): Observable<TaskProjectDetailDto> { return this.api.get<TaskProjectDetailDto>(`/tasks/projects/${id(projectId)}`) }
+  createProject(request: TaskProjectRequest): Observable<TaskProjectDetailDto> { return this.api.post<TaskProjectDetailDto>('/tasks/projects', request) }
+  updateProject(projectId: string, request: TaskProjectRequest): Observable<TaskProjectDetailDto> {
+    return this.api.put<TaskProjectDetailDto>(`/tasks/projects/${id(projectId)}`, request)
+  }
+  /** Finished or abandoned; its open todos stay open. */
+  closeProject(projectId: string, how: 'finish' | 'abandon'): Observable<TaskProjectDetailDto> {
+    return this.api.post<TaskProjectDetailDto>(`/tasks/projects/${id(projectId)}/${how}`, {})
+  }
+  reopenProject(projectId: string): Observable<TaskProjectDetailDto> { return this.api.post<TaskProjectDetailDto>(`/tasks/projects/${id(projectId)}/reopen`, {}) }
+  uploadProjectImage(projectId: string, file: File): Observable<TaskProjectDetailDto> {
+    return from(reduceImage(file, LIBRARY_IMAGE)).pipe(switchMap(image => {
+      const form = new FormData()
+      form.append('image', image)
+      return this.api.put<TaskProjectDetailDto>(`/tasks/projects/${id(projectId)}/image`, form)
+    }))
+  }
+  removeProjectImage(projectId: string): Observable<void> { return this.api.delete(`/tasks/projects/${id(projectId)}/image`) }
 }

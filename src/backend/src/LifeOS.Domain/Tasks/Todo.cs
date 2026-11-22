@@ -41,6 +41,8 @@ public sealed class Todo : Entity
     public int? DurationMinutes { get; private set; }
     public string Priority { get; private set; } = "normal";
     public List<string> Tags { get; private set; } = [];
+    /// <summary>The project it belongs to, in the same household; none for a loose todo.</summary>
+    public Guid? ProjectId { get; private set; }
     public string State { get; private set; } = "open";
     /// <summary>The day it was done; set only in the <c>done</c> state.</summary>
     public DateOnly? DoneOn { get; private set; }
@@ -82,6 +84,13 @@ public sealed class Todo : Entity
         DurationMinutes = durationMinutes;
         Priority = code;
         Tags = CleanTags(tags);
+        UpdatedAt = now;
+    }
+
+    /// <summary>Moves the todo into a project of its household (checked by the caller), or out of any.</summary>
+    public void MoveToProject(Guid? projectId, DateTimeOffset now)
+    {
+        ProjectId = projectId == Guid.Empty ? null : projectId;
         UpdatedAt = now;
     }
 
