@@ -241,8 +241,8 @@ d'ajustement des repas.
 [ADR 0018](architecture/decisions/0018-health-module.md). Étape avancée avant le
 semainier, qui viendra quand le reste aura servi.
 
-- Compléments : dose par jour, moment, conditionnement, prix et magasin, à l'année ou
-  en cure ; une coche par complément et par jour ; coût par mois calculé.
+- Compléments : dose par jour, moment, conditionnement, prix, magasin et liens
+  d'achat, à l'année ou en cure ; une coche par complément et par jour ; coût par mois calculé.
 - Symptômes physiques et mentaux : saisie à tout moment (intensité 1 à 10) et bilan du
   jour facultatif ; un journal, les corrélations viendront du semainier.
 - Analyses : marqueurs avec unité, plage du labo, cible personnelle, fréquence et

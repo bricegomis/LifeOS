@@ -43,6 +43,8 @@ Un complément porte :
 - un **moment** facultatif, pour l'ordre d'affichage : matin, midi, soir ou au choix ;
 - un **conditionnement** : contenu (dans la même unité que la dose), prix payé et
   magasin ou site en texte libre ;
+- des **liens d'achat** : un ou plusieurs, chacun avec un nom facultatif et une adresse
+  `https`, ouverts depuis la page du complément ;
 - une **période** : à l'année (en continu depuis une date), ou **en cure** de N semaines
   ou mois à partir d'une date, avec une pause facultative de N semaines ou mois avant de
   recommencer ;
