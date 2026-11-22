@@ -9,7 +9,7 @@ describe('navigation', () => {
     assert.deepEqual(NAVIGATION_BLOCKS[1]!.items.map(item => item.label),
       ['Aujourd’hui', 'Historique', 'Progression', 'Routines', 'Exercices', 'Défis', 'Objectifs', 'Séances types'])
     assert.equal(NAVIGATION_BLOCKS[1]!.items[0]!.exact, true)
-    assert.deepEqual(NAVIGATION_BLOCKS[2]!.items.map(item => item.path), ['/tasks', '/tasks/all'])
+    assert.deepEqual(NAVIGATION_BLOCKS[2]!.items.map(item => item.path), ['/tasks', '/tasks/all', '/tasks/routines'])
   })
 
   it('finds the block and page of a URL for the open block and the phone title', () => {
@@ -25,6 +25,7 @@ describe('navigation', () => {
     assert.equal(pageTitle('/tasks/all'), 'Tâches · Toutes les tâches')
     assert.equal(currentEntry('/tasks/todo/7')?.block.id, 'tasks')
     assert.equal(pageTitle('/tasks/todo/7'), 'Tâches')
+    assert.equal(currentEntry('/tasks/routine/3')?.block.id, 'tasks')
   })
 
   it('remembers the menu state and survives an unavailable storage', () => {

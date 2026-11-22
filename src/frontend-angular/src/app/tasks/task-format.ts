@@ -1,4 +1,4 @@
-import type { TodoDto, TodoPriority, TodoRequest } from './tasks.models.ts'
+import type { TaskRoutineDto, TodoDto, TodoPriority, TodoRequest } from './tasks.models.ts'
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 const DAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.']
@@ -68,40 +68,64 @@ export function todoMeta(todo: TodoDto, today: string, showDue: boolean): string
   return bits.join(' · ')
 }
 
-function priorityRank(todo: TodoDto): number { return todo.priority === 'high' ? 0 : todo.priority === 'normal' ? 1 : 2 }
+/** A todo or a routine, as one card of a list. */
+export type TaskItem = { kind: 'todo', key: string, todo: TodoDto } | { kind: 'routine', key: string, routine: TaskRoutineDto }
 
-function byPriority(a: TodoDto, b: TodoDto): number {
-  return priorityRank(a) - priorityRank(b) || a.title.localeCompare(b.title, 'fr')
+export function todoItem(todo: TodoDto): TaskItem { return { kind: 'todo', key: `t-${todo.id}`, todo } }
+export function routineItem(routine: TaskRoutineDto): TaskItem { return { kind: 'routine', key: `r-${routine.id}`, routine } }
+
+function itemOf(item: TaskItem): { title: string, priority: TodoPriority, tags: string[] } {
+  return item.kind === 'todo' ? item.todo : item.routine
 }
 
-export interface TodaySection { id: string, title: string, late: boolean, todos: TodoDto[] }
+function byPriority(a: TaskItem, b: TaskItem): number {
+  const rank = (item: TaskItem) => { const p = itemOf(item).priority; return p === 'high' ? 0 : p === 'normal' ? 1 : 2 }
+  return rank(a) - rank(b) || itemOf(a).title.localeCompare(itemOf(b).title, 'fr')
+}
+
+function hasTag(item: TaskItem, tag: string): boolean {
+  return !tag || itemOf(item).tags.some(x => x.localeCompare(tag, 'fr', { sensitivity: 'base' }) === 0)
+}
+
+/** The day a card belongs to on the today page; null when undated. */
+function dayOf(item: TaskItem, today: string): string | null {
+  if (item.kind === 'todo') return item.todo.state === 'done' ? today : item.todo.dueOn
+  return item.routine.nextDueOn
+}
+
+export interface TodaySection { id: string, title: string, late: boolean, items: TaskItem[] }
 
 /**
  * The "Aujourd’hui" page (ADR 0017): late, today (with what was done today), then each of the next
- * seven days that has something, and the undated open todos apart. High priority first in each.
+ * seven days that has something, and the undated open todos apart; todos and routines mixed, high
+ * priority first in each. A routine done today shows struck through today and again on its next due day.
  */
-export function todaySections(todos: TodoDto[], today: string, tag = ''): { sections: TodaySection[], undated: TodoDto[] } {
-  const shown = todos.filter(t => !tag || t.tags.some(x => x.localeCompare(tag, 'fr', { sensitivity: 'base' }) === 0))
-  const late = shown.filter(t => t.state === 'open' && t.dueOn && t.dueOn < today)
-    .sort((a, b) => a.dueOn!.localeCompare(b.dueOn!) || byPriority(a, b))
-  const now = shown.filter(t => (t.state === 'open' && t.dueOn === today) || (t.state === 'done' && t.doneOn === today))
-    .sort((a, b) => (a.state === 'open' ? 0 : 1) - (b.state === 'open' ? 0 : 1) || byPriority(a, b))
+export function todaySections(todos: TodoDto[], routines: TaskRoutineDto[], today: string, tag = ''): { sections: TodaySection[], undated: TaskItem[] } {
+  const items = [
+    ...todos.filter(t => t.state === 'open' || (t.state === 'done' && t.doneOn === today)).map(todoItem),
+    ...routines.filter(r => r.state === 'active' && r.nextDueOn).map(routineItem),
+  ].filter(item => hasTag(item, tag))
+  const doneRoutines = routines.filter(r => r.doneToday && hasTag(routineItem(r), tag)).map(r => ({ ...routineItem(r), key: `d-${r.id}` }))
+  const late = items.filter(i => { const d = dayOf(i, today); return d !== null && d < today })
+    .sort((a, b) => dayOf(a, today)!.localeCompare(dayOf(b, today)!) || byPriority(a, b))
+  const closed = (i: TaskItem) => (i.kind === 'todo' ? i.todo.state === 'done' : i.key.startsWith('d-')) ? 1 : 0
+  const now = [...items.filter(i => dayOf(i, today) === today), ...doneRoutines].sort((a, b) => closed(a) - closed(b) || byPriority(a, b))
   const sections: TodaySection[] = []
-  if (late.length) sections.push({ id: 'late', title: 'En retard', late: true, todos: late })
-  sections.push({ id: today, title: 'Aujourd’hui', late: false, todos: now })
+  if (late.length) sections.push({ id: 'late', title: 'En retard', late: true, items: late })
+  sections.push({ id: today, title: 'Aujourd’hui', late: false, items: now })
   for (let gap = 1; gap <= 7; gap++) {
     const day = addDays(today, gap)
-    const due = shown.filter(t => t.state === 'open' && t.dueOn === day).sort(byPriority)
-    if (due.length) sections.push({ id: day, title: dayLabel(day, today), late: false, todos: due })
+    const due = items.filter(i => dayOf(i, today) === day).sort(byPriority)
+    if (due.length) sections.push({ id: day, title: dayLabel(day, today), late: false, items: due })
   }
-  const undated = shown.filter(t => t.state === 'open' && !t.dueOn).sort(byPriority)
+  const undated = items.filter(i => dayOf(i, today) === null).sort(byPriority)
   return { sections, undated }
 }
 
-/** The tags of a list of todos, without duplicates, for the filter chips. */
-export function tagsOf(todos: TodoDto[]): string[] {
+/** The tags of todos and routines, without duplicates, for the filter chips. */
+export function tagsOf(items: { tags: string[] }[]): string[] {
   const seen = new Map<string, string>()
-  for (const tag of todos.flatMap(t => t.tags)) if (!seen.has(tag.toLocaleLowerCase('fr'))) seen.set(tag.toLocaleLowerCase('fr'), tag)
+  for (const tag of items.flatMap(t => t.tags)) if (!seen.has(tag.toLocaleLowerCase('fr'))) seen.set(tag.toLocaleLowerCase('fr'), tag)
   return [...seen.values()].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 

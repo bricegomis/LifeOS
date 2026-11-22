@@ -2,8 +2,8 @@
 
 Statut : accepté, 2026-11-22. Étape 3 de la [roadmap](../../01-roadmap.md).
 Maquette validée le 2026-11-22 (canevas des maquettes, « Tâches — ordinateur » et
-« Tâches — smartphone »). Les todos sont livrés en code ; routines, projets et outils de
-l'assistant suivent. Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
+« Tâches — smartphone »). Todos et routines du foyer sont livrés en code ; projets et outils
+de l'assistant suivent. Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
 (module Tâches, schéma `tasks`) et l'[ADR 0016](0016-angular-material-ui-kit.md) (UI kit).
 
 ## Contexte
@@ -50,8 +50,8 @@ et un profil responsable, et sa **récurrence**, au choix :
 - **date fixe** : tous les N jours, certains jours de la semaine toutes les N
   semaines, ou un jour du mois tous les N mois (le 31 tombe le dernier jour d'un
   mois plus court), à partir d'une date de départ ;
-- **délai** : N jours après la dernière fois qu'elle a été faite (ou après la date
-  de départ si elle n'a jamais été faite).
+- **délai** : N jours après le dernier passage (fait ou sauté) ; la date de départ est
+  la première échéance.
 
 La prochaine échéance est calculée à la lecture, jamais stockée. Une routine n'a
 qu'une échéance ouverte à la fois : tant qu'elle n'est pas faite ou sautée, elle
@@ -68,7 +68,9 @@ jokers. La fiche affiche aussi la dernière fois et la meilleure série.
 
 Modifier la récurrence vaut pour les échéances suivantes ; l'historique reste.
 Une routine peut être mise en pause (aucune échéance, série conservée) ou arrêtée
-(historique conservé).
+(historique conservé). À la reprise, aucune échéance n'est antérieure au jour de la
+reprise : la pause ne met jamais en retard. Avec des dates fixes, la première
+échéance après un passage vient après l'échéance close et après le jour du passage.
 
 La checklist reste propre aux todos.
 

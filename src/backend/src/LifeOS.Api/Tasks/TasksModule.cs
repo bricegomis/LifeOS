@@ -8,10 +8,12 @@ public static class TasksModule
     /// <summary>Management code shared by the Tasks endpoints and the assistant tools (ADR 0017).</summary>
     public static IServiceCollection AddTaskLibraries(this IServiceCollection services) => services
         .AddScoped<TaskProfiles>()
-        .AddScoped<TodoLibrary>();
+        .AddScoped<TodoLibrary>()
+        .AddScoped<TaskRoutineLibrary>();
 
     public static IEndpointRouteBuilder MapTaskEndpoints(this IEndpointRouteBuilder app) => app
-        .MapTodosEndpoints();
+        .MapTodosEndpoints()
+        .MapTaskRoutinesEndpoints();
 }
 
 /// <summary>

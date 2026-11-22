@@ -4,7 +4,7 @@ import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { initial } from './task-format'
 
 /**
- * A todo image served by the API (authenticated, so loaded as a blob); without one, the title's
+ * A todo, routine or project image served by the API (authenticated, so loaded as a blob); without one, the title's
  * initial on a tonal background (ADR 0017).
  */
 @Component({
@@ -30,7 +30,9 @@ import { initial } from './task-format'
 })
 export class TaskImageComponent {
   private readonly api = inject(LifeosApiService)
+  /** Id of the todo or routine. */
   readonly todoId = input.required<string>()
+  readonly kind = input<'todos' | 'routines' | 'projects'>('todos')
   readonly hasImage = input(false)
   readonly title = input('')
   /** Changes when the image was replaced, to reload it. */
@@ -43,19 +45,19 @@ export class TaskImageComponent {
 
   constructor() {
     effect(() => {
-      const id = this.todoId(); const hasImage = this.hasImage(); this.version()
+      const id = this.todoId(); const kind = this.kind(); const hasImage = this.hasImage(); this.version()
       // Untracked: load() reads `url` synchronously, which would otherwise rerun this effect forever.
-      untracked(() => void this.load(id, hasImage))
+      untracked(() => void this.load(kind, id, hasImage))
     })
     inject(DestroyRef).onDestroy(() => this.release())
   }
 
-  private async load(id: string, hasImage: boolean): Promise<void> {
+  private async load(kind: string, id: string, hasImage: boolean): Promise<void> {
     const current = ++this.loadId
     this.release()
     if (!hasImage) return
     try {
-      const blob = await firstValueFrom(this.api.getBlob(`/tasks/todos/${encodeURIComponent(id)}/image`))
+      const blob = await firstValueFrom(this.api.getBlob(`/tasks/${kind}/${encodeURIComponent(id)}/image`))
       if (current === this.loadId) this.url.set(URL.createObjectURL(blob))
     } catch {
       if (current === this.loadId) this.url.set(null)

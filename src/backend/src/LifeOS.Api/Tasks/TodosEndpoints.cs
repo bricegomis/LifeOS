@@ -105,7 +105,7 @@ public static class TodosEndpoints
 /// <see cref="Todo"/>. A null result means "not in this household".
 /// </summary>
 public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRemoteImageSource remoteImages,
-    TaskProfiles profiles, TimeProvider clock, ILogger<TodoLibrary> logger)
+    TaskProfiles profiles, TaskRoutineLibrary routines, TimeProvider clock, ILogger<TodoLibrary> logger)
 {
     private DateOnly Today => TaskClock.Today(clock);
 
@@ -116,7 +116,7 @@ public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRe
         var todos = await Query(householdId)
             .Where(t => (t.State == "open" && (t.DueOn == null || t.DueOn <= horizon)) || (t.State == "done" && t.DoneOn == today))
             .ToListAsync(ct);
-        return new TaskTodayDto(today, Ordered(todos).Select(t => TodoDto.From(t, today)).ToList());
+        return new TaskTodayDto(today, Ordered(todos).Select(t => TodoDto.From(t, today)).ToList(), await routines.DueSoonAsync(householdId, ct));
     }
 
     /// <summary>
@@ -145,11 +145,12 @@ public sealed class TodoLibrary(LifeOSDbContext db, TaskImageStorage images, IRe
         return Ordered(todos).Select(t => TodoDto.From(t, today)).ToList();
     }
 
-    /// <summary>The tags used by the household's todos, to suggest them.</summary>
+    /// <summary>The tags used by the household's todos and routines, to suggest them.</summary>
     public async Task<List<string>> TagsAsync(Guid householdId, CancellationToken ct)
     {
         var tags = await db.Todos.Where(t => t.HouseholdId == householdId).Select(t => t.Tags).ToListAsync(ct);
-        return tags.SelectMany(t => t).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase).ToList();
+        return tags.SelectMany(t => t).Concat(await routines.TagsAsync(householdId, ct))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 
     public async Task<TodoDto?> GetAsync(Guid householdId, Guid id, CancellationToken ct) =>

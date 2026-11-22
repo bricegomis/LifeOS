@@ -8,7 +8,7 @@
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
   templates, logged sessions, weekly goals, daily challenges; ADR 0013; exercises and
-  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist; ADR 0017). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines; ADR 0017). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -48,8 +48,11 @@
   due day until it is done, postponed (an update with a new due day) or abandoned, nothing slides
   by itself. Its checklist is an owned, ordered list; ticking every sub-task does not complete
   it. "Today" is the Paris day (`TaskClock`). Search (`TodoLibrary.SearchAsync`) runs in memory
-  over the household's todos, ignoring case and accents. Management code is `TodoLibrary`
-  (registered in `Api/Tasks/TasksModule.cs`).
+  over the household's todos, ignoring case and accents. A household routine is a `TaskRoutine` (fixed dates or a delay,
+  `Recurrence`) with `RoutinePass`es (done or skipped, each closing one due day); the next due day,
+  lateness, streak and record are computed on read by `RoutineSchedule`, never stored; one open due
+  day at a time, a pause never makes it late (`ResumedOn`). Management code is `TodoLibrary` and
+  `TaskRoutineLibrary` (registered in `Api/Tasks/TasksModule.cs`).
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless

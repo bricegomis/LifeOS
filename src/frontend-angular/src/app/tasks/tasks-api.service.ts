@@ -2,7 +2,9 @@ import { inject, Injectable } from '@angular/core'
 import { from, switchMap, type Observable } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LIBRARY_IMAGE, reduceImage } from '@/app/shared/image-reduction'
-import type { TaskTodayDto, TodoDto, TodoRequest, TodoStateFilter } from './tasks.models'
+import type {
+  RoutineStateFilter, TaskRoutineDetailDto, TaskRoutineDto, TaskRoutineRequest, TaskTodayDto, TodoDto, TodoRequest, TodoStateFilter,
+} from './tasks.models'
 
 const id = (value: string) => encodeURIComponent(value)
 
@@ -46,4 +48,33 @@ export class TasksApiService {
     }))
   }
   removeImage(todoId: string): Observable<void> { return this.api.delete(`/tasks/todos/${id(todoId)}/image`) }
+
+  /** Active and paused by default; searched like todos. */
+  routines(state: RoutineStateFilter = 'active', q = '', tag = ''): Observable<TaskRoutineDto[]> {
+    return this.api.get<TaskRoutineDto[]>('/tasks/routines', { state, ...(q.trim() ? { q: q.trim() } : {}), ...(tag ? { tag } : {}) })
+  }
+  routine(routineId: string): Observable<TaskRoutineDetailDto> { return this.api.get<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}`) }
+  createRoutine(request: TaskRoutineRequest): Observable<TaskRoutineDetailDto> { return this.api.post<TaskRoutineDetailDto>('/tasks/routines', request) }
+  updateRoutine(routineId: string, request: TaskRoutineRequest): Observable<TaskRoutineDetailDto> {
+    return this.api.put<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}`, request)
+  }
+  /** Closes the open due day; `day` is today when null. */
+  routineDone(routineId: string, day: string | null = null, note: string | null = null): Observable<TaskRoutineDetailDto> {
+    return this.api.post<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}/done`, { day, note })
+  }
+  skipRoutine(routineId: string): Observable<TaskRoutineDetailDto> { return this.api.post<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}/skip`, {}) }
+  removePass(routineId: string, passId: string): Observable<TaskRoutineDetailDto> {
+    return this.api.delete<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}/passes/${id(passId)}`)
+  }
+  pauseRoutine(routineId: string): Observable<TaskRoutineDetailDto> { return this.api.post<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}/pause`, {}) }
+  resumeRoutine(routineId: string): Observable<TaskRoutineDetailDto> { return this.api.post<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}/resume`, {}) }
+  stopRoutine(routineId: string): Observable<TaskRoutineDetailDto> { return this.api.post<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}/stop`, {}) }
+  uploadRoutineImage(routineId: string, file: File): Observable<TaskRoutineDetailDto> {
+    return from(reduceImage(file, LIBRARY_IMAGE)).pipe(switchMap(image => {
+      const form = new FormData()
+      form.append('image', image)
+      return this.api.put<TaskRoutineDetailDto>(`/tasks/routines/${id(routineId)}/image`, form)
+    }))
+  }
+  removeRoutineImage(routineId: string): Observable<void> { return this.api.delete(`/tasks/routines/${id(routineId)}/image`) }
 }

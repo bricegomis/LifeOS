@@ -11,8 +11,8 @@
   stores, tickets), `sports` (today, history, progress, one page per element —
   routines, exercises, challenges, goals, templates — with their windows, and the
   routine page `sports/routine/:id` with its passes; rules in `sports/routine-format.ts`),
-  `tasks` (today, all tasks with search, one page per todo `tasks/todo/:id`, edit and postpone
-  windows; rules in `tasks/task-format.ts`),
+  `tasks` (today, all tasks with search, routines, one page per todo `tasks/todo/:id` and per routine
+  `tasks/routine/:id`, their windows; rules in `tasks/task-format.ts` and `tasks/routine-rules.ts`),
   `household` (settings: profiles, versions, account).
 - A module folder holds its models, its API service (all HTTP calls), pure rules in
   plain `.ts` files with a `.spec.ts` (e.g. `food/foods/food-form.ts`,
