@@ -1,6 +1,9 @@
 import type { Routes } from '@angular/router'
 import { AnalysesPageComponent } from './analyses-page.component'
 import { AnalysisPageComponent } from './analysis-page.component'
+import { AppointmentsPageComponent } from './appointments-page.component'
+import { DocumentPageComponent } from './document-page.component'
+import { DocumentsPageComponent } from './documents-page.component'
 import { HealthTodayPageComponent } from './health-today-page.component'
 import { MarkerPageComponent } from './marker-page.component'
 import { MeasuresPageComponent } from './measures-page.component'
@@ -18,4 +21,7 @@ export const HEALTH_ROUTES: Routes = [
   { path: 'marker/:id', component: MarkerPageComponent },
   { path: 'analysis/:id', component: AnalysisPageComponent },
   { path: 'measures', component: MeasuresPageComponent },
+  { path: 'documents', component: DocumentsPageComponent },
+  { path: 'document/:id', component: DocumentPageComponent },
+  { path: 'appointments', component: AppointmentsPageComponent },
 ]

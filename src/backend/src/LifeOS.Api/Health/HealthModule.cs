@@ -11,12 +11,15 @@ public static class HealthModule
         .AddScoped<HealthOwners>()
         .AddScoped<SupplementLibrary>()
         .AddScoped<SymptomLibrary>()
-        .AddScoped<AnalysisLibrary>();
+        .AddScoped<AnalysisLibrary>()
+        .AddScoped<HealthDocumentLibrary>()
+        .AddScoped<AppointmentLibrary>();
 
     public static IEndpointRouteBuilder MapHealthEndpoints(this IEndpointRouteBuilder app) => app
         .MapSupplementsEndpoints()
         .MapSymptomsEndpoints()
-        .MapAnalysesEndpoints();
+        .MapAnalysesEndpoints()
+        .MapDocumentsEndpoints();
 }
 
 /// <summary>

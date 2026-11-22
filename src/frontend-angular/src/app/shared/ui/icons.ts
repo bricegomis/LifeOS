@@ -18,6 +18,10 @@ import SearchIcon from '@material-symbols/svg-400/rounded/search.svg'
 import CheckIcon from '@material-symbols/svg-400/rounded/check.svg'
 import BiotechIcon from '@material-symbols/svg-400/rounded/biotech.svg'
 import DescriptionIcon from '@material-symbols/svg-400/rounded/description.svg'
+import PictureAsPdfIcon from '@material-symbols/svg-400/rounded/picture_as_pdf.svg'
+import EventIcon from '@material-symbols/svg-400/rounded/event.svg'
+import AttachFileIcon from '@material-symbols/svg-400/rounded/attach_file.svg'
+import UploadFileIcon from '@material-symbols/svg-400/rounded/upload_file.svg'
 import ImageIcon from '@material-symbols/svg-400/rounded/image.svg'
 import UndoIcon from '@material-symbols/svg-400/rounded/undo.svg'
 import PlayArrowIcon from '@material-symbols/svg-400/rounded/play_arrow.svg'
@@ -88,6 +92,10 @@ export const ICONS: Record<string, string> = {
   check: CheckIcon,
   biotech: BiotechIcon,
   description: DescriptionIcon,
+  picture_as_pdf: PictureAsPdfIcon,
+  event: EventIcon,
+  upload_file: UploadFileIcon,
+  attach_file: AttachFileIcon,
   image: ImageIcon,
   undo: UndoIcon,
   play_arrow: PlayArrowIcon,

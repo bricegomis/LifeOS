@@ -31,6 +31,8 @@ internal sealed class AnalysisConfiguration : IEntityTypeConfiguration<Analysis>
         builder.Property(a => a.Laboratory).HasMaxLength(100);
         builder.Property(a => a.Notes).HasMaxLength(Analysis.MaxNotesLength);
         HealthOwnership.Configure(builder);
+        // The report it was read from: a document of the same account (checked by the library).
+        builder.HasOne<HealthDocument>().WithMany().HasForeignKey(a => a.DocumentId).OnDelete(DeleteBehavior.SetNull);
         builder.OwnsMany(a => a.Values, values =>
         {
             values.ToTable("analysis_values", HealthSchema.Name);
