@@ -1,9 +1,9 @@
 import { inject, Injectable } from '@angular/core'
 import { from, switchMap, type Observable } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
-import { LIBRARY_IMAGE, reduceImage } from '@/app/shared/image-reduction'
+import { LIBRARY_IMAGE, RECEIPT_PHOTO, reduceImage } from '@/app/shared/image-reduction'
 import type {
-  AnalysisDto, AnalysisRequest, MarkerDto, MarkerListDto, MarkerRequest, MeasureTypeDto,
+  AnalysisDto, AnalysisRequest, AppointmentDto, AppointmentListDto, AppointmentRequest, HealthDocumentDto, HealthDocumentRequest, MarkerDto, MarkerListDto, MarkerRequest, MeasureTypeDto,
   CheckinRequest, SupplementDto, SupplementListDto, SupplementRequest, SymptomDayDto, SymptomEntryDto, SymptomEntryRequest, SymptomJournalDto, SymptomKind, SymptomTypeDto,
 } from './health.models'
 
@@ -70,4 +70,35 @@ export class HealthApiService {
     return this.api.post<MeasureTypeDto>('/health/measures/values', { measureTypeId, day, value, note })
   }
   removeMeasurement(measurementId: string): Observable<void> { return this.api.delete(`/health/measures/values/${id(measurementId)}`) }
+
+  documents(type: string | null = null, q = ''): Observable<HealthDocumentDto[]> {
+    return this.api.get<HealthDocumentDto[]>('/health/documents', { ...(type ? { type } : {}), ...(q.trim() ? { q: q.trim() } : {}) })
+  }
+  document(documentId: string): Observable<HealthDocumentDto> { return this.api.get<HealthDocumentDto>(`/health/documents/${id(documentId)}`) }
+  createDocument(request: HealthDocumentRequest): Observable<HealthDocumentDto> { return this.api.post<HealthDocumentDto>('/health/documents', request) }
+  updateDocument(documentId: string, request: HealthDocumentRequest): Observable<HealthDocumentDto> {
+    return this.api.put<HealthDocumentDto>(`/health/documents/${id(documentId)}`, request)
+  }
+  removeDocument(documentId: string): Observable<void> { return this.api.delete(`/health/documents/${id(documentId)}`) }
+  /** Adds a photo (reduced like a receipt photo) or a PDF (sent as is); the API stores it encrypted. */
+  addDocumentFile(documentId: string, file: File): Observable<HealthDocumentDto> {
+    const prepared = file.type === 'application/pdf' ? Promise.resolve(file) : reduceImage(file, RECEIPT_PHOTO)
+    return from(prepared).pipe(switchMap(upload => {
+      const form = new FormData()
+      form.append('file', upload)
+      return this.api.post<HealthDocumentDto>(`/health/documents/${id(documentId)}/files`, form)
+    }))
+  }
+  documentFilePath(documentId: string, fileId: string): string { return `/health/documents/${id(documentId)}/files/${id(fileId)}` }
+  documentFile(documentId: string, fileId: string): Observable<Blob> { return this.api.getBlob(this.documentFilePath(documentId, fileId)) }
+  removeDocumentFile(documentId: string, fileId: string): Observable<HealthDocumentDto> {
+    return this.api.delete<HealthDocumentDto>(`/health/documents/${id(documentId)}/files/${id(fileId)}`)
+  }
+
+  appointments(): Observable<AppointmentListDto> { return this.api.get<AppointmentListDto>('/health/appointments') }
+  createAppointment(request: AppointmentRequest): Observable<AppointmentDto> { return this.api.post<AppointmentDto>('/health/appointments', request) }
+  updateAppointment(appointmentId: string, request: AppointmentRequest): Observable<AppointmentDto> {
+    return this.api.put<AppointmentDto>(`/health/appointments/${id(appointmentId)}`, request)
+  }
+  removeAppointment(appointmentId: string): Observable<void> { return this.api.delete(`/health/appointments/${id(appointmentId)}`) }
 }

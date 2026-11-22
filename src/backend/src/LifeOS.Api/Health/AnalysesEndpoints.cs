@@ -230,7 +230,8 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
         return await DocumentExistsAsync(household, documentId, ct) ? documentId : throw new ArgumentException("Document introuvable.");
     }
 
-    private Task<bool> DocumentExistsAsync(HouseholdContext household, Guid id, CancellationToken ct) => Task.FromResult(false);
+    private Task<bool> DocumentExistsAsync(HouseholdContext household, Guid id, CancellationToken ct) =>
+        db.HealthDocuments.AnyAsync(d => d.Id == id && d.HouseholdId == household.HouseholdId && d.OwnerUserId == household.UserId, ct);
 
     private static MeasureTypeDto MeasureDto(MeasureType t, IEnumerable<Measurement> values) =>
         new(t.Id, t.Name, t.Unit, t.IsArchived, values.Where(v => v.MeasureTypeId == t.Id).OrderBy(v => v.Day)

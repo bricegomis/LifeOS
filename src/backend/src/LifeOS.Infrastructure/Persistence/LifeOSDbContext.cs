@@ -62,6 +62,8 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<Analysis> Analyses => Set<Analysis>();
     public DbSet<MeasureType> MeasureTypes => Set<MeasureType>();
     public DbSet<Measurement> Measurements => Set<Measurement>();
+    public DbSet<HealthDocument> HealthDocuments => Set<HealthDocument>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

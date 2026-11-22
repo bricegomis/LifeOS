@@ -68,6 +68,8 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
       { path: '/health/symptoms', label: 'Symptômes' },
       { path: '/health/analyses', label: 'Analyses' },
       { path: '/health/measures', label: 'Mesures' },
+      { path: '/health/documents', label: 'Documents' },
+      { path: '/health/appointments', label: 'Rendez-vous' },
     ],
   },
 ]

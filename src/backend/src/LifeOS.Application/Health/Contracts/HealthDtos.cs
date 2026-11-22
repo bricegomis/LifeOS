@@ -98,3 +98,24 @@ public sealed record MeasurementDto(Guid Id, DateOnly Day, decimal Value, string
 
 /// <param name="Values">Oldest first.</param>
 public sealed record MeasureTypeDto(Guid Id, string Name, string Unit, bool IsArchived, IReadOnlyList<MeasurementDto> Values);
+
+public sealed record HealthDocumentFileDto(Guid Id, string ContentType, long Size, string? OriginalName);
+
+/// <param name="Type">ordonnance, compte_rendu, resultat, bilan or autre.</param>
+/// <param name="AnalysisIds">Analyses entered from this document.</param>
+public sealed record HealthDocumentDto(Guid Id, string Type, string Title, DateOnly Day, string? Who, string? Notes, IReadOnlyList<HealthDocumentFileDto> Files,
+    IReadOnlyList<Guid> AnalysisIds)
+{
+    public static HealthDocumentDto From(HealthDocument d, IEnumerable<Guid> analysisIds) =>
+        new(d.Id, d.Type, d.Title, d.Day, d.Who, d.Notes, d.OrderedFiles.Select(f => new HealthDocumentFileDto(f.Id, f.ContentType, f.Size, f.OriginalName)).ToList(),
+            analysisIds.ToList());
+}
+
+/// <param name="Time">"HH:mm:ss" when given.</param>
+/// <param name="ReportTitle">Title of the report document, when linked.</param>
+public sealed record AppointmentDto(Guid Id, DateOnly Day, TimeOnly? Time, string Who, string? Reason, string? Place, string? Notes, string? BookingUrl,
+    Guid? ReportDocumentId, string? ReportTitle);
+
+/// <param name="Upcoming">From today, soonest first.</param>
+/// <param name="Past">Most recent first.</param>
+public sealed record AppointmentListDto(DateOnly Today, IReadOnlyList<AppointmentDto> Upcoming, IReadOnlyList<AppointmentDto> Past);

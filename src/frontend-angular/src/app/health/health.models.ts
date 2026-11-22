@@ -89,3 +89,19 @@ export interface AnalysisDto { id: string, day: string, laboratory: string | nul
 export interface AnalysisRequest { day: string | null, laboratory: string | null, notes: string | null, documentId: string | null, values: { markerId: string, value: number }[] }
 export interface MeasurementDto { id: string, day: string, value: number, note: string | null }
 export interface MeasureTypeDto { id: string, name: string, unit: string, isArchived: boolean, values: MeasurementDto[] }
+
+export type HealthDocumentType = 'ordonnance' | 'compte_rendu' | 'resultat' | 'bilan' | 'autre'
+export interface HealthDocumentFileDto { id: string, contentType: string, size: number, originalName: string | null }
+export interface HealthDocumentDto {
+  id: string, type: HealthDocumentType, title: string, day: string, who: string | null, notes: string | null, files: HealthDocumentFileDto[], analysisIds: string[]
+}
+export interface HealthDocumentRequest { type: HealthDocumentType, title: string, day: string | null, who: string | null, notes: string | null }
+/** `time` is "HH:mm:ss" when given. */
+export interface AppointmentDto {
+  id: string, day: string, time: string | null, who: string, reason: string | null, place: string | null, notes: string | null, bookingUrl: string | null,
+  reportDocumentId: string | null, reportTitle: string | null
+}
+export interface AppointmentListDto { today: string, upcoming: AppointmentDto[], past: AppointmentDto[] }
+export interface AppointmentRequest {
+  day: string, time: string | null, who: string, reason: string | null, place: string | null, notes: string | null, bookingUrl: string | null, reportDocumentId: string | null
+}

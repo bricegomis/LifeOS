@@ -11,11 +11,12 @@ import { CheckinDialogComponent, type CheckinDialogData } from './checkin-dialog
 import { SymptomEntryDialogComponent, type SymptomEntryDialogData } from './symptom-entry-dialog.component'
 import { checkinStatus } from './symptom-rules'
 import { HealthApiService } from './health-api.service'
-import type { MarkerDto, SupplementDto, SupplementListDto, SymptomJournalDto } from './health.models'
+import type { AppointmentListDto, MarkerDto, SupplementDto, SupplementListDto, SymptomJournalDto } from './health.models'
 import { MarkerCardComponent } from './marker-card.component'
 import { SupplementActionsService } from './supplement-actions.service'
 import { SupplementCardComponent } from './supplement-card.component'
 import { todayGroups } from './supplement-rules'
+import { appointmentWhen, inDays } from './document-rules'
 
 /** Home of the Health module (ADR 0018): today's supplements by moment, one tick each, and the daily check-in. */
 @Component({
@@ -62,9 +63,23 @@ import { todayGroups } from './supplement-rules'
           <div class="cards">@for (m of dueMarkers(); track m.id) { <app-marker-card [marker]="m" /> }</div>
         </section>
       }
+      @if (appointments(); as a) {
+        @if (a.upcoming.length) {
+          <section class="lo-section" aria-labelledby="appointments">
+            <div class="lo-section-head"><h2 id="appointments">Prochains rendez-vous</h2><a mat-button routerLink="/health/appointments"><mat-icon svgIcon="event" />Tous</a></div>
+            <div class="lo-list">
+              @for (r of a.upcoming.slice(0, 3); track r.id) {
+                <div class="lo-row"><a class="lo-row-main appointment" routerLink="/health/appointments"><span class="lo-lead-icon"><mat-icon svgIcon="event" /></span>
+                  <span class="lo-row-text"><span class="lo-row-title">{{ r.who }}</span><span class="lo-row-sub">{{ when(r) }} · {{ soon(r.day, a.today) }}</span></span></a></div>
+              }
+            </div>
+          </section>
+        }
+      }
     </div>
   `,
   styles: [`
+    a.appointment { text-decoration: none; }
     .moment { margin: 4px 0 0; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-title-small); }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; }
     .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
@@ -78,6 +93,9 @@ export class HealthTodayPageComponent implements OnInit {
   private readonly snack = inject(MatSnackBar)
   readonly journal = signal<SymptomJournalDto | null>(null)
   readonly dueMarkers = signal<MarkerDto[]>([])
+  readonly appointments = signal<AppointmentListDto | null>(null)
+  readonly when = appointmentWhen
+  readonly soon = inDays
   readonly busyCalm = signal(false)
   readonly status = computed(() => this.journal() ? checkinStatus(this.journal()!) : '')
   readonly list = signal<SupplementListDto | null>(null)
@@ -125,6 +143,7 @@ export class HealthTodayPageComponent implements OnInit {
     catch (error) { this.error.set(apiErrorMessage(error)) }
     await this.loadJournal()
     try { this.dueMarkers.set((await firstValueFrom(this.api.markers())).markers.filter(m => m.due)) } catch { /* the section stays hidden */ }
+    try { this.appointments.set(await firstValueFrom(this.api.appointments())) } catch { /* the section stays hidden */ }
   }
 
   private async loadJournal(): Promise<void> {
