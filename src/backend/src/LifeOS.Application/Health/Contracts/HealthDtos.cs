@@ -41,3 +41,60 @@ public sealed record SupplementDto(Guid Id, string Name, string? Notes, decimal 
 
 /// <param name="MonthlyTotal">Sum of the monthly costs of the supplements that are not stopped (known prices only).</param>
 public sealed record SupplementListDto(DateOnly Today, decimal MonthlyTotal, IReadOnlyList<SupplementDto> Supplements);
+
+/// <param name="Kind">physique or mental.</param>
+public sealed record SymptomTypeDto(Guid Id, string Name, string Kind, bool IsArchived)
+{
+    public static SymptomTypeDto From(SymptomType t) => new(t.Id, t.Name, t.Kind, t.IsArchived);
+}
+
+public sealed record SymptomEntryDto(Guid Id, Guid SymptomTypeId, string SymptomName, string Kind, DateOnly Day, TimeOnly? Time, int Intensity, string? Note);
+
+/// <param name="Calm">Noted as "rien à signaler".</param>
+/// <param name="MaxIntensity">The strongest symptom of the day; null without any.</param>
+public sealed record SymptomDayDto(DateOnly Day, bool Calm, int? MaxIntensity, IReadOnlyList<SymptomEntryDto> Entries);
+
+/// <summary>The journal from <paramref name="From"/> to <paramref name="Today"/>, newest day first, and the symptom list.</summary>
+public sealed record SymptomJournalDto(DateOnly Today, DateOnly From, IReadOnlyList<SymptomDayDto> Days, IReadOnlyList<SymptomTypeDto> Types);
+
+public sealed record MarkerValueDto(Guid AnalysisId, DateOnly Day, decimal Value, string Status);
+
+/// <param name="FrequencyMonths">0: once.</param>
+/// <param name="Status">Of the last value: below_lab, above_lab, in_target or normal (in the lab range, outside the target).</param>
+/// <param name="Trend">From the previous value: better, worse, stable or in_target; null with less than two values.</param>
+/// <param name="NextDueOn">When to measure it again; today when never measured, null when once is enough.</param>
+/// <param name="Due">To measure within 30 days, or late.</param>
+/// <param name="Values">Oldest first.</param>
+public sealed record MarkerDto(Guid Id, string Name, string Unit, decimal? LabMin, decimal? LabMax, decimal? TargetMin, decimal? TargetMax,
+    int FrequencyMonths, IReadOnlyList<string> Panels, bool IsArchived, IReadOnlyList<MarkerValueDto> Values, string? Status, string? Trend,
+    DateOnly? NextDueOn, bool Due, bool Late)
+{
+    public static MarkerDto From(Marker m, IEnumerable<Analysis> analyses, DateOnly today)
+    {
+        var values = analyses.SelectMany(a => a.Values.Where(v => v.MarkerId == m.Id).Select(v => (a.Id, a.Day, v.Value)))
+            .OrderBy(v => v.Day).Select(v => new MarkerValueDto(v.Id, v.Day, v.Value, m.StatusOf(v.Value))).ToList();
+        var last = values.LastOrDefault();
+        var previous = values.Count > 1 ? values[^2].Value : (decimal?)null;
+        var next = m.NextDueOn(last?.Day, today);
+        return new(m.Id, m.Name, m.Unit, m.LabMin, m.LabMax, m.TargetMin, m.TargetMax, m.FrequencyMonths, m.Panels, m.IsArchived, values,
+            last?.Status, last is null ? null : m.TrendOf(previous, last.Value), next, !m.IsArchived && next <= today.AddDays(30), !m.IsArchived && next < today);
+    }
+}
+
+/// <param name="Panels">Every panel name used by the markers.</param>
+public sealed record MarkerListDto(DateOnly Today, IReadOnlyList<MarkerDto> Markers, IReadOnlyList<string> Panels);
+
+public sealed record AnalysisValueDto(Guid MarkerId, string MarkerName, string Unit, decimal Value, string Status);
+
+public sealed record AnalysisDto(Guid Id, DateOnly Day, string? Laboratory, string? Notes, Guid? DocumentId, IReadOnlyList<AnalysisValueDto> Values)
+{
+    public static AnalysisDto From(Analysis a, IReadOnlyDictionary<Guid, Marker> markers) =>
+        new(a.Id, a.Day, a.Laboratory, a.Notes, a.DocumentId, a.Values.Where(v => markers.ContainsKey(v.MarkerId))
+            .Select(v => { var m = markers[v.MarkerId]; return new AnalysisValueDto(m.Id, m.Name, m.Unit, v.Value, m.StatusOf(v.Value)); })
+            .OrderBy(v => v.MarkerName).ToList());
+}
+
+public sealed record MeasurementDto(Guid Id, DateOnly Day, decimal Value, string? Note);
+
+/// <param name="Values">Oldest first.</param>
+public sealed record MeasureTypeDto(Guid Id, string Name, string Unit, bool IsArchived, IReadOnlyList<MeasurementDto> Values);

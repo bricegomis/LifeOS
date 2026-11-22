@@ -8,7 +8,7 @@
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
   templates, logged sessions, weekly goals, daily challenges; ADR 0013; exercises and
-  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines, projects; ADR 0017), `Health` (supplements; ADR 0018). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines, projects; ADR 0017), `Health` (supplements, symptoms, analyses, body measures; ADR 0018). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -64,7 +64,13 @@
   from the configuration, never in the database); without the key, uploads are refused. A
   `Supplement` has a daily dose and unit, a package, purchase links and a `SupplementPeriod`
   (all year, or a cure repeated after a pause; a week is 7 days, a month 30); one
-  `SupplementIntake` per day taken; monthly cost and streak are computed on read.
+  `SupplementIntake` per day taken; monthly cost and streak are computed on read. Symptoms:
+  `SymptomType` (the owner's list, seeded with defaults on first read), `SymptomEntry` (1-10)
+  and `CalmDay` ("rien à signaler", dropped when a symptom is noted that day). A `Marker` has a
+  lab range, a personal target, a frequency (0 = once) and panels; an `Analysis` holds one value
+  per marker; status, trend and next due day are computed on read. `MeasureType` (defaults on
+  first read) and `Measurement`. Management code: `SupplementLibrary`, `SymptomLibrary`,
+  `AnalysisLibrary` (registered in `Api/Health/HealthModule.cs`).
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
