@@ -14,7 +14,7 @@ aura besoin (échéance, durée, priorité).
 ## Décision
 
 Le module Tâches porte trois notions : les **todos**, les **routines** et les
-**projets**, plus deux aides de saisie : la **boîte de réception** et les
+**projets**, plus deux aides : la **saisie rapide** (tâches à trier) et les
 **étiquettes**. Toutes les données sont dans le schéma `tasks`, filtrées par foyer.
 
 ### Todos
@@ -39,10 +39,11 @@ Un todo ouvert dont l'échéance est passée est **en retard**. Il reste visible
 jusqu'à ce qu'on le fasse, le reporte (nouvelle échéance) ou l'abandonne. Rien ne
 glisse tout seul. Un todo fait peut être rouvert.
 
-### Boîte de réception
+### Saisie rapide et tâches à trier
 
 La saisie rapide ne demande qu'un titre. Le todo créé est marqué **à trier**. Il
-apparaît dans la boîte de réception, pas dans « Aujourd'hui ». Le trier, c'est
+apparaît en tête de « Toutes les tâches », pas dans « Aujourd'hui ». Il n'y a pas
+de page « Boîte de réception » séparée. Le trier, c'est
 l'ouvrir et l'enregistrer depuis sa fiche (échéance, projet, etc., même vides) :
 la marque disparaît. Un todo à trier peut aussi être fait ou abandonné directement.
 
@@ -107,12 +108,12 @@ Menu « Tâches » dans la navigation, avec :
   routine). Une coche marque fait ; la routine propose aussi « sauter ». Filtre
   par étiquette. Les todos ouverts sans échéance sont dans une section repliée
   « Sans échéance » ;
-- **Boîte de réception** : champ de saisie rapide et liste à trier ;
-- **Toutes les tâches** : todos et routines dans une seule liste, avec un champ de
-  recherche (titre, notes, étiquettes, projet, sous-tâches, sans tenir compte des
+- **Toutes les tâches** : champ de saisie rapide en haut, puis todos et routines
+  dans une seule liste, avec un champ de recherche (titre, notes, étiquettes, projet, sous-tâches, sans tenir compte des
   accents ni des majuscules) et des filtres : type (todos, routines), état (ouverts,
-  faits, abandonnés ou arrêtés, tous) et étiquette. Les tâches à trier y apparaissent
-  aussi. Tri par échéance, sans échéance ensuite, faits à la fin ;
+  à trier, faits, abandonnés ou arrêtés, tous) et étiquette. Les tâches à trier
+  viennent en tête, avec un bouton « Trier », et leur nombre s'affiche dans le menu.
+  Puis tri par échéance, sans échéance ensuite, faits à la fin ;
 - **Routines** : liste, puis une page par routine (récurrence, prochaine
   échéance, série, historique) ;
 - **Projets** : liste avec avancement, puis une page par projet avec ses todos ;
