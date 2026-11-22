@@ -62,7 +62,7 @@ const IMPORTS = [EditorFrameComponent, FormsModule, MatButtonToggleModule, MatFo
             </mat-button-toggle-group>
           }
         </div>
-        <mat-form-field appearance="outline" class="narrow">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
           <mat-label>Cible par jour</mat-label>
           <input matInput type="number" name="target" required min="1" max="100000" inputmode="numeric" [(ngModel)]="draft.dailyTarget" />
           @if (challenge) { <mat-hint>Une cible modifiée vaut à partir d’aujourd’hui.</mat-hint> }
@@ -156,7 +156,7 @@ export const GOAL_KINDS: { id: GoalKind, label: string }[] = [
             </mat-form-field>
           }
         }
-        <mat-form-field appearance="outline" class="narrow">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="narrow">
           <mat-label>{{ draft.kind === 'volume' ? 'Cible par semaine' : 'Séances par semaine' }}</mat-label>
           <input matInput type="number" name="target" required [min]="draft.kind === 'volume' ? 0.5 : 1" [step]="draft.kind === 'volume' ? 'any' : 1"
             [(ngModel)]="draft.target" />

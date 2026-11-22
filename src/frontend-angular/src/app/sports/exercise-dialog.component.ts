@@ -68,7 +68,7 @@ export interface ExerciseDialogResult { exercise: ExerciseDto, message: string }
             </mat-button-toggle-group>
           }
         </div>
-        <mat-form-field appearance="outline" class="load-field">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="load-field">
           <mat-label>Charge habituelle (kg)</mat-label>
           <input matInput type="number" name="load" min="0" max="500" step="0.5" inputmode="decimal" placeholder="Poids du corps" [(ngModel)]="draft.defaultLoadKg" />
           <mat-hint>Facultative : vide ou 0 = au poids du corps. Proposée comme cible dans une routine.</mat-hint>

@@ -122,7 +122,7 @@ interface IngredientDraft { id: string; quantity: string; unit: IngredientUnit }
     </app-editor-frame>
   `,
   styles: [`
-    .lines { display: flex; flex-direction: column; gap: 8px; }
+    .lines { display: flex; flex-direction: column; gap: 16px; }
     .line, .add-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
     .line-name, .picked { min-width: 0; flex: 1 1 160px; }
     .line-name { font-weight: 500; }
