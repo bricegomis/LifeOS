@@ -108,6 +108,11 @@ Menu « Tâches » dans la navigation, avec :
   par étiquette. Les todos ouverts sans échéance sont dans une section repliée
   « Sans échéance » ;
 - **Boîte de réception** : champ de saisie rapide et liste à trier ;
+- **Toutes les tâches** : todos et routines dans une seule liste, avec un champ de
+  recherche (titre, notes, étiquettes, projet, sous-tâches, sans tenir compte des
+  accents ni des majuscules) et des filtres : type (todos, routines), état (ouverts,
+  faits, abandonnés ou arrêtés, tous) et étiquette. Les tâches à trier y apparaissent
+  aussi. Tri par échéance, sans échéance ensuite, faits à la fin ;
 - **Routines** : liste, puis une page par routine (récurrence, prochaine
   échéance, série, historique) ;
 - **Projets** : liste avec avancement, puis une page par projet avec ses todos ;

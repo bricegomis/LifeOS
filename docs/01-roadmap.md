@@ -189,12 +189,14 @@ avancement des objectifs et des défis).
 - Projets : simple regroupement de todos avec avancement.
 - Boîte de réception pour la saisie rapide ; étiquettes libres du foyer.
 - Un profil sur chaque tâche ; seul l'utilisateur principal est proposé.
-- Écran principal « Aujourd'hui » : en retard, aujourd'hui, 7 prochains jours.
+- Écran principal « Aujourd'hui » : en retard, aujourd'hui, 7 prochains jours ;
+  page « Toutes les tâches » avec recherche texte et filtres.
 
 **Déroulé.**
 
 1. **Cadrage fonctionnel.** Fait.
-2. **Maquette cliquable** : Aujourd'hui, boîte de réception, todo, routines,
+2. **Maquette cliquable** : Aujourd'hui, boîte de réception, toutes les tâches
+   avec recherche, todo, routines,
    projets (ordinateur et smartphone).
 3. **Todos**, boîte de réception, étiquettes et checklist.
 4. **Routines** : récurrence, passages, série.
