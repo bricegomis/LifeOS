@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-22 (module Tâches : todos, routines du foyer et projets). Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-22 (module Tâches : todos, routines du foyer, projets et outils de l'assistant). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -20,15 +20,15 @@ quotidiennes et bibliothèque d'exercices ajoutées le 2026-11-16
 ressenti et une page par élément le même jour ([ADR 0015](architecture/decisions/0015-sport-pages-and-routine-sessions.md)) ;
 reste l'usage réel pendant quelques semaines.
 Étape 3, « Tâches », commencée le 2026-11-22 ([ADR 0017](architecture/decisions/0017-tasks-module.md)) :
-maquette validée, todos, routines du foyer et projets livrés en code ; restent les outils
-de l'assistant.
+maquette validée ; todos, routines du foyer, projets et outils de l'assistant livrés en code ;
+reste le contrat de lecture pour le semainier, puis l'usage réel.
 
 ## Ce qui existe
 
 | Domaine | Fonctionnalités |
 | --- | --- |
 | Compte | Connexion Google gérée par l'API, réservée aux adresses autorisées ; l'API émet ses propres jetons (accès 1 h, rafraîchissement par rotation) |
-| Assistant Claude | Endpoint MCP `/mcp` pour claude.ai et Claude Code, avec consentement à la première connexion ; outils pour lire et remplir les modules Alimentation et Sport (aliments avec image par URL et classement, recettes avec nutrition et coût, magasins, produits, prix, avis, tickets) ; accès révocables dans Réglages |
+| Assistant Claude | Endpoint MCP `/mcp` pour claude.ai et Claude Code, avec consentement à la première connexion ; outils pour lire et remplir les modules Alimentation, Sport et Tâches (aliments avec image par URL et classement, recettes avec nutrition et coût, magasins, produits, prix, avis, tickets) ; accès révocables dans Réglages |
 | Foyer | Foyer créé à la première connexion, membres, profils avec coefficient de portion ; page Paramètres (profils, versions de l'interface et de l'API) |
 | Aliments | Fiches génériques avec photo, famille obligatoire, rôles dans l'assiette, conservation, mois de saison et étiquettes du foyer (classement modifiable sur ordinateur, lu sur téléphone) ; nutrition manuelle (base 100 g / 100 ml / 1 pièce, calories, protéines, glucides, lipides, fibres, FODMAP, NOVA), état « À compléter », prix relevés en lecture seule, archivage ; liste filtrable par famille, rôle, conservation, saison du mois et étiquette |
 | Recettes | Photo, ingrédients sur aliments en g, ml ou pièce (chaque ingrédient ouvre la fiche de l'aliment et affiche sa saison du mois, avec un message pour les ingrédients hors saison ; choix d'un ingrédient dans une liste filtrable, de saison d'abord), rendement, étapes, durée, catégories, nutrition par portion marquée partielle si une valeur manque ; coût minimum–maximum tous magasins confondus, calculé à la lecture, avec le détail du produit, du magasin et du prix retenus |

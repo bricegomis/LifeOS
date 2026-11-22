@@ -95,7 +95,8 @@
   endpoints: Application use cases, or the module's management class shared with the
   endpoints (`FoodLibrary`, `RecipeLibrary`, `StoreLibrary`, `ProductLibrary`,
   `ReviewLibrary`, registered in `Api/Food/FoodModule.cs`; the Sport libraries in
-  `Api/Sports/SportsModule.cs`). Never query the DbContext in
+  `Api/Sports/SportsModule.cs`; the Tasks libraries in `Api/Tasks/TasksModule.cs`, tools in
+  `Api/Tasks/TaskAssistantTools.cs`, household routines named `*_task_routine` apart from the sport routines). Never query the DbContext in
   a tool when an endpoint already does the same thing. `ArgumentException` and unique/FK
   violations reach the assistant as readable errors (call-tool filter in
   `AssistantSetup`); not found is `AssistantRequest.NotFound`. Images by URL go through

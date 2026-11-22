@@ -200,7 +200,7 @@ avancement des objectifs et des défis).
 3. **Todos**, étiquettes et checklist. Fait.
 4. **Routines** : récurrence, passages, série. Fait.
 5. **Projets**, et le projet d'un todo. Fait.
-6. **Outils de l'assistant** pour tout le module.
+6. **Outils de l'assistant** pour tout le module. Fait.
 
 **Terminé quand.** Routines et todos sont suivis dans LifeOS au quotidien. Le
 module publie son contrat de lecture (tâches à placer, durée, échéance, état).
