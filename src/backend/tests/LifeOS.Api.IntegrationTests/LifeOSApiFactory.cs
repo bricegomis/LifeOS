@@ -38,6 +38,8 @@ public sealed class LifeOSApiFactory(
                 ["FoodImages:StoragePath"] = foodImageStoragePath ?? Path.Combine(Path.GetTempPath(), $"lifeos-food-images-{Guid.NewGuid():N}"),
                 ["SportImages:StoragePath"] = Path.Combine(Path.GetTempPath(), $"lifeos-sport-images-{Guid.NewGuid():N}"),
                 ["TaskImages:StoragePath"] = Path.Combine(Path.GetTempPath(), $"lifeos-task-images-{Guid.NewGuid():N}"),
+                ["HealthFiles:StoragePath"] = Path.Combine(Path.GetTempPath(), $"lifeos-health-files-{Guid.NewGuid():N}"),
+                ["HealthFiles:EncryptionKey"] = Convert.ToBase64String(new byte[32].Select((_, i) => (byte)(i + 1)).ToArray()),
             });
         });
     }

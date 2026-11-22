@@ -256,8 +256,9 @@ semainier, qui viendra quand le reste aura servi.
 **Déroulé.**
 
 1. **Cadrage fonctionnel.** Fait.
-2. **Maquette cliquable** des quatre parties (ordinateur et smartphone).
-3. **Compléments.**
+2. **Maquette cliquable** des quatre parties (ordinateur et smartphone). Validée le
+   2026-11-22.
+3. **Compléments.** Fait.
 4. **Symptômes.**
 5. **Analyses et mesures.**
 6. **Documents et rendez-vous**, fichiers chiffrés.

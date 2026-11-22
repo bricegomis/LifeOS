@@ -10,6 +10,7 @@ using LifeOS.Api.Food.Reviews;
 using LifeOS.Api.Food.Stores;
 using LifeOS.Api.Households;
 using LifeOS.Api.Sports;
+using LifeOS.Api.Health;
 using LifeOS.Api.Tasks;
 using LifeOS.Infrastructure;
 using LifeOS.Infrastructure.Persistence;
@@ -25,6 +26,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddFoodLibraries();
 builder.Services.AddSportLibraries();
 builder.Services.AddTaskLibraries();
+builder.Services.AddHealthLibraries();
 
 builder.AddLifeOSAuthentication();
 builder.AddLifeOSAssistant();
@@ -113,6 +115,8 @@ app.MapReceiptsEndpoints();
 app.MapSportEndpoints();
 // Tasks module
 app.MapTaskEndpoints();
+// Health module
+app.MapHealthEndpoints();
 
 app.Run();
 
