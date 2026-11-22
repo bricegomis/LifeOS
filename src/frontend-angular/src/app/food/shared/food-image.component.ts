@@ -22,7 +22,7 @@ import { tintFor } from './tint'
   `,
   styles: [`
     :host { display: contents; }
-    .placeholder { display: flex; align-items: flex-end; padding: 10px 12px; color: #4a463c; font-size: 12px; font-weight: 600; }
+    .placeholder { display: flex; align-items: flex-end; padding: 10px 12px; color: var(--mat-sys-on-surface-variant); font-size: 12px; font-weight: 600; }
   `],
 })
 export class FoodImageComponent {
@@ -38,7 +38,11 @@ export class FoodImageComponent {
   readonly width = input('48px')
   readonly height = input('48px')
   readonly url = signal<string | null>(null)
-  readonly tint = computed(() => tintFor(this.name()))
+  /** Warm tint of the name; in the dark scheme it is mixed into the dark surface so the label stays readable. */
+  readonly tint = computed(() => {
+    const tint = tintFor(this.name())
+    return `light-dark(${tint}, color-mix(in srgb, ${tint} 30%, var(--mat-sys-surface-container-high)))`
+  })
   private loadId = 0
 
   constructor() {

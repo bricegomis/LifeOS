@@ -107,9 +107,10 @@ icônes modifier et supprimer, vignette d'image chargée par l'API.
 ## Conséquences
 
 - Nouvelles dépendances : `@angular/material`, `@angular/cdk`, `@material-symbols/svg-400`.
-- Le mode sombre n'est plus bloqué : tous les écrans prennent leurs couleurs du thème.
-  Il reste à l'activer dans `src/theme.scss` (surfaces beiges à décliner en sombre) et à
-  le vérifier à l'écran ; le thème est en clair seul d'ici là.
+- Mode sombre actif depuis le 2026-11-22, selon le réglage du système : chaque variable
+  du thème vaut `light-dark(clair, sombre)` ; les surfaces beiges deviennent les tons
+  neutres chauds et foncés de la même palette. Les vignettes sans photo gardent leur
+  teinte, assombrie en mode sombre. Un écran se vérifie dans les deux modes.
 - Taille de l'application en hausse, limitée par le chargement à la demande des modules.
 - Les règles « contrôles natifs, aucune bibliothèque d'interface » sont retirées de
   `CLAUDE.md`, `AGENTS.md` et `src/frontend-angular/CLAUDE.md`, qui imposent désormais

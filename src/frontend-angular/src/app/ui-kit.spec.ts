@@ -41,7 +41,7 @@ describe('UI kit (ADR 0016)', () => {
     // The theme files define the palette; picture placeholders keep fixed warm tints; the canvas used to
     // shrink photos paints white.
     const colours = offenders(/var\(--lifeos-[\w-]+\)|#[0-9a-fA-F]{3,8}\b(?![\w-])|rgba?\([^)]*\)/g,
-      ['theme.scss', '_theme-colors.scss', 'app/food/shared/tint.ts', 'app/food/shared/food-image.component.ts', 'app/shared/image-reduction.ts'])
+      ['theme.scss', '_theme-colors.scss', 'app/food/shared/tint.ts', 'app/shared/image-reduction.ts'])
     assert.deepEqual(colours, [])
   })
 

@@ -35,7 +35,8 @@
     `is-off`, `is-done`), `lo-chip` / `lo-filter-chip`, `lo-notice`, `lo-error`, `lo-status`,
     `lo-desktop-only` / `lo-phone-only`. Library pages use `app-list-page`.
   - Colours only from theme variables (`var(--mat-sys-*)`): no hex value, no `--lifeos-*`
-    token (they are gone).
+    token (they are gone). The theme follows the system light/dark setting (each variable is
+    a `light-dark()` value), so a screen must read well in both schemes.
   - Windows: `openEditor(dialog, Component, data)` + `app-editor-frame` (full screen on the
     phone, dangerous action bottom left with a second-click confirmation; without `formId`
     the window only has "Fermer"). Feedback after an action: `MatSnackBar`.
