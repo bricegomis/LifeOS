@@ -39,7 +39,7 @@
             <span class="account-email">{{ email() }}</span>
           </span>
         </div>
-        @if (signOutError()) { <p class="error-text small" role="alert">{{ signOutError() }}</p> }
+        @if (signOutError()) { <p class="lo-error" role="alert">{{ signOutError() }}</p> }
         <button mat-stroked-button type="button" class="sign-out" (click)="signOut()"><mat-icon svgIcon="logout" />Déconnexion</button>
       </div>
     </nav>

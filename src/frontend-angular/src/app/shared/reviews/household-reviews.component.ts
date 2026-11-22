@@ -1,90 +1,62 @@
 import { Component, DestroyRef, HostListener, Input, OnChanges, SimpleChanges, inject, output, signal } from '@angular/core'
-import { FormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
+import { MatDialog, type MatDialogRef } from '@angular/material/dialog'
+import { MatIconModule } from '@angular/material/icon'
 import { firstValueFrom } from 'rxjs'
 import type { MemberProfileDto, ReviewDto, SaveReviewRequest } from '@/app/core/api/api.models'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
-import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { ReviewDraftsService } from './review-drafts.service'
+import { ReviewEditorDialogComponent } from './review-editor-dialog.component'
 
 type ReviewTarget = 'food' | 'recipe'
-let nextReviewFormId = 0
 
+/** Household reviews of a food or a recipe (ADR 0007): one per profile, optional score 0..10 and comment. */
 @Component({
   selector: 'app-household-reviews',
   standalone: true,
-  imports: [FormsModule, LifeosDialogComponent],
+  imports: [MatButtonModule, MatIconModule],
   template: `
-    <section class="household-reviews" aria-label="Avis du foyer">
-      <h2>Avis du foyer</h2>
-      @if (loading()) { <p role="status">Chargement des avis…</p> }
-      @if (error() && !editorOpen()) { <p class="review-error" role="alert">{{ error() }}</p> }
+    <section class="reviews" aria-labelledby="reviews-title">
+      <div class="lo-panel-head">
+        <h2 id="reviews-title">Avis du foyer</h2>
+        @if (profiles.length) {
+          <button mat-stroked-button type="button" [disabled]="busy()" (click)="add()"><mat-icon svgIcon="rate_review" />Ajouter un avis</button>
+        }
+      </div>
+      @if (loading()) { <p class="lo-status" role="status">Chargement des avis…</p> }
+      @if (error() && !editorOpen()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (reviews().length) {
-        <ul class="review-list">
+        <div class="lo-list">
           @for (review of reviews(); track review.id) {
-            <li>
-              <strong>{{ review.profileName ?? 'Profil supprimé' }}</strong>
-              <span class="review-score">{{ review.score === null ? 'Non noté' : review.score + '/10' }}</span>
-              <span class="review-comment">{{ review.comment }}</span>
-              <div class="review-actions">
-                <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="edit(review, $event)">Modifier</button>
-                <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="remove(review)">Supprimer</button>
+            <div class="lo-row">
+              <div class="lo-row-main">
+                <span class="lo-lead-icon" aria-hidden="true"><mat-icon svgIcon="person" /></span>
+                <span class="lo-row-text">
+                  <span class="lo-row-title">{{ review.profileName ?? 'Profil supprimé' }} · <strong>{{ review.score === null ? 'Non noté' : review.score + '/10' }}</strong></span>
+                  @if (review.comment) { <span class="lo-row-sub">{{ review.comment }}</span> }
+                </span>
               </div>
-            </li>
+              <span class="lo-row-action">
+                <button mat-icon-button type="button" [disabled]="busy()" (click)="edit(review)"
+                  [attr.aria-label]="'Modifier l’avis de ' + (review.profileName ?? 'ce profil')" title="Modifier"><mat-icon svgIcon="edit" /></button>
+                <button mat-icon-button type="button" [disabled]="busy()" (click)="remove(review)"
+                  [attr.aria-label]="'Supprimer l’avis de ' + (review.profileName ?? 'ce profil')" title="Supprimer"><mat-icon svgIcon="delete" /></button>
+              </span>
+            </div>
           }
-        </ul>
-      } @else if (!loading()) {
-        <p>Aucun avis pour le moment. Les avis restent visibles dans votre foyer.</p>
-      }
-
-      @if (profiles.length) {
-        <div class="review-actions">
-          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="add($event)">Ajouter un avis</button>
         </div>
-      } @else {
-        <p>Ajoutez d’abord un profil dans Paramètres pour saisir un avis.</p>
+      } @else if (!loading()) {
+        <p class="lo-muted">Aucun avis pour le moment. Les avis restent visibles dans votre foyer.</p>
       }
+      @if (!profiles.length) { <p class="lo-muted">Ajoutez d’abord un profil dans Paramètres pour saisir un avis.</p> }
     </section>
-    <app-lifeos-dialog [open]="editorOpen()" [heading]="editingId() ? 'Modifier l’avis' : 'Ajouter un avis'"
-      [centered]="true" [formId]="formId" submitLabel="Enregistrer l’avis"
-      [busy]="busy()" [dirty]="dirty()" [error]="error()" [restoreFocusTo]="editorTrigger" (dismissed)="cancelEdit()">
-      <form [id]="formId" class="review-form" ngNativeValidate (ngSubmit)="save()" (submit)="$event.stopPropagation()">
-        <fieldset class="review-fields" [disabled]="busy()">
-          <label class="dialog-field">
-            <span>Profil</span>
-            <select class="text-input" name="target" required [disabled]="!!editingId()" [(ngModel)]="target">
-              <option value="">Choisir</option>
-              @for (profile of profiles; track profile.id) { <option [value]="profile.id">{{ profile.displayName }}</option> }
-            </select>
-          </label>
-          <div class="dialog-row">
-            <label class="dialog-field">
-              <span>Note (0 à 10, facultative)</span>
-              <input class="text-input" name="score" type="number" min="0" max="10" step="1" [(ngModel)]="score" />
-            </label>
-            <label class="dialog-field">
-              <span>Commentaire (facultatif)</span>
-              <textarea class="text-input" name="comment" maxlength="2000" rows="2" [(ngModel)]="comment"></textarea>
-            </label>
-          </div>
-        </fieldset>
-      </form>
-    </app-lifeos-dialog>
   `,
   styles: [`
-    .household-reviews { display: grid; gap: 12px; }
-    .household-reviews h2 { margin: 0; font-size: 17px; font-weight: 600; }
-    .household-reviews p { margin: 0; color: var(--lifeos-text-soft); }
-    .review-list { display: grid; margin: 0; padding: 0; list-style: none; }
-    .review-list li { display: grid; grid-template-columns: 110px 80px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--lifeos-line); }
-    .review-score { font-weight: 600; }
-    .review-comment { color: var(--lifeos-text-soft); }
-    @media (max-width: 560px) { .review-list li { grid-template-columns: minmax(0, 1fr) auto; } .review-comment, .review-list .review-actions { grid-column: 1 / -1; } }
-    .review-form, .review-fields { display: grid; gap: 12px; min-width: 0; }
-    .review-fields { margin: 0; padding: 0; border: 0; }
-    .review-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .review-error { color: #8f2017 !important; }
-    @media (max-width: 560px) { .review-form .dialog-row { grid-template-columns: minmax(0, 1fr); } }
+    .reviews { display: flex; flex-direction: column; gap: 12px; }
+    .reviews h2 { margin: 0; font: var(--mat-sys-title-medium); font-weight: 600; }
+    .lo-row-action { display: flex; }
   `],
 })
 export class HouseholdReviewsComponent implements OnChanges {
@@ -92,6 +64,8 @@ export class HouseholdReviewsComponent implements OnChanges {
   @Input({ required: true }) targetId = ''
   @Input() profiles: MemberProfileDto[] = []
   private readonly api = inject(LifeosApiService)
+  private readonly dialog = inject(MatDialog)
+  private editorRef: MatDialogRef<ReviewEditorDialogComponent> | null = null
   readonly reviews = signal<ReviewDto[]>([])
   readonly reviewsLoaded = output<ReviewDto[]>()
   readonly loading = signal(false)
@@ -99,8 +73,6 @@ export class HouseholdReviewsComponent implements OnChanges {
   readonly error = signal('')
   readonly editingId = signal('')
   readonly editorOpen = signal(false)
-  readonly formId = `household-review-form-${++nextReviewFormId}`
-  editorTrigger: HTMLElement | null = null
   target = ''
   score: number | null = null
   comment = ''
@@ -143,29 +115,39 @@ export class HouseholdReviewsComponent implements OnChanges {
     }
   }
 
-  add(event?: Event): void {
+  add(): void {
     if (this.busy() || this.editorOpen()) return
     this.cancelEdit()
-    this.openEditor(event)
+    this.openEditor()
   }
 
-  edit(review: ReviewDto, event?: Event): void {
+  edit(review: ReviewDto): void {
     if (this.busy() || this.editorOpen()) return
     this.editingId.set(review.id)
     this.target = review.memberProfileId
     this.score = review.score
     this.comment = review.comment ?? ''
     this.initial = formSnapshot({ target: this.target, score: this.score, comment: this.comment })
-    this.openEditor(event)
+    this.openEditor()
   }
 
-  private openEditor(event?: Event): void {
-    this.editorTrigger = event?.currentTarget instanceof HTMLElement ? event.currentTarget : null
+  /** The window edits this component's draft; closing it (Annuler, Escape, backdrop) drops the draft. */
+  private openEditor(): void {
     this.error.set('')
     this.editorOpen.set(true)
+    const ref = openEditor<ReviewEditorDialogComponent, HouseholdReviewsComponent>(this.dialog, ReviewEditorDialogComponent, this)
+    this.editorRef = ref
+    ref.afterClosed().subscribe(() => {
+      if (this.editorRef !== ref) return
+      this.editorRef = null
+      if (this.editorOpen()) this.cancelEdit()
+    })
   }
 
   cancelEdit(): void {
+    const ref = this.editorRef
+    this.editorRef = null
+    ref?.close()
     this.editorOpen.set(false)
     this.error.set('')
     this.editingId.set('')

@@ -67,6 +67,11 @@ export function seasonStatus(months: readonly number[], month: number): SeasonSt
   return months.includes(month) ? { kind: 'in', label: 'De saison' } : { kind: 'out', label: 'Hors saison' }
 }
 
+/** Tag style of a season status (`lo-tag` modifier): in season, all year (neutral), out of season. */
+export function seasonTagClass(kind: SeasonKind): string {
+  return kind === 'in' ? 'is-ok' : kind === 'out' ? 'is-off' : ''
+}
+
 const seasonRank: Record<SeasonKind, number> = { in: 0, all: 1, out: 2 }
 
 /** In season first, then all year, then out of season; by name inside each group. Nothing is hidden. */

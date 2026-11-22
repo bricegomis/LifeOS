@@ -1,5 +1,7 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatSelectModule } from '@angular/material/select'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { daysLabel, exerciseCharts, hasLoad, kilos, measureUnit, routineDayLevel, routineDayTitle } from './routine-format'
@@ -11,28 +13,28 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
 @Component({
   selector: 'app-routine-progress',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, MatFormFieldModule, MatSelectModule],
   template: `
-    @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
+    @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
     @if (loaded() && (routines().length || exercises().length)) {
-      <div class="week-grid">
-        <section class="surface-card sport-section" aria-labelledby="progress-routines">
+      <div class="lo-grid-2">
+        <section class="lo-panel" aria-labelledby="progress-routines">
           <h2 id="progress-routines">Routines</h2>
-          @if (!routines().length) { <p class="muted">Aucune routine pour l'instant.</p> } @else {
-            <div class="choice-grid" role="group" aria-label="Routine affichée">
+          @if (!routines().length) { <p class="lo-muted">Aucune routine pour l'instant.</p> } @else {
+            <div class="lo-chips" role="group" aria-label="Routine affichée">
               @for (report of routines(); track report.routine.id) {
-                <button type="button" class="pill" [attr.aria-pressed]="selected()?.routine?.id === report.routine.id"
+                <button type="button" class="lo-filter-chip" [class.is-on]="selected()?.routine?.id === report.routine.id" [attr.aria-pressed]="selected()?.routine?.id === report.routine.id"
                   (click)="selectedId.set(report.routine.id)">{{ report.routine.name }}{{ report.routine.isActive ? '' : ' (arrêtée)' }}</button>
               }
             </div>
             @if (selected(); as report) {
-              <div class="stats">
-                <div class="stat"><div class="stat-label">Série</div><div class="stat-value">{{ report.streak }} j</div></div>
-                <div class="stat"><div class="stat-label">Record</div><div class="stat-value">{{ report.record }} j</div></div>
-                <div class="stat"><div class="stat-label">Jokers restants</div>
-                  <div class="stat-value">{{ report.jokersPerWeek ? report.jokersLeftThisWeek + ' / ' + report.jokersPerWeek : 'Aucun' }}</div></div>
+              <div class="lo-stats">
+                <div class="lo-stat"><div class="lo-stat-label">Série</div><div class="lo-stat-value">{{ report.streak }} j</div></div>
+                <div class="lo-stat"><div class="lo-stat-label">Record</div><div class="lo-stat-value">{{ report.record }} j</div></div>
+                <div class="lo-stat"><div class="lo-stat-label">Jokers restants</div>
+                  <div class="lo-stat-value">{{ report.jokersPerWeek ? report.jokersLeftThisWeek + ' / ' + report.jokersPerWeek : 'Aucun' }}</div></div>
               </div>
-              <p class="muted small">{{ daysLabel(report.routine.days) }}</p>
+              <p class="lo-muted lo-small">{{ daysLabel(report.routine.days) }}</p>
               <div class="calendar">
                 <div class="calendar-days" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
                 <div class="calendar-weeks" role="img" [attr.aria-label]="'Calendrier des 12 dernières semaines pour ' + report.routine.name">
@@ -52,41 +54,43 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
                 <span><i class="cell cell-high"></i>&lt; 100 %</span><span><i class="cell cell-full"></i>Faite</span>
                 <span><i class="cell cell-joker"></i>Joker</span><span><i class="cell cell-off"></i>Non prévu</span>
               </div>
-              <p class="muted small">Un chiffre dans une case : nombre de passages terminés ce jour-là.</p>
+              <p class="lo-muted lo-small">Un chiffre dans une case : nombre de passages terminés ce jour-là.</p>
             }
           }
         </section>
 
-        <section class="surface-card sport-section" aria-labelledby="progress-exercises">
+        <section class="lo-panel" aria-labelledby="progress-exercises">
           <h2 id="progress-exercises">Exercices</h2>
-          @if (!exercises().length) { <p class="muted">Aucun exercice pour l'instant.</p> } @else {
-            <label class="field"><span>Exercice</span>
-              <select class="text-input" name="progressExercise" [ngModel]="exercise()?.id" (ngModelChange)="pick($event)">
-                @for (item of exercises(); track item.id) { <option [value]="item.id">{{ item.name }}{{ item.isArchived ? ' (archivé)' : '' }}</option> }
-              </select></label>
+          @if (!exercises().length) { <p class="lo-muted">Aucun exercice pour l'instant.</p> } @else {
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Exercice</mat-label>
+              <mat-select name="progressExercise" [ngModel]="exercise()?.id" (ngModelChange)="pick($event)">
+                @for (item of exercises(); track item.id) { <mat-option [value]="item.id">{{ item.name }}{{ item.isArchived ? ' (archivé)' : '' }}</mat-option> }
+              </mat-select>
+            </mat-form-field>
             @if (exercise(); as item) {
               @if (progress(); as data) {
-                @if (data.bestValue === null) { <p class="muted">Pas encore réalisé.</p> } @else {
-                  <div class="stats">
-                    <div class="stat"><div class="stat-label">{{ item.measure === 'hold' ? 'Record de tenue' : 'Record de répétitions' }}</div>
-                      <div class="stat-value">{{ data.bestValue }} {{ measureUnit(item.measure) }}</div></div>
+                @if (data.bestValue === null) { <p class="lo-muted">Pas encore réalisé.</p> } @else {
+                  <div class="lo-stats">
+                    <div class="lo-stat"><div class="lo-stat-label">{{ item.measure === 'hold' ? 'Record de tenue' : 'Record de répétitions' }}</div>
+                      <div class="lo-stat-value">{{ data.bestValue }} {{ measureUnit(item.measure) }}</div></div>
                     @if (data.bestLoadKg !== null) {
-                      <div class="stat"><div class="stat-label">Record de charge</div><div class="stat-value">{{ kilos(data.bestLoadKg) }} kg</div></div>
+                      <div class="lo-stat"><div class="lo-stat-label">Record de charge</div><div class="lo-stat-value">{{ kilos(data.bestLoadKg) }} kg</div></div>
                     }
-                    <div class="stat"><div class="stat-label">Jours réalisés</div><div class="stat-value">{{ data.daysDone }}</div></div>
+                    <div class="lo-stat"><div class="lo-stat-label">Jours réalisés</div><div class="lo-stat-value">{{ data.daysDone }}</div></div>
                   </div>
                   @for (chart of charts(); track chart.title) {
                     <div class="exercise-chart">
                       <div class="goal-row-head"><strong>{{ chart.title }}</strong><span class="value is-done">{{ chart.now }}</span></div>
                       <div class="mini-chart" role="img" [attr.aria-label]="chart.summary">
                         @for (bar of chart.bars; track $index) {
-                          <div class="mini-col" [title]="bar.title"><span class="muted">{{ bar.label }}</span>
+                          <div class="mini-col" [title]="bar.title"><span class="lo-muted">{{ bar.label }}</span>
                             <span class="chart-bar" [class.is-current]="bar.current" [style.height.px]="bar.height"></span></div>
                         }
                       </div>
                     </div>
                   }
-                  <p class="muted small">Meilleure valeur de chaque semaine sur 12 semaines, toutes routines et tous passages confondus.</p>
+                  <p class="lo-muted lo-small">Meilleure valeur de chaque semaine sur 12 semaines, toutes routines et tous passages confondus.</p>
                   @if (data.recent.length) {
                     <table class="recent">
                       <caption>Dernières fois</caption>
@@ -98,23 +102,26 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
                         }
                       </tbody>
                     </table>
-                    <p class="muted small">« — » : non noté. La cible se règle à la main dans la routine.</p>
+                    <p class="lo-muted lo-small">« — » : non noté. La cible se règle à la main dans la routine.</p>
                   }
                 }
-              } @else if (!error()) { <p class="status-text" role="status">Chargement…</p> }
+              } @else if (!error()) { <p class="lo-status" role="status">Chargement…</p> }
             }
           }
         </section>
       </div>
     }
   `,
-  styleUrls: ['./sports.css', './routines.css'],
+  styleUrl: './sports.css',
   styles: [`
-    .calendar .cell { display: grid; place-items: center; color: var(--lifeos-surface); font-size: 11px; font-weight: 700; }
-    .recent { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .calendar .cell { display: grid; place-items: center; color: var(--mat-sys-on-primary); font-size: 11px; font-weight: 700; }
+    .exercise-chart { display: flex; flex-direction: column; gap: 8px; }
+    .mini-chart { display: flex; height: 96px; align-items: flex-end; gap: 6px; }
+    .mini-col { display: flex; min-width: 0; height: 100%; flex: 1 1 0; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; font-size: 10px; }
+    .recent { width: 100%; border-collapse: collapse; font: var(--mat-sys-body-medium); }
     .recent caption { padding-bottom: 6px; text-align: left; font-weight: 700; }
-    .recent th { color: var(--lifeos-text-soft); font-size: 12px; font-weight: 600; text-align: left; }
-    .recent th, .recent td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--lifeos-line); }
+    .recent th { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-medium); text-align: left; }
+    .recent th, .recent td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--mat-sys-outline-variant); }
   `],
 })
 export class RoutineProgressComponent implements OnInit {

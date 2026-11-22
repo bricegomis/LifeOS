@@ -27,8 +27,8 @@ code, identifiers and code comments are English.
   edit popups, menu grouped by domain on desktop and phone, routine passes with one
   counter tick per set, per-exercise effort and discomfort).
 - UI kit: ADR 0016 (Angular Material 3 with a LifeOS theme, Material Symbols, screen
-  conventions for lists, dialogs, add buttons and actions; Sport first, then Food
-  page by page).
+  conventions for lists, dialogs, add buttons and actions). Applied to every screen;
+  any new or changed Angular screen uses it (see `src/frontend-angular/CLAUDE.md`).
 - Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly

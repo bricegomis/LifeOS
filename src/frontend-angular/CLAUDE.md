@@ -5,7 +5,7 @@
 - Structure: `src/app/core` (api client, auth, native/Capacitor bridge), `shared`
   (dialog, household reviews, build version, picture reduction before upload, and
   `shared/ui`: Material building blocks of ADR 0016 — icon registry, list page,
-  editor window frame, stepper, breakpoints), `shell` (Material side menu with one
+  editor window frame and `openEditor`, stepper, breakpoints), `shell` (Material side menu with one
   foldable group per domain; on the phone a panel opened from the top bar, no tab
   bar), `login`, and one folder per module: `food` (recipes, foods, products and prices,
   stores, tickets), `sports` (today, history, progress, one page per element —
@@ -18,22 +18,31 @@
   (`food/food.routes.ts`). `module-boundaries.spec.ts` fails when a module imports
   another module; sub-features of one module (`food/recipes`, `food/foods`) may share
   `food/shared`.
-- Screens follow the validated step 1 mockup: photos everywhere (`food/shared/food-image.component.ts`
+- Screens follow the validated mockups: photos everywhere (`food/shared/food-image.component.ts`
   loads authenticated images as blobs), a filter bar on top of every list page,
   prices secondary and read-only on everyday screens.
-- UI kit: Angular Material 3 with the LifeOS theme (`src/theme.scss`), Material Symbols
-  as SVG (`<mat-icon svgIcon="name" />`; add the icon to `shared/ui/icons.ts` first) and
-  the screen conventions of ADR 0016 (classes `lo-*` in `src/lifeos-ui.css`: list page
-  via `app-list-page`, rows with a picture or icon on the left, windows through
-  `openEditor` + `app-editor-frame`, full screen on the phone, dangerous action bottom left). New and migrated screens use Material
-  components and the LifeOS components built on them; don't add another UI library.
-  Screens not migrated yet keep native controls, the shared blocks of `src/styles.css`
-  and PrimeIcons (`pi pi-...`) until their turn.
-- Dialogs: migrated screens use `MatDialog` and keep the dirty-draft guard of
-  `dialog-guard.ts`. Screens not migrated yet reuse `shared/dialog/lifeos-dialog.component.ts` (native modal
-  `<dialog>`, focus return, dirty-draft confirmation via `dialog-guard.ts`). Detail
-  and review editors open as centered popups; closing a modified draft asks first,
-  a pending request blocks closing, errors stay visible.
+- UI kit (ADR 0016), the norm for every screen, new or changed: Angular Material 3 with the
+  LifeOS theme (`src/theme.scss`) and the LifeOS building blocks.
+  - Icons: Material Symbols as SVG (`<mat-icon svgIcon="name" />`); add the icon to
+    `shared/ui/icons.ts` first (check it exists in `@material-symbols/svg-400/rounded`).
+  - Fields: `mat-form-field appearance="outline"` with `matInput` or `mat-select`,
+    `mat-checkbox`, `mat-button-toggle-group`; buttons `mat-flat-button` (main),
+    `mat-stroked-button`, `mat-button`, `mat-icon-button`. A file picker is a hidden native
+    `type="file"` input opened by a Material button.
+  - Layout classes `lo-*` of `src/lifeos-ui.css`: page (`lo-page`, `lo-page-head`), list rows
+    with a picture or icon on the left (`lo-list`, `lo-row`, `lo-row-main`), `lo-panel` for the
+    sections of a detail page, `lo-table` for grids, `lo-stat`, `lo-tag` (`is-ok`, `is-warn`,
+    `is-off`, `is-done`), `lo-chip` / `lo-filter-chip`, `lo-notice`, `lo-error`, `lo-status`,
+    `lo-desktop-only` / `lo-phone-only`. Library pages use `app-list-page`.
+  - Colours only from theme variables (`var(--mat-sys-*)`): no hex value, no `--lifeos-*`
+    token (they are gone).
+  - Windows: `openEditor(dialog, Component, data)` + `app-editor-frame` (full screen on the
+    phone, dangerous action bottom left with a second-click confirmation; without `formId`
+    the window only has "Fermer"). Feedback after an action: `MatSnackBar`.
+  - `src/app/ui-kit.spec.ts` fails on native selects/inputs/text areas, PrimeIcons, old
+    tokens, fixed colours or the former shared classes. Don't add another UI library.
+- Dialogs keep the dirty-draft guard of `dialog-guard.ts` (through `app-editor-frame`):
+  closing a modified draft asks first, a pending request blocks closing, errors stay visible.
 - Accessibility matters: whole-card links must be keyboard-reachable, keep
   `aria-*` attributes and visible labels. UI text is French.
 - Data comes only from the LifeOS API (`core/api/lifeos-api.service.ts`) with the

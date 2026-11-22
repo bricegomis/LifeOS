@@ -42,6 +42,14 @@ import SellIcon from '@material-symbols/svg-400/rounded/sell.svg'
 import NutritionIcon from '@material-symbols/svg-400/rounded/nutrition.svg'
 import MenuBookIcon from '@material-symbols/svg-400/rounded/menu_book.svg'
 import CheckCircleIcon from '@material-symbols/svg-400/rounded/check_circle.svg'
+import PhotoLibraryIcon from '@material-symbols/svg-400/rounded/photo_library.svg'
+import RotateRightIcon from '@material-symbols/svg-400/rounded/rotate_right.svg'
+import OpenInNewIcon from '@material-symbols/svg-400/rounded/open_in_new.svg'
+import ContentCopyIcon from '@material-symbols/svg-400/rounded/content_copy.svg'
+import AddAPhotoIcon from '@material-symbols/svg-400/rounded/add_a_photo.svg'
+import PersonIcon from '@material-symbols/svg-400/rounded/person.svg'
+import LinkOffIcon from '@material-symbols/svg-400/rounded/link_off.svg'
+import SyncIcon from '@material-symbols/svg-400/rounded/sync.svg'
 
 /**
  * Material Symbols used by the app (ADR 0016), bundled as SVG so only these icons ship and nothing is
@@ -89,6 +97,14 @@ export const ICONS: Record<string, string> = {
   nutrition: NutritionIcon,
   menu_book: MenuBookIcon,
   check_circle: CheckCircleIcon,
+  photo_library: PhotoLibraryIcon,
+  rotate_right: RotateRightIcon,
+  open_in_new: OpenInNewIcon,
+  content_copy: ContentCopyIcon,
+  add_a_photo: AddAPhotoIcon,
+  person: PersonIcon,
+  link_off: LinkOffIcon,
+  sync: SyncIcon,
 }
 
 export function provideLifeosIcons() {

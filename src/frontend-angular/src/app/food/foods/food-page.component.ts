@@ -1,5 +1,10 @@
 import { Component, computed, HostListener, inject, input, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatIconModule } from '@angular/material/icon'
+import { MatInputModule } from '@angular/material/input'
+import { MatSelectModule } from '@angular/material/select'
 import { Router, RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
 import type { MemberProfileDto } from '@/app/core/api/api.models'
@@ -11,7 +16,7 @@ import { FoodApiService } from '../food-api.service'
 import type { FoodDto, FoodRole, ProductDto, StoreDto } from '../food.models'
 import {
   addTag, CONSERVATION_LABELS, conservationOptions, currentMonth, familyLabel, familyOptions, householdTags, MAX_TAG_LENGTH,
-  MONTH_NAMES, MONTH_SHORT, ROLE_LABELS, roleOptions, seasonRangeLabel, seasonStatus,
+  MONTH_NAMES, MONTH_SHORT, ROLE_LABELS, roleOptions, seasonRangeLabel, seasonStatus, seasonTagClass,
 } from '../shared/classification'
 import { FoodImageComponent } from '../shared/food-image.component'
 import { FODMAP_LABELS, NOVA_LABELS } from '../shared/format'
@@ -20,9 +25,13 @@ import { buildFoodRequest, emptyFoodForm, foodFormFrom, foodPriceSummary, type F
 @Component({
   selector: 'app-food-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, FoodImageComponent, HouseholdReviewsComponent],
+  imports: [
+    FoodImageComponent, FormsModule, HouseholdReviewsComponent, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule,
+    MatSelectModule, RouterLink,
+  ],
   templateUrl: './food-page.component.html',
-  styleUrl: './foods.css',
+  styleUrl: './food-page.css',
+  styles: [`.danger { color: var(--mat-sys-error); }`],
 })
 export class FoodPageComponent implements OnInit {
   private readonly api = inject(FoodApiService)
@@ -63,9 +72,9 @@ export class FoodPageComponent implements OnInit {
   readonly novaOptions = Object.entries(NOVA_LABELS)
   readonly prices = computed(() => foodPriceSummary(this.products(), this.stores()))
   readonly back = computed(() => {
-    if (this.from() === 'recipe' && this.recipe()) return { link: ['/recipes', this.recipe()!], label: '← Recette' }
-    if (this.from() === 'products') return { link: ['/products'], label: '← Produits et prix' }
-    return { link: ['/foods'], label: '← Aliments' }
+    if (this.from() === 'recipe' && this.recipe()) return { link: ['/recipes', this.recipe()!], label: 'Recette' }
+    if (this.from() === 'products') return { link: ['/products'], label: 'Produits et prix' }
+    return { link: ['/foods'], label: 'Aliments' }
   })
 
   async ngOnInit(): Promise<void> {
@@ -119,9 +128,9 @@ export class FoodPageComponent implements OnInit {
   }
 
   /** Season of the form being edited, for the current month. */
-  seasonNow(): { kind: string; text: string } {
+  seasonNow(): { tag: string; text: string } {
     const status = seasonStatus(this.form.seasonMonths, this.month)
-    return { kind: status.kind, text: status.kind === 'all' ? 'Pas saisonnier : disponible toute l’année' : `${status.label} en ${this.monthName}` }
+    return { tag: seasonTagClass(status.kind), text: status.kind === 'all' ? 'Pas saisonnier : disponible toute l’année' : `${status.label} en ${this.monthName}` }
   }
 
   addTag(typed = this.tagDraft): void {

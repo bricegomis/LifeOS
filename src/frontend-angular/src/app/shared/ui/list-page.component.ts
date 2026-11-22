@@ -9,6 +9,7 @@ import { HANDSET_QUERY } from './breakpoints'
 /**
  * Library page (ADR 0016): title and add button on the computer (the phone's top bar holds the title
  * and a floating + adds), a search field, an optional "show archived" filter, then the projected list.
+ * Secondary page actions (e.g. "Relever un prix") are projected with the `pageActions` attribute.
  */
 @Component({
   selector: 'app-list-page',
@@ -21,9 +22,12 @@ import { HANDSET_QUERY } from './breakpoints'
           <h1 [class.sr-only]="handset()">{{ heading() }}</h1>
           @if (intro()) { <p class="lo-intro">{{ intro() }}</p> }
         </div>
-        @if (!handset()) {
-          <button mat-flat-button type="button" (click)="add.emit()"><mat-icon svgIcon="add" />{{ addLabel() }}</button>
-        }
+        <div class="lo-actions">
+          <ng-content select="[pageActions]" />
+          @if (!handset()) {
+            <button mat-flat-button type="button" (click)="add.emit()"><mat-icon svgIcon="add" />{{ addLabel() }}</button>
+          }
+        </div>
       </header>
       <div class="lo-filters">
         <label class="lo-search">

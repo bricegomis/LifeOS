@@ -1,10 +1,16 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
+import { MatDialog } from '@angular/material/dialog'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatIconModule } from '@angular/material/icon'
+import { MatInputModule } from '@angular/material/input'
 import { RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
+import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { RoutinesTodayComponent } from './routines-today.component'
-import { SessionEditorComponent } from './session-editor.component'
+import { SessionEditorComponent, type SessionEditorData } from './session-editor.component'
 import {
   celebration, challengePercent, entryTime, goalPercent, goalProgressText, integer, jokerLine, longDay, quickSteps,
   sessionCalories, sessionDetails, sessionTitle, shortDay, streakLine, weekRange, decimal, duration,
@@ -16,73 +22,75 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
 @Component({
   selector: 'app-sport-today-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, RoutinesTodayComponent, SessionEditorComponent],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, RouterLink, RoutinesTodayComponent],
   template: `
-    <div class="page">
-      <div class="page-header">
-        <div><h1>Sport</h1>@if (today()) { <p class="muted">{{ longDay(today()) }}</p> }</div>
-        <button type="button" class="lifeos-button" [disabled]="!today()" (click)="openEditor(null)"><i class="pi pi-plus" aria-hidden="true"></i> Ajouter une séance</button>
-      </div>
+    <div class="lo-page">
+      <header class="lo-page-head">
+        <div class="lo-page-title"><h1>Sport</h1>@if (today()) { <p class="lo-intro">{{ longDay(today()) }}</p> }</div>
+        <button mat-flat-button type="button" [disabled]="!today()" (click)="openEditor(null)"><mat-icon svgIcon="add" />Ajouter une séance</button>
+      </header>
       @if (banner()) {
-        <div class="celebration" role="status"><i class="pi pi-trophy" aria-hidden="true"></i><span>{{ banner() }}</span>
-          <button type="button" aria-label="Fermer le message" (click)="banner.set('')">×</button></div>
+        <div class="celebration" role="status"><mat-icon svgIcon="trophy" /><span>{{ banner() }}</span>
+          <button mat-icon-button type="button" aria-label="Fermer le message" (click)="banner.set('')"><mat-icon svgIcon="close" /></button></div>
       }
-      @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p class="status-text" role="status">Chargement…</p> } @else {
+      @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
+      @if (loading()) { <p class="lo-status" role="status">Chargement…</p> } @else {
         <app-routines-today />
         <section class="sport-section" aria-labelledby="sport-challenges">
           <div class="sport-section-head"><h2 id="sport-challenges">Défis du jour</h2>
-            <a class="link-button" routerLink="/sports/challenges">Gérer les défis</a></div>
+            <a mat-button routerLink="/sports/challenges"><mat-icon svgIcon="tune" />Gérer</a></div>
           @if (!challenges().length) {
-            <p class="empty-state">Aucun défi. Ajoutez par exemple « 100 pompes par jour » sur la page Défis.</p>
+            <p class="lo-empty">Aucun défi. Ajoutez par exemple « 100 pompes par jour » sur la page Défis.</p>
           }
           <div class="challenge-grid">
             @for (report of challenges(); track report.challenge.id) {
-              <article class="challenge-card" [attr.aria-labelledby]="'challenge-' + report.challenge.id">
+              <article class="lo-card challenge-card" [attr.aria-labelledby]="'challenge-' + report.challenge.id">
                 <div class="challenge-head">
                   <div><strong [id]="'challenge-' + report.challenge.id">{{ report.challenge.name }}</strong>
-                    <span class="muted small">{{ streakLine(report) }}</span></div>
-                  <span class="chip" [class.chip-done]="report.reachedToday" [class.chip-neutral]="!report.reachedToday">
-                    {{ report.reachedToday ? 'Atteint' : challengePercent(report) + ' %' }}</span>
+                    <span class="lo-muted lo-small">{{ streakLine(report) }}</span></div>
+                  <span class="lo-tag" [class.is-done]="report.reachedToday">{{ report.reachedToday ? 'Atteint' : challengePercent(report) + ' %' }}</span>
                 </div>
                 <div class="challenge-count"><strong>{{ integer(report.todayTotal) }}</strong>
-                  <span class="muted">/ {{ integer(report.todayTarget) }} {{ unitNoun(report) }}</span></div>
+                  <span class="lo-muted">/ {{ integer(report.todayTarget) }} {{ unitNoun(report) }}</span></div>
                 <div class="progress" role="progressbar" [attr.aria-valuenow]="challengePercent(report)" aria-valuemin="0" aria-valuemax="100"
                   [attr.aria-label]="'Avancement du défi ' + report.challenge.name">
                   <span [style.width.%]="challengePercent(report)" [class.is-done]="report.reachedToday"></span></div>
                 <div class="quick-row">
                   @for (step of quickSteps(report.challenge.unit, report.todayTarget); track step) {
-                    <button type="button" class="quick" [disabled]="pending() === report.challenge.id" (click)="add(report, step)"
+                    <button mat-stroked-button type="button" [disabled]="pending() === report.challenge.id" (click)="add(report, step)"
                       [attr.aria-label]="'Ajouter ' + step + ' à ' + report.challenge.name">+{{ step }}</button>
                   }
                 </div>
                 <form class="custom-row" (ngSubmit)="addCustom(report)">
-                  <input class="text-input" type="number" inputmode="numeric" min="1" max="10000" [name]="'custom-' + report.challenge.id"
-                    placeholder="Autre nombre" [attr.aria-label]="'Nombre libre pour ' + report.challenge.name" [(ngModel)]="custom[report.challenge.id]" />
-                  <button type="submit" class="lifeos-button lifeos-button-secondary" [disabled]="pending() === report.challenge.id">Ajouter</button>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Autre nombre</mat-label>
+                    <input matInput type="number" inputmode="numeric" min="1" max="10000" [name]="'custom-' + report.challenge.id"
+                      [attr.aria-label]="'Nombre libre pour ' + report.challenge.name" [(ngModel)]="custom[report.challenge.id]" />
+                  </mat-form-field>
+                  <button mat-stroked-button type="submit" [disabled]="pending() === report.challenge.id">Ajouter</button>
                 </form>
                 @if (report.todayEntries.length) {
-                  <div class="entries-row muted small">
+                  <div class="entries-row lo-muted lo-small">
                     <span>{{ entriesLine(report) }}</span>
-                    <button type="button" class="link-button" [disabled]="pending() === report.challenge.id" (click)="undo(report)">Retirer le dernier</button>
+                    <button mat-button type="button" [disabled]="pending() === report.challenge.id" (click)="undo(report)"><mat-icon svgIcon="undo" />Retirer le dernier</button>
                   </div>
                 }
-                <span class="muted small">{{ jokerLine(report) }}</span>
+                <span class="lo-muted lo-small">{{ jokerLine(report) }}</span>
               </article>
             }
           </div>
         </section>
 
         @if (week(); as week) {
-          <div class="week-grid">
+          <div class="lo-grid-2">
             <section class="sport-section" aria-labelledby="sport-week">
-              <div class="sport-section-head"><h2 id="sport-week">Cette semaine</h2><span class="muted small">{{ weekRange(week.monday, week.sunday) }}</span></div>
-              <div class="stats">
-                <div class="stat-card"><div class="stat-label">Calories</div><div class="stat-value">{{ integer(week.calories) }} kcal</div>
-                  <div class="stat-note" [class.is-partial]="!week.caloriesComplete">{{ caloriesNote(week) }}</div></div>
-                <div class="stat-card"><div class="stat-label">Séances</div><div class="stat-value">{{ week.sessionCount }}</div>
-                  <div class="muted small">{{ duration(week.durationMinutes) }}</div></div>
-                <div class="stat-card"><div class="stat-label">Distance</div><div class="stat-value">{{ decimal(week.distanceKm) }} km</div></div>
+              <div class="sport-section-head"><h2 id="sport-week">Cette semaine</h2><span class="lo-muted lo-small">{{ weekRange(week.monday, week.sunday) }}</span></div>
+              <div class="lo-stats">
+                <div class="lo-stat"><div class="lo-stat-label">Calories</div><div class="lo-stat-value">{{ integer(week.calories) }} kcal</div>
+                  <div class="lo-stat-note" [class.is-partial]="!week.caloriesComplete">{{ caloriesNote(week) }}</div></div>
+                <div class="lo-stat"><div class="lo-stat-label">Séances</div><div class="lo-stat-value">{{ week.sessionCount }}</div>
+                  <div class="lo-muted lo-small">{{ duration(week.durationMinutes) }}</div></div>
+                <div class="lo-stat"><div class="lo-stat-label">Distance</div><div class="lo-stat-value">{{ decimal(week.distanceKm) }} km</div></div>
               </div>
               @if (week.goals.length) {
                 <div class="goal-list">
@@ -91,43 +99,41 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
                       <div class="goal-row-head"><strong>{{ progress.goal.label }}</strong>
                         <span class="value" [class.is-done]="progress.reached">{{ goalProgressText(progress) }}</span></div>
                       <div class="progress progress-thin"><span [style.width.%]="goalPercent(progress)" [class.is-done]="progress.reached"></span></div>
-                      <span class="muted small">{{ progress.goal.kindLabel }}{{ progress.reached ? ' · atteint' : '' }}</span>
+                      <span class="lo-muted lo-small">{{ progress.goal.kindLabel }}{{ progress.reached ? ' · atteint' : '' }}</span>
                     </div>
                   }
                 </div>
               } @else {
-                <p class="empty-state">Aucun objectif. Fixez par exemple « 2 footings » ou « 4 séances » par semaine dans les réglages.</p>
+                <p class="lo-empty">Aucun objectif. Fixez par exemple « 2 footings » ou « 4 séances » par semaine sur la page Objectifs.</p>
               }
             </section>
             <section class="sport-section" aria-labelledby="sport-recent">
-              <div class="sport-section-head"><h2 id="sport-recent">Dernières séances</h2><a class="link-button" routerLink="/sports/history">Tout l'historique</a></div>
+              <div class="sport-section-head"><h2 id="sport-recent">Dernières séances</h2>
+                <a mat-button routerLink="/sports/history"><mat-icon svgIcon="history" />Tout l’historique</a></div>
               @if (recent().length) {
                 <div class="session-list">
                   @for (session of recent(); track session.id) {
                     <button type="button" class="session-row" (click)="openEditor(session)">
                       <span class="session-day">{{ shortDay(session.date) }}</span>
-                      <span class="session-text"><strong>{{ sessionTitle(session) }}</strong><span class="muted small">{{ sessionDetails(session) }}</span></span>
+                      <span class="session-text"><strong>{{ sessionTitle(session) }}</strong><span class="lo-muted lo-small">{{ sessionDetails(session) }}</span></span>
                       <span class="session-kcal" [class.is-unknown]="session.calories === null">{{ sessionCalories(session) }}</span>
                     </button>
                   }
                 </div>
               } @else {
-                <p class="empty-state">Aucune séance ces deux dernières semaines.</p>
+                <p class="lo-empty">Aucune séance ces deux dernières semaines.</p>
               }
             </section>
           </div>
         }
       }
     </div>
-    @if (today()) {
-      <app-session-editor [open]="editorOpen()" [session]="editing()" [templates]="templates()" [sports]="sports()" [today]="today()"
-        (saved)="onSaved($event)" (dismissed)="editorOpen.set(false)" />
-    }
   `,
   styleUrl: './sports.css',
 })
 export class SportTodayPageComponent implements OnInit {
   private readonly api = inject(SportsApiService)
+  private readonly dialog = inject(MatDialog)
   readonly loading = signal(true)
   readonly error = signal('')
   readonly banner = signal('')
@@ -139,8 +145,6 @@ export class SportTodayPageComponent implements OnInit {
   readonly week = computed(() => this.weeks().at(-1) ?? null)
   readonly recent = computed(() => [...this.weeks()].reverse().flatMap(week => week.sessions).slice(0, 3))
   readonly pending = signal('')
-  readonly editorOpen = signal(false)
-  readonly editing = signal<SportSessionDto | null>(null)
   custom: Record<string, number | null> = {}
 
   readonly integer = integer
@@ -208,10 +212,10 @@ export class SportTodayPageComponent implements OnInit {
     finally { this.pending.set('') }
   }
 
-  openEditor(session: SportSessionDto | null): void { this.editing.set(session); this.editorOpen.set(true) }
-
-  async onSaved(message: string): Promise<void> {
-    this.editorOpen.set(false)
+  async openEditor(session: SportSessionDto | null): Promise<void> {
+    const message = await firstValueFrom(openEditor<SessionEditorComponent, SessionEditorData, string>(this.dialog, SessionEditorComponent,
+      { session, templates: this.templates(), sports: this.sports(), today: this.today() }).afterClosed())
+    if (!message) return
     this.banner.set(message)
     try { this.weeks.set(await firstValueFrom(this.api.weeks(2))) }
     catch (error) { this.error.set(apiErrorMessage(error)) }

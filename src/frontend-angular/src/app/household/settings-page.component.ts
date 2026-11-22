@@ -1,6 +1,11 @@
 import { Component, inject, OnInit, signal } from '@angular/core'
 import { Router } from '@angular/router'
 import { FormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatIconModule } from '@angular/material/icon'
+import { MatInputModule } from '@angular/material/input'
+import { MatSnackBar } from '@angular/material/snack-bar'
 import { firstValueFrom, timeout } from 'rxjs'
 import { parseApiBuildInfo, type BuildInfo } from '@/app/core/build-info'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
@@ -16,69 +21,88 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [FormsModule, BuildVersionComponent],
+  imports: [BuildVersionComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   template: `
-    <section class="page page-narrow">
-      <div class="page-header"><h1>Paramètres</h1></div>
-      @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
-      @if (notice()) { <p class="muted" role="status">{{ notice() }}</p> }
+    <div class="lo-page is-narrow">
+      <header class="lo-page-head"><h1>Paramètres</h1></header>
+      @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
 
-      <section class="card settings-section">
-        <div>
-          <h2>Profils du foyer</h2>
-          <p class="muted">Chaque personne donne ses avis. Le coefficient suggère une portion, sans l’imposer. Un profil peut représenter un enfant sans compte.</p>
+      <section class="lo-panel" aria-labelledby="profiles-title">
+        <div class="lo-page-title">
+          <h2 id="profiles-title">Profils du foyer</h2>
+          <p class="lo-muted">Chaque personne donne ses avis. Le coefficient suggère une portion, sans l’imposer. Un profil peut représenter un enfant sans compte.</p>
         </div>
         @if (profiles().length) {
-          <div class="profile-grid table-head" aria-hidden="true"><span>Profil</span><span>Coefficient de portion</span><span></span></div>
-          @for (profile of profiles(); track profile.id) {
-            <div class="profile-grid profile-row">
-              <strong>{{ profile.displayName }}</strong>
-              <span>{{ profile.portionCoefficient }}</span>
-              <span class="page-actions">
-                <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="editProfile(profile)">Modifier</button>
-                <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="deleteProfile(profile)">Supprimer</button>
-              </span>
-            </div>
-          }
+          <div class="lo-list">
+            @for (profile of profiles(); track profile.id) {
+              <div class="lo-row">
+                <div class="lo-row-main">
+                  <span class="lo-lead-icon" aria-hidden="true"><mat-icon svgIcon="person" /></span>
+                  <span class="lo-row-text"><span class="lo-row-title">{{ profile.displayName }}</span>
+                    <span class="lo-row-sub">Coefficient de portion : {{ profile.portionCoefficient }}</span></span>
+                </div>
+                <span class="lo-row-action">
+                  <button mat-icon-button type="button" [disabled]="busy()" (click)="editProfile(profile)"
+                    [attr.aria-label]="'Modifier ' + profile.displayName" title="Modifier"><mat-icon svgIcon="edit" /></button>
+                  <button mat-icon-button type="button" [disabled]="busy()" (click)="deleteProfile(profile)"
+                    [attr.aria-label]="'Supprimer ' + profile.displayName" title="Supprimer"><mat-icon svgIcon="delete" /></button>
+                </span>
+              </div>
+            }
+          </div>
         } @else {
-          <p class="muted">Aucun profil. Ajoutez les personnes du foyer pour saisir leurs avis.</p>
+          <p class="lo-muted">Aucun profil. Ajoutez les personnes du foyer pour saisir leurs avis.</p>
         }
-        <form class="settings-form" (ngSubmit)="saveProfile()">
-          <label class="field"><span>Nom affiché</span><input class="lifeos-input" name="profileName" required maxlength="200" [(ngModel)]="profileName" /></label>
-          <label class="field"><span>Coefficient de portion</span><input class="lifeos-input" name="profileCoefficient" type="number" min="0.01" max="100" step="any" required [(ngModel)]="profileCoefficient" /></label>
-          <button class="lifeos-button" type="submit" [disabled]="busy()">{{ editingProfileId() ? 'Enregistrer' : 'Ajouter un profil' }}</button>
-          @if (editingProfileId()) { <button class="lifeos-button lifeos-button-secondary" type="button" (click)="cancelProfileEdit()">Annuler</button> }
+        <form class="profile-form" (ngSubmit)="saveProfile()" [attr.aria-label]="editingProfileId() ? 'Modifier le profil' : 'Ajouter un profil'">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Nom affiché</mat-label>
+            <input matInput name="profileName" required maxlength="200" [(ngModel)]="profileName" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="coefficient">
+            <mat-label>Coefficient de portion</mat-label>
+            <input matInput name="profileCoefficient" type="number" inputmode="decimal" min="0.01" max="100" step="any" required [(ngModel)]="profileCoefficient" />
+          </mat-form-field>
+          <div class="lo-actions">
+            <button mat-flat-button type="submit" [disabled]="busy()">
+              <mat-icon [svgIcon]="editingProfileId() ? 'check' : 'add'" />{{ editingProfileId() ? 'Enregistrer' : 'Ajouter un profil' }}</button>
+            @if (editingProfileId()) { <button mat-button type="button" (click)="cancelProfileEdit()">Annuler</button> }
+          </div>
         </form>
       </section>
 
-      <section class="card settings-section">
-        <div>
-          <h2>Assistants connectés</h2>
-          <p class="muted">Claude peut remplir et lire LifeOS pendant une discussion, avec les droits de votre compte. Ajoutez cette adresse comme connecteur personnalisé dans claude.ai, ou avec <code>claude mcp add</code> dans Claude Code.</p>
+      <section class="lo-panel" aria-labelledby="assistants-title">
+        <div class="lo-page-title">
+          <h2 id="assistants-title">Assistants connectés</h2>
+          <p class="lo-muted">Claude peut remplir et lire LifeOS pendant une discussion, avec les droits de votre compte. Ajoutez cette adresse comme connecteur personnalisé dans claude.ai, ou avec <code>claude mcp add</code> dans Claude Code.</p>
         </div>
         <div class="mcp-url">
           <code>{{ mcpUrl || 'Adresse de l’API non configurée' }}</code>
           @if (mcpUrl) {
-            <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" (click)="copyMcpUrl()">
-              <i class="pi pi-copy" aria-hidden="true"></i> {{ copied() ? 'Copiée' : 'Copier' }}
-            </button>
+            <button mat-stroked-button type="button" (click)="copyMcpUrl()">
+              <mat-icon [svgIcon]="copied() ? 'check' : 'content_copy'" />{{ copied() ? 'Copiée' : 'Copier' }}</button>
           }
         </div>
-        @for (connection of connections(); track connection.id) {
-          <div class="profile-grid profile-row connection-row">
-            <strong>{{ connection.clientName }}</strong>
-            <span class="muted small">{{ connection.grantedAt ? 'Autorisé le ' + formatDate(connection.grantedAt) : '' }}</span>
-            <span class="page-actions">
-              <button type="button" class="lifeos-button lifeos-button-secondary lifeos-button-sm" [disabled]="busy()" (click)="revokeConnection(connection)">Retirer l’accès</button>
-            </span>
+        @if (connections().length) {
+          <div class="lo-list">
+            @for (connection of connections(); track connection.id) {
+              <div class="lo-row">
+                <div class="lo-row-main">
+                  <span class="lo-row-text"><span class="lo-row-title">{{ connection.clientName }}</span>
+                    @if (connection.grantedAt) { <span class="lo-row-sub">Autorisé le {{ formatDate(connection.grantedAt) }}</span> }</span>
+                </div>
+                <span class="lo-row-action">
+                  <button mat-button type="button" class="danger" [disabled]="busy()" (click)="revokeConnection(connection)"><mat-icon svgIcon="link_off" />Retirer l’accès</button>
+                </span>
+              </div>
+            }
           </div>
-        } @empty {
-          <p class="muted">Aucun assistant autorisé.</p>
+        } @else {
+          <p class="lo-muted">Aucun assistant autorisé.</p>
         }
       </section>
 
-      <section class="card">
-        <h2>Versions</h2>
+      <section class="lo-panel" aria-labelledby="versions-title">
+        <h2 id="versions-title">Versions</h2>
         <dl class="versions">
           <dt>Interface</dt><dd><app-build-version component="UI" [info]="buildInfo" /></dd>
           <dt>API</dt><dd><app-build-version component="API" [info]="apiBuildInfo()" [status]="apiBuildStatus()" /></dd>
@@ -86,18 +110,18 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
         </dl>
       </section>
 
-      <section class="card">
-        <h2>Compte</h2>
+      <section class="lo-panel" aria-labelledby="account-title">
+        <h2 id="account-title">Compte</h2>
         <p>{{ auth.user()?.email ?? 'Compte du foyer' }}</p>
-        <p class="muted small">Connexion avec Google, gérée par LifeOS API, qui conserve aussi les données du foyer.</p>
-        <div class="mobile-only" style="margin-top: 12px">
-          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy()" (click)="signOut()">Déconnexion</button>
+        <p class="lo-muted lo-small">Connexion avec Google, gérée par LifeOS API, qui conserve aussi les données du foyer.</p>
+        <div class="lo-phone-only">
+          <button mat-stroked-button type="button" [disabled]="busy()" (click)="signOut()"><mat-icon svgIcon="logout" />Déconnexion</button>
         </div>
       </section>
 
       @if (bridgeStatus() !== 'web') {
-        <section class="card">
-          <h2>iPhone</h2>
+        <section class="lo-panel" aria-labelledby="iphone-title">
+          <h2 id="iphone-title">iPhone</h2>
           <dl class="versions">
             <dt>Pont natif</dt>
             <dd>{{ bridgeStatus() === 'available' ? 'Disponible' : 'Non enregistré : reconstruire dans Xcode' }}</dd>
@@ -108,36 +132,34 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
                 @case ('synced') { À jour }
                 @case ('syncing') { Synchronisation en cours… }
                 @case ('stale') { Données en cache (réseau indisponible) }
-                @case ('error') { <span class="error-text">Erreur de synchronisation</span> }
+                @case ('error') { <span class="lo-error-text">Erreur de synchronisation</span> }
                 @default { En attente }
               }
             </dd>
-            @if (nativeSync.lastSyncError()) { <dt>Dernier incident</dt><dd class="error-text">{{ nativeSync.lastSyncError() }}</dd> }
+            @if (nativeSync.lastSyncError()) { <dt>Dernier incident</dt><dd class="lo-error-text">{{ nativeSync.lastSyncError() }}</dd> }
             @if (nativeSync.lastSyncedAt()) { <dt>Dernière synchronisation</dt><dd>{{ nativeSync.lastSyncedAt() }}</dd> }
           </dl>
-          <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="busy() || nativeSync.syncStatus() === 'syncing'" (click)="triggerNativeSync()">
-            Synchroniser maintenant
-          </button>
+          <div>
+            <button mat-stroked-button type="button" [disabled]="busy() || nativeSync.syncStatus() === 'syncing'" (click)="triggerNativeSync()">
+              <mat-icon svgIcon="sync" />Synchroniser maintenant</button>
+          </div>
         </section>
       }
-    </section>
+    </div>
   `,
   styles: [`
-    .settings-section { display: flex; flex-direction: column; gap: 12px; }
-    .settings-section h2 { margin-bottom: 4px; }
-    .profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) 160px auto; align-items: center; gap: 12px; padding: 0; }
-    .profile-row { padding: 12px 0; border-top: 1px solid var(--lifeos-line); }
-    .settings-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding-top: 12px; border-top: 1px solid var(--lifeos-line); }
+    .lo-panel h2 { margin: 0; font: var(--mat-sys-title-medium); font-weight: 600; }
+    .lo-row-action { display: flex; }
+    .profile-form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    .profile-form mat-form-field { flex: 1 1 220px; }
+    .profile-form .coefficient { flex: 0 1 200px; }
     .mcp-url { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-    .mcp-url code { padding: 6px 10px; border-radius: var(--lifeos-radius-sm); background: var(--lifeos-accent-soft); overflow-wrap: anywhere; }
+    .mcp-url code { padding: 6px 10px; border-radius: 8px; background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); overflow-wrap: anywhere; }
+    .danger { color: var(--mat-sys-error); }
     .versions { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 12px; margin: 0; }
     .versions dt { font-weight: 500; }
-    .versions dd { margin: 0; color: var(--lifeos-text-soft); overflow-wrap: anywhere; }
-    @media (max-width: 560px) {
-      .profile-grid { grid-template-columns: minmax(0, 1fr) auto; }
-      .profile-grid > :last-child { grid-column: 1 / -1; }
-      .versions { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-    }
+    .versions dd { margin: 0; color: var(--mat-sys-on-surface-variant); overflow-wrap: anywhere; }
+    @media (max-width: 560px) { .versions { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
   `],
 })
 export class SettingsPageComponent implements OnInit {
@@ -151,10 +173,10 @@ export class SettingsPageComponent implements OnInit {
   readonly apiBuildInfo = signal<BuildInfo | null>(null)
   readonly apiBuildStatus = signal(apiBaseUrl ? 'chargement…' : 'non configurée')
   private readonly router = inject(Router)
+  private readonly snack = inject(MatSnackBar)
   readonly profiles = signal<MemberProfileDto[]>([])
   readonly busy = signal(false)
   readonly error = signal('')
-  readonly notice = signal('')
   readonly editingProfileId = signal('')
   readonly connections = signal<AssistantConnectionDto[]>([])
   readonly copied = signal(false)
@@ -224,11 +246,10 @@ export class SettingsPageComponent implements OnInit {
     if (this.busy() || !window.confirm(`Retirer l’accès de « ${connection.clientName} » à LifeOS ?`)) return
     this.busy.set(true)
     this.error.set('')
-    this.notice.set('')
     try {
       await firstValueFrom(this.api.delete(`/account/connections/${encodeURIComponent(connection.id)}`))
       this.connections.update(items => items.filter(item => item.id !== connection.id))
-      this.notice.set('Accès retiré. L’assistant devra demander à nouveau votre autorisation.')
+      this.snack.open('Accès retiré. L’assistant devra demander à nouveau votre autorisation.', undefined, { duration: 4000 })
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {
@@ -240,7 +261,6 @@ export class SettingsPageComponent implements OnInit {
     this.editingProfileId.set(profile.id)
     this.profileName = profile.displayName
     this.profileCoefficient = profile.portionCoefficient
-    this.notice.set('')
   }
 
   cancelProfileEdit(): void {
@@ -258,7 +278,6 @@ export class SettingsPageComponent implements OnInit {
     }
     this.busy.set(true)
     this.error.set('')
-    this.notice.set('')
     try {
       const id = this.editingProfileId()
       const request = { displayName, portionCoefficient: coefficient }
@@ -267,7 +286,7 @@ export class SettingsPageComponent implements OnInit {
         : await firstValueFrom(this.api.post<MemberProfileDto>('/households/profiles', request))
       this.profiles.update(items => id ? items.map(item => item.id === id ? profile : item) : [...items, profile])
       this.cancelProfileEdit()
-      this.notice.set(id ? 'Personne mise à jour.' : 'Personne ajoutée.')
+      this.snack.open(id ? 'Personne mise à jour.' : 'Personne ajoutée.', undefined, { duration: 4000 })
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {
@@ -283,7 +302,7 @@ export class SettingsPageComponent implements OnInit {
       await firstValueFrom(this.api.delete(`/households/profiles/${profile.id}`))
       this.profiles.update(items => items.filter(item => item.id !== profile.id))
       if (this.editingProfileId() === profile.id) this.cancelProfileEdit()
-      this.notice.set('Personne supprimée.')
+      this.snack.open('Personne supprimée.', undefined, { duration: 4000 })
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {

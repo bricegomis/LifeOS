@@ -1,0 +1,30 @@
+.food-hero { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px; }
+.food-hero-text { display: flex; min-width: 0; flex: 1 1 320px; flex-direction: column; align-items: flex-start; gap: 10px; }
+.food-hero-text h1 { font: var(--mat-sys-headline-medium); }
+.missing { color: var(--mat-sys-on-tertiary-container); font-weight: 500; }
+.food-form { display: flex; flex-direction: column; gap: inherit; }
+.fields { display: flex; flex-wrap: wrap; gap: 0 12px; }
+.fields > mat-form-field { flex: 1 1 180px; }
+.fields > .full { flex-basis: 100%; }
+mat-form-field.is-missing { --mat-form-field-outlined-outline-color: var(--mat-sys-tertiary); --mat-form-field-outlined-label-text-color: var(--mat-sys-tertiary); }
+.class-group { display: flex; min-width: 0; flex-direction: column; gap: 8px; margin: 8px 0 0; padding: 0; border: 0; }
+.class-group legend { display: flex; width: 100%; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; padding: 0; }
+.month-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
+.month-grid .lo-chip { justify-content: center; min-height: 40px; }
+.month-grid .lo-chip.is-current { box-shadow: 0 0 0 2px var(--mat-sys-tertiary); }
+.tag-removable { gap: 2px; padding-right: 0; height: 32px; font: var(--mat-sys-label-large); }
+.tag-removable button { --mat-icon-button-state-layer-size: 32px; padding: 4px; }
+.tag-input { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tag-input mat-form-field { flex: 1 1 220px; }
+.suggestion { border-style: dashed; }
+.class-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--mat-sys-outline-variant); }
+.class-row span:first-child { color: var(--mat-sys-on-surface-variant); }
+.class-row span:last-child { font-weight: 500; text-align: right; }
+.form-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.price-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--mat-sys-outline-variant); }
+.price-row > span:first-child { display: flex; min-width: 0; flex-direction: column; }
+.price-product { font-weight: 500; }
+.price-amount { font-weight: 600; white-space: nowrap; }
+@media (max-width: 760px) {
+  .food-hero-text h1 { font: var(--mat-sys-headline-small); }
+}

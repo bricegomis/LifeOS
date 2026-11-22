@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-16 (passages de routine, une page par élément, Angular Material). Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-22 (toute l’interface en Angular Material). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -38,10 +38,12 @@ reste l'usage réel pendant quelques semaines.
 Navigation : un menu à gauche avec un groupe par domaine (Alimentation, Sport) qui s'ouvre sur
 ses pages, Paramètres et compte en bas ; sur ordinateur il reste affiché (repliable), sur
 téléphone il s'ouvre en panneau depuis la barre du haut, qui rappelle la page affichée. Plus
-d'onglets en bas. Les écrans du Sport et le menu utilisent Angular Material 3 avec le thème
-LifeOS ([ADR 0016](architecture/decisions/0016-angular-material-ui-kit.md)) ; ceux de
-l'Alimentation gardent leurs contrôles natifs jusqu'à leur migration. Chaque liste commence
-par une zone de filtre.
+d'onglets en bas. Tous les écrans (Alimentation, Sport, Paramètres, connexion) utilisent
+Angular Material 3 avec le thème LifeOS et les icônes Material Symbols
+([ADR 0016](architecture/decisions/0016-angular-material-ui-kit.md)) : chaque liste commence
+par une zone de recherche et de filtres, chaque création ou modification s'ouvre dans une
+fenêtre, plein écran sur téléphone. Le thème est en clair seul ; le mode sombre reste à
+activer.
 
 Modèle : [02-core-model.md](02-core-model.md). Code découpé en modules (ADR 0009) :
 Foyer, Alimentation et Sport, chacun avec son schéma PostgreSQL ; tests d'architecture

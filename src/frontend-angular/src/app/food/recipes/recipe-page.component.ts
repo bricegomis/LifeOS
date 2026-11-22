@@ -1,39 +1,39 @@
 import { Component, computed, inject, input, OnInit, signal } from '@angular/core'
-import { FormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
+import { MatDialog } from '@angular/material/dialog'
+import { MatIconModule } from '@angular/material/icon'
 import { Router, RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
 import type { MemberProfileDto } from '@/app/core/api/api.models'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
-import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
 import { HouseholdReviewsComponent } from '@/app/shared/reviews/household-reviews.component'
 import { ReviewDraftsService } from '@/app/shared/reviews/review-drafts.service'
+import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { FoodApiService } from '../food-api.service'
-import type { FoodDto, FoodFamily, FoodRole, IngredientUnit, StoreDto } from '../food.models'
-import {
-  currentMonth, familyLabel, familyOptions, MONTH_NAMES, offSeasonNotice, ROLE_LABELS, roleOptions, seasonStatus, sortBySeason,
-} from '../shared/classification'
+import type { FoodDto, StoreDto } from '../food.models'
+import { currentMonth, offSeasonNotice, seasonStatus, seasonTagClass } from '../shared/classification'
 import { FoodImageComponent } from '../shared/food-image.component'
-import { matches } from '../shared/format'
 import { fodmapLabel, formatNumber, formatQuantity } from '../shared/format'
 import { costView } from './recipe-cost'
 import { RecipeEditorComponent } from './recipe-editor.component'
-import { buildIngredientRequest, INGREDIENT_UNITS, recipeSteps } from './recipe-form'
+import { recipeSteps } from './recipe-form'
+import { type RecipeIngredientsData, RecipeIngredientsDialogComponent } from './recipe-ingredients-dialog.component'
 import { recipeNutrition } from './recipe-nutrition'
 import type { RecipeCostDto, RecipeDto, RecipeIngredientDto } from './recipe.models'
 import { RecipesApiService } from './recipes-api.service'
 
-interface IngredientDraft { id: string; quantity: string; unit: IngredientUnit }
-
+/** A recipe: photo, ingredients with their season, preparation, reviews, nutrition per portion and cost range. */
 @Component({
   selector: 'app-recipe-page',
   standalone: true,
-  imports: [FormsModule, RouterLink, LifeosDialogComponent, FoodImageComponent, HouseholdReviewsComponent, RecipeEditorComponent],
+  imports: [FoodImageComponent, HouseholdReviewsComponent, MatButtonModule, MatIconModule, RouterLink],
   templateUrl: './recipe-page.component.html',
-  styleUrl: './recipes.css',
+  styleUrl: './recipe-page.css',
 })
 export class RecipePageComponent implements OnInit {
   private readonly recipesApi = inject(RecipesApiService)
   private readonly foodApi = inject(FoodApiService)
+  private readonly dialog = inject(MatDialog)
   private readonly router = inject(Router)
   private readonly reviewDrafts = inject(ReviewDraftsService)
   /** Route parameter. */
@@ -49,20 +49,14 @@ export class RecipePageComponent implements OnInit {
   readonly error = signal('')
   readonly actionError = signal('')
   readonly busy = signal(false)
-  readonly editing = signal(false)
-  readonly editingIngredients = signal(false)
-  readonly ingredientError = signal('')
-  drafts: IngredientDraft[] = []
-  newIngredient = { foodItemId: '', quantity: '', unit: 'g' as IngredientUnit }
 
-  readonly units = INGREDIENT_UNITS
   readonly fodmapLabel = fodmapLabel
+  readonly seasonTagClass = seasonTagClass
   readonly steps = computed(() => recipeSteps(this.recipe()?.instructions ?? null))
   readonly nutrition = computed(() => {
     const recipe = this.recipe()
     return recipe ? recipeNutrition(recipe, this.foods()) : null
   })
-  readonly activeFoods = computed(() => this.foods().filter(food => !food.isArchived))
 
   /** Season of the ingredients for the current month (ADR 0012), computed on read. */
   readonly month = currentMonth()
@@ -72,38 +66,6 @@ export class RecipePageComponent implements OnInit {
     const foods = recipe.ingredients.map(i => this.food(i.foodItemId)).filter((food): food is FoodDto => !!food)
     return offSeasonNotice(foods, this.month)
   })
-
-  /** Ingredient picker: search and filters, in season first unless asked otherwise. Nothing is hidden by season. */
-  readonly pickSearch = signal('')
-  readonly pickFamily = signal<FoodFamily | ''>('')
-  readonly pickRole = signal<FoodRole | ''>('')
-  readonly pickSeasonFirst = signal(true)
-  readonly familyOptions = familyOptions
-  readonly roleOptions = roleOptions
-  readonly pickHint = computed(() => this.pickSeasonFirst()
-    ? `De saison en ${MONTH_NAMES[this.month - 1]}, puis toute l’année, puis hors saison. Rien n’est masqué.`
-    : 'Ordre alphabétique.')
-  readonly pickerFoods = computed(() => {
-    const used = new Set(this.recipe()?.ingredients.map(i => i.foodItemId) ?? [])
-    const family = this.pickFamily()
-    const role = this.pickRole()
-    const found = this.activeFoods().filter(food => !used.has(food.id) && matches(food.name, this.pickSearch())
-      && (!family || food.family === family) && (!role || food.roles.includes(role)))
-    return this.pickSeasonFirst() ? sortBySeason(found, this.month) : [...found].sort((a, b) => a.name.localeCompare(b.name, 'fr'))
-  })
-
-  season(food: FoodDto | undefined) { return seasonStatus(food?.seasonMonths ?? [], this.month) }
-
-  pickDetail(food: FoodDto): string {
-    return [familyLabel(food.family), food.roles.map(role => ROLE_LABELS[role]).join(', ')].filter(Boolean).join(' · ')
-  }
-
-  /** Picks the food and the unit matching its nutrition base; the quantity is still typed by hand. */
-  choose(food: FoodDto): void {
-    const unit: IngredientUnit = food.referenceUnit === '100 ml' ? 'ml' : food.referenceUnit === '1 pièce' ? 'pièce' : 'g'
-    this.newIngredient = { ...this.newIngredient, foodItemId: food.id, unit }
-    this.ingredientError.set('')
-  }
   readonly costLines = computed(() => {
     const cost = this.cost()
     return cost ? costView(cost, this.foods(), this.stores()) : null
@@ -135,14 +97,27 @@ export class RecipePageComponent implements OnInit {
     return `${recipe.servings} portion${recipe.servings > 1 ? 's' : ''} · ${recipe.durationMinutes} min`
   }
 
+  season(food: FoodDto | undefined) { return seasonStatus(food?.seasonMonths ?? [], this.month) }
   food(id: string): FoodDto | undefined { return this.foods().find(food => food.id === id) }
   quantity(ingredient: RecipeIngredientDto): string { return formatQuantity(ingredient.quantity, ingredient.unit) }
   number(value: number): string { return formatNumber(value, value < 10 ? 1 : 0) }
 
-  edited(recipe: RecipeDto): void {
-    this.recipe.set(recipe)
-    this.editing.set(false)
+  async edit(): Promise<void> {
+    const recipe = this.recipe()
+    if (!recipe) return
+    const saved = await firstValueFrom(openEditor<RecipeEditorComponent, RecipeDto, RecipeDto>(this.dialog, RecipeEditorComponent, recipe).afterClosed())
+    if (!saved) return
+    this.recipe.set(saved)
     void this.loadCost()
+  }
+
+  /** Each ingredient row saves itself; the page follows every change. */
+  openIngredients(): void {
+    const recipe = this.recipe()
+    if (!recipe) return
+    openEditor<RecipeIngredientsDialogComponent, RecipeIngredientsData>(this.dialog, RecipeIngredientsDialogComponent, {
+      recipe, foods: this.foods(), changed: updated => { this.recipe.set(updated); void this.loadCost() },
+    })
   }
 
   /** The cost is computed on read; it is reloaded after each change of ingredients or yield. */
@@ -182,69 +157,6 @@ export class RecipePageComponent implements OnInit {
       await firstValueFrom(this.recipesApi.archive(recipe.id))
       await this.router.navigate(['/recipes'])
     })
-  }
-
-  openIngredients(): void {
-    const recipe = this.recipe()
-    if (!recipe) return
-    this.drafts = recipe.ingredients.map(i => ({ id: i.id, quantity: String(i.quantity).replace('.', ','), unit: i.unit }))
-    this.newIngredient = { foodItemId: '', quantity: '', unit: 'g' }
-    this.pickSearch.set('')
-    this.pickFamily.set('')
-    this.pickRole.set('')
-    this.ingredientError.set('')
-    this.editingIngredients.set(true)
-  }
-
-  async addIngredient(): Promise<void> {
-    const recipe = this.recipe()
-    const request = buildIngredientRequest(this.newIngredient.quantity, this.newIngredient.unit)
-    if (!recipe) return
-    if (!this.newIngredient.foodItemId) { this.ingredientError.set('Choisissez un aliment.'); return }
-    if (!request.ok) { this.ingredientError.set(request.error); return }
-    await this.ingredientAction(async () => {
-      const updated = await firstValueFrom(this.recipesApi.addIngredient(recipe.id, { foodItemId: this.newIngredient.foodItemId, ...request.value }))
-      const added = updated.ingredients.find(i => !this.drafts.some(d => d.id === i.id))
-      if (added) this.drafts.push({ id: added.id, quantity: String(added.quantity).replace('.', ','), unit: added.unit })
-      this.newIngredient = { foodItemId: '', quantity: '', unit: 'g' }
-      return updated
-    })
-  }
-
-  async updateIngredient(draft: IngredientDraft): Promise<void> {
-    const recipe = this.recipe()
-    const request = buildIngredientRequest(draft.quantity, draft.unit)
-    if (!recipe) return
-    if (!request.ok) { this.ingredientError.set(request.error); return }
-    await this.ingredientAction(() => firstValueFrom(this.recipesApi.updateIngredient(recipe.id, draft.id, request.value)))
-  }
-
-  async removeIngredient(draft: IngredientDraft): Promise<void> {
-    const recipe = this.recipe()
-    if (!recipe) return
-    await this.ingredientAction(async () => {
-      const updated = await firstValueFrom(this.recipesApi.removeIngredient(recipe.id, draft.id))
-      this.drafts = this.drafts.filter(d => d.id !== draft.id)
-      return updated
-    })
-  }
-
-  ingredientName(id: string): string {
-    const ingredient = this.recipe()?.ingredients.find(i => i.id === id)
-    return ingredient ? this.food(ingredient.foodItemId)?.name ?? 'Aliment indisponible' : ''
-  }
-
-  private async ingredientAction(action: () => Promise<RecipeDto>): Promise<void> {
-    this.busy.set(true)
-    this.ingredientError.set('')
-    try {
-      this.recipe.set(await action())
-      void this.loadCost()
-    } catch (error) {
-      this.ingredientError.set(apiErrorMessage(error))
-    } finally {
-      this.busy.set(false)
-    }
   }
 
   private async run(action: () => Promise<void>): Promise<void> {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { FoodDto } from '../food.models.ts'
 import {
-  addTag, filterFoods, type FoodListFilter, householdTags, offSeasonNotice, seasonRangeLabel, seasonStatus, sortBySeason,
+  addTag, filterFoods, type FoodListFilter, householdTags, offSeasonNotice, seasonRangeLabel, seasonStatus, seasonTagClass, sortBySeason,
 } from './classification.ts'
 
 const food = (name: string, extra: Partial<FoodDto> = {}) => ({
@@ -16,6 +16,12 @@ const leek = food('Poireau', { seasonMonths: [1, 2, 3, 4, 9, 10, 11, 12] })
 const tofu = food('Tofu', { family: 'legume', roles: ['protein'], missingFields: ['Fibres'] })
 
 describe('food classification', () => {
+  it('styles in season as positive, out of season as a warning and all year as neutral', () => {
+    assert.equal(seasonTagClass('in'), 'is-ok')
+    assert.equal(seasonTagClass('all'), '')
+    assert.equal(seasonTagClass('out'), 'is-off')
+  })
+
   it('reads no month as all year, otherwise in or out of season', () => {
     assert.equal(seasonStatus([], 12).kind, 'all')
     assert.equal(seasonStatus([7, 8], 12).kind, 'out')

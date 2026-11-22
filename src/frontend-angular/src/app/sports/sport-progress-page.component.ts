@@ -23,16 +23,16 @@ const STATUS_LABELS: Record<string, string> = { reached: 'atteint', joker: 'joke
   standalone: true,
   imports: [RoutineProgressComponent],
   template: `
-    <div class="page">
-      <div class="page-header"><h1>Progression</h1></div>
-      @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p class="status-text" role="status">Chargement…</p> } @else {
-        <div class="week-grid">
-          <section class="surface-card sport-section" aria-labelledby="progress-weeks">
+    <div class="lo-page">
+      <header class="lo-page-head"><h1>Progression</h1></header>
+      @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
+      @if (loading()) { <p class="lo-status" role="status">Chargement…</p> } @else {
+        <div class="lo-grid-2">
+          <section class="lo-panel" aria-labelledby="progress-weeks">
             <h2 id="progress-weeks">8 dernières semaines</h2>
-            <div class="choice-grid" role="group" aria-label="Mesure affichée">
+            <div class="lo-chips" role="group" aria-label="Mesure affichée">
               @for (item of metrics; track item.id) {
-                <button type="button" class="pill" [attr.aria-pressed]="metric() === item.id" (click)="metric.set(item.id)">{{ item.label }}</button>
+                <button type="button" class="lo-filter-chip" [class.is-on]="metric() === item.id" [attr.aria-pressed]="metric() === item.id" (click)="metric.set(item.id)">{{ item.label }}</button>
               }
             </div>
             <div class="chart" role="img" [attr.aria-label]="chartLabel()">
@@ -40,31 +40,31 @@ const STATUS_LABELS: Record<string, string> = { reached: 'atteint', joker: 'joke
                 <div class="chart-col">
                   <strong>{{ bar.value }}</strong>
                   <span class="chart-bar" [class.is-current]="bar.current" [style.height.px]="bar.height"></span>
-                  <span class="muted">{{ bar.label }}</span>
+                  <span class="lo-muted">{{ bar.label }}</span>
                   <span class="goals" [class.is-done]="bar.allGoals">{{ bar.goals }}</span>
                 </div>
               }
             </div>
-            <p class="muted small">Sous chaque barre : objectifs atteints. Barre hachurée : semaine en cours. * : calories partielles.</p>
+            <p class="lo-muted lo-small">Sous chaque barre : objectifs atteints. Barre hachurée : semaine en cours. * : calories partielles.</p>
             @for (record of records(); track record.label) {
-              <div class="settings-row"><span>{{ record.label }}</span><strong>{{ record.value }}</strong></div>
+              <div class="record-row"><span>{{ record.label }}</span><strong>{{ record.value }}</strong></div>
             }
           </section>
 
-          <section class="surface-card sport-section" aria-labelledby="progress-challenges">
+          <section class="lo-panel" aria-labelledby="progress-challenges">
             <h2 id="progress-challenges">Défis du jour</h2>
-            @if (!challenges().length) { <p class="muted">Aucun défi pour l'instant.</p> } @else {
-              <div class="choice-grid" role="group" aria-label="Défi affiché">
+            @if (!challenges().length) { <p class="lo-muted">Aucun défi pour l'instant.</p> } @else {
+              <div class="lo-chips" role="group" aria-label="Défi affiché">
                 @for (report of challenges(); track report.challenge.id) {
-                  <button type="button" class="pill" [attr.aria-pressed]="selected()?.challenge?.id === report.challenge.id"
+                  <button type="button" class="lo-filter-chip" [class.is-on]="selected()?.challenge?.id === report.challenge.id" [attr.aria-pressed]="selected()?.challenge?.id === report.challenge.id"
                     (click)="selectedId.set(report.challenge.id)">{{ report.challenge.name }}{{ report.challenge.isActive ? '' : ' (arrêté)' }}</button>
                 }
               </div>
               @if (selected(); as report) {
-                <div class="stats">
-                  <div class="stat"><div class="stat-label">Série</div><div class="stat-value">{{ report.streak }} j</div></div>
-                  <div class="stat"><div class="stat-label">Record</div><div class="stat-value">{{ report.record }} j</div></div>
-                  <div class="stat"><div class="stat-label">Jokers restants</div><div class="stat-value">{{ report.jokersLeftThisWeek }} / {{ report.jokersPerWeek }}</div></div>
+                <div class="lo-stats">
+                  <div class="lo-stat"><div class="lo-stat-label">Série</div><div class="lo-stat-value">{{ report.streak }} j</div></div>
+                  <div class="lo-stat"><div class="lo-stat-label">Record</div><div class="lo-stat-value">{{ report.record }} j</div></div>
+                  <div class="lo-stat"><div class="lo-stat-label">Jokers restants</div><div class="lo-stat-value">{{ report.jokersLeftThisWeek }} / {{ report.jokersPerWeek }}</div></div>
                 </div>
                 <div class="calendar">
                   <div class="calendar-days" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
@@ -84,20 +84,20 @@ const STATUS_LABELS: Record<string, string> = { reached: 'atteint', joker: 'joke
                   <span><i class="cell cell-zero"></i>0</span><span><i class="cell cell-low"></i>&lt; 50 %</span>
                   <span><i class="cell cell-high"></i>&lt; 100 %</span><span><i class="cell cell-full"></i>Atteint</span><span><i class="cell cell-joker"></i>Joker</span>
                 </div>
-                <div class="stats">
-                  <div class="stat"><div class="stat-label">Depuis le {{ dayMonth(report.challenge.startedOn) }}</div><div class="stat-value">{{ amount(report, report.total) }}</div></div>
-                  <div class="stat"><div class="stat-label">Cette année</div><div class="stat-value">{{ amount(report, report.totalThisYear) }}</div></div>
+                <div class="lo-stats">
+                  <div class="lo-stat"><div class="lo-stat-label">Depuis le {{ dayMonth(report.challenge.startedOn) }}</div><div class="lo-stat-value">{{ amount(report, report.total) }}</div></div>
+                  <div class="lo-stat"><div class="lo-stat-label">Cette année</div><div class="lo-stat-value">{{ amount(report, report.totalThisYear) }}</div></div>
                 </div>
                 @if (report.nextMilestone; as next) {
                   <div class="goal-row">
-                    <div class="goal-row-head"><span class="muted">Prochain palier</span>
+                    <div class="goal-row-head"><span class="lo-muted">Prochain palier</span>
                       <strong>{{ amount(report, next) }} (encore {{ amount(report, next - report.total) }})</strong></div>
                     <div class="progress"><span class="is-done" [style.width.%]="milestonePercent(report)"></span></div>
                   </div>
                 }
-                <div class="tags">
+                <div class="lo-tags">
                   @for (milestone of report.milestones; track milestone) {
-                    <span class="chip" [class.chip-ok]="report.total >= milestone" [class.chip-neutral]="report.total < milestone">
+                    <span class="lo-tag" [class.is-ok]="report.total >= milestone">
                       {{ report.total >= milestone ? '✓ ' : '' }}{{ amount(report, milestone) }}</span>
                   }
                 </div>

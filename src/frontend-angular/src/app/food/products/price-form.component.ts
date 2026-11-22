@@ -1,5 +1,10 @@
 import { Component, computed, inject, input, OnChanges, output, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatIconModule } from '@angular/material/icon'
+import { MatInputModule } from '@angular/material/input'
+import { MatSelectModule } from '@angular/material/select'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { FoodApiService } from '../food-api.service'
@@ -14,43 +19,40 @@ import { buildPriceRequest, type PriceFormValues } from './product-form'
 @Component({
   selector: 'app-price-form',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule],
   template: `
-    <form class="price-form" (ngSubmit)="record()">
-      <label class="field">
-        <span>Produit</span>
-        <select class="lifeos-input" name="product" required [(ngModel)]="values.productId">
-          <option value="">Choisir un produit</option>
-          @for (option of options(); track option.id) { <option [value]="option.id">{{ option.label }}</option> }
-        </select>
-      </label>
-      <div class="field-row">
-        <label class="field">
-          <span>Magasin</span>
-          <select class="lifeos-input" name="store" required [(ngModel)]="values.storeId">
-            <option value="">Choisir</option>
-            @for (store of stores(); track store.id) { <option [value]="store.id">{{ store.name }}</option> }
-          </select>
-        </label>
-        <label class="field">
-          <span>Date</span>
-          <input class="lifeos-input" name="date" type="date" required [max]="maxDate" [(ngModel)]="values.observedOn" />
-        </label>
-        <label class="field">
-          <span>Prix payé (€)</span>
-          <input class="lifeos-input" name="price" inputmode="decimal" placeholder="0,00" required [(ngModel)]="values.price" />
-        </label>
+    <form class="lo-form" (ngSubmit)="record()">
+      <mat-form-field appearance="outline">
+        <mat-label>Produit</mat-label>
+        <mat-select name="product" required [(ngModel)]="values.productId">
+          @for (option of options(); track option.id) { <mat-option [value]="option.id">{{ option.label }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <div class="lo-form-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Magasin</mat-label>
+          <mat-select name="store" required [(ngModel)]="values.storeId">
+            @for (store of stores(); track store.id) { <mat-option [value]="store.id">{{ store.name }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date</mat-label>
+          <input matInput name="date" type="date" required [max]="maxDate" [(ngModel)]="values.observedOn" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Prix payé (€)</mat-label>
+          <input matInput name="price" inputmode="decimal" placeholder="0,00" required [(ngModel)]="values.price" />
+        </mat-form-field>
       </div>
-      <p class="muted small">Prix d’un conditionnement. Le prix au kilo, au litre ou à la pièce se calcule depuis sa contenance.</p>
-      <div class="page-actions">
-        <button type="submit" class="lifeos-button" [disabled]="busy()">{{ busy() ? 'Enregistrement…' : 'Ajouter le prix' }}</button>
+      <p class="lo-help">Prix d’un conditionnement. Le prix au kilo, au litre ou à la pièce se calcule depuis sa contenance.</p>
+      @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
+      @if (lastRecorded()) { <p class="lo-muted" role="status">{{ lastRecorded() }}</p> }
+      <div class="lo-actions">
+        <button mat-flat-button type="submit" [disabled]="busy()"><mat-icon svgIcon="sell" />{{ busy() ? 'Enregistrement…' : 'Ajouter le prix' }}</button>
         <ng-content />
       </div>
-      @if (error()) { <p class="error-text" role="alert">{{ error() }}</p> }
-      @if (lastRecorded()) { <p class="muted" role="status">{{ lastRecorded() }}</p> }
     </form>
   `,
-  styles: [`.price-form { display: flex; flex-direction: column; gap: 12px; }`],
 })
 export class PriceFormComponent implements OnChanges {
   private readonly api = inject(FoodApiService)
@@ -76,6 +78,7 @@ export class PriceFormComponent implements OnChanges {
   }
 
   async record(): Promise<void> {
+    if (this.busy()) return
     const request = buildPriceRequest(this.values, today())
     if (!request.ok) { this.error.set(request.error); return }
     this.busy.set(true)

@@ -6,8 +6,7 @@ import ts from 'typescript'
 import type { ReviewDto } from '../../core/api/api.models.ts'
 import type { HouseholdReviewsComponent } from './household-reviews.component.ts'
 import type { ReviewDraftsService } from './review-drafts.service.ts'
-import type { LifeosDialogComponent } from '../dialog/lifeos-dialog.component.ts'
-import { dismissDecision, focusableFieldSelector, formSnapshot, hasChanges } from '../dialog/dialog-guard.ts'
+import { formSnapshot, hasChanges } from '../dialog/dialog-guard.ts'
 
 function signal<T>(initial: T) {
   let value = initial
@@ -32,13 +31,21 @@ function harness() {
   let hold: Promise<unknown> | null = null
   let confirmAnswer = true
   let confirmations = 0
-  let dismissed = 0
   const loadedReviews: ReviewDto[][] = []
-  let focused = 0
   const onDestroy: (() => void)[] = []
-  const modal = { open: false, showModal() { this.open = true } }
-  let openDialogs: { contains: (target: unknown) => boolean }[] = []
-  const target = { isConnected: true, focus: () => { focused++ } }
+  const windows = { opened: 0, open: 0 }
+  const dialogToken = {}
+  /** Stands for MatDialog through openEditor: closing the window runs its afterClosed subscribers. */
+  const openEditor = () => {
+    windows.opened++
+    windows.open++
+    const closed: (() => void)[] = []
+    let isOpen = true
+    return {
+      afterClosed: () => ({ subscribe: (callback: () => void) => { closed.push(callback) } }),
+      close: () => { if (!isOpen) return; isOpen = false; windows.open--; closed.forEach(callback => callback()) },
+    }
+  }
   const api = Object.fromEntries(['get', 'post', 'put', 'delete'].map(method => [
     method, async (path: string, body?: unknown) => {
       calls.push({ method, path, body })
@@ -59,17 +66,17 @@ function harness() {
     '@angular/core': {
       Component: noopDecorator, Injectable: noopDecorator, Input: noopDecorator, HostListener: noopDecorator,
       DestroyRef: destroyRef, signal, input,
-      output: () => ({ emit: (reviews?: ReviewDto[]) => { if (reviews) loadedReviews.push(reviews); else dismissed++ } }),
-      viewChild: { required: () => () => ({ nativeElement: modal }) },
-      afterRenderEffect: () => {},
-      inject: (token: unknown) => token === destroyRef ? destroyRef : token === reviewDraftsToken ? drafts : api,
+      output: () => ({ emit: (reviews?: ReviewDto[]) => { if (reviews) loadedReviews.push(reviews) } }),
+      inject: (token: unknown) => token === destroyRef ? destroyRef : token === reviewDraftsToken ? drafts : token === dialogToken ? {} : api,
     },
-    '@angular/forms': { FormsModule: {} },
+    '@angular/material/button': { MatButtonModule: {} },
+    '@angular/material/dialog': { MatDialog: dialogToken },
+    '@angular/material/icon': { MatIconModule: {} },
+    '@/app/shared/ui/editor-dialog': { openEditor },
+    './review-editor-dialog.component': { ReviewEditorDialogComponent: {} },
     'rxjs': { firstValueFrom: (value: unknown) => Promise.resolve(value) },
     '@/app/core/api/lifeos-api.service': { LifeosApiService: {}, apiErrorMessage: (error: Error) => error.message },
     '@/app/shared/dialog/dialog-guard': { formSnapshot, hasChanges },
-    './dialog-guard': { dismissDecision, focusableFieldSelector },
-    '@/app/shared/dialog/lifeos-dialog.component': { LifeosDialogComponent: {} },
     './review-drafts.service': { ReviewDraftsService: reviewDraftsToken },
   }
   function load<T>(path: string, name: string): T {
@@ -81,27 +88,37 @@ function harness() {
     runInNewContext(js, {
       exports, require: (id: string) => { assert.ok(id in imports, `Missing port ${id}`); return imports[id] },
       window: { confirm: () => { confirmations++; return confirmAnswer } },
-      document: { querySelectorAll: () => openDialogs },
-      HTMLElement: class {}, console,
+      console,
     })
     return new exports[name]!()
   }
   drafts = load<ReviewDraftsService>('./review-drafts.service.ts', 'ReviewDraftsService')
   const component = load<HouseholdReviewsComponent>('./household-reviews.component.ts', 'HouseholdReviewsComponent')
-  const dialog = load<LifeosDialogComponent>('../dialog/lifeos-dialog.component.ts', 'LifeosDialogComponent')
   component.targetId = 'target/1'
   return {
-    component, dialog, drafts, review, calls, modal, target, loadedReviews,
+    component, drafts, review, calls, windows, loadedReviews,
     fail: (message: string) => { failure = message },
     hold: (promise: Promise<unknown> | null) => { hold = promise },
     confirm: (answer: boolean) => { confirmAnswer = answer },
-    confirmations: () => confirmations, dismissed: () => dismissed, focused: () => focused,
-    openDialogs: (dialogs: typeof openDialogs) => { openDialogs = dialogs },
+    confirmations: () => confirmations,
     destroy: () => onDestroy.forEach(callback => callback()),
   }
 }
 
-describe('shared household review popup', () => {
+describe('shared household review window', () => {
+  it('opens one window per draft and drops the draft when the window is closed', async () => {
+    const { component, windows } = harness()
+    component.add()
+    assert.equal(windows.open, 1)
+    component.add()
+    assert.equal(windows.opened, 1, 'A second window never opens over a draft')
+    component.comment = 'Brouillon'
+    component.cancelEdit()
+    assert.equal(windows.open, 0)
+    assert.equal(component.editorOpen(), false)
+    assert.equal(component.comment, '')
+  })
+
   it('opens clean creation and editing drafts without removing existing reviews', async () => {
     const { component, review } = harness()
     await component.load()
@@ -257,53 +274,5 @@ describe('shared household review popup', () => {
     await loading
     assert.equal(component.reviews().length, 0)
     assert.equal(component.loading(), false)
-  })
-})
-
-describe('native stacked dialog guards and focus', () => {
-  it('routes cross, Escape and Cancel through the same dirty/pending guard', () => {
-    const { dialog, confirm, confirmations, dismissed } = harness()
-    const dirty = signal(true)
-    const busy = signal(false)
-    Object.assign(dialog, { dirty, busy })
-    confirm(false)
-    dialog.requestDismiss()
-    let prevented = false
-    dialog.onCancel({ preventDefault: () => { prevented = true } } as Event)
-    assert.equal(prevented, true)
-    assert.equal(dismissed(), 0)
-    assert.equal(confirmations(), 2)
-    busy.set(true)
-    confirm(true)
-    dialog.requestDismiss()
-    assert.equal(dismissed(), 0)
-    assert.equal(confirmations(), 2)
-    busy.set(false)
-    dialog.requestDismiss()
-    assert.equal(dismissed(), 1)
-  })
-
-  it('restores focus inside an open parent but not behind an unrelated modal', () => {
-    const { dialog, target, focused, openDialogs } = harness()
-    Object.assign(dialog, { returnFocus: target })
-    openDialogs([{ contains: candidate => candidate === target }])
-    dialog.onNativeClose()
-    assert.equal(focused(), 1)
-    Object.assign(dialog, { returnFocus: target })
-    openDialogs([{ contains: () => false }])
-    dialog.onNativeClose()
-    assert.equal(focused(), 1)
-    Object.assign(dialog, { returnFocus: target })
-    openDialogs([])
-    dialog.onNativeClose()
-    assert.equal(focused(), 2)
-  })
-
-  it('reopens a native force-close while the owner still considers the dialog open', () => {
-    const { dialog, modal, focused } = harness()
-    Object.assign(dialog, { open: signal(true) })
-    dialog.onNativeClose()
-    assert.equal(modal.open, true)
-    assert.equal(focused(), 0)
   })
 })

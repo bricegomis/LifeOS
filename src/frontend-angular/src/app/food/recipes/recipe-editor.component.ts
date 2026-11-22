@@ -1,91 +1,81 @@
-import { Component, inject, input, OnInit, output, signal } from '@angular/core'
+import { Component, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog'
+import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatInputModule } from '@angular/material/input'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
-import { LifeosDialogComponent } from '@/app/shared/dialog/lifeos-dialog.component'
+import { EditorFrameComponent } from '@/app/shared/ui/editor-frame.component'
 import { buildRecipeRequest, type RecipeFormValues } from './recipe-form'
 import type { RecipeDto } from './recipe.models'
 import { RecipesApiService } from './recipes-api.service'
 
-let nextEditorId = 0
-
-/** Creates a recipe (`recipe` null) or edits its name, yield, duration, categories and preparation. */
+/** Creates a recipe (data null) or edits its name, yield, duration, categories and preparation; returns the saved recipe. */
 @Component({
   selector: 'app-recipe-editor',
   standalone: true,
-  imports: [FormsModule, LifeosDialogComponent],
+  imports: [EditorFrameComponent, FormsModule, MatFormFieldModule, MatInputModule],
   template: `
-    <app-lifeos-dialog [open]="true" [heading]="recipe() ? 'Modifier la recette' : 'Nouvelle recette'" [wide]="true"
-      [formId]="formId" [submitLabel]="recipe() ? 'Enregistrer' : 'Créer la recette'" [busy]="busy()" [dirty]="dirty()"
-      [error]="error()" (dismissed)="closed.emit()">
-      <form [id]="formId" class="editor-form" (ngSubmit)="save()">
-        <label class="field">
-          <span>Nom</span>
-          <input class="lifeos-input" name="name" maxlength="200" required [(ngModel)]="values.name" />
-        </label>
-        <div class="field-row">
-          <label class="field">
-            <span>Portions (rendement)</span>
-            <input class="lifeos-input" name="servings" type="number" min="1" step="1" required [(ngModel)]="values.servings" />
-          </label>
-          <label class="field">
-            <span>Durée (minutes)</span>
-            <input class="lifeos-input" name="duration" type="number" min="0" step="1" required [(ngModel)]="values.durationMinutes" />
-          </label>
+    <app-editor-frame [heading]="recipe ? 'Modifier la recette' : 'Nouvelle recette'" formId="recipe-form"
+      [saveLabel]="recipe ? 'Enregistrer' : 'Créer'" [busy]="busy()" [dirty]="dirty()" [error]="error()">
+      <form id="recipe-form" class="lo-form" (ngSubmit)="save()">
+        <mat-form-field appearance="outline">
+          <mat-label>Nom</mat-label>
+          <input matInput name="name" maxlength="200" required [(ngModel)]="values.name" />
+        </mat-form-field>
+        <div class="lo-form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Portions (rendement)</mat-label>
+            <input matInput name="servings" type="number" inputmode="numeric" min="1" step="1" required [(ngModel)]="values.servings" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Durée (minutes)</mat-label>
+            <input matInput name="duration" type="number" inputmode="numeric" min="0" step="1" required [(ngModel)]="values.durationMinutes" />
+          </mat-form-field>
         </div>
-        <label class="field">
-          <span>Catégories, séparées par des virgules</span>
-          <input class="lifeos-input" name="tags" placeholder="plat, végétarien, batch" [(ngModel)]="values.tagsText" />
-        </label>
-        <label class="field">
-          <span>Préparation : une étape par ligne</span>
-          <textarea class="lifeos-input" name="instructions" rows="8" maxlength="10000" [(ngModel)]="values.instructions"></textarea>
-        </label>
+        <mat-form-field appearance="outline">
+          <mat-label>Catégories</mat-label>
+          <input matInput name="tags" placeholder="plat, végétarien, batch" [(ngModel)]="values.tagsText" />
+          <mat-hint>Séparées par des virgules.</mat-hint>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Préparation</mat-label>
+          <textarea matInput name="instructions" rows="8" maxlength="10000" [(ngModel)]="values.instructions"></textarea>
+          <mat-hint>Une étape par ligne.</mat-hint>
+        </mat-form-field>
       </form>
-    </app-lifeos-dialog>
+    </app-editor-frame>
   `,
-  styles: [`.editor-form { display: flex; flex-direction: column; gap: 16px; }`],
 })
-export class RecipeEditorComponent implements OnInit {
+export class RecipeEditorComponent {
   private readonly api = inject(RecipesApiService)
-  readonly recipe = input.required<RecipeDto | null>()
-  readonly saved = output<RecipeDto>()
-  readonly closed = output<void>()
+  private readonly ref = inject<MatDialogRef<RecipeEditorComponent, RecipeDto>>(MatDialogRef)
+  readonly recipe = inject<RecipeDto | null>(MAT_DIALOG_DATA)
   readonly busy = signal(false)
   readonly error = signal('')
-  readonly formId = `recipe-editor-${++nextEditorId}`
-  values: RecipeFormValues = { name: '', servings: 4, durationMinutes: 30, tagsText: '', instructions: '' }
-  private initial = formSnapshot(this.values)
-
-  ngOnInit(): void {
-    const recipe = this.recipe()
-    if (recipe) {
-      this.values = {
-        name: recipe.name, servings: recipe.servings, durationMinutes: recipe.durationMinutes,
-        tagsText: recipe.tags.join(', '), instructions: recipe.instructions ?? '',
+  readonly values: RecipeFormValues = this.recipe
+    ? {
+        name: this.recipe.name, servings: this.recipe.servings, durationMinutes: this.recipe.durationMinutes,
+        tagsText: this.recipe.tags.join(', '), instructions: this.recipe.instructions ?? '',
       }
-    }
-    this.initial = formSnapshot(this.values)
-  }
+    : { name: '', servings: 4, durationMinutes: 30, tagsText: '', instructions: '' }
+  private readonly initial = formSnapshot(this.values)
 
   dirty(): boolean { return hasChanges(this.initial, this.values) }
 
   async save(): Promise<void> {
+    if (this.busy()) return
     const request = buildRecipeRequest(this.values)
     if (!request.ok) { this.error.set(request.error); return }
-    const recipe = this.recipe()
     this.busy.set(true)
     this.error.set('')
     try {
-      const result = recipe
-        ? await firstValueFrom(this.api.update(recipe.id, request.value))
-        : await firstValueFrom(this.api.create(request.value))
-      this.initial = formSnapshot(this.values)
-      this.saved.emit(result)
+      this.ref.close(this.recipe
+        ? await firstValueFrom(this.api.update(this.recipe.id, request.value))
+        : await firstValueFrom(this.api.create(request.value)))
     } catch (error) {
       this.error.set(apiErrorMessage(error))
-    } finally {
       this.busy.set(false)
     }
   }

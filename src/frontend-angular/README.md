@@ -1,10 +1,9 @@
 # LifeOS Angular frontend
 
 The frontend is a standalone Angular 22 + TypeScript single-page application,
-built with the Angular CLI. The menu and the Sport screens use Angular Material 3 with
-the LifeOS theme (`src/theme.scss`, ADR 0016) and Material Symbols bundled as SVG; the
-Food screens still use native controls, the LifeOS CSS tokens and PrimeIcons until their
-migration. It is the only, API-backed
+built with the Angular CLI. Every screen uses Angular Material 3 with the LifeOS theme
+(`src/theme.scss`, ADR 0016), Material Symbols bundled as SVG and the shared `lo-*`
+classes of `src/lifeos-ui.css`; `src/app/ui-kit.spec.ts` keeps new screens on it. It is the only, API-backed
 frontend, published by the Docker delivery workflow for VPS deployments and
 packaged for iPhone with Capacitor (see [docs/ios-v1.md](../../docs/ios-v1.md)).
 

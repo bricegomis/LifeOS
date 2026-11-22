@@ -5,7 +5,8 @@
 @use './theme-colors' as lifeos;
 
 html {
-  // Light only until every screen uses the theme's colours; the dark scheme comes with the Food migration.
+  // Light only for now. Every screen takes its colours from the theme, so the dark scheme (ADR 0016) only needs
+  // `color-scheme: light dark` and dark values for the warm surfaces below, then a check on screen.
   color-scheme: light;
   @include mat.theme((
     color: (primary: lifeos.$primary-palette, tertiary: lifeos.$tertiary-palette),

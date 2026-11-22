@@ -1,26 +1,21 @@
 <main class="login-page">
-  <section class="login-panel">
+  <section class="lo-card login-panel">
     <div class="login-copy">
       <p class="eyebrow">LifeOS · votre foyer</p>
       <h1>Préparez la semaine ensemble.</h1>
-      <p>Connectez-vous pour organiser les repas, suivre les recettes et planifier les séances de votre foyer.</p>
+      <p class="lo-muted">Connectez-vous pour organiser les repas, suivre les recettes et planifier les séances de votre foyer.</p>
     </div>
-    <button
-      class="lifeos-button"
-      type="button"
-      (click)="continueWithGoogle()"
-      [disabled]="googleSubmitting() || !auth.ready() || !auth.configured"
-      [attr.aria-busy]="googleSubmitting()"
-    >
+    <button mat-flat-button type="button" (click)="continueWithGoogle()"
+      [disabled]="googleSubmitting() || !auth.ready() || !auth.configured" [attr.aria-busy]="googleSubmitting()">
       {{ googleSubmitting() ? 'Redirection vers Google…' : 'Continuer avec Google' }}
     </button>
     @if (!auth.configured) {
-      <p class="login-hint" role="status">La connexion est indisponible : l’adresse de LifeOS API n’est pas configurée.</p>
+      <p class="lo-muted" role="status">La connexion est indisponible : l’adresse de LifeOS API n’est pas configurée.</p>
     } @else {
-      <p class="login-hint">Seuls les comptes Google autorisés pour ce foyer peuvent se connecter.</p>
+      <p class="lo-muted">Seuls les comptes Google autorisés pour ce foyer peuvent se connecter.</p>
     }
-    @if (auth.initializing()) { <p class="login-hint" role="status">Vérification de la connexion…</p> }
-    @if (message()) { <p class="login-feedback" role="alert">{{ message() }}</p> }
-    @if (auth.error()) { <p class="login-feedback" role="alert">{{ auth.error() }}</p> }
+    @if (auth.initializing()) { <p class="lo-status" role="status">Vérification de la connexion…</p> }
+    @if (message()) { <p class="lo-error" role="alert">{{ message() }}</p> }
+    @if (auth.error()) { <p class="lo-error" role="alert">{{ auth.error() }}</p> }
   </section>
 </main>

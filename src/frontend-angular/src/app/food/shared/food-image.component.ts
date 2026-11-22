@@ -12,9 +12,9 @@ import { tintFor } from './tint'
   standalone: true,
   template: `
     @if (url(); as source) {
-      <img class="thumb" [src]="source" [alt]="alt()" [style.width]="width()" [style.height]="height()" />
+      <img class="lo-thumb" [src]="source" [alt]="alt()" [style.width]="width()" [style.height]="height()" />
     } @else {
-      <span class="thumb placeholder" [attr.role]="alt() ? 'img' : null" [attr.aria-label]="alt() || null"
+      <span class="lo-thumb placeholder" [attr.role]="alt() ? 'img' : null" [attr.aria-label]="alt() || null"
         [attr.aria-hidden]="alt() ? null : 'true'" [style.width]="width()" [style.height]="height()" [style.background]="tint()">
         @if (label()) { <span>{{ label() }}</span> }
       </span>

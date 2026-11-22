@@ -2,7 +2,9 @@
 
 ## Stack and active scope
 - Angular 22 + TypeScript in `src/frontend-angular`, UI kit Angular Material 3 with the
-  LifeOS theme (ADR 0016); screens not yet migrated still use native controls and PrimeIcons.
+  LifeOS theme (ADR 0016) on every screen: Material components, Material Symbols, the
+  `lo-*` classes and `shared/ui` components, colours from `--mat-sys-*` only. New screens
+  follow it; `src/app/ui-kit.spec.ts` checks it.
 - ASP.NET Core / EF Core / PostgreSQL in `src/backend`.
 - The API signs users in with Google and is its own OAuth server (ADR 0011); no Supabase.
 - Generic foods, recipes, sport session templates and receipts kept as stored photos.

@@ -11,7 +11,9 @@ import { HANDSET_QUERY } from './breakpoints'
 /**
  * Frame of every creation and edit window (ADR 0016). On the computer: title, content, then the
  * dangerous action bottom left and Annuler / Enregistrer bottom right. On the phone: full screen with
- * close top left and Enregistrer top right. The save button submits the form named `formId`.
+ * close top left and Enregistrer top right. The save button submits the form named `formId`; without
+ * `formId` the window only has its close button (labelled `cancelLabel`, e.g. "Fermer"), for windows
+ * whose rows save themselves.
  */
 @Component({
   selector: 'app-editor-frame',
@@ -22,7 +24,7 @@ import { HANDSET_QUERY } from './breakpoints'
       <div class="frame-bar">
         <button mat-icon-button type="button" (click)="requestClose()" aria-label="Fermer la fenêtre"><mat-icon svgIcon="close" /></button>
         <h2 mat-dialog-title class="frame-bar-title">{{ heading() }}</h2>
-        <button mat-button type="submit" [attr.form]="formId()" [disabled]="busy()">{{ saveLabel() }}</button>
+        @if (formId()) { <button mat-button type="submit" [attr.form]="formId()" [disabled]="busy()">{{ saveLabel() }}</button> }
       </div>
     } @else {
       <h2 mat-dialog-title>{{ heading() }}</h2>
@@ -31,15 +33,15 @@ import { HANDSET_QUERY } from './breakpoints'
       <ng-content />
       @if (error()) { <p class="frame-error" role="alert"><mat-icon svgIcon="error" /><span>{{ error() }}</span></p> }
       @if (handset() && dangerLabel()) { <div class="frame-danger-row"><button mat-button type="button" class="frame-danger" [class.is-confirming]="confirming()" [disabled]="busy()"
-          (click)="dangerClick()"><mat-icon svgIcon="archive" />{{ confirming() ? 'Confirmer : ' + dangerLabel().toLowerCase() : dangerLabel() }}</button></div> }
+          (click)="dangerClick()"><mat-icon [svgIcon]="dangerIcon()" />{{ confirming() ? 'Confirmer : ' + dangerLabel().toLowerCase() : dangerLabel() }}</button></div> }
     </mat-dialog-content>
     @if (!handset()) {
       <mat-dialog-actions class="frame-actions">
         @if (dangerLabel()) { <button mat-button type="button" class="frame-danger" [class.is-confirming]="confirming()" [disabled]="busy()"
-          (click)="dangerClick()"><mat-icon svgIcon="archive" />{{ confirming() ? 'Confirmer : ' + dangerLabel().toLowerCase() : dangerLabel() }}</button> }
+          (click)="dangerClick()"><mat-icon [svgIcon]="dangerIcon()" />{{ confirming() ? 'Confirmer : ' + dangerLabel().toLowerCase() : dangerLabel() }}</button> }
         <span class="frame-spacer"></span>
         <button mat-button type="button" (click)="requestClose()" [disabled]="busy()">{{ cancelLabel() }}</button>
-        <button mat-flat-button type="submit" [attr.form]="formId()" [disabled]="busy()">{{ saveLabel() }}</button>
+        @if (formId()) { <button mat-flat-button type="submit" [attr.form]="formId()" [disabled]="busy()">{{ saveLabel() }}</button> }
       </mat-dialog-actions>
     }
   `,
@@ -60,7 +62,7 @@ import { HANDSET_QUERY } from './breakpoints'
 export class EditorFrameComponent {
   private readonly ref = inject(MatDialogRef)
   readonly heading = input.required<string>()
-  readonly formId = input.required<string>()
+  readonly formId = input('')
   readonly saveLabel = input('Enregistrer')
   readonly cancelLabel = input('Annuler')
   readonly busy = input(false)
@@ -68,6 +70,8 @@ export class EditorFrameComponent {
   readonly error = input('')
   /** Archive or stop; asks a second click before acting. */
   readonly dangerLabel = input('')
+  /** `archive` (default), `delete` for a removal. */
+  readonly dangerIcon = input('archive')
   readonly danger = output<void>()
   readonly confirming = signal(false)
   readonly handset = toSignal(inject(BreakpointObserver).observe(HANDSET_QUERY).pipe(map(state => state.matches)),

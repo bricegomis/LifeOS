@@ -1,8 +1,8 @@
-<div class="page page-narrow food-page">
-  <a class="link-button back-link" [routerLink]="back().link">{{ back().label }}</a>
+<div class="lo-page is-narrow">
+  <a mat-button class="lo-back" [routerLink]="back().link"><mat-icon svgIcon="arrow_back" />{{ back().label }}</a>
 
-  @if (error()) { <p class="api-error" role="alert">{{ error() }}</p> }
-  @if (loading()) { <p class="status-text" role="status">Chargement de l’aliment…</p> }
+  @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
+  @if (loading()) { <p class="lo-status" role="status">Chargement de l’aliment…</p> }
 
   @if (food(); as food) {
     <div class="food-hero">
@@ -10,174 +10,176 @@
         [name]="food.name" [alt]="'Photo de ' + food.name" label="Photo de l’aliment" width="180px" height="180px" />
       <div class="food-hero-text">
         <h1>{{ food.name }}</h1>
-        @if (food.missingFields.length) {
-          <span class="chip chip-todo">À compléter</span>
-          <p class="missing">Manque : {{ food.missingFields.join(', ') }}.</p>
-        } @else {
-          <span class="chip chip-ok">Complet</span>
-        }
-        @if (food.isArchived) { <span class="chip chip-todo">Archivé</span> }
-        <div class="photo-actions">
-          <label class="lifeos-button lifeos-button-secondary" [class.is-disabled]="imageBusy()">
-            {{ food.hasImage ? 'Changer la photo' : 'Ajouter une photo' }}
-            <input class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" [disabled]="imageBusy()" (change)="changeImage($event)" />
-          </label>
+        <div class="lo-tags">
+          @if (food.missingFields.length) { <span class="lo-tag is-warn">À compléter</span> } @else { <span class="lo-tag is-ok">Complet</span> }
+          @if (food.isArchived) { <span class="lo-tag">Archivé</span> }
+        </div>
+        @if (food.missingFields.length) { <p class="missing">Manque : {{ food.missingFields.join(', ') }}.</p> }
+        <div class="lo-actions">
+          <input #photo class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" tabindex="-1" aria-hidden="true" (change)="changeImage($event)" />
+          <button mat-stroked-button type="button" [disabled]="imageBusy()" (click)="photo.click()">
+            <mat-icon svgIcon="add_a_photo" />{{ food.hasImage ? 'Changer la photo' : 'Ajouter une photo' }}</button>
           @if (food.hasImage) {
-            <button type="button" class="lifeos-button lifeos-button-secondary" [disabled]="imageBusy()" (click)="removeImage()">Retirer la photo</button>
+            <button mat-button type="button" [disabled]="imageBusy()" (click)="removeImage()"><mat-icon svgIcon="delete" />Retirer la photo</button>
           }
         </div>
       </div>
     </div>
 
     <form class="food-form" (ngSubmit)="save()" aria-label="Fiche de l’aliment">
-    <section class="card desktop-only" aria-labelledby="class-title">
-      <h2 id="class-title">Classement</h2>
-      <div class="field-row">
-        <label class="field">
-          <span>Famille (obligatoire)</span>
-          <select class="lifeos-input" name="family" required [class.is-missing]="!form.family" [(ngModel)]="form.family">
-            @if (!form.family) { <option value="">Choisir une famille</option> }
-            @for (option of familyOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
-          </select>
-        </label>
-        <label class="field">
-          <span>Conservation (facultatif)</span>
-          <select class="lifeos-input" name="conservation" [(ngModel)]="form.conservation">
-            <option value="">Non précisée</option>
-            @for (option of conservationOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
-          </select>
-        </label>
-      </div>
-      <fieldset class="class-group">
-        <legend>Rôles dans l’assiette (facultatif, plusieurs possibles)</legend>
-        <div class="tags">
-          @for (option of roleOptions; track option[0]) {
-            <button type="button" class="pill" [attr.aria-pressed]="hasRole(option[0])" (click)="toggleRole(option[0])">{{ option[1] }}</button>
-          }
+      <section class="lo-panel lo-desktop-only" aria-labelledby="class-title">
+        <h2 id="class-title">Classement</h2>
+        <div class="fields">
+          <mat-form-field appearance="outline" [class.is-missing]="!form.family">
+            <mat-label>Famille (obligatoire)</mat-label>
+            <mat-select name="family" required [(ngModel)]="form.family">
+              @for (option of familyOptions; track option[0]) { <mat-option [value]="option[0]">{{ option[1] }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Conservation (facultatif)</mat-label>
+            <mat-select name="conservation" [(ngModel)]="form.conservation">
+              <mat-option value="">Non précisée</mat-option>
+              @for (option of conservationOptions; track option[0]) { <mat-option [value]="option[0]">{{ option[1] }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
         </div>
-      </fieldset>
-      <fieldset class="class-group">
-        <legend class="class-legend-row">
-          <span>Mois de saison (facultatif)</span>
-          <span class="chip" [class]="'chip-season-' + seasonNow().kind">{{ seasonNow().text }}</span>
-        </legend>
-        <div class="month-grid">
-          @for (month of months; track month.value) {
-            <button type="button" class="month-toggle" [class.is-current]="month.value === this.month"
-              [attr.aria-pressed]="hasMonth(month.value)" [attr.aria-label]="month.name" (click)="toggleMonth(month.value)">{{ month.label }}</button>
-          }
-        </div>
-        <p class="muted small">Aucun mois coché : pas saisonnier (sec, conserve, surgelé…). Le mois entouré est le mois en cours.</p>
-      </fieldset>
-      <fieldset class="class-group">
-        <legend>Étiquettes du foyer (facultatif)</legend>
-        <div class="tags">
-          @for (tag of form.tags; track tag) {
-            <span class="tag tag-removable">{{ tag }}
-              <button type="button" class="tag-remove" [attr.aria-label]="'Retirer l’étiquette ' + tag" (click)="removeTag(tag)">×</button>
-            </span>
-          } @empty { <span class="muted">Aucune étiquette.</span> }
-        </div>
-        <div class="tag-input">
-          <input class="lifeos-input" name="tagDraft" aria-label="Nouvelle étiquette" placeholder="Nouvelle étiquette"
-            [maxlength]="maxTagLength" [(ngModel)]="tagDraft" (keydown.enter)="$event.preventDefault(); addTag()" />
-          <button type="button" class="lifeos-button lifeos-button-secondary" (click)="addTag()">Ajouter</button>
-        </div>
-        @if (suggestions().length) {
-          <div class="tags">
-            <span class="muted small">Déjà utilisées dans le foyer :</span>
-            @for (tag of suggestions(); track tag) {
-              <button type="button" class="pill pill-suggestion" (click)="addTag(tag)">+ {{ tag }}</button>
+        <fieldset class="class-group">
+          <legend class="lo-field-label">Rôles dans l’assiette (facultatif, plusieurs possibles)</legend>
+          <div class="lo-chips">
+            @for (option of roleOptions; track option[0]) {
+              <button type="button" class="lo-chip" [class.is-on]="hasRole(option[0])" [attr.aria-pressed]="hasRole(option[0])" (click)="toggleRole(option[0])">
+                @if (hasRole(option[0])) { <mat-icon svgIcon="check" /> }{{ option[1] }}</button>
             }
           </div>
-        }
-      </fieldset>
-    </section>
+        </fieldset>
+        <fieldset class="class-group">
+          <legend>
+            <span class="lo-field-label">Mois de saison (facultatif)</span>
+            <span class="lo-tag" [class]="seasonNow().tag">{{ seasonNow().text }}</span>
+          </legend>
+          <div class="month-grid">
+            @for (month of months; track month.value) {
+              <button type="button" class="lo-chip" [class.is-on]="hasMonth(month.value)" [class.is-current]="month.value === this.month"
+                [attr.aria-pressed]="hasMonth(month.value)" [attr.aria-label]="month.name" (click)="toggleMonth(month.value)">{{ month.label }}</button>
+            }
+          </div>
+          <p class="lo-help">Aucun mois coché : pas saisonnier (sec, conserve, surgelé…). Le mois entouré est le mois en cours.</p>
+        </fieldset>
+        <fieldset class="class-group">
+          <legend class="lo-field-label">Étiquettes du foyer (facultatif)</legend>
+          <div class="lo-chips">
+            @for (tag of form.tags; track tag) {
+              <span class="lo-tag tag-removable">{{ tag }}
+                <button mat-icon-button type="button" [attr.aria-label]="'Retirer l’étiquette ' + tag" (click)="removeTag(tag)"><mat-icon svgIcon="close" /></button>
+              </span>
+            } @empty { <span class="lo-muted">Aucune étiquette.</span> }
+          </div>
+          <div class="tag-input">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Nouvelle étiquette</mat-label>
+              <input matInput name="tagDraft" [maxlength]="maxTagLength" [(ngModel)]="tagDraft" (keydown.enter)="$event.preventDefault(); addTag()" />
+            </mat-form-field>
+            <button mat-stroked-button type="button" (click)="addTag()"><mat-icon svgIcon="add" />Ajouter</button>
+          </div>
+          @if (suggestions().length) {
+            <div class="lo-chips">
+              <span class="lo-muted lo-small">Déjà utilisées dans le foyer :</span>
+              @for (tag of suggestions(); track tag) {
+                <button type="button" class="lo-chip suggestion" (click)="addTag(tag)"><mat-icon svgIcon="add" />{{ tag }}</button>
+              }
+            </div>
+          }
+        </fieldset>
+      </section>
 
-    <section class="card mobile-only" aria-labelledby="class-title-mobile">
-      <div class="class-legend-row">
-        <h2 id="class-title-mobile">Classement</h2>
-        <span class="chip" [class]="'chip-season-' + seasonNow().kind">{{ seasonNow().text }}</span>
-      </div>
-      @for (row of classRows(food); track row.label) {
-        <div class="class-row"><span class="muted">{{ row.label }}</span><span>{{ row.value }}</span></div>
-      }
-      <p class="muted small" style="margin-top: 8px">Le classement se modifie depuis l’ordinateur.</p>
-    </section>
+      <section class="lo-panel lo-phone-only" aria-labelledby="class-title-mobile">
+        <div class="lo-panel-head">
+          <h2 id="class-title-mobile">Classement</h2>
+          <span class="lo-tag" [class]="seasonNow().tag">{{ seasonNow().text }}</span>
+        </div>
+        <div>
+          @for (row of classRows(food); track row.label) {
+            <div class="class-row"><span>{{ row.label }}</span><span>{{ row.value }}</span></div>
+          }
+        </div>
+        <p class="lo-help">Le classement se modifie depuis l’ordinateur.</p>
+      </section>
 
-    <section class="card" aria-labelledby="nutrition-title">
-      <h2 id="nutrition-title">Nutrition et digestion</h2>
-      <div class="field-row">
-        <label class="field" style="flex-basis: 100%">
-          <span>Nom</span>
-          <input class="lifeos-input" name="name" maxlength="200" required [(ngModel)]="form.name" />
-        </label>
-        <label class="field">
-          <span>Base nutritionnelle</span>
-          <select class="lifeos-input" name="referenceUnit" [class.is-missing]="!form.referenceUnit" [(ngModel)]="form.referenceUnit">
-            <option value="">À renseigner</option>
-            <option value="100 g">100 g</option>
-            <option value="100 ml">100 ml</option>
-            <option value="1 pièce">1 pièce</option>
-          </select>
-        </label>
-        @for (field of fields; track field.key) {
-          <label class="field">
-            <span>{{ field.label }}</span>
-            <input class="lifeos-input" inputmode="decimal" [name]="field.key" [class.is-missing]="isMissing(form.nutrition[field.key])"
-              [(ngModel)]="form.nutrition[field.key]" />
-          </label>
-        }
-        <label class="field">
-          <span>FODMAP</span>
-          <select class="lifeos-input" name="fodmap" [class.is-missing]="!form.fodmap" [(ngModel)]="form.fodmap">
-            <option value="">À renseigner</option>
-            @for (option of fodmapOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
-          </select>
-        </label>
-        <label class="field">
-          <span>NOVA</span>
-          <select class="lifeos-input" name="nova" [class.is-missing]="!form.nova" [(ngModel)]="form.nova">
-            <option value="">À renseigner</option>
-            @for (option of novaOptions; track option[0]) { <option [value]="option[0]">{{ option[1] }}</option> }
-          </select>
-        </label>
-      </div>
-      <label class="field" style="margin-top: 16px">
-        <span>Notes digestives (facultatif)</span>
-        <textarea class="lifeos-input" name="digestiveNotes" rows="2" maxlength="2000" [(ngModel)]="form.digestiveNotes"></textarea>
-      </label>
-      <p class="muted small" style="margin-top: 8px">Valeurs pour la base choisie. Zéro est une valeur ; un champ vide reste à compléter.</p>
-      <div class="form-footer">
-        <button type="submit" class="lifeos-button" [disabled]="saving() || !dirty()">{{ saving() ? 'Enregistrement…' : 'Enregistrer' }}</button>
-        @if (saved() && !dirty()) { <span class="muted" role="status">Enregistré.</span> }
-        @if (saveError()) { <span class="error-text" role="alert">{{ saveError() }}</span> }
-      </div>
-    </section>
+      <section class="lo-panel" aria-labelledby="nutrition-title">
+        <h2 id="nutrition-title">Nutrition et digestion</h2>
+        <div class="fields">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Nom</mat-label>
+            <input matInput name="name" maxlength="200" required [(ngModel)]="form.name" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" [class.is-missing]="!form.referenceUnit">
+            <mat-label>Base nutritionnelle</mat-label>
+            <mat-select name="referenceUnit" [(ngModel)]="form.referenceUnit">
+              <mat-option value="">À renseigner</mat-option>
+              <mat-option value="100 g">100 g</mat-option>
+              <mat-option value="100 ml">100 ml</mat-option>
+              <mat-option value="1 pièce">1 pièce</mat-option>
+            </mat-select>
+          </mat-form-field>
+          @for (field of fields; track field.key) {
+            <mat-form-field appearance="outline" [class.is-missing]="isMissing(form.nutrition[field.key])">
+              <mat-label>{{ field.label }}</mat-label>
+              <input matInput inputmode="decimal" [name]="field.key" [(ngModel)]="form.nutrition[field.key]" />
+            </mat-form-field>
+          }
+          <mat-form-field appearance="outline" [class.is-missing]="!form.fodmap">
+            <mat-label>FODMAP</mat-label>
+            <mat-select name="fodmap" [(ngModel)]="form.fodmap">
+              <mat-option value="">À renseigner</mat-option>
+              @for (option of fodmapOptions; track option[0]) { <mat-option [value]="option[0]">{{ option[1] }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" [class.is-missing]="!form.nova">
+            <mat-label>NOVA</mat-label>
+            <mat-select name="nova" [(ngModel)]="form.nova">
+              <mat-option value="">À renseigner</mat-option>
+              @for (option of novaOptions; track option[0]) { <mat-option [value]="option[0]">{{ option[1] }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Notes digestives (facultatif)</mat-label>
+            <textarea matInput name="digestiveNotes" rows="2" maxlength="2000" [(ngModel)]="form.digestiveNotes"></textarea>
+            <mat-hint>Valeurs pour la base choisie. Zéro est une valeur ; un champ vide reste à compléter.</mat-hint>
+          </mat-form-field>
+        </div>
+        @if (saveError()) { <p class="lo-error" role="alert">{{ saveError() }}</p> }
+        <div class="form-footer">
+          <button mat-flat-button type="submit" [disabled]="saving() || !dirty()">{{ saving() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+          @if (saved() && !dirty()) { <span class="lo-muted" role="status">Enregistré.</span> }
+        </div>
+      </section>
     </form>
 
-    <section class="card">
+    <section class="lo-panel">
       <app-household-reviews targetType="food" [targetId]="food.id" [profiles]="profiles()" />
     </section>
 
-    <section class="card" aria-labelledby="prices-title">
-      <div class="prices-header">
-        <div>
+    <section class="lo-panel" aria-labelledby="prices-title">
+      <div class="lo-panel-head">
+        <div class="lo-page-title">
           <h2 id="prices-title">Prix relevés</h2>
-          <p class="muted">{{ prices().range }}</p>
+          <p class="lo-muted">{{ prices().range }}</p>
         </div>
-        <a class="lifeos-button lifeos-button-secondary desktop-only" routerLink="/products">Voir les produits</a>
+        <a mat-button class="lo-desktop-only" routerLink="/products"><mat-icon svgIcon="sell" />Voir les produits</a>
       </div>
-      @for (line of prices().lines; track $index) {
-        <div class="price-row">
-          <span><span style="font-weight: 500">{{ line.product }}</span><span class="muted small">{{ line.detail }}</span></span>
-          <span class="price-amount">{{ line.unitPrice }}</span>
-        </div>
-      }
+      <div>
+        @for (line of prices().lines; track $index) {
+          <div class="price-row">
+            <span><span class="price-product">{{ line.product }}</span><span class="lo-muted lo-small">{{ line.detail }}</span></span>
+            <span class="price-amount">{{ line.unitPrice }}</span>
+          </div>
+        }
+      </div>
     </section>
 
     @if (!food.isArchived) {
-      <div><button type="button" class="lifeos-button lifeos-button-secondary" (click)="archive()">Archiver l’aliment</button></div>
+      <div><button mat-button type="button" class="danger" (click)="archive()"><mat-icon svgIcon="archive" />Archiver l’aliment</button></div>
     }
   }
 </div>

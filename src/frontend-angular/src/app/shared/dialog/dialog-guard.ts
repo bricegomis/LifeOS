@@ -20,10 +20,3 @@ export function formSnapshot(value: unknown): string {
 export function hasChanges(initialSnapshot: string, current: unknown): boolean {
   return formSnapshot(current) !== initialSnapshot
 }
-
-export const focusableFieldSelector = [
-  '[autofocus]',
-  'input:not([type="hidden"]):not([disabled]):not([readonly])',
-  'select:not([disabled])',
-  'textarea:not([disabled]):not([readonly])',
-].join(', ')
