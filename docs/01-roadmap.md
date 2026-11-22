@@ -247,7 +247,9 @@ semainier, qui viendra quand le reste aura servi.
   jour facultatif ; un journal, les corrélations viendront du semainier.
 - Analyses : marqueurs avec unité, plage du labo, cible personnelle, fréquence et
   bilans ; valeurs par analyse, tendance, marqueurs à refaire. Mesures corporelles.
-- Documents (ordonnances, comptes rendus, résultats, bilans) et rendez-vous.
+- Documents (ordonnances, comptes rendus, résultats, bilans) et rendez-vous, avec un
+  lien de prise de rendez-vous (Doctolib…) ; les rendez-vous sont remplis par Claude
+  depuis les emails ou l'agenda, LifeOS ne se connecte pas à Doctolib.
 - Données privées par profil ; fichiers chiffrés sur le disque ; l'assistant lit les
   documents et propose les valeurs, l'API ne lit rien elle-même.
 

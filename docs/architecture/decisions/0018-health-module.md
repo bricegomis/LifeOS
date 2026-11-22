@@ -106,8 +106,16 @@ un ou plusieurs fichiers (photos ou PDF, plusieurs pages). Liste filtrable par t
 et texte. Un document de résultat peut être relié à une analyse.
 
 Un **rendez-vous** : une date et une heure, un médecin ou une spécialité, un motif, un
-lieu facultatif, des notes, et ensuite son compte rendu (un document). Le semainier les
-affichera plus tard.
+lieu facultatif, des notes, un **lien de prise de rendez-vous** facultatif (la page
+Doctolib ou d'un autre site du médecin, `https`) et ensuite son compte rendu (un
+document). Le bouton « Reprendre rendez-vous » ouvre ce lien : la réservation se fait sur
+le site, LifeOS ne s'y connecte pas. Le semainier les affichera plus tard.
+
+LifeOS ne se connecte pas à Doctolib : pas d'API publique pour les patients, et stocker
+les identifiants du site serait contraire à ses conditions et risqué. Les rendez-vous
+sont remplis par l'assistant, avec un prompt dédié de l'utilisateur qui lit les emails de
+confirmation ou l'agenda (connecteurs de Claude) et crée ou met à jour les rendez-vous
+par les outils MCP, après confirmation. L'API ne va rien chercher seule (ADR 0011).
 
 ### Écrans
 
@@ -122,7 +130,8 @@ selon les ADR 0015 et 0016.
 Outils MCP pour chaque partie. Comme pour les tickets : un document envoyé dans
 l'application est lu par Claude, qui propose les valeurs de l'analyse et les saisit
 après confirmation. Claude peut aussi noter un symptôme (« j'ai mal au ventre, 6/10 »),
-cocher un complément ou créer un rendez-vous.
+cocher un complément ou créer et mettre à jour les rendez-vous (par exemple depuis
+les emails de confirmation Doctolib).
 
 ## Conséquences
 
