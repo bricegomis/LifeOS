@@ -26,6 +26,9 @@ code, identifiers and code comments are English.
 - Sport rework (accepted, mockup validated 2026-11-16): ADR 0015 (one page per element with
   edit popups, menu grouped by domain on desktop and phone, routine passes with one
   counter tick per set, per-exercise effort and discomfort).
+- Step 3 target: ADR 0017 (tasks: todos with due date, duration, priority, image or
+  initial, checklist, tags; household routines on fixed dates or a delay after the last
+  time, with history and streak; projects as plain groups; quick-capture inbox).
 - UI kit: ADR 0016 (Angular Material 3 with a LifeOS theme, Material Symbols, screen
   conventions for lists, dialogs, add buttons and actions). Applied to every screen;
   any new or changed Angular screen uses it (see `src/frontend-angular/CLAUDE.md`).
