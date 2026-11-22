@@ -4,11 +4,12 @@ import { currentEntry, NAVIGATION_BLOCKS, pageTitle, readMenuOpen, writeMenuOpen
 
 describe('navigation', () => {
   it('groups every page in one block per domain', () => {
-    assert.deepEqual(NAVIGATION_BLOCKS.map(block => block.title), ['Alimentation', 'Sport'])
+    assert.deepEqual(NAVIGATION_BLOCKS.map(block => block.title), ['Alimentation', 'Sport', 'Tâches'])
     assert.deepEqual(NAVIGATION_BLOCKS[0]!.items.map(item => item.path), ['/recipes', '/foods', '/products', '/stores', '/tickets'])
     assert.deepEqual(NAVIGATION_BLOCKS[1]!.items.map(item => item.label),
       ['Aujourd’hui', 'Historique', 'Progression', 'Routines', 'Exercices', 'Défis', 'Objectifs', 'Séances types'])
     assert.equal(NAVIGATION_BLOCKS[1]!.items[0]!.exact, true)
+    assert.deepEqual(NAVIGATION_BLOCKS[2]!.items.map(item => item.path), ['/tasks', '/tasks/all'])
   })
 
   it('finds the block and page of a URL for the open block and the phone title', () => {
@@ -21,6 +22,9 @@ describe('navigation', () => {
     assert.equal(pageTitle('/sports/exercises'), 'Sport · Exercices')
     assert.equal(pageTitle('/sports/routine/42'), 'Sport')
     assert.equal(pageTitle('/settings'), 'Paramètres')
+    assert.equal(pageTitle('/tasks/all'), 'Tâches · Toutes les tâches')
+    assert.equal(currentEntry('/tasks/todo/7')?.block.id, 'tasks')
+    assert.equal(pageTitle('/tasks/todo/7'), 'Tâches')
   })
 
   it('remembers the menu state and survives an unavailable storage', () => {

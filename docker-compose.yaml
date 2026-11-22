@@ -30,6 +30,9 @@ services:
       # Durable storage for optional exercise images
       SportImages__StoragePath: /data/sports
       SportImages__MaxFileBytes: 10485760
+      # Durable storage for optional todo images
+      TaskImages__StoragePath: /data/tasks
+      TaskImages__MaxFileBytes: 10485760
       # Public frontend URL
       Cors__AllowedOrigins__0: ${FRONTEND_URL}
       Cors__AllowedOrigins__1: ${GITHUB_PAGES_URL:-}
@@ -43,6 +46,7 @@ services:
       - receipts_data:/data/receipts
       - food_images:/data/foods
       - sport_images:/data/sports
+      - task_images:/data/tasks
   web:
     image: ghcr.io/bricegomis/lifeos-web:latest
     container_name: lifeos-web
@@ -65,3 +69,5 @@ volumes:
     name: lifeos_food_images
   sport_images:
     name: lifeos_sport_images
+  task_images:
+    name: lifeos_task_images

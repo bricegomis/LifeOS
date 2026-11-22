@@ -6,6 +6,7 @@ using LifeOS.Domain.Food.Reviews;
 using LifeOS.Domain.Food.Stores;
 using LifeOS.Domain.Households;
 using LifeOS.Domain.Sports;
+using LifeOS.Domain.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace LifeOS.Infrastructure.Persistence;
@@ -45,6 +46,9 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<ExerciseCompletion> ExerciseCompletions => Set<ExerciseCompletion>();
     public DbSet<RoutineSession> RoutineSessions => Set<RoutineSession>();
     public DbSet<SportProfileSettings> SportProfileSettings => Set<SportProfileSettings>();
+
+    // Tasks module (ADR 0017)
+    public DbSet<Todo> Todos => Set<Todo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

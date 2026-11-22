@@ -1,7 +1,9 @@
 # ADR 0017 — Tâches : todos, routines du foyer et projets
 
-Statut : accepté (cadrage), 2026-11-22. Étape 3 de la [roadmap](../../01-roadmap.md).
-Maquette à valider avant tout code. Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
+Statut : accepté, 2026-11-22. Étape 3 de la [roadmap](../../01-roadmap.md).
+Maquette validée le 2026-11-22 (canevas des maquettes, « Tâches — ordinateur » et
+« Tâches — smartphone »). Les todos sont livrés en code ; routines, projets et outils de
+l'assistant suivent. Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
 (module Tâches, schéma `tasks`) et l'[ADR 0016](0016-angular-material-ui-kit.md) (UI kit).
 
 ## Contexte

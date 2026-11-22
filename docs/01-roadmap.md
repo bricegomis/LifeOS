@@ -196,11 +196,10 @@ avancement des objectifs et des défis).
 
 1. **Cadrage fonctionnel.** Fait.
 2. **Maquette cliquable** : Aujourd'hui, toutes les tâches avec recherche,
-   todo, routines,
-   projets (ordinateur et smartphone).
-3. **Todos**, étiquettes et checklist.
+   todo, routines, projets (ordinateur et smartphone). Validée le 2026-11-22.
+3. **Todos**, étiquettes et checklist. Fait.
 4. **Routines** : récurrence, passages, série.
-5. **Projets.**
+5. **Projets**, et le projet d'un todo.
 6. **Outils de l'assistant** pour tout le module.
 
 **Terminé quand.** Routines et todos sont suivis dans LifeOS au quotidien. Le

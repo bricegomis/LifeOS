@@ -12,6 +12,7 @@ using LifeOS.Infrastructure.Food.Receipts;
 using LifeOS.Infrastructure.Households;
 using LifeOS.Infrastructure.Persistence;
 using LifeOS.Infrastructure.Sports;
+using LifeOS.Infrastructure.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,6 +62,8 @@ public static class DependencyInjection
         services.AddSingleton<FoodImageStorage>();
         services.Configure<SportImageStorageOptions>(configuration.GetSection("SportImages"));
         services.AddSingleton<SportImageStorage>();
+        services.Configure<TaskImageStorageOptions>(configuration.GetSection("TaskImages"));
+        services.AddSingleton<TaskImageStorage>();
         services.Configure<ReceiptPhotoStorageOptions>(configuration.GetSection("Receipts"));
         services.AddSingleton<ReceiptPhotoStorage>();
         // Images found by the assistant (ADR 0011): https only, public addresses only.
