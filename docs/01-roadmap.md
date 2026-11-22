@@ -262,7 +262,7 @@ semainier, qui viendra quand le reste aura servi.
 4. **Symptômes.** Fait.
 5. **Analyses et mesures.** Fait.
 6. **Documents et rendez-vous**, fichiers chiffrés. Fait.
-7. **Outils de l'assistant** pour tout le module.
+7. **Outils de l'assistant** pour tout le module. Fait.
 
 **Reste à cadrer à l'étape 4.** Ce que contient le résumé transmis au semainier et à
 l'agent ; le lien symptômes ↔ repas et sport ; l'objectif calorique.

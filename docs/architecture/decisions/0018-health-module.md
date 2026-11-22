@@ -1,7 +1,7 @@
 # ADR 0018 — Santé : compléments, symptômes, analyses, documents
 
 Statut : accepté, 2026-11-22 ; maquette validée le 2026-11-22 (canevas des maquettes,
-« Santé — ordinateur » et « Santé — smartphone »). Livré en code : compléments, symptômes, analyses et mesures, documents et rendez-vous. Étape 5 de la [roadmap](../../01-roadmap.md),
+« Santé — ordinateur » et « Santé — smartphone »). Livré en code : tout le module, outils de l'assistant compris. Étape 5 de la [roadmap](../../01-roadmap.md),
 avancée avant le semainier (étape 4) à la demande de l'utilisateur. Maquette à valider
 avant tout code. Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
 (module Santé, schéma `health`, données privées par profil), l'[ADR 0011](0011-conversational-assistant-mcp.md)
