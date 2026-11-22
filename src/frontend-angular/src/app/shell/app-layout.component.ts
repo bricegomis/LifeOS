@@ -1,9 +1,10 @@
 import { BreakpointObserver } from '@angular/cdk/layout'
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core'
+import { Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { MatButtonModule } from '@angular/material/button'
 import { MatIconModule } from '@angular/material/icon'
-import { MatSidenavModule } from '@angular/material/sidenav'
+import { MatListModule } from '@angular/material/list'
+import { MatSidenavContent, MatSidenavModule } from '@angular/material/sidenav'
 import { MatToolbarModule } from '@angular/material/toolbar'
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router'
 import { filter, firstValueFrom, map } from 'rxjs'
@@ -17,7 +18,7 @@ import { currentEntry, NAVIGATION_BLOCKS, pageTitle, readMenuOpen, writeMenuOpen
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, MatSidenavModule, MatToolbarModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [MatButtonModule, MatIconModule, MatListModule, MatSidenavModule, MatToolbarModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app-layout.component.html',
   styleUrl: './app-layout.component.css',
 })
@@ -34,6 +35,8 @@ export class AppLayoutComponent implements OnInit {
   readonly phoneOpen = signal(false)
   readonly menuOpened = computed(() => this.handset() ? this.phoneOpen() : this.desktopOpen())
   private readonly url = signal(this.router.url)
+  /** The only scrolling area of the app; brought back to the top when the page changes. */
+  private readonly content = viewChild(MatSidenavContent)
   readonly title = computed(() => pageTitle(this.url()))
   /** Blocks unfolded by hand; the block of the current page is always open on arrival. */
   readonly openBlocks = signal(new Set<string>())
@@ -45,7 +48,9 @@ export class AppLayoutComponent implements OnInit {
   constructor() {
     this.openCurrentBlock()
     const subscription = this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
+      const samePage = pathOf(this.url()) === pathOf(this.router.url)
       this.url.set(this.router.url)
+      if (!samePage) this.content()?.scrollTo({ top: 0 })
       this.openCurrentBlock()
       this.phoneOpen.set(false)
       void this.refreshPendingReceipts()
@@ -70,14 +75,9 @@ export class AppLayoutComponent implements OnInit {
     })
   }
 
-  openMenu(): void {
-    if (this.handset()) this.phoneOpen.set(true)
-    else this.setDesktop(true)
-  }
-
-  closeMenu(): void {
-    if (this.handset()) this.phoneOpen.set(false)
-    else this.setDesktop(false)
+  toggleMenu(): void {
+    if (this.handset()) this.phoneOpen.set(!this.phoneOpen())
+    else this.setDesktop(!this.desktopOpen())
   }
 
   /** The panel was closed by its backdrop or the Escape key. */
@@ -117,4 +117,9 @@ export class AppLayoutComponent implements OnInit {
       this.signOutError.set(error instanceof Error ? error.message : 'Impossible de terminer la déconnexion.')
     }
   }
+}
+
+/** URL without its query string: a filter change is not a new page. */
+function pathOf(url: string): string {
+  return url.split(/[?#]/)[0] ?? ''
 }

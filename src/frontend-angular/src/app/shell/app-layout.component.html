@@ -1,64 +1,63 @@
-<mat-sidenav-container class="shell">
-  <mat-sidenav class="side-menu" [mode]="handset() ? 'over' : 'side'" [opened]="menuOpened()" (closed)="menuClosed()"
-    [fixedInViewport]="handset()" aria-label="Navigation principale">
-    <nav class="menu" aria-label="Navigation principale">
-      <div class="menu-top">
-        <span class="brand">LifeOS</span>
-        <button mat-icon-button type="button" (click)="closeMenu()" aria-label="Fermer le menu">
-          <mat-icon [svgIcon]="handset() ? 'close' : 'menu'" />
-        </button>
-      </div>
-      @for (block of blocks; track block.id) {
-        <div class="menu-block">
-          <button type="button" class="menu-group" [attr.aria-expanded]="isOpen(block.id)" (click)="toggleBlock(block.id)">
-            <mat-icon [svgIcon]="block.icon" />
-            <span class="menu-group-title">{{ block.title }}</span>
-            <mat-icon class="menu-chevron" [class.is-open]="isOpen(block.id)" svgIcon="keyboard_arrow_down" />
-          </button>
-          @if (isOpen(block.id)) {
-            @for (item of block.items; track item.path) {
-              <a class="menu-item" [routerLink]="item.path" routerLinkActive="is-active" ariaCurrentWhenActive="page"
-                [routerLinkActiveOptions]="{ exact: item.exact ?? false }">
-                <span>{{ item.label }}</span>
-                @if (item.receiptsBadge && pendingReceipts()) {
-                  <span class="badge" [attr.aria-label]="pendingReceipts() + ' à traiter'">{{ pendingReceipts() }}</span>
-                }
-              </a>
+<div class="shell">
+  <mat-toolbar class="top-bar">
+    <button mat-icon-button type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpened()"
+      aria-controls="main-menu" [attr.aria-label]="menuOpened() ? 'Fermer le menu' : 'Ouvrir le menu'">
+      <mat-icon svgIcon="menu" />
+    </button>
+    <span class="top-title">{{ handset() ? title() : 'LifeOS' }}</span>
+  </mat-toolbar>
+
+  <mat-sidenav-container class="shell-body">
+    <mat-sidenav id="main-menu" class="side-menu" [mode]="handset() ? 'over' : 'side'" [opened]="menuOpened()"
+      (closed)="menuClosed()">
+      <nav class="menu" aria-label="Navigation principale">
+        <mat-nav-list class="menu-list">
+          @for (block of blocks; track block.id) {
+            <button mat-list-item type="button" class="menu-group" [attr.aria-expanded]="isOpen(block.id)"
+              (click)="toggleBlock(block.id)">
+              <mat-icon matListItemIcon [svgIcon]="block.icon" />
+              <span matListItemTitle class="menu-group-title">{{ block.title }}</span>
+              <mat-icon matListItemMeta class="menu-chevron" [class.is-open]="isOpen(block.id)" svgIcon="keyboard_arrow_down" />
+            </button>
+            @if (isOpen(block.id)) {
+              @for (item of block.items; track item.path) {
+                <a mat-list-item class="menu-item" [routerLink]="item.path" routerLinkActive #link="routerLinkActive"
+                  [activated]="link.isActive" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: item.exact ?? false }">
+                  <span matListItemTitle>{{ item.label }}</span>
+                  @if (item.receiptsBadge && pendingReceipts()) {
+                    <span matListItemMeta class="badge" [attr.aria-label]="pendingReceipts() + ' à traiter'">{{ pendingReceipts() }}</span>
+                  }
+                </a>
+              }
             }
           }
+        </mat-nav-list>
+
+        <div class="menu-bottom">
+          <mat-nav-list>
+            <a mat-list-item routerLink="/settings" routerLinkActive #settings="routerLinkActive" [activated]="settings.isActive"
+              ariaCurrentWhenActive="page">
+              <mat-icon matListItemIcon svgIcon="settings" />
+              <span matListItemTitle>Paramètres</span>
+            </a>
+          </mat-nav-list>
+          <div class="account">
+            <span class="avatar" aria-hidden="true">{{ initial() }}</span>
+            <span class="account-text">
+              <strong>Compte du foyer</strong>
+              <span class="account-email">{{ email() }}</span>
+            </span>
+          </div>
+          @if (signOutError()) { <p class="lo-error" role="alert">{{ signOutError() }}</p> }
+          <button mat-stroked-button type="button" class="sign-out" (click)="signOut()"><mat-icon svgIcon="logout" />Déconnexion</button>
         </div>
-      }
-      <div class="menu-bottom">
-        <a class="menu-group" routerLink="/settings" routerLinkActive="is-active" ariaCurrentWhenActive="page">
-          <mat-icon svgIcon="settings" /><span class="menu-group-title">Paramètres</span>
-        </a>
-        <div class="account">
-          <span class="avatar" aria-hidden="true">{{ initial() }}</span>
-          <span class="account-text">
-            <strong>Compte du foyer</strong>
-            <span class="account-email">{{ email() }}</span>
-          </span>
-        </div>
-        @if (signOutError()) { <p class="lo-error" role="alert">{{ signOutError() }}</p> }
-        <button mat-stroked-button type="button" class="sign-out" (click)="signOut()"><mat-icon svgIcon="logout" />Déconnexion</button>
-      </div>
-    </nav>
-  </mat-sidenav>
-  <mat-sidenav-content class="shell-content">
-    @if (handset()) {
-      <mat-toolbar class="top-bar">
-        <button mat-icon-button type="button" (click)="openMenu()" [attr.aria-expanded]="menuOpened()" aria-label="Ouvrir le menu">
-          <mat-icon svgIcon="menu" />
-        </button>
-        <span class="top-title">{{ title() }}</span>
-      </mat-toolbar>
-    } @else if (!menuOpened()) {
-      <button mat-icon-button type="button" class="menu-reopen" (click)="openMenu()" aria-label="Ouvrir le menu">
-        <mat-icon svgIcon="menu" />
-      </button>
-    }
-    <main class="shell-main">
-      <router-outlet />
-    </main>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+      </nav>
+    </mat-sidenav>
+
+    <mat-sidenav-content class="shell-content">
+      <main class="shell-main">
+        <router-outlet />
+      </main>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>

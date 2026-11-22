@@ -84,7 +84,8 @@ h1, h2, h3 { line-height: 1.2; }
 .lo-media-card > .lo-media { flex: 0 0 auto; align-self: stretch; }
 .lo-media-body { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; justify-content: center; gap: 4px; padding: 12px 16px; }
 
-.lo-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 5; }
+/* Doubled class: Material's own `.mat-mdc-fab { position: relative }` would otherwise win. */
+.lo-fab.lo-fab { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 5; }
 
 .lo-fullscreen-dialog .mat-mdc-dialog-surface { border-radius: 0; }
 .lo-fullscreen-dialog .mat-mdc-dialog-content { max-height: none; flex: 1 1 auto; }
