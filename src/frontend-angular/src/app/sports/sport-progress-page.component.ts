@@ -24,7 +24,7 @@ const STATUS_LABELS: Record<string, string> = { reached: 'atteint', joker: 'joke
   imports: [RoutineProgressComponent],
   template: `
     <div class="lo-page">
-      <header class="lo-page-head"><h1>Progression</h1></header>
+      <header class="lo-page-head"><h1 class="lo-bar-title">Progression</h1></header>
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (loading()) { <p class="lo-status" role="status">Chargement…</p> } @else {
         <div class="lo-grid-2">

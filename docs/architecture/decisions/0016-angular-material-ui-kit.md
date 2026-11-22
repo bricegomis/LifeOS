@@ -69,7 +69,7 @@ Elles valent pour tous les modules ; les composants LifeOS partagés les appliqu
 | Élément | Convention |
 | --- | --- |
 | Navigation | Menu latéral (`mat-sidenav`) avec un groupe par domaine qui s'ouvre (Alimentation, Sport…), Paramètres en bas. Sur ordinateur il reste affiché ; sur téléphone il s'ouvre depuis la barre du haut (ADR 0015). |
-| Barre du haut | Titre de la page, bouton menu sur téléphone, actions secondaires en icônes à droite. |
+| Barre du haut | Fixe, sur ordinateur et téléphone : bouton menu (replie le menu sur ordinateur, l'ouvre sur téléphone), « LifeOS » sur ordinateur, titre de la page sur téléphone. Seul le contenu sous la barre défile. |
 | Page de liste | Champ de filtre en haut, puis une liste ou des cartes. **Ajouter** : bouton flottant « + » en bas à droite sur téléphone, bouton principal dans la barre de la page sur ordinateur. |
 | Élément d'une liste | Photo ou vignette à gauche, titre et résumé au centre, menu « ⋯ » ou action principale à droite. Un appui sur l'élément l'ouvre. Sans photo, une icône en tient lieu. |
 | Création et modification | Fenêtre de dialogue sur ordinateur ; **plein écran sur téléphone**. « Enregistrer » en haut à droite (téléphone) ou en bas à droite (ordinateur) ; l'action dangereuse (archiver, arrêter, supprimer) en bas à gauche, avec confirmation. Fermer un brouillon modifié demande d'abord. |

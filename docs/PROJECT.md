@@ -36,9 +36,9 @@ reste l'usage réel pendant quelques semaines.
 | Sport | Séances types (sport d'une liste fixe, durée, distance, calories proposées) ; séances réalisées à une date par profil (calories saisies, inconnues = total partiel, distance, ressenti, fréquence cardiaque, notes) ; objectifs de la semaine (par séance type, par sport, nombre de séances ou volume) ; défis du jour en répétitions ou minutes, remplis par séries, avec série de jours, jokers, calendrier, totaux et paliers ; exercices du foyer (photo choisie dès la création, consigne, tenue en secondes ou répétitions, charge habituelle facultative, vide = poids du corps) ; routines quotidiennes par profil (jours de la semaine, exercices ordonnés avec leur cible) faites en passages, plusieurs par jour, une coche par série par un bouton compteur, effort et gêne notés en fin de passage à partir de valeurs proposées réglables, série et jokers par routine (jour fait dès un passage terminé), calendrier avec le nombre de passages, progression par exercice avec les dernières coches ; une page par élément (Exercices, Routines, Défis, Objectifs modifiables, Séances types) avec une fenêtre de modification, plein écran sur téléphone ; pages Aujourd'hui, Historique et Progression. Seul le profil principal est affiché |
 
 Navigation : un menu à gauche avec un groupe par domaine (Alimentation, Sport) qui s'ouvre sur
-ses pages, Paramètres et compte en bas ; sur ordinateur il reste affiché (repliable), sur
-téléphone il s'ouvre en panneau depuis la barre du haut, qui rappelle la page affichée. Plus
-d'onglets en bas. Tous les écrans (Alimentation, Sport, Paramètres, connexion) utilisent
+ses pages, Paramètres et compte en bas. Une barre du haut fixe porte le bouton menu : sur
+ordinateur le menu reste affiché (repliable par ce bouton), sur téléphone il s'ouvre en panneau
+et la barre rappelle la page affichée. Seul le contenu de la page défile. Plus d'onglets en bas. Tous les écrans (Alimentation, Sport, Paramètres, connexion) utilisent
 Angular Material 3 avec le thème LifeOS et les icônes Material Symbols
 ([ADR 0016](architecture/decisions/0016-angular-material-ui-kit.md)) : chaque liste commence
 par une zone de recherche et de filtres, chaque création ou modification s'ouvre dans une
