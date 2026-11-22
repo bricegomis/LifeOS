@@ -55,6 +55,8 @@ import RadioButtonUncheckedIcon from '@material-symbols/svg-400/rounded/radio_bu
 import TimerIcon from '@material-symbols/svg-400/rounded/timer.svg'
 import NotesIcon from '@material-symbols/svg-400/rounded/notes.svg'
 import BlockIcon from '@material-symbols/svg-400/rounded/block.svg'
+import RedoIcon from '@material-symbols/svg-400/rounded/redo.svg'
+import PauseIcon from '@material-symbols/svg-400/rounded/pause.svg'
 
 /**
  * Material Symbols used by the app (ADR 0016), bundled as SVG so only these icons ship and nothing is
@@ -115,6 +117,8 @@ export const ICONS: Record<string, string> = {
   timer: TimerIcon,
   notes: NotesIcon,
   block: BlockIcon,
+  redo: RedoIcon,
+  pause: PauseIcon,
 }
 
 export function provideLifeosIcons() {

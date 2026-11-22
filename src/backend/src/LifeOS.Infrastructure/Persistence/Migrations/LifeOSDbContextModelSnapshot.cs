@@ -1100,6 +1100,132 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Tasks.TaskRoutine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImageContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateOnly?>("ResumedOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("StartOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.PrimitiveCollection<List<string>>("Tags")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("tags");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Recurrence", "LifeOS.Domain.Tasks.TaskRoutine.Recurrence#Recurrence", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<int>("Days")
+                                .HasColumnType("integer")
+                                .HasColumnName("RecurrenceDays");
+
+                            b1.Property<int>("DelayDays")
+                                .HasColumnType("integer")
+                                .HasColumnName("RecurrenceDelayDays");
+
+                            b1.Property<int>("Every")
+                                .HasColumnType("integer")
+                                .HasColumnName("RecurrenceEvery");
+
+                            b1.Property<string>("Kind")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("RecurrenceKind");
+
+                            b1.Property<int>("MonthDay")
+                                .HasColumnType("integer")
+                                .HasColumnName("RecurrenceMonthDay");
+
+                            b1.Property<string>("Unit")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)")
+                                .HasColumnName("RecurrenceUnit");
+                        });
+
+                    b.HasKey("Id")
+                        .HasName("PK_routines1");
+
+                    b.HasAlternateKey("Id", "HouseholdId")
+                        .HasName("AK_routines_Id_HouseholdId1");
+
+                    b.HasIndex("HouseholdId", "State");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId")
+                        .HasDatabaseName("IX_routines_MemberProfileId_HouseholdId1");
+
+                    b.ToTable("routines", "tasks", t =>
+                        {
+                            t.HasCheckConstraint("ck_task_routine_days", "\"RecurrenceDays\" >= 0 AND \"RecurrenceDays\" <= 127");
+
+                            t.HasCheckConstraint("ck_task_routine_delay", "\"RecurrenceDelayDays\" >= 1 AND \"RecurrenceDelayDays\" <= 365");
+
+                            t.HasCheckConstraint("ck_task_routine_duration", "\"DurationMinutes\" IS NULL OR (\"DurationMinutes\" >= 1 AND \"DurationMinutes\" <= 1440)");
+
+                            t.HasCheckConstraint("ck_task_routine_every", "\"RecurrenceEvery\" >= 1 AND \"RecurrenceEvery\" <= 365");
+
+                            t.HasCheckConstraint("ck_task_routine_image", "(\"ImagePath\" IS NULL) = (\"ImageContentType\" IS NULL)");
+
+                            t.HasCheckConstraint("ck_task_routine_kind", "\"RecurrenceKind\" IN ('fixed', 'delay')");
+
+                            t.HasCheckConstraint("ck_task_routine_month_day", "\"RecurrenceMonthDay\" >= 1 AND \"RecurrenceMonthDay\" <= 31");
+
+                            t.HasCheckConstraint("ck_task_routine_priority", "\"Priority\" IN ('high', 'normal', 'low')");
+
+                            t.HasCheckConstraint("ck_task_routine_state", "\"State\" IN ('active', 'paused', 'stopped')");
+
+                            t.HasCheckConstraint("ck_task_routine_unit", "\"RecurrenceUnit\" IN ('day', 'week', 'month')");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Tasks.Todo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1848,6 +1974,60 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasForeignKey("TemplateId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Tasks.TaskRoutine", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("LifeOS.Domain.Tasks.RoutinePass", "Passes", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateOnly>("Day")
+                                .HasColumnType("date");
+
+                            b1.Property<DateOnly>("DueOn")
+                                .HasColumnType("date");
+
+                            b1.Property<string>("Kind")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)");
+
+                            b1.Property<string>("Note")
+                                .HasMaxLength(500)
+                                .HasColumnType("character varying(500)");
+
+                            b1.Property<Guid>("RoutineId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("RoutineId", "DueOn");
+
+                            b1.ToTable("routine_passes", "tasks", t =>
+                                {
+                                    t.HasCheckConstraint("ck_routine_pass_kind", "\"Kind\" IN ('done', 'skipped')");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("RoutineId");
+                        });
+
+                    b.Navigation("Passes");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Tasks.Todo", b =>

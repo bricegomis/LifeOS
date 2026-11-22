@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  addDays, dayLabel, draftOf, durationLabel, initial, postponeChoices, postponed, tagsOf, todaySections, todoMeta, todoRequest, withTag,
+  addDays, dayLabel, draftOf, type TaskItem, durationLabel, initial, postponeChoices, postponed, tagsOf, todaySections, todoMeta, todoRequest, withTag,
 } from './task-format.ts'
-import type { TodoDto } from './tasks.models.ts'
+import type { TaskRoutineDto, TodoDto } from './tasks.models.ts'
 
 const today = '2026-11-22' // a Sunday
 
@@ -11,6 +11,14 @@ function todo(title: string, more: Partial<TodoDto> = {}): TodoDto {
   return {
     id: title, memberProfileId: 'p', title, notes: null, dueOn: null, durationMinutes: null, priority: 'normal', tags: [],
     state: 'open', doneOn: null, isLate: false, hasImage: false, checklist: [], updatedAt: '', ...more,
+  }
+}
+
+function routine(title: string, more: Partial<TaskRoutineDto> = {}): TaskRoutineDto {
+  return {
+    id: title, memberProfileId: 'p', title, notes: null, durationMinutes: null, priority: 'normal', tags: [],
+    recurrence: { kind: 'delay', unit: 'day', every: 1, days: [], monthDay: 1, delayDays: 7 }, startOn: today, state: 'active',
+    nextDueOn: today, isLate: false, streak: 0, record: 0, lastDoneOn: null, doneToday: false, hasImage: false, updatedAt: '', ...more,
   }
 }
 
@@ -53,15 +61,22 @@ describe('today page', () => {
       todo('Mardi', { dueOn: '2026-11-24', tags: ['Maison'] }),
       todo('Sans date', { tags: ['maison'] }),
     ]
-    const { sections, undated } = todaySections(todos, today)
-    assert.deepEqual(sections.map(s => [s.title, s.todos.map(t => t.title)]), [
-      ['En retard', ['Retard']],
-      ['Aujourd’hui', ['Urgent', 'Basse', 'Fait']],
+    const routines = [
+      routine('Draps', { nextDueOn: '2026-11-21', isLate: true }),
+      routine('Poubelles', { nextDueOn: '2026-11-26', doneToday: true, tags: ['maison'] }),
+      routine('En pause', { state: 'paused', nextDueOn: null }),
+    ]
+    const titles = (items: TaskItem[]) => items.map(i => i.kind === 'todo' ? i.todo.title : i.routine.title)
+    const { sections, undated } = todaySections(todos, routines, today)
+    assert.deepEqual(sections.map(s => [s.title, titles(s.items)]), [
+      ['En retard', ['Retard', 'Draps']],
+      ['Aujourd’hui', ['Urgent', 'Basse', 'Fait', 'Poubelles']],
       ['mar. 24 nov.', ['Mardi']],
+      ['jeu. 26 nov.', ['Poubelles']],
     ])
-    assert.deepEqual(undated.map(t => t.title), ['Sans date'])
-    const tagged = todaySections(todos, today, 'MAISON')
-    assert.deepEqual(tagged.sections.map(s => s.todos.length), [0, 1])
+    assert.deepEqual(titles(undated), ['Sans date'])
+    const tagged = todaySections(todos, routines, today, 'MAISON')
+    assert.deepEqual(tagged.sections.map(s => s.items.length), [1, 1, 1])
     assert.equal(tagged.undated.length, 1)
     assert.deepEqual(tagsOf(todos), ['Maison'])
   })

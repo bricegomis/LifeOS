@@ -18,6 +18,45 @@ public sealed record TodoDto(Guid Id, Guid MemberProfileId, string Title, string
 
 /// <summary>
 /// The "Aujourd'hui" page (ADR 0017): open todos due up to <paramref name="Today"/> + 7 days (late ones
-/// included), open todos without a due day, and those done today.
+/// included), open todos without a due day, and those done today; active routines due within the
+/// same week or done today.
 /// </summary>
-public sealed record TaskTodayDto(DateOnly Today, IReadOnlyList<TodoDto> Todos);
+public sealed record TaskTodayDto(DateOnly Today, IReadOnlyList<TodoDto> Todos, IReadOnlyList<TaskRoutineDto> Routines);
+
+/// <param name="Kind">fixed or delay.</param>
+/// <param name="Unit">day, week or month, for fixed dates.</param>
+/// <param name="Days">Days of the week, 1 (Monday) to 7 (Sunday), for a weekly recurrence.</param>
+/// <param name="DelayDays">Days after the last pass, for a delay recurrence.</param>
+public sealed record RecurrenceDto(string Kind, string Unit, int Every, IReadOnlyList<int> Days, int MonthDay, int DelayDays)
+{
+    public static RecurrenceDto From(Recurrence r) => new(r.Kind, r.Unit, r.Every, r.WeekDays, r.MonthDay, r.DelayDays);
+}
+
+/// <param name="State">active, paused or stopped.</param>
+/// <param name="NextDueOn">The open due day; none while paused or stopped.</param>
+/// <param name="Streak">Due days done on time in a row; a late or skipped one resets it.</param>
+public sealed record TaskRoutineDto(Guid Id, Guid MemberProfileId, string Title, string? Notes, int? DurationMinutes, string Priority,
+    IReadOnlyList<string> Tags, RecurrenceDto Recurrence, DateOnly StartOn, string State, DateOnly? NextDueOn, bool IsLate,
+    int Streak, int Record, DateOnly? LastDoneOn, bool DoneToday, bool HasImage, DateTimeOffset UpdatedAt)
+{
+    public static TaskRoutineDto From(TaskRoutine r, DateOnly today)
+    {
+        var status = RoutineSchedule.Compute(r, today);
+        return new(r.Id, r.MemberProfileId, r.Title, r.Notes, r.DurationMinutes, r.Priority, r.Tags, RecurrenceDto.From(r.Recurrence),
+            r.StartOn, r.State, status.NextDueOn, status.IsLate, status.Streak, status.Record, status.LastDoneOn, status.DoneToday,
+            r.HasImage, r.UpdatedAt);
+    }
+}
+
+/// <param name="Kind">done or skipped.</param>
+/// <param name="DueOn">The due day this pass closed.</param>
+/// <param name="OnTime">Done at the latest on its due day.</param>
+public sealed record RoutinePassDto(Guid Id, string Kind, DateOnly Day, DateOnly DueOn, bool OnTime, string? Note);
+
+/// <summary>A routine with its passes, newest first.</summary>
+public sealed record TaskRoutineDetailDto(TaskRoutineDto Routine, IReadOnlyList<RoutinePassDto> Passes)
+{
+    public static TaskRoutineDetailDto From(TaskRoutine r, DateOnly today) =>
+        new(TaskRoutineDto.From(r, today), r.Passes.OrderByDescending(p => p.DueOn).ThenByDescending(p => p.Day)
+            .Select(p => new RoutinePassDto(p.Id, p.Kind, p.Day, p.DueOn, p.OnTime, p.Note)).ToList());
+}

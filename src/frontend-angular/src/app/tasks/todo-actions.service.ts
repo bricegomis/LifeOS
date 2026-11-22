@@ -3,9 +3,9 @@ import { MatSnackBar } from '@angular/material/snack-bar'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { TasksApiService } from './tasks-api.service'
-import type { TodoDto } from './tasks.models'
+import type { TaskRoutineDetailDto, TaskRoutineDto, TodoDto } from './tasks.models'
 
-/** Ticking a todo from any screen: done (with "Annuler" in the message) or reopened. */
+/** Ticking a todo or a routine from any screen, with "Annuler" in the message. */
 @Injectable({ providedIn: 'root' })
 export class TodoActionsService {
   private readonly api = inject(TasksApiService)
@@ -25,6 +25,24 @@ export class TodoActionsService {
         catch (error) { this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 }) }
       })
       return done
+    } catch (error) {
+      this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 })
+      return null
+    }
+  }
+
+  /** Marks a routine done (today unless `day`) or skips it; "Annuler" removes the new pass. */
+  async closeRoutine(routine: TaskRoutineDto, how: 'done' | 'skip', changed: () => void, day: string | null = null, note: string | null = null)
+    : Promise<TaskRoutineDetailDto | null> {
+    try {
+      const detail = await firstValueFrom(how === 'done' ? this.api.routineDone(routine.id, day, note) : this.api.skipRoutine(routine.id))
+      const pass = detail.passes.find(p => p.kind === (how === 'done' ? 'done' : 'skipped'))
+      const message = how === 'done' ? `« ${routine.title} » fait` : `« ${routine.title} » sauté, série remise à zéro`
+      this.snack.open(message, pass ? 'Annuler' : undefined, { duration: 6000 }).onAction().subscribe(async () => {
+        try { await firstValueFrom(this.api.removePass(routine.id, pass!.id)); changed() }
+        catch (error) { this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 }) }
+      })
+      return detail
     } catch (error) {
       this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 })
       return null
