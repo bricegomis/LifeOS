@@ -55,10 +55,26 @@ cas de panne, les séances peuvent être saisies à la main.
   qui administre Coolify : choix accepté par l'utilisateur. Il n'est jamais dans la base
   LifeOS.
 - Les jetons Garmin obtenus à la connexion sont gardés dans un volume
-  `lifeos_garmin_tokens`, pour ne pas se reconnecter à chaque synchro. Si le compte Garmin
-  demande un code MFA, la toute première connexion (et une reconnexion après expiration
-  des jetons) se fait à la main avec une commande interactive du conteneur ; LifeOS
-  affiche l'erreur quand c'est nécessaire.
+  `lifeos_garmin_tokens`, pour ne pas se reconnecter à chaque synchro.
+- **Double authentification gérée dès le premier lot**, avec ou sans MFA sur le compte
+  Garmin, sans jamais ouvrir de terminal sur le serveur :
+  1. Le service essaie les jetons gardés. S'ils sont absents ou refusés, il se connecte
+     avec `GARMIN_EMAIL` et `GARMIN_PASSWORD`. Sans MFA, c'est fini.
+  2. Avec MFA, Garmin envoie un code (email ou SMS). Le service garde la connexion en
+     attente **en mémoire seulement** (`login` avec `return_on_mfa`, qui renvoie
+     `needs_mfa`) et signale à LifeOS l'état « code Garmin demandé ».
+  3. LifeOS affiche un bandeau « Garmin attend un code » sur la page Aujourd'hui et un
+     champ de saisie dans les Réglages Garmin. Le code saisi est gardé par l'API au plus
+     15 minutes, transmis une seule fois au service, puis effacé.
+  4. Le service interroge l'API toutes les 15 secondes pendant l'attente, reçoit le code
+     et termine la connexion (`resume_login`). Un code faux laisse la connexion en
+     attente : LifeOS affiche « code refusé » et on peut en ressaisir un.
+  5. Sans code au bout de 15 minutes, l'attente est abandonnée (« code expiré ») ; un
+     bouton « Relancer la connexion Garmin » refait une demande, donc un nouveau code.
+  Le service ne redemande jamais de lui-même un code plus d'une fois par synchro
+  planifiée, pour ne pas inonder la boîte mail. L'état de la connexion (connecté, code
+  demandé, code refusé, code expiré, identifiants refusés, erreur) est visible dans les
+  Réglages et lisible par l'assistant.
 - **Rythme** : à 7 h, 13 h, 19 h et 23 h (Europe/Paris). Un bouton « Synchroniser
   maintenant » enregistre une demande dans LifeOS ; le service la voit en interrogeant
   l'API toutes les 5 minutes. LifeOS affiche la dernière synchro réussie et la dernière
@@ -173,8 +189,9 @@ Maquette cliquable avant le code, ordinateur et téléphone :
 - **VO2max** : courbe sur des mois, par sport.
 - **Sommeil et récupération** : courbes sur 4 semaines, 3 mois, 1 an (sommeil et
   phases, FC au repos, HRV dans sa plage, Body Battery, stress).
-- **Réglages** : jeton d'import, dernière synchro, dernière erreur, bouton
-  « Synchroniser maintenant ».
+- **Réglages** : jeton d'import, état de la connexion Garmin, champ du code MFA quand
+  il est demandé, bouton « Relancer la connexion Garmin », dernière synchro, dernière
+  erreur, bouton « Synchroniser maintenant ».
 
 ### 8. Assistant
 
@@ -189,7 +206,8 @@ séance type d'une séance Garmin, et les séances manuelles avec leurs heures.
    les objectifs globaux.
 3. Jeton d'import et endpoints d'import des activités (correspondance des sports,
    fusion, suppression).
-4. Service `garmin-sync` : connexion, historique, synchro planifiée et à la demande.
+4. Service `garmin-sync` : connexion avec ou sans MFA (code saisi dans LifeOS),
+   historique, synchro planifiée et à la demande.
 5. VO2max.
 6. Sommeil et récupération dans le module Santé.
 7. Écrans réels, puis outils de l'assistant.
