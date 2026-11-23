@@ -68,7 +68,9 @@
   computed on read over its whole sub-tree (done todos over todos not abandoned) and closing it never
   touches its todos or sub-projects; a todo only joins a project in
   progress. Management code is `TodoLibrary`, `TaskRoutineLibrary` and `TaskProjectLibrary`
-  (registered in `Api/Tasks/TasksModule.cs`).
+  (registered in `Api/Tasks/TasksModule.cs`). The published read contract for the planner is
+  `Application/Tasks/Contracts/TaskReadContract` (open todos, routine due days projected by
+  `RoutineSchedule.DueDays`, done todos and passes per day and profile).
 - Health (ADR 0018): private to an account, not only a household. Every row carries
   `HouseholdId`, `OwnerUserId` and `MemberProfileId` (`HealthOwners` resolves them from the
   caller) and every query filters on household **and** account, so another member of the same

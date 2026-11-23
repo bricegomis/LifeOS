@@ -204,6 +204,8 @@ avancement des objectifs et des défis).
 4. **Routines** : récurrence, passages, série. Fait.
 5. **Projets**, et le projet d'un todo. Fait.
 6. **Outils de l'assistant** pour tout le module. Fait.
+7. **Contrat de lecture** pour le semainier : todos ouverts, échéances des routines,
+   tâches faites par jour et par profil. Fait.
 
 **Terminé quand.** Routines et todos sont suivis dans LifeOS au quotidien. Le
 module publie son contrat de lecture (tâches à placer, durée, échéance, état).

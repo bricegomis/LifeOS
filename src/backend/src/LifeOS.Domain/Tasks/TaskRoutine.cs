@@ -292,6 +292,26 @@ public static class RoutineSchedule
         return new RoutineStatus(next, next < today, streak, record, done, done == today);
     }
 
+    /// <summary>
+    /// The due days of a routine up to <paramref name="to"/>, for the planner: the open one (late ones
+    /// included), then the next ones as if each were done on its day (a late open one, today). None while
+    /// paused or stopped.
+    /// </summary>
+    public static IReadOnlyList<DateOnly> DueDays(TaskRoutine routine, DateOnly today, DateOnly to)
+    {
+        if (Compute(routine, today).NextDueOn is not { } due || due > to) return [];
+        var days = new List<DateOnly> { due };
+        var r = routine.Recurrence;
+        var doneOn = Max(due, today);
+        while (true)
+        {
+            var next = r.Kind == "delay" ? doneOn.AddDays(r.DelayDays) : r.FirstOnOrAfter(doneOn.AddDays(1), routine.StartOn);
+            if (next > to) return days;
+            days.Add(next);
+            doneOn = next;
+        }
+    }
+
     private static DateOnly NextDue(TaskRoutine routine, RoutinePass? last)
     {
         var r = routine.Recurrence;

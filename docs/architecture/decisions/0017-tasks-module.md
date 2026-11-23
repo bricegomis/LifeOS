@@ -2,8 +2,8 @@
 
 Statut : accepté, 2026-11-22. Étape 3 de la [roadmap](../../01-roadmap.md).
 Maquette validée le 2026-11-22 (canevas des maquettes, « Tâches — ordinateur » et
-« Tâches — smartphone »). Todos, routines du foyer, projets et outils de l'assistant sont livrés
-en code ; reste le contrat de lecture pour le semainier. Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
+« Tâches — smartphone »). Todos, routines du foyer, projets, outils de l'assistant et contrat de lecture
+sont livrés en code. Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
 (module Tâches, schéma `tasks`) et l'[ADR 0016](0016-angular-material-ui-kit.md) (UI kit).
 
 ## Contexte
@@ -133,9 +133,15 @@ créer, modifier (dont le projet parent) et clore un projet ; image par URL.
 
 ### Contrat de lecture
 
-Le module publie pour le futur semainier : les todos ouverts avec échéance, durée,
-priorité et profil ; les échéances ouvertes des routines sur une période ; les
-passages faits par jour et par profil.
+Le module publie pour le futur semainier (`TaskReadContract`), tous profils du foyer,
+calculé à la lecture :
+
+- les **todos ouverts** avec échéance (ou sans), retard, durée, priorité, profil et projet ;
+- les **échéances des routines actives** jusqu'à une date (366 jours au plus) : l'échéance
+  ouverte, même en retard, puis les suivantes projetées comme si chacune était faite le
+  jour dit (une échéance en retard, aujourd'hui). Une routine en pause ou arrêtée n'en a pas ;
+- les **jours** : todos faits et passages faits (pas les passages sautés), par jour et par
+  profil, avec la somme des durées estimées connues et l'indication qu'il en manque.
 
 ## Conséquences
 

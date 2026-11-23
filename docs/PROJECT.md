@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-23 (import Garmin : séances avec heures, VO2max, sommeil et récupération, service garmin-sync, page Aujourd'hui). Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-23 (contrat de lecture des Tâches ; import Garmin : séances avec heures, VO2max, sommeil et récupération, service garmin-sync, page Aujourd'hui). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -21,8 +21,8 @@ ressenti et une page par élément le même jour ([ADR 0015](architecture/decisi
 import Garmin livré le 2026-11-23 ([ADR 0019](architecture/decisions/0019-garmin-import.md)) ;
 reste l'usage réel pendant quelques semaines.
 Étape 3, « Tâches », commencée le 2026-11-22 ([ADR 0017](architecture/decisions/0017-tasks-module.md)) :
-maquette validée ; todos, routines du foyer, projets et outils de l'assistant livrés en code ;
-reste le contrat de lecture pour le semainier, puis l'usage réel.
+maquette validée ; todos, routines du foyer, projets, outils de l'assistant et contrat de lecture
+pour le semainier livrés en code ; reste l'usage réel.
 Étape 5, « Santé », avancée avant le semainier ([ADR 0018](architecture/decisions/0018-health-module.md)) :
 maquette validée le 2026-11-22 ; compléments, symptômes, analyses, mesures, documents, rendez-vous et
 outils de l'assistant livrés ; reste l'usage réel.

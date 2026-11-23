@@ -117,4 +117,34 @@ public sealed class TaskRoutineTests
         Assert.Throws<ArgumentException>(() => TaskRoutine.Create(Household, Profile, " ", null, null, null, null, Recurrence.Delay(1), Sunday, Now));
         Assert.Throws<ArgumentException>(() => TaskRoutine.Create(Household, Profile, "A", null, null, "urgent", null, Recurrence.Delay(1), Sunday, Now));
     }
+
+    [Fact]
+    public void Due_days_start_with_the_open_one_then_follow_fixed_dates_as_if_done_today()
+    {
+        // Monday and Thursday from 2 November, never done: the open due day is 2 November, late.
+        var routine = Create(Recurrence.Weekly(1, [1, 4]), new DateOnly(2026, 11, 2));
+        var monday = new DateOnly(2026, 11, 23);
+        Assert.Equal([new DateOnly(2026, 11, 2), new DateOnly(2026, 11, 26), new DateOnly(2026, 11, 30), new DateOnly(2026, 12, 3)],
+            RoutineSchedule.DueDays(routine, monday, new DateOnly(2026, 12, 3)));
+    }
+
+    [Fact]
+    public void Due_days_of_a_delay_routine_count_from_today_when_the_open_one_is_late()
+    {
+        var routine = Create(Recurrence.Delay(7), new DateOnly(2026, 11, 20));
+        Assert.Equal([new DateOnly(2026, 11, 20), new DateOnly(2026, 11, 29), new DateOnly(2026, 12, 6)],
+            RoutineSchedule.DueDays(routine, Sunday, new DateOnly(2026, 12, 10)));
+        routine.Complete(Sunday, null, Sunday, Now);
+        Assert.Equal([new DateOnly(2026, 11, 29), new DateOnly(2026, 12, 6)], RoutineSchedule.DueDays(routine, Sunday, new DateOnly(2026, 12, 10)));
+    }
+
+    [Fact]
+    public void A_paused_routine_or_one_due_after_the_period_has_no_due_day()
+    {
+        var later = Create(Recurrence.Delay(7), new DateOnly(2026, 12, 1));
+        Assert.Empty(RoutineSchedule.DueDays(later, Sunday, new DateOnly(2026, 11, 30)));
+        var paused = Create(Recurrence.FixedDays(1), Sunday);
+        paused.Pause(Now);
+        Assert.Empty(RoutineSchedule.DueDays(paused, Sunday, new DateOnly(2026, 12, 31)));
+    }
 }
