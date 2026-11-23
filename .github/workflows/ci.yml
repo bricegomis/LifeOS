@@ -13,9 +13,11 @@ permissions:
   contents: read
   pull-requests: read
 
+# A new push to a pull request cancels its previous run; runs on main always finish,
+# so every merged commit gets a result instead of a "cancelled" one.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
