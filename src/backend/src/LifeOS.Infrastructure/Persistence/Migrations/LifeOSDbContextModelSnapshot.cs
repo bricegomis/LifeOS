@@ -653,6 +653,113 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("calm_days", "health");
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Health.DailyWellness", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AwakeSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BodyBatteryHigh")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BodyBatteryLow")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("BodyBatteryWake")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("DeepSleepSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("HrvBaselineHigh")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("HrvBaselineLow")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("HrvNightAverage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("HrvStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("HrvWeeklyAverage")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("LightSleepSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Raw")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int?>("RemSleepSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Respiration")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)");
+
+                    b.Property<int?>("RestingHeartRate")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("SleepEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SleepQuality")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("SleepScore")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SleepSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("SleepStart")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("SpO2")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)");
+
+                    b.Property<int?>("Steps")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("StressAverage")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("HouseholdId", "OwnerUserId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.HasIndex("HouseholdId", "OwnerUserId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("daily_wellness", "health");
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Health.HealthDocument", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1066,6 +1173,75 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Households.GarminLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("LastErrorAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("LastSuccessAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastSuccessSummary")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("MfaCode")
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
+                    b.Property<DateTimeOffset?>("MfaCodeAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("MfaRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("NextSyncAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ReconnectRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset?>("SyncRequestedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("garmin_links", "households", t =>
+                        {
+                            t.HasCheckConstraint("ck_garmin_link_state", "\"State\" IN ('never', 'ok', 'mfa_requested', 'code_refused', 'code_expired', 'credentials_refused', 'error')");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Households.Household", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1114,6 +1290,58 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("household_members", "households");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Households.ImportToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Hint")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Hash")
+                        .IsUnique();
+
+                    b.HasIndex("HouseholdId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.ToTable("import_tokens", "households");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Households.MemberProfile", b =>
@@ -1468,8 +1696,20 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("AerobicTrainingEffect")
+                        .HasPrecision(3, 1)
+                        .HasColumnType("numeric(3,1)");
+
+                    b.Property<decimal?>("AnaerobicTrainingEffect")
+                        .HasPrecision(3, 1)
+                        .HasColumnType("numeric(3,1)");
+
                     b.Property<int?>("AverageHeartRate")
                         .HasColumnType("integer");
+
+                    b.Property<decimal?>("AverageSpeedKmh")
+                        .HasPrecision(7, 2)
+                        .HasColumnType("numeric(7,2)");
 
                     b.Property<int?>("Calories")
                         .HasColumnType("integer");
@@ -1487,8 +1727,35 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<int>("DurationMinutes")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("Feeling")
+                    b.Property<int?>("Effort")
                         .HasColumnType("integer");
+
+                    b.Property<int?>("ElevationGainMeters")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("EndedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Feel")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<long?>("GarminActivityId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("GarminName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("GarminRaw")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("GarminType")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.PrimitiveCollection<int[]>("HeartRateZoneSeconds")
+                        .HasColumnType("integer[]");
 
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid");
@@ -1514,6 +1781,12 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<bool>("SportOverridden")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("TemplateId")
                         .HasColumnType("uuid");
 
@@ -1528,15 +1801,21 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("HouseholdId", "MemberProfileId", "Date");
 
+                    b.HasIndex("HouseholdId", "MemberProfileId", "GarminActivityId")
+                        .IsUnique()
+                        .HasFilter("\"GarminActivityId\" IS NOT NULL");
+
                     b.ToTable("sport_sessions", "sports", t =>
                         {
                             t.HasCheckConstraint("ck_sport_session_duration", "\"DurationMinutes\" > 0 AND \"DurationMinutes\" <= 1440");
 
-                            t.HasCheckConstraint("ck_sport_session_source", "\"Source\" IN ('manual')");
+                            t.HasCheckConstraint("ck_sport_session_source", "(\"Source\" = 'manual' AND \"GarminActivityId\" IS NULL) OR (\"Source\" = 'garmin' AND \"GarminActivityId\" IS NOT NULL)");
 
                             t.HasCheckConstraint("ck_sport_session_sport", "\"Sport\" IN ('running', 'walking', 'hiking', 'cycling', 'swimming', 'strength', 'crossfit', 'bodyweight', 'mobility', 'team_sport', 'racket', 'other')");
 
-                            t.HasCheckConstraint("ck_sport_session_values", "(\"Calories\" IS NULL OR \"Calories\" >= 0) AND (\"DistanceKm\" IS NULL OR \"DistanceKm\" >= 0) AND (\"Feeling\" IS NULL OR (\"Feeling\" >= 1 AND \"Feeling\" <= 10))");
+                            t.HasCheckConstraint("ck_sport_session_times", "\"EndedAt\" > \"StartedAt\"");
+
+                            t.HasCheckConstraint("ck_sport_session_values", "(\"Calories\" IS NULL OR \"Calories\" >= 0) AND (\"DistanceKm\" IS NULL OR \"DistanceKm\" >= 0) AND (\"Effort\" IS NULL OR (\"Effort\" >= 1 AND \"Effort\" <= 10)) AND (\"Feel\" IS NULL OR \"Feel\" IN ('very_weak', 'weak', 'normal', 'strong', 'very_strong'))");
                         });
                 });
 
@@ -1585,10 +1864,52 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Sports.Vo2MaxMeasure", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sport")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(4, 1)
+                        .HasColumnType("numeric(4,1)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.HasIndex("HouseholdId", "MemberProfileId", "Sport", "Date")
+                        .IsUnique();
+
+                    b.ToTable("vo2max_measures", "sports", t =>
+                        {
+                            t.HasCheckConstraint("ck_vo2max_sport", "\"Sport\" IN ('running', 'cycling')");
+
+                            t.HasCheckConstraint("ck_vo2max_value", "\"Value\" >= 10 AND \"Value\" <= 100");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Sports.WeeklyGoal", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<string[]>("ExcludedSports")
+                        .IsRequired()
+                        .HasColumnType("text[]");
 
                     b.Property<Guid>("HouseholdId")
                         .HasColumnType("uuid");
@@ -2394,6 +2715,28 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Health.DailyWellness", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Health.HealthDocument", b =>
                 {
                     b.HasOne("LifeOS.Domain.Households.Household", null)
@@ -2651,6 +2994,21 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Households.GarminLink", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Households.HouseholdMember", b =>
                 {
                     b.HasOne("LifeOS.Domain.Households.Household", null)
@@ -2663,6 +3021,28 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Households.ImportToken", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -2915,6 +3295,22 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("HouseholdId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Sports.Vo2MaxMeasure", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

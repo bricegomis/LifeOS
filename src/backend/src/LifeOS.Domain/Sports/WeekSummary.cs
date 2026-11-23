@@ -25,7 +25,7 @@ public sealed record WeekSummary(
         if (SportWeek.Monday(monday) != monday) throw new ArgumentException("Une semaine commence un lundi.");
         var sunday = monday.AddDays(6);
         var week = sessions.Where(s => s.Date >= monday && s.Date <= sunday)
-            .OrderBy(s => s.Date).ThenBy(s => s.CreatedAt).ToList();
+            .OrderBy(s => s.StartedAt).ThenBy(s => s.CreatedAt).ToList();
         var calories = week.Sum(s => s.Calories ?? 0);
         var missing = week.Count(s => s.Calories is null);
         var progress = goals.Where(goal => goal.AppliesTo(monday)).OrderBy(goal => goal.ValidFrom)
@@ -34,8 +34,9 @@ public sealed record WeekSummary(
             calories, missing, progress);
     }
 
-    private static GoalProgress Progress(WeeklyGoal goal, IReadOnlyList<SportSession> week)
+    private static GoalProgress Progress(WeeklyGoal goal, IReadOnlyList<SportSession> all)
     {
+        var week = all.Where(goal.Counts).ToList();
         var (achieved, partial) = goal.Kind switch
         {
             "template" => ((decimal)week.Count(s => s.TemplateId == goal.TemplateId), false),

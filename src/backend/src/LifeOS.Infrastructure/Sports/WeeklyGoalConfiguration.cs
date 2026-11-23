@@ -25,6 +25,7 @@ internal sealed class WeeklyGoalConfiguration : IEntityTypeConfiguration<WeeklyG
         builder.Property(g => g.Sport).HasMaxLength(30);
         builder.Property(g => g.Unit).HasMaxLength(10);
         builder.Property(g => g.Target).HasPrecision(10, 2);
+        builder.Property(g => g.ExcludedSports).IsRequired();
         builder.HasOne<Household>().WithMany().HasForeignKey(g => g.HouseholdId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<MemberProfile>().WithMany().HasForeignKey(g => new { g.MemberProfileId, g.HouseholdId })
             .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Restrict);

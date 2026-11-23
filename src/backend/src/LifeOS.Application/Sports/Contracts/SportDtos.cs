@@ -2,33 +2,44 @@ using LifeOS.Domain.Sports;
 
 namespace LifeOS.Application.Sports.Contracts;
 
+/// <param name="Effort">Perceived effort, 1 (very easy) to 10 (maximal).</param>
+/// <param name="Feel">very_weak, weak, normal, strong or very_strong.</param>
+/// <param name="Source">manual or garmin.</param>
+/// <param name="HeartRateZoneSeconds">Seconds in zones 1 to 5; Garmin only.</param>
 public sealed record SportSessionDto(
-    Guid Id, Guid MemberProfileId, DateOnly Date, string Sport, string SportLabel,
+    Guid Id, Guid MemberProfileId, DateOnly Date, DateTimeOffset StartedAt, DateTimeOffset EndedAt, string Sport, string SportLabel,
     Guid? TemplateId, string? TemplateName, int DurationMinutes, decimal? DistanceKm, int? Calories,
-    int? Feeling, int? AverageHeartRate, int? MaxHeartRate, string Notes, string Source)
+    int? Effort, string? Feel, string? FeelLabel, int? AverageHeartRate, int? MaxHeartRate, string Notes, string Source,
+    int? ElevationGainMeters, decimal? AverageSpeedKmh, decimal? AerobicTrainingEffect, decimal? AnaerobicTrainingEffect,
+    IReadOnlyList<int>? HeartRateZoneSeconds, long? GarminActivityId, string? GarminType, string? GarminName, bool SportOverridden)
 {
     public static SportSessionDto From(SportSession s, IReadOnlyDictionary<Guid, string> templateNames) => new(
-        s.Id, s.MemberProfileId, s.Date, s.Sport, SportCatalog.Sports[s.Sport],
+        s.Id, s.MemberProfileId, s.Date, s.StartedAt, s.EndedAt, s.Sport, SportCatalog.Sports[s.Sport],
         s.TemplateId, s.TemplateId is { } id ? templateNames.GetValueOrDefault(id) : null,
-        s.DurationMinutes, s.DistanceKm, s.Calories, s.Feeling, s.AverageHeartRate, s.MaxHeartRate, s.Notes, s.Source);
+        s.DurationMinutes, s.DistanceKm, s.Calories, s.Effort, s.Feel, s.Feel is { } f ? SportSession.Feels[f] : null,
+        s.AverageHeartRate, s.MaxHeartRate, s.Notes, s.Source,
+        s.ElevationGainMeters, s.AverageSpeedKmh, s.AerobicTrainingEffect, s.AnaerobicTrainingEffect,
+        s.HeartRateZoneSeconds, s.GarminActivityId, s.GarminType, s.GarminName, s.SportOverridden);
 }
 
 public sealed record WeeklyGoalDto(
     Guid Id, Guid MemberProfileId, string Kind, string KindLabel, Guid? TemplateId, string? TemplateName,
-    string? Sport, string? Unit, decimal Target, string Label, DateOnly ValidFrom, DateOnly? ValidUntil)
+    string? Sport, string? Unit, decimal Target, string Label, DateOnly ValidFrom, DateOnly? ValidUntil,
+    IReadOnlyList<string> ExcludedSports)
 {
     public static WeeklyGoalDto From(WeeklyGoal g, IReadOnlyDictionary<Guid, string> templateNames)
     {
         var templateName = g.TemplateId is { } id ? templateNames.GetValueOrDefault(id, "Séance type archivée") : null;
+        var except = g.ExcludedSports.Length == 0 ? "" : " (hors " + string.Join(", ", g.ExcludedSports.Select(x => SportCatalog.Sports[x].ToLowerInvariant())) + ")";
         var label = g.Kind switch
         {
             "template" => $"{templateName} ×{g.Target:0}",
             "sport" => $"{SportCatalog.Sports[g.Sport!]} ×{g.Target:0}",
-            "sessions" => $"{g.Target:0} séances, tous sports",
-            _ => g.Unit switch { "kcal" => $"{g.Target:0.##} kcal", "km" => $"{g.Target:0.##} km", _ => $"{g.Target:0.##} h" },
+            "sessions" => g.ExcludedSports.Length == 0 ? $"{g.Target:0} séances, tous sports" : $"{g.Target:0} séances{except}",
+            _ => g.Unit switch { "kcal" => $"{g.Target:0.##} kcal", "km" => $"{g.Target:0.##} km", _ => $"{g.Target:0.##} h" } + except,
         };
         return new(g.Id, g.MemberProfileId, g.Kind, WeeklyGoal.Kinds[g.Kind], g.TemplateId, templateName,
-            g.Sport, g.Unit, g.Target, label, g.ValidFrom, g.ValidUntil);
+            g.Sport, g.Unit, g.Target, label, g.ValidFrom, g.ValidUntil, g.ExcludedSports);
     }
 }
 
@@ -140,4 +151,4 @@ public sealed record SportSettingsDto(Guid MemberProfileId, int DefaultEffort, i
 public sealed record SportDayDto(DateOnly Date, Guid MemberProfileId, IReadOnlyList<SportDaySessionDto> Sessions,
     int Calories, bool CaloriesComplete);
 
-public sealed record SportDaySessionDto(Guid Id, string Sport, int DurationMinutes, int? Calories);
+public sealed record SportDaySessionDto(Guid Id, string Sport, int DurationMinutes, int? Calories, DateTimeOffset StartedAt, DateTimeOffset EndedAt);

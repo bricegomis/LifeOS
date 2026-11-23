@@ -10,7 +10,7 @@ namespace LifeOS.Api.IntegrationTests;
 public sealed class SportModuleTests(PostgresContainerFixture postgres)
 {
     private static SportSessionRequest Run(Guid? template = null, int? calories = 520) =>
-        new(null, null, "running", template, 46, 8.2m, calories, 7, 148, 171, "Fractionné");
+        new(null, null, new TimeOnly(7, 0), new TimeOnly(7, 46), "running", template, null, 8.2m, calories, 7, "normal", 148, 171, "Fractionné");
 
     [Fact]
     public async Task Logged_sessions_fill_the_week_report_and_its_goals()
@@ -29,7 +29,7 @@ public sealed class SportModuleTests(PostgresContainerFixture postgres)
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var session = (await created.Content.ReadFromJsonAsync<SportSessionDto>())!;
         Assert.Equal("Footing 45 min", session.TemplateName);
-        (await client.PostAsJsonAsync("/api/sport/sessions", new SportSessionRequest(null, null, "crossfit", null, 60, null, null, 6, null, null, "Cindy")))
+        (await client.PostAsJsonAsync("/api/sport/sessions", new SportSessionRequest(null, null, new TimeOnly(8, 0), new TimeOnly(9, 0), "crossfit", null, null, null, null, 6, null, null, null, "Cindy")))
             .EnsureSuccessStatusCode();
 
         var week = Assert.Single((await client.GetFromJsonAsync<List<WeekReportDto>>("/api/sport/weeks"))!);

@@ -31,6 +31,8 @@ public sealed class WeeklyGoal : Entity
     public string? Sport { get; private set; }
     public string? Unit { get; private set; }
     public decimal Target { get; private set; }
+    /// <summary>Sports left out of a global goal (sessions or volume), e.g. walking (ADR 0019).</summary>
+    public string[] ExcludedSports { get; private set; } = [];
     public DateOnly ValidFrom { get; private set; }
     public DateOnly? ValidUntil { get; private set; }
 
@@ -51,6 +53,9 @@ public sealed class WeeklyGoal : Entity
     public bool IsActive => ValidUntil is null;
 
     public bool AppliesTo(DateOnly monday) => ValidFrom <= monday && (ValidUntil is null || monday < ValidUntil);
+
+    /// <summary>Whether a session counts for this goal's global forms.</summary>
+    public bool Counts(SportSession session) => !ExcludedSports.Contains(session.Sport);
 
     /// <summary>
     /// Changes the goal from the current week. A goal created this week is edited in place;
@@ -83,7 +88,7 @@ public sealed class WeeklyGoal : Entity
         var kind = values.Kind?.Trim() ?? "";
         if (!Kinds.ContainsKey(kind))
             throw new ArgumentException("Forme d'objectif : template (séance type), sport, sessions (nombre de séances) ou volume.");
-        TemplateId = null; Sport = null; Unit = null;
+        TemplateId = null; Sport = null; Unit = null; ExcludedSports = [];
         switch (kind)
         {
             case "template":
@@ -105,9 +110,15 @@ public sealed class WeeklyGoal : Entity
         {
             throw new ArgumentException("Nombre de séances par semaine : entier de 1 à 21.");
         }
+        if (values.ExcludedSports is { Count: > 0 } excluded)
+        {
+            if (kind is not ("sessions" or "volume")) throw new ArgumentException("Seul un objectif global peut exclure des sports.");
+            ExcludedSports = excluded.Select(SportCatalog.Require).Distinct().Order().ToArray();
+        }
         Kind = kind;
         Target = values.Target;
     }
 }
 
-public sealed record WeeklyGoalValues(string Kind, Guid? TemplateId, string? Sport, string? Unit, decimal Target);
+public sealed record WeeklyGoalValues(string Kind, Guid? TemplateId, string? Sport, string? Unit, decimal Target,
+    IReadOnlyList<string>? ExcludedSports = null);

@@ -125,7 +125,7 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
         var sessions = await data.SessionsAsync(householdId, null, from, to, ct);
         return sessions.GroupBy(s => (s.Date, s.MemberProfileId)).OrderBy(g => g.Key.Date)
             .Select(g => new SportDayDto(g.Key.Date, g.Key.MemberProfileId,
-                g.Select(s => new SportDaySessionDto(s.Id, s.Sport, s.DurationMinutes, s.Calories)).ToList(),
+                g.Select(s => new SportDaySessionDto(s.Id, s.Sport, s.DurationMinutes, s.Calories, s.StartedAt, s.EndedAt)).ToList(),
                 g.Sum(s => s.Calories ?? 0), g.All(s => s.Calories is not null)))
             .ToList();
     }
@@ -134,7 +134,7 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
         week.Monday, week.Monday.AddDays(6), week.Sessions.Count, week.DurationMinutes, week.DistanceKm,
         week.Calories, week.SessionsWithoutCalories, week.CaloriesComplete, week.GoalsReached,
         week.Goals.Select(g => new GoalProgressDto(WeeklyGoalDto.From(g.Goal, names), g.Achieved, g.Reached, g.Partial)).ToList(),
-        week.Sessions.OrderByDescending(s => s.Date).ThenByDescending(s => s.CreatedAt).Select(s => SportSessionDto.From(s, names)).ToList());
+        week.Sessions.OrderByDescending(s => s.StartedAt).ThenByDescending(s => s.CreatedAt).Select(s => SportSessionDto.From(s, names)).ToList());
 
     private static ChallengeReportDto Report(DailyChallenge challenge, ChallengeProgress p, IReadOnlyList<ChallengeEntry> todayEntries,
         DateOnly today) => new(

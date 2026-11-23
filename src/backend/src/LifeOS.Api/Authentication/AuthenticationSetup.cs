@@ -156,6 +156,8 @@ public static class AuthenticationSetup
             }
         }
 
+        services.AddImportTokenAuthentication();
+
         services.AddAuthorization(authorization => authorization.AddPolicy(AssistantAuthentication.Policy, policy => policy
             .AddAuthenticationSchemes(AssistantAuthentication.Scheme)
             .RequireAuthenticatedUser()

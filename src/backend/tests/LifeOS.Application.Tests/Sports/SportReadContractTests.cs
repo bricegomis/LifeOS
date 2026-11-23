@@ -1,3 +1,4 @@
+using LifeOS.Application.Sports;
 using LifeOS.Application.Sports.Contracts;
 using LifeOS.Application.Tests.Food;
 using LifeOS.Domain.Sports;
@@ -56,7 +57,7 @@ public sealed class SportReadContractTests
     }
 
     private static SportSession Session(Guid profile, DateOnly date, Guid? template, int? calories) =>
-        SportSession.Create(Household, profile, new SportSessionValues(date, "running", template, 45, 8, calories, null, null, null, null),
+        SportSession.Create(Household, profile, new SportSessionValues(date, SportClock.At(date, new TimeOnly(7, 0)), SportClock.At(date, new TimeOnly(7, 45)), "running", template, 45, 8, calories, null, null, null, null, null),
             Friday, LateEvening.GetUtcNow());
 
     [Fact]

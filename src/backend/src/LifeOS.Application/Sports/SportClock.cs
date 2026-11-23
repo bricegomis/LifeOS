@@ -15,6 +15,12 @@ public static class SportClock
         return new DateTimeOffset(local, Zone.GetUtcOffset(local)).ToUniversalTime();
     }
 
+    /// <summary>The Paris day of an instant.</summary>
+    public static DateOnly DayOf(DateTimeOffset instant) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, Zone).DateTime);
+
+    /// <summary>The Paris time of an instant.</summary>
+    public static TimeOnly TimeOf(DateTimeOffset instant) => TimeOnly.FromDateTime(TimeZoneInfo.ConvertTime(instant, Zone).DateTime);
+
     private static TimeZoneInfo FindZone()
     {
         try { return TimeZoneInfo.FindSystemTimeZoneById("Europe/Paris"); }

@@ -81,17 +81,22 @@ public sealed class SportAssistantTools
     }
 
     [McpServerTool(Name = "log_sport_session", Title = "Enregistrer une séance")]
-    [Description("Enregistre une séance réalisée (jamais dans le futur). Partant d'une séance type, recopiez ses valeurs " +
-        "et passez templateId pour qu'elle compte dans les objectifs par séance type. Calories : celles que l'utilisateur " +
-        "donne ; inconnues, laissez vide (le total de la semaine sera partiel), ne les inventez pas. " + SportHelp)]
+    [Description("Enregistre une séance réalisée à la main (jamais dans le futur), avec son heure de début et de fin " +
+        "(heure de Paris). Les séances de la montre arrivent seules par l'import Garmin : n'en créez pas en double. " +
+        "Partant d'une séance type, recopiez ses valeurs et passez templateId pour qu'elle compte dans les objectifs par " +
+        "séance type. Calories : celles que l'utilisateur donne ; inconnues, laissez vide (le total de la semaine sera " +
+        "partiel), ne les inventez pas. " + SportHelp)]
     public static async Task<SportSessionDto> LogSportSession(IHttpContextAccessor accessor, SportSessionLibrary sessions,
         string sport,
-        [Description("Durée en minutes (1 à 1440).")] int durationMinutes,
-        [Description("Jour de la séance (aaaa-MM-jj) ; aujourd'hui si omis.")] DateOnly? date = null,
+        [Description("Heure de début (HH:mm, heure de Paris).")] TimeOnly startTime,
+        [Description("Heure de fin (HH:mm) ; avant le début, elle tombe le lendemain.")] TimeOnly endTime,
+        [Description("Jour du début (aaaa-MM-jj) ; aujourd'hui si omis.")] DateOnly? date = null,
+        [Description("Durée active en minutes ; fin moins début si omise.")] int? durationMinutes = null,
         Guid? templateId = null,
         [Description("Distance en km, sports d'endurance seulement.")] decimal? distanceKm = null,
         [Description("Calories dépensées (kcal), si connues.")] int? calories = null,
-        [Description("Ressenti de 1 (très dur) à 10 (excellent).")] int? feeling = null,
+        [Description(EffortHelp)] int? effort = null,
+        [Description(FeelHelp)] string? feel = null,
         [Description("Fréquence cardiaque moyenne (bpm).")] int? averageHeartRate = null,
         [Description("Fréquence cardiaque maximale (bpm).")] int? maxHeartRate = null,
         [Description("Texte libre : exercices, séries, charges, WOD, score.")] string? notes = null,
@@ -99,23 +104,30 @@ public sealed class SportAssistantTools
         CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        var request = AssistantRequest.Validated(new SportSessionRequest(profileId, date, sport, templateId, durationMinutes,
-            distanceKm, calories, feeling, averageHeartRate, maxHeartRate, notes));
+        var request = AssistantRequest.Validated(new SportSessionRequest(profileId, date, startTime, endTime, sport, templateId,
+            durationMinutes, distanceKm, calories, effort, feel, averageHeartRate, maxHeartRate, notes));
         return await sessions.CreateAsync(household.HouseholdId, request, ct);
     }
 
     [McpServerTool(Name = "update_sport_session", Idempotent = true, Title = "Modifier une séance")]
-    [Description("Remplace toutes les valeurs d'une séance réalisée (un champ omis devient vide ; la date reste si omise). " + SportHelp)]
+    [Description("Remplace les valeurs d'une séance réalisée (un champ omis devient vide ; date et heures restent si omises). " +
+        "Sur une séance Garmin, seuls le sport, la séance type et les notes changent : les valeurs de la montre restent " +
+        "celles de Garmin, et un sport changé n'est plus écrasé. " + SportHelp)]
     public static async Task<SportSessionDto> UpdateSportSession(IHttpContextAccessor accessor, SportSessionLibrary sessions,
-        Guid sessionId, string sport, int durationMinutes, DateOnly? date = null, Guid? templateId = null, decimal? distanceKm = null,
-        int? calories = null, int? feeling = null, int? averageHeartRate = null, int? maxHeartRate = null, string? notes = null,
+        Guid sessionId, string sport, DateOnly? date = null, TimeOnly? startTime = null, TimeOnly? endTime = null,
+        int? durationMinutes = null, Guid? templateId = null, decimal? distanceKm = null, int? calories = null,
+        [Description(EffortHelp)] int? effort = null, [Description(FeelHelp)] string? feel = null,
+        int? averageHeartRate = null, int? maxHeartRate = null, string? notes = null,
         CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        var request = AssistantRequest.Validated(new SportSessionRequest(null, date, sport, templateId, durationMinutes,
-            distanceKm, calories, feeling, averageHeartRate, maxHeartRate, notes));
+        var request = AssistantRequest.Validated(new SportSessionRequest(null, date, startTime, endTime, sport, templateId,
+            durationMinutes, distanceKm, calories, effort, feel, averageHeartRate, maxHeartRate, notes));
         return (await sessions.UpdateAsync(household.HouseholdId, sessionId, request, ct)).OrNotFound("Séance");
     }
+
+    internal const string EffortHelp = "Effort perçu de 1 (très facile) à 10 (maximal).";
+    internal const string FeelHelp = "Sensation : very_weak (très faible), weak, normal, strong ou very_strong (très forte).";
 
     [McpServerTool(Name = "delete_sport_session", Destructive = true, Title = "Supprimer une séance")]
     [Description("Supprime une séance réalisée. Demandez confirmation à l'utilisateur avant.")]
@@ -151,6 +163,7 @@ public sealed class SportHabitAssistantTools
         "Forme (kind) : template (séances d'une séance type, templateId obligatoire), sport (séances d'un sport, sport " +
         "obligatoire), sessions (nombre de séances, tous sports) ou volume (unit obligatoire : kcal, km ou hours). " +
         "target : nombre de séances par semaine (entier 1 à 21) ou volume visé.";
+    private const string ExcludedHelp = "Sports exclus d'un objectif global (sessions ou volume), par exemple [\"walking\"] pour ne pas compter la marche.";
 
     [McpServerTool(Name = "list_weekly_goals", ReadOnly = true, Title = "Objectifs de la semaine")]
     [Description("Liste les objectifs en cours d'un profil. Pour leur avancement, utilisez get_sport_weeks.")]
@@ -165,11 +178,12 @@ public sealed class SportHabitAssistantTools
     [Description("Crée un objectif de la semaine, compté à partir de la semaine en cours. " + GoalHelp + " " + SportAssistantTools.SportHelp)]
     public static async Task<WeeklyGoalDto> CreateWeeklyGoal(IHttpContextAccessor accessor, WeeklyGoalLibrary goals,
         string kind, decimal target, Guid? templateId = null, string? sport = null, string? unit = null,
+        [Description(ExcludedHelp)] List<string>? excludedSports = null,
         [Description(SportAssistantTools.ProfileHelp)] Guid? profileId = null, CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
         return await goals.CreateAsync(household.HouseholdId,
-            AssistantRequest.Validated(new WeeklyGoalRequest(profileId, kind, templateId, sport, unit, target)), ct);
+            AssistantRequest.Validated(new WeeklyGoalRequest(profileId, kind, templateId, sport, unit, target, excludedSports)), ct);
     }
 
     [McpServerTool(Name = "change_weekly_goal", Idempotent = true, Title = "Modifier un objectif")]
@@ -177,10 +191,11 @@ public sealed class SportHabitAssistantTools
         "(l'identifiant renvoyé peut changer). " + GoalHelp)]
     public static async Task<WeeklyGoalDto> ChangeWeeklyGoal(IHttpContextAccessor accessor, WeeklyGoalLibrary goals,
         Guid goalId, string kind, decimal target, Guid? templateId = null, string? sport = null, string? unit = null,
+        [Description(ExcludedHelp)] List<string>? excludedSports = null,
         CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        var request = AssistantRequest.Validated(new WeeklyGoalRequest(null, kind, templateId, sport, unit, target));
+        var request = AssistantRequest.Validated(new WeeklyGoalRequest(null, kind, templateId, sport, unit, target, excludedSports));
         return (await goals.ChangeAsync(household.HouseholdId, goalId, request, ct)).OrNotFound("Objectif");
     }
 

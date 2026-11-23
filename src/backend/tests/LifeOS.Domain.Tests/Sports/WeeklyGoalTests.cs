@@ -11,7 +11,19 @@ public sealed class WeeklyGoalTests
     private static readonly DateTimeOffset Now = new(2026, 11, 13, 9, 0, 0, TimeSpan.Zero);
 
     private static SportSession Session(DateOnly date, string sport, Guid? template = null, int? calories = 300, decimal? km = null, int minutes = 45) =>
-        SportSession.Create(Household, Profile, new SportSessionValues(date, sport, template, minutes, km, calories, null, null, null, null), Friday, Now);
+        SportSession.Create(Household, Profile, new SportSessionValues(date, At(date, 7), At(date, 7).AddMinutes(minutes), sport, template, minutes, km, calories, null, null, null, null, null), Friday, Now);
+
+    private static DateTimeOffset At(DateOnly date, int hour) => new(date.ToDateTime(new TimeOnly(hour, 0)), TimeSpan.Zero);
+
+    [Fact]
+    public void A_global_goal_can_leave_out_walking()
+    {
+        var goal = WeeklyGoal.Create(Household, Profile, new WeeklyGoalValues("sessions", null, null, null, 2, ["walking"]), Friday);
+        var week = WeekSummary.Compute(Monday, [Session(Monday, "walking"), Session(Monday, "running"), Session(Friday, "walking")], [goal]);
+        Assert.Equal(1m, Assert.Single(week.Goals).Achieved);
+        Assert.Equal(3, week.Sessions.Count);
+        Assert.Throws<ArgumentException>(() => WeeklyGoal.Create(Household, Profile, new WeeklyGoalValues("sport", null, "running", null, 2, ["walking"]), Friday));
+    }
 
     [Fact]
     public void Weeks_start_on_monday()

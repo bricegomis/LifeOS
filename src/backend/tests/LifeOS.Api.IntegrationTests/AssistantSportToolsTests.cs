@@ -20,7 +20,7 @@ public sealed class AssistantSportToolsTests(PostgresContainerFixture postgres)
         var template = await Call(mcp, "create_sport_template", new() { ["name"] = "Footing 45 min", ["sport"] = "running", ["durationMinutes"] = 45, ["calories"] = 500, ["distanceKm"] = 8 });
         var templateId = template.GetProperty("id").GetString();
         await Call(mcp, "create_weekly_goal", new() { ["kind"] = "template", ["templateId"] = templateId, ["target"] = 2 });
-        await Call(mcp, "log_sport_session", new() { ["sport"] = "running", ["durationMinutes"] = 46, ["templateId"] = templateId, ["calories"] = 520, ["feeling"] = 7 });
+        await Call(mcp, "log_sport_session", new() { ["sport"] = "running", ["startTime"] = "07:00", ["endTime"] = "07:46", ["templateId"] = templateId, ["calories"] = 520, ["effort"] = 7, ["feel"] = "strong" });
 
         var week = Assert.Single((await Call(mcp, "get_sport_weeks", new())).EnumerateArray());
         Assert.Equal(1, week.GetProperty("sessionCount").GetInt32());
@@ -30,7 +30,7 @@ public sealed class AssistantSportToolsTests(PostgresContainerFixture postgres)
         var report = await Call(mcp, "add_challenge_entry", new() { ["challengeId"] = challenge.GetProperty("id").GetString(), ["quantity"] = 30 });
         Assert.Equal(30, report.GetProperty("todayTotal").GetInt32());
 
-        Assert.Contains("Sport inconnu", await Error(mcp, "log_sport_session", new() { ["sport"] = "yoga", ["durationMinutes"] = 30 }));
+        Assert.Contains("Sport inconnu", await Error(mcp, "log_sport_session", new() { ["sport"] = "yoga", ["startTime"] = "08:00", ["endTime"] = "08:30" }));
         Assert.Contains("introuvable", await Error(neighbour, "add_challenge_entry", new() { ["challengeId"] = challenge.GetProperty("id").GetString(), ["quantity"] = 30 }));
         Assert.Empty((await Call(neighbour, "list_daily_challenges", new())).EnumerateArray());
         Assert.Empty((await Call(neighbour, "list_sport_templates", new())).EnumerateArray());

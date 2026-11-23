@@ -35,6 +35,16 @@
   read by the published contract `Application/Sports/Contracts/SportReadContract`
   (week reports, challenge streaks with jokers, sport days); "today" is the Paris day
   (`SportClock`). Calories are typed, never computed.
+- Garmin import (ADR 0019): a `SportSession` has `StartedAt`/`EndedAt` (Paris day in `Date`), effort 1-10 and a
+  five-level `Feel` (the former 1-10 "ressenti" is gone), and a source `manual` or `garmin`. Garmin values are
+  overwritten by `ApplyGarmin`; notes, template and a sport changed in LifeOS (`SportOverridden`) never are; a manual
+  session of the same sport whose times overlap becomes the Garmin one (`MatchesGarmin`). Type mapping and the watch's
+  scales live in `GarminActivityMapping`. `Vo2MaxMeasure` (Sport) and `DailyWellness` (Health, with Garmin's raw JSON)
+  are imported by day. The external `src/garmin-sync` service writes through `/api/import/garmin/*` with an
+  `ImportToken` (household core, header `X-LifeOS-Import-Token`, policy `Import`; the token acts for the account that
+  created it and opens no other endpoint). `GarminLink` (household core) holds the connection state the service
+  reports and the user's requests (sync, reconnect, MFA code kept 15 minutes and handed over once). The API never
+  calls Garmin.
 - Routines (ADR 0014, ADR 0015): a `Routine` owns dated versions (days of the week as bits,
   jokers, ordered lines with targets and an optional load, null = bodyweight); a change
   applies from today and past days are judged with the version they had. A routine is done

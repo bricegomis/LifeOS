@@ -24,6 +24,8 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
+    public DbSet<ImportToken> ImportTokens => Set<ImportToken>();
+    public DbSet<GarminLink> GarminLinks => Set<GarminLink>();
 
     // Food module
     public DbSet<FoodItem> FoodItems => Set<FoodItem>();
@@ -47,6 +49,7 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<ExerciseCompletion> ExerciseCompletions => Set<ExerciseCompletion>();
     public DbSet<RoutineSession> RoutineSessions => Set<RoutineSession>();
     public DbSet<SportProfileSettings> SportProfileSettings => Set<SportProfileSettings>();
+    public DbSet<Vo2MaxMeasure> Vo2MaxMeasures => Set<Vo2MaxMeasure>();
 
     // Tasks module (ADR 0017)
     public DbSet<Todo> Todos => Set<Todo>();
@@ -64,6 +67,7 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<Measurement> Measurements => Set<Measurement>();
     public DbSet<HealthDocument> HealthDocuments => Set<HealthDocument>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<DailyWellness> DailyWellness => Set<DailyWellness>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -13,7 +13,8 @@ public static class SportsModule
         .AddScoped<WeeklyGoalLibrary>()
         .AddScoped<DailyChallengeLibrary>()
         .AddScoped<ExerciseLibrary>()
-        .AddScoped<RoutineLibrary>();
+        .AddScoped<RoutineLibrary>()
+        .AddScoped<GarminSportImport>();
 
     public static IEndpointRouteBuilder MapSportEndpoints(this IEndpointRouteBuilder app) => app
         .MapSportTemplatesEndpoints()
@@ -22,7 +23,8 @@ public static class SportsModule
         .MapDailyChallengesEndpoints()
         .MapExercisesEndpoints()
         .MapRoutinesEndpoints()
-        .MapSportOverviewEndpoints();
+        .MapSportOverviewEndpoints()
+        .MapGarminImportEndpoints();
 }
 
 /// <summary>

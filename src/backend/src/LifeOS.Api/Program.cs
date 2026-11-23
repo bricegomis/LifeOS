@@ -24,6 +24,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddFoodLibraries();
+builder.Services.AddScoped<GarminLinks>();
 builder.Services.AddSportLibraries();
 builder.Services.AddTaskLibraries();
 builder.Services.AddHealthLibraries();
@@ -103,6 +104,7 @@ app.MapLifeOSAssistant();
 // Household core
 app.MapHouseholdEndpoints();
 app.MapProfilesEndpoints();
+app.MapGarminEndpoints();
 // Food module
 app.MapFoodsEndpoints();
 app.MapRecipesEndpoints();

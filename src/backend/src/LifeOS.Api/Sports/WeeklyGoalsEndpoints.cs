@@ -12,13 +12,15 @@ namespace LifeOS.Api.Sports;
 /// <param name="Kind">template, sport, sessions or volume.</param>
 /// <param name="Unit">For volume goals: kcal, km or hours.</param>
 /// <param name="MemberProfileId">The main profile when omitted. Ignored on update.</param>
+/// <param name="ExcludedSports">Sports left out of a global goal (sessions or volume), e.g. walking.</param>
 public sealed record WeeklyGoalRequest(
     Guid? MemberProfileId,
     [property: Required] string Kind,
     Guid? TemplateId,
     string? Sport,
     string? Unit,
-    [property: Range(0.01, 100000)] decimal Target);
+    [property: Range(0.01, 100000)] decimal Target,
+    IReadOnlyList<string>? ExcludedSports = null);
 
 public static class WeeklyGoalsEndpoints
 {
@@ -87,7 +89,7 @@ public sealed class WeeklyGoalLibrary(LifeOSDbContext db, SportProfiles profiles
         return true;
     }
 
-    private static WeeklyGoalValues Values(WeeklyGoalRequest r) => new(r.Kind, r.TemplateId, r.Sport, r.Unit, r.Target);
+    private static WeeklyGoalValues Values(WeeklyGoalRequest r) => new(r.Kind, r.TemplateId, r.Sport, r.Unit, r.Target, r.ExcludedSports);
 
     private async Task CheckTemplateAsync(Guid householdId, WeeklyGoalRequest r, CancellationToken ct)
     {
