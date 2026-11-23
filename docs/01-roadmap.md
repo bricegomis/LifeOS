@@ -15,7 +15,7 @@ Vision : [00-vision.md](00-vision.md).
 | 4 | Semainier | Calendrier rempli par un agent IA, propositions à valider |
 | 5 | Santé | Dossier de santé privé, relié au semainier |
 | 6 | iPhone natif | Hors ligne, widgets, notifications |
-| 7 | Budget | Budget mensuel du foyer, alimenté par l'alimentation et les compléments |
+| 7 | Budget | Budget mensuel, alimenté par les relevés et les compléments (livré) |
 | 8 | Lecture | Livres lus, en cours et à lire, temps de lecture et objectifs |
 | 9 | Films et séries | Ce qui est vu, à voir ou écarté, avec notes ; suggestions par l'assistant |
 
@@ -344,12 +344,12 @@ par LifeOS plutôt que saisies.
 1. **Cadrage fonctionnel.** Fait.
 2. **Maquette cliquable** : mois, opérations et import, lignes prévues, règles,
    évolution (ordinateur et smartphone). Validée le 2026-11-23.
-3. **Postes, lignes prévues et revenus**, puis mise en place depuis l'Excel par Claude.
-4. **Opérations** : import OFX, saisie, étalement.
-5. **Règles de classement.**
-6. **Mois et évolution.**
-7. **Compléments** calculés depuis la Santé.
-8. **Outils de l'assistant** pour tout le module.
+3. **Postes, lignes prévues et revenus.** Fait ; reste la mise en place depuis l'Excel par Claude.
+4. **Opérations** : import OFX, saisie, étalement. Fait.
+5. **Règles de classement.** Fait.
+6. **Mois et évolution.** Fait.
+7. **Compléments** calculés depuis la Santé. Fait.
+8. **Outils de l'assistant** pour tout le module. Fait.
 
 **Terminé quand.** Le budget du mois se tient dans LifeOS sans l'Excel, avec
 l'alimentation et les compléments remplis automatiquement, et le bilan du mois se lit

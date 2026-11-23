@@ -2,7 +2,7 @@
 
 Statut : accepté, 2026-11-23. Étape 7 de la [roadmap](../../01-roadmap.md).
 Maquette validée le 2026-11-23 (canevas des maquettes, « Budget — ordinateur » et
-« Budget — smartphone »). Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
+« Budget — smartphone ») ; module livré en code le même jour (schéma `budget`). Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
 (module Budget, schéma `budget`), l'[ADR 0011](0011-conversational-assistant-mcp.md)
 (outils de l'assistant) et l'[ADR 0016](0016-angular-material-ui-kit.md) (UI kit).
 
@@ -145,8 +145,8 @@ les lignes « à diminuer » montrent leur tendance ; les extras ont leur propre
 ### Valeurs calculées par LifeOS
 
 - **Compléments.** Une ligne prévue peut prendre comme prévu le coût mensuel des
-  compléments du compte, calculé par la Santé (cures lissées, ADR 0018) au lieu d'un
-  montant saisi. Le réel vient des achats rangés dans cette ligne, étalés sur la durée
+  compléments actifs du compte, calculé par la Santé (cures lissées, ADR 0018) au lieu
+  d'un montant saisi ; ce prévu suit les compléments actuels, pour tous les mois. Le réel vient des achats rangés dans cette ligne, étalés sur la durée
   couverte.
 - **Alimentation.** Le prévu reste une enveloppe saisie et le réel vient des paiements
   par carte. Quand le semainier existera, le coût des repas planifiés (fourchette

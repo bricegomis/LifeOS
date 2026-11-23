@@ -41,7 +41,7 @@ code, identifiers and code comments are English.
 - UI kit: ADR 0016 (Angular Material 3 with a LifeOS theme, Material Symbols, screen
   conventions for lists, dialogs, add buttons and actions). Applied to every screen;
   any new or changed Angular screen uses it (see `src/frontend-angular/CLAUDE.md`).
-- Step 7 target (accepted, mockup validated 2026-11-23): ADR 0020 (budget: private to the account,
+- Budget (delivered 2026-11-23): ADR 0020 (budget: private to the account,
   planned lines fixed/envelope/extra, planned and received income, bank OFX operations (deduplicated by FITID)
   classified by user rules or the assistant, spreading over N months; Budget is a synthesis
   module that may read published contracts, e.g. the supplements monthly cost).
@@ -99,6 +99,10 @@ code, identifiers and code comments are English.
   nor Planning; cross-domain rules live in Planning as signals computed on read.
 - The planner changes only through a direct user action or a user-accepted proposal.
   Planning is computed by an external agent; the API never calls an AI provider.
+- Budget (ADR 0020) is private to its account like health; it is a synthesis module: it may read the
+  published contracts of domain modules (today the supplements' monthly cost from Health), no module reads it.
+  Imported operations are unique per account, bank account and FITID; only user rules (label contains)
+  classify them, the API guesses nothing else.
 - Health data is owned by a profile, not shared with the household, never sent to the agent,
   except sleep and recovery imported from Garmin (ADR 0019).
 - Out of scope, don't reintroduce: stock, shopping list, planning computed inside the

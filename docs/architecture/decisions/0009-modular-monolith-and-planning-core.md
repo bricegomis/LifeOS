@@ -53,8 +53,13 @@ Le code est découpé en modules métier :
 | Tâches | routines, todos, projets | à créer |
 | Santé | mesures, symptômes, rendez-vous, traitements, documents | à créer |
 | Planning | semainier, propositions, signaux, agenda externe | à créer |
+| Budget | budget mensuel, opérations bancaires, règles de classement (ADR 0020) | existe |
 
-Sens des dépendances : `Foyer ← modules de domaine ← Planning`.
+Sens des dépendances : `Foyer ← modules de domaine ← Planning, Budget`.
+
+Le Planning et le Budget sont des **modules de synthèse** : ils lisent les contrats
+publiés des modules de domaine (jamais leurs tables ni leurs entités) et aucun module ne
+les lit. Le test d'architecture le vérifie.
 
 - Un module de domaine ne connaît ni les autres domaines ni le Planning.
 - Toute règle qui croise deux domaines vit dans le Planning, jamais dans un domaine.

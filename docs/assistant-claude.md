@@ -59,10 +59,16 @@ créer, tu valides dans la discussion. Il cherche lui-même les valeurs nutritio
 | Santé : compléments | `list_supplements` (coût par mois, coche du jour, série), `create_supplement` (dose, moment, conditionnement, liens d'achat, cure), `update_supplement`, `set_supplement_taken` (« j'ai pris ma vitamine D »), `stop_supplement` (et reprise) |
 | Santé : symptômes | `get_symptom_journal` (journal et liste suivie), `create_symptom_type`, `log_symptom` (« j'ai mal au ventre, 6/10 »), `delete_symptom_entry`, `save_symptom_checkin` (bilan du jour, « rien à signaler ») |
 | Santé : analyses et mesures | `list_markers` (position, tendance, à refaire), `create_marker`, `update_marker`, `list_analyses`, `create_analysis` (valeurs lues d'un document, après confirmation), `update_analysis`, `delete_analysis`, `list_body_measures`, `create_body_measure_type`, `add_body_measure`, `delete_body_measure` |
+| Budget | `list_budget_lines`, `get_budget_line`, `create_budget_line` (par exemple depuis ton fichier Excel), `update_budget_line` (nouveau montant à partir d'un mois), `stop_budget_line`, `get_budget_month` (prévu, réel, écart, enveloppes, non classées), `get_budget_trend`, `list_budget_operations`, `classify_budget_operation` (avec étalement et règle facultatifs), `add_budget_operation`, `list_budget_rules`, `create_budget_rule`, `update_budget_rule`, `delete_budget_rule` |
 | Santé : documents et rendez-vous | `list_health_documents`, `get_health_document_file` (Claude lit la photo ou le PDF), `create_health_document`, `update_health_document`, `list_appointments`, `create_appointment` (depuis un e-mail de confirmation ou l'agenda), `update_appointment` (rendez-vous déplacé, compte rendu), `delete_appointment` |
 
 Images par URL : `https` uniquement, adresse publique (jamais le réseau local), JPEG,
 PNG ou WebP de 10 Mo au plus, téléchargées en 20 secondes au plus.
+
+Budget : Claude ne voit que le budget du compte connecté. Le relevé OFX s'importe dans
+l'application ; ensuite, par exemple : « Range mes opérations non classées d'octobre ; pour
+les prélèvements PayPal et Amazon, cherche l'achat dans mes emails ». Pour démarrer : « Crée
+mes lignes de budget à partir de ce fichier Excel » (en joignant le fichier).
 
 Santé : Claude ne voit que la santé du compte connecté. Un document (ordonnance, résultat…)
 se photographie ou s'envoie en PDF dans l'application ; ensuite, par exemple : « Lis mon
