@@ -10,6 +10,7 @@ using LifeOS.Api.Food.Reviews;
 using LifeOS.Api.Food.Stores;
 using LifeOS.Api.Households;
 using LifeOS.Api.Sports;
+using LifeOS.Api.Budget;
 using LifeOS.Api.Health;
 using LifeOS.Api.Tasks;
 using LifeOS.Infrastructure;
@@ -28,6 +29,7 @@ builder.Services.AddScoped<GarminLinks>();
 builder.Services.AddSportLibraries();
 builder.Services.AddTaskLibraries();
 builder.Services.AddHealthLibraries();
+builder.Services.AddBudgetLibraries();
 
 builder.AddLifeOSAuthentication();
 builder.AddLifeOSAssistant();
@@ -119,6 +121,9 @@ app.MapSportEndpoints();
 app.MapTaskEndpoints();
 // Health module
 app.MapHealthEndpoints();
+
+// Budget module (ADR 0020)
+app.MapBudgetEndpoints();
 
 app.Run();
 

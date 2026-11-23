@@ -1,3 +1,4 @@
+using LifeOS.Domain.Budget;
 using LifeOS.Domain.Food.Foods;
 using LifeOS.Domain.Food.Products;
 using LifeOS.Domain.Food.Receipts;
@@ -68,6 +69,12 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<HealthDocument> HealthDocuments => Set<HealthDocument>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<DailyWellness> DailyWellness => Set<DailyWellness>();
+
+    // Budget module (ADR 0020): private per account, reads published contracts only
+    public DbSet<BudgetLine> BudgetLines => Set<BudgetLine>();
+    public DbSet<BudgetOperation> BudgetOperations => Set<BudgetOperation>();
+    public DbSet<BudgetRule> BudgetRules => Set<BudgetRule>();
+    public DbSet<BudgetAccount> BudgetAccounts => Set<BudgetAccount>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

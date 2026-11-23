@@ -23,6 +23,259 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("LifeOS.Domain.Budget.BudgetAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Account")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<decimal?>("Balance")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)");
+
+                    b.Property<DateOnly?>("BalanceOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("LastFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("LastImportAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("LastTo")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "OwnerUserId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.HasIndex("OwnerUserId", "Account")
+                        .IsUnique();
+
+                    b.ToTable("accounts", "budget");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Budget.BudgetLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("FromSupplements")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Reduce")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly?>("StoppedFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("HouseholdId", "OwnerUserId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.ToTable("lines", "budget", t =>
+                        {
+                            t.HasCheckConstraint("ck_budget_line_kind", "\"Kind\" IN ('fixed', 'envelope', 'extra', 'off', 'income')");
+
+                            t.HasCheckConstraint("ck_budget_line_supplements", "NOT \"FromSupplements\" OR \"Kind\" IN ('fixed', 'envelope')");
+                        });
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Budget.BudgetOperation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Account")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("BankId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ClassifiedBy")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("LineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("PostedOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("RuleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("Spread")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RuleId");
+
+                    b.HasIndex("HouseholdId", "OwnerUserId");
+
+                    b.HasIndex("LineId", "OwnerUserId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.HasIndex("OwnerUserId", "Date");
+
+                    b.HasIndex("OwnerUserId", "Account", "BankId")
+                        .IsUnique()
+                        .HasFilter("\"BankId\" IS NOT NULL");
+
+                    b.ToTable("operations", "budget", t =>
+                        {
+                            t.HasCheckConstraint("ck_budget_operation_bank", "(\"Source\" = 'ofx') = (\"BankId\" IS NOT NULL AND \"Account\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_budget_operation_by", "\"ClassifiedBy\" IS NULL OR \"ClassifiedBy\" IN ('rule', 'hand', 'assistant')");
+
+                            t.HasCheckConstraint("ck_budget_operation_classified", "(\"LineId\" IS NULL) = (\"ClassifiedBy\" IS NULL)");
+
+                            t.HasCheckConstraint("ck_budget_operation_source", "\"Source\" IN ('ofx', 'manual')");
+
+                            t.HasCheckConstraint("ck_budget_operation_spread", "\"Spread\" >= 1 AND \"Spread\" <= 36");
+                        });
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Budget.BudgetRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Spread")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("HouseholdId", "OwnerUserId");
+
+                    b.HasIndex("LineId", "OwnerUserId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.ToTable("rules", "budget", t =>
+                        {
+                            t.HasCheckConstraint("ck_budget_rule_direction", "\"Direction\" IN ('any', 'out', 'in')");
+
+                            t.HasCheckConstraint("ck_budget_rule_spread", "\"Spread\" >= 1 AND \"Spread\" <= 36");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Food.Foods.FoodItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2434,6 +2687,147 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasIndex("ApplicationId", "Status", "Subject", "Type");
 
                     b.ToTable("tokens", "auth");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Budget.BudgetAccount", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Budget.BudgetLine", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsMany("LifeOS.Domain.Budget.BudgetAmount", "Amounts", b1 =>
+                        {
+                            b1.Property<Guid>("LineId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateOnly>("FromMonth")
+                                .HasColumnType("date");
+
+                            b1.Property<decimal>("Amount")
+                                .HasPrecision(12, 2)
+                                .HasColumnType("numeric(12,2)");
+
+                            b1.Property<int>("Months")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Period")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)");
+
+                            b1.HasKey("LineId", "FromMonth");
+
+                            b1.ToTable("line_amounts", "budget", t =>
+                                {
+                                    t.HasCheckConstraint("ck_budget_amount_period", "\"Period\" IN ('month', 'year', 'months')");
+
+                                    t.HasCheckConstraint("ck_budget_amount_values", "\"Amount\" >= 0 AND \"Months\" >= 1 AND \"Months\" <= 60");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("LineId");
+                        });
+
+                    b.Navigation("Amounts");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Budget.BudgetOperation", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Budget.BudgetRule", null)
+                        .WithMany()
+                        .HasForeignKey("RuleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LifeOS.Domain.Budget.BudgetLine", null)
+                        .WithMany()
+                        .HasForeignKey("LineId", "OwnerUserId")
+                        .HasPrincipalKey("Id", "OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Budget.BudgetRule", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Budget.BudgetLine", null)
+                        .WithMany()
+                        .HasForeignKey("LineId", "OwnerUserId")
+                        .HasPrincipalKey("Id", "OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Food.Foods.FoodItem", b =>

@@ -16,6 +16,8 @@ public sealed class ModuleBoundaryTests
     /// <summary>Domain modules. Add a module here when its folder is created.</summary>
     private static readonly string[] DomainModules = ["Food", "Sports", "Tasks", "Health"];
     private const string Planning = "Planning";
+    /// <summary>Synthesis modules (ADR 0020) read the published contracts of domain modules; no module reads them.</summary>
+    private static readonly string[] SynthesisModules = ["Budget"];
     private static readonly string[] Layers = ["Domain", "Application", "Infrastructure", "Api"];
 
     private static readonly Assembly[] Assemblies =
@@ -49,11 +51,35 @@ public sealed class ModuleBoundaryTests
     [Theory]
     [MemberData(nameof(Modules))]
     public void A_domain_module_knows_neither_the_other_domain_modules_nor_planning(string module) =>
-        AssertNoDependency(module, DomainModules.Where(other => other != module).Append(Planning));
+        AssertNoDependency(module, DomainModules.Where(other => other != module).Append(Planning).Concat(SynthesisModules));
 
     [Fact]
     public void The_household_core_depends_on_no_domain_module_and_not_on_planning() =>
-        AssertNoDependency(Core, DomainModules.Append(Planning));
+        AssertNoDependency(Core, DomainModules.Append(Planning).Concat(SynthesisModules));
+
+    public static TheoryData<string> Syntheses => new(SynthesisModules);
+
+    [Theory]
+    [MemberData(nameof(Syntheses))]
+    public void A_synthesis_module_reads_domain_modules_through_their_published_contracts_only(string module)
+    {
+        // Domain, Infrastructure and Api of a domain module are forbidden, and so is its Application layer except Contracts.
+        var applicationTypes = Types.InAssembly(typeof(LifeOS.Application.Households.ResolveHouseholdForUserQuery).Assembly).GetTypes()
+            .Where(t => t.Namespace is { } ns && DomainModules.Any(m => ns == $"LifeOS.Application.{m}" || ns.StartsWith($"LifeOS.Application.{m}.", StringComparison.Ordinal))
+                && !DomainModules.Any(m => ns == $"LifeOS.Application.{m}.Contracts"))
+            .Select(t => t.FullName!).ToArray();
+        var forbidden = DomainModules.SelectMany(m => new[] { $"LifeOS.Domain.{m}", $"LifeOS.Infrastructure.{m}", $"LifeOS.Api.{m}" })
+            .Concat(applicationTypes).Append($"LifeOS.Application.{Planning}").ToArray();
+        foreach (var assembly in Assemblies)
+        {
+            foreach (var ns in Namespaces(module))
+            {
+                var result = Types.InAssembly(assembly).That().ResideInNamespaceStartingWith(ns).ShouldNot().HaveDependencyOnAny(forbidden).GetResult();
+                Assert.True(result.IsSuccessful, $"{ns} may only read published contracts: " + string.Join(", ", result.FailingTypeNames ?? []));
+            }
+        }
+        Assert.NotEmpty(Types.InAssembly(typeof(Program).Assembly).That().ResideInNamespaceStartingWith($"LifeOS.Api.{module}").GetTypes());
+    }
 
     [Fact]
     public void The_domain_layer_has_no_persistence_or_http_dependency()

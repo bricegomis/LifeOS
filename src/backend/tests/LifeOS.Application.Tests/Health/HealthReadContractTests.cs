@@ -19,6 +19,11 @@ public sealed class HealthReadContractTests
         public Task<IReadOnlyList<DailyWellness>> WellnessAsync(Guid householdId, Guid ownerUserId, DateOnly from, DateOnly to, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<DailyWellness>>(Days.Where(d => d.HouseholdId == householdId && d.OwnerUserId == ownerUserId
                 && d.Date >= from && d.Date <= to).ToList());
+
+        public List<Supplement> Supplements { get; } = [];
+
+        public Task<IReadOnlyList<Supplement>> ActiveSupplementsAsync(Guid householdId, Guid ownerUserId, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<Supplement>>(Supplements.Where(s => s.HouseholdId == householdId && s.OwnerUserId == ownerUserId && !s.IsStopped).ToList());
     }
 
     private static DailyWellness Day(Guid owner, DateOnly date, int sleepSeconds, int bodyBattery)
@@ -43,5 +48,18 @@ public sealed class HealthReadContractTests
         Assert.Equal(("balanced", 52, 80), (days[0].HrvStatus, days[0].RestingHeartRate, days[0].SleepScore));
         await Assert.ThrowsAsync<ArgumentException>(() => new HealthReadContract(data, FixedClock.Default)
             .SleepAndRecoveryAsync(Household, Me, Monday, Monday.AddDays(-1), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task The_budget_reads_the_monthly_cost_of_the_account_s_active_supplements_only()
+    {
+        var data = new FakeData();
+        Supplement Make(Guid owner, decimal? price) => Supplement.Create(Household, owner, Profile, "Magnésium", null, 2, "gelule", "soir", 180, price, null, null,
+            SupplementPeriod.AllYear(Monday), FixedClock.Default.GetUtcNow());
+        var stopped = Make(Me, 50);
+        stopped.Stop(FixedClock.Default.GetUtcNow());
+        data.Supplements.AddRange([Make(Me, 29.9m), Make(Me, null), Make(Partner, 100), stopped]);
+
+        Assert.Equal(9.97m, await new HealthReadContract(data, FixedClock.Default).SupplementsMonthlyCostAsync(Household, Me, CancellationToken.None));
     }
 }

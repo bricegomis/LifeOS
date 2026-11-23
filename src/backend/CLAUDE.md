@@ -8,7 +8,7 @@
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
   templates, logged sessions, weekly goals, daily challenges; ADR 0013; exercises and
-  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines, projects; ADR 0017), `Health` (supplements, symptoms, analyses, body measures, documents, appointments; ADR 0018). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines, projects; ADR 0017), `Health` (supplements, symptoms, analyses, body measures, documents, appointments; ADR 0018), and the synthesis module `Budget` (ADR 0020). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -92,11 +92,21 @@
   `Appointment` has a day, optional time, booking link (https; LifeOS never calls the site) and an
   optional report document. Management code: `SupplementLibrary`, `SymptomLibrary`,
   `AnalysisLibrary`, `HealthDocumentLibrary`, `AppointmentLibrary` (registered in `Api/Health/HealthModule.cs`).
+- Budget (ADR 0020): a synthesis module, private to an account like Health (rows carry `HouseholdId`, `OwnerUserId`,
+  `MemberProfileId`; every query filters on household and account). It reads domain modules only through their published
+  contracts (`HealthReadContract.SupplementsMonthlyCostAsync`); the architecture test allows `Application/<Module>/Contracts`
+  and nothing else, and forbids domain modules from reading Budget. A `BudgetLine` is fixed, envelope, extra, off or income,
+  with dated `BudgetAmount`s (per month, year or every N months; a change applies from a month on) or the supplements' cost.
+  A `BudgetOperation` comes from an OFX statement (`OfxStatement`: OFX 2 XML or OFX 1 SGML; unique per owner, account and
+  FITID; the purchase day is read from "CARTE dd/mm/yy" labels) or is typed by hand; it may be spread over 1 to 36 months.
+  `BudgetRule`s (label contains, ignoring case and accents; direction; first in order wins) classify imports and the
+  unclassified operations when a rule is saved. Months, trend and line history are computed on read by
+  `Application/Budget/BudgetReports`; management code is `BudgetLibrary` (`Api/Budget`), shared with `BudgetAssistantTools`.
 
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
   `SkipDatabaseMigration=true`. Each module owns a PostgreSQL schema (`households`,
-  `food`, `sports`, `tasks`, `health`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
+  `food`, `sports`, `tasks`, `health`, `budget`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
 - `FoodModuleReset` (roadmap step 1, ADR 0010) replaced the whole previous history:
   it drops every table of `public` with its data. Never edit it; add a new migration:
   `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api --output-dir Persistence/Migrations`
