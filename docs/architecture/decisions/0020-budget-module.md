@@ -1,7 +1,8 @@
 # ADR 0020 — Budget : budget mensuel, opérations bancaires et dépenses calculées
 
-Statut : proposé, 2026-11-23 (cadrage). Étape 7 de la [roadmap](../../01-roadmap.md).
-Maquette à faire et à valider avant tout code. Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
+Statut : accepté, 2026-11-23. Étape 7 de la [roadmap](../../01-roadmap.md).
+Maquette validée le 2026-11-23 (canevas des maquettes, « Budget — ordinateur » et
+« Budget — smartphone »). Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
 (module Budget, schéma `budget`), l'[ADR 0011](0011-conversational-assistant-mcp.md)
 (outils de l'assistant) et l'[ADR 0016](0016-angular-material-ui-kit.md) (UI kit).
 
