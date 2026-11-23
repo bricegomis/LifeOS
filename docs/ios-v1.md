@@ -154,9 +154,10 @@ xcodebuild -workspace ios/App/App.xcworkspace -scheme App \
 ```
 
 Le scheme App construit et embarque **LifeosWidgetExtension**. Un scheme partagé
-de l'extension permet aussi sa compilation séparée. La CI
-(job `ios` de `.github/workflows/ci.yml`) exécute contrôles Angular, contrat Swift,
-sync Capacitor et builds natifs sans secret Apple ; sa configuration réseau
+de l'extension permet aussi sa compilation séparée. Le workflow
+`.github/workflows/ios.yml` (hors CI principale et hors « CI ok », lancé seulement
+quand le code natif, la config Capacitor ou les dépendances changent, ou à la main)
+exécute contrat Swift, sync Capacitor et builds natifs sans secret Apple ; sa configuration réseau
 `.example` est synthétique et **ne permet pas une vraie connexion**.
 
 ## Fonctionnement et corrections de fiabilité

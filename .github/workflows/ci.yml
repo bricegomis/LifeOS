@@ -3,6 +3,8 @@ name: CI
 # One workflow so the main ruleset can require a single check ("CI ok").
 # Jobs are skipped when their sources did not change; the gate job always
 # reports, so pull requests never wait on a check that was never started.
+# The native iOS build lives in ios.yml: it needs a macOS runner, which can stay
+# queued and get cancelled, so it must not turn this workflow red.
 
 on:
   pull_request:
@@ -71,57 +73,6 @@ jobs:
           LIFEOS_BUILD_SERVER_URL: ${{ github.server_url }}
           LIFEOS_BUILD_WORKFLOW: ${{ github.workflow }}
 
-  ios:
-    name: iOS native
-    needs: changes
-    if: needs.changes.outputs.frontend == 'true'
-    runs-on: macos-15
-    timeout-minutes: 30
-    defaults:
-      run:
-        working-directory: src/frontend-angular
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: src/frontend-angular/package-lock.json
-      - name: Show native toolchain
-        run: |
-          xcodebuild -version
-          xcodebuild -showsdks
-          pod --version
-      - run: npm ci
-      - run: npm test
-      # cap:sync includes the production Angular build before copying web assets.
-      - run: npm run cap:sync
-        env:
-          LIFEOS_API_URL: https://api.lifeos.example
-      - name: Build app and widget for generic simulator and device (unsigned)
-        shell: bash
-        run: |
-          set -euo pipefail
-          for platform in simulator device; do
-            if [[ "$platform" == simulator ]]; then
-              sdk=iphonesimulator
-              destination='generic/platform=iOS Simulator'
-              configuration=Debug
-            else
-              sdk=iphoneos
-              destination='generic/platform=iOS'
-              configuration=Release
-            fi
-            for scheme in App LifeosWidgetExtension; do
-              xcodebuild -workspace ios/App/App.xcworkspace \
-                -scheme "$scheme" -configuration "$configuration" \
-                -sdk "$sdk" -destination "$destination" \
-                -derivedDataPath "ios/DerivedData/$platform" \
-                CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-                CODE_SIGN_IDENTITY= build
-            done
-          done
-
   backend:
     name: Backend tests
     needs: changes
@@ -164,7 +115,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, frontend, ios, backend, garmin-sync]
+    needs: [changes, frontend, backend, garmin-sync]
     runs-on: ubuntu-latest
     steps:
       - name: Fail when a needed job failed or was cancelled
