@@ -15,6 +15,7 @@ Vision : [00-vision.md](00-vision.md).
 | 4 | Semainier | Calendrier rempli par un agent IA, propositions à valider |
 | 5 | Santé | Dossier de santé privé, relié au semainier |
 | 6 | iPhone natif | Hors ligne, widgets, notifications |
+| 7 | Budget | Dépenses du foyer suivies, à cadrer |
 
 ## Règles communes à toutes les étapes
 
@@ -64,6 +65,25 @@ Tâches et Santé ; ils sont livrés.
 - Mise en place de la pile d'intégration sur le VPS (par l'utilisateur).
 - Accès à Docker sur le poste de développement, nécessaire pour lancer en local les
   tests d'intégration et une base PostgreSQL.
+
+## En attendant le semainier
+
+Le semainier (étape 4) attend que les modules aient servi. D'ici là, dans cet ordre
+proposé (chaque point commence par un cadrage, puis une maquette validée) :
+
+1. **Accueil « Aujourd'hui » unifié.** Un seul écran avec ce qu'il y a à faire et à
+   cocher dans la journée : todos et routines du foyer du jour ou en retard,
+   compléments à prendre, routines sportives et défis du jour, en plus de la nuit et
+   de l'énergie déjà affichées. On coche depuis cet écran. Rien n'est placé dans le
+   temps et aucun agent n'intervient : l'écran lit les contrats publiés des modules.
+   Il deviendra l'accueil du semainier.
+2. **Usage réel.** Une à deux semaines d'usage de Sport, Tâches et Santé, avec la
+   liste de ce qui gêne, traitée en une passe.
+3. **iPhone, première partie** (étape 6 sans le semainier) : notifications
+   (compléments, routines, échéances des todos), widget « à faire aujourd'hui »,
+   retrait du code Swift du widget « prochain événement » et de la Live Activity de
+   cuisine. Demande macOS et Xcode.
+4. **Budget** (étape 7), à cadrer.
 
 ## Étape 1 — Alimentation saine
 
@@ -293,8 +313,29 @@ Demande macOS et Xcode ; l'installation réelle reste une vérification humaine.
 Cette étape ne dépend pas de l'étape 5 : elle peut passer avant la santé si
 l'usage mobile du semainier le demande.
 
+## Étape 7 — Budget
+
+**But.** Savoir où part l'argent du foyer, au même endroit que le reste.
+
+**À cadrer.**
+
+- Saisie : à la main, par photo de ticket gardée (comme les tickets de courses, sans
+  lecture automatique par l'API), par l'assistant depuis les emails, ou par import
+  d'un relevé bancaire (fichier CSV/OFX) ? Pas de connexion directe à la banque par
+  défaut.
+- Catégories (fixes ou libres), comptes, dépenses récurrentes (abonnements, loyer).
+- Budget par mois et par catégorie, avec l'avancement du mois.
+- Données partagées par le foyer ou privées par profil ?
+- Lien avec les autres modules par leurs contrats publiés : prix payés en
+  Alimentation, coût mensuel des compléments en Santé. Pas de liste de courses ni de
+  stock.
+
+**Terminé quand.** Les dépenses d'un mois sont suivies dans LifeOS et le bilan du mois
+se lit en un écran.
+
 ## Après la roadmap
 
 Pistes non planifiées : acceptation automatique des propositions toujours validées,
 écriture vers l'agenda externe, autres personnes suivies, autres adultes connectés,
-nouveaux domaines.
+nouveaux domaines (par exemple la lecture : livres à lire, en cours et lus, pages ou
+temps par jour, notes et citations, objectif annuel).
