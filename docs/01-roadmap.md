@@ -332,7 +332,7 @@ par LifeOS plutôt que saisies.
   (non planifié, suivi seul) ; montant par mois, par an ou tous les N mois ; repère
   « à diminuer ».
 - Salaire prévu mois par mois et salaire reçu.
-- Opérations importées d'un CSV BoursoBank chaque mois ou saisies à la main ;
+- Opérations importées d'un relevé OFX BoursoBank ou saisies à la main ;
   rangées par des règles sur le libellé, le reste par l'utilisateur ou Claude ; un
   achat peut être étalé sur N mois.
 - Compléments : prévu = coût mensuel calculé par la Santé ; alimentation : réel par
@@ -345,7 +345,7 @@ par LifeOS plutôt que saisies.
 2. **Maquette cliquable** : mois, opérations et import, lignes prévues, règles,
    évolution (ordinateur et smartphone).
 3. **Postes, lignes prévues et revenus**, puis mise en place depuis l'Excel par Claude.
-4. **Opérations** : import CSV, saisie, étalement.
+4. **Opérations** : import OFX, saisie, étalement.
 5. **Règles de classement.**
 6. **Mois et évolution.**
 7. **Compléments** calculés depuis la Santé.

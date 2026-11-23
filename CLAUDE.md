@@ -42,7 +42,7 @@ code, identifiers and code comments are English.
   conventions for lists, dialogs, add buttons and actions). Applied to every screen;
   any new or changed Angular screen uses it (see `src/frontend-angular/CLAUDE.md`).
 - Step 7 target (proposed, mockup pending): ADR 0020 (budget: private to the account,
-  planned lines fixed/envelope/extra, planned and received income, bank CSV operations
+  planned lines fixed/envelope/extra, planned and received income, bank OFX operations (deduplicated by FITID)
   classified by user rules or the assistant, spreading over N months; Budget is a synthesis
   module that may read published contracts, e.g. the supplements monthly cost).
 - Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the

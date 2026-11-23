@@ -59,6 +59,8 @@ Une **ligne prévue** est l'équivalent d'une ligne du Récap. Elle porte :
     carburant). Le non-dépensé n'est pas reporté : chaque mois repart du plafond ;
   - **extra** : aucun montant prévu ; la ligne sert à ranger et à suivre les
     dépenses non planifiées ;
+  - **hors budget** : ni dépense ni revenu (virement vers un autre compte à soi,
+    avance remboursée) ; ses opérations ne comptent nulle part ;
 - un **montant** et sa **période** : par mois, par an ou tous les N mois. Le prévu
   mensuel est calculé (montant ÷ 12 par an, ÷ N tous les N mois) ;
 - un repère **à diminuer** ;
@@ -78,14 +80,27 @@ par mois (congés, RTT). Le reçu vient des opérations rangées dans cette lign
 ### Opérations
 
 Une **opération** est un mouvement du compte : date, libellé, montant signé (dépense
-négative, revenu positif), compte, et sa **ligne** (prévue, extra ou revenu), ou « non
-classée ». Elle vient :
+négative, revenu positif), compte, et sa **ligne** (prévue, extra, hors budget ou
+revenu), ou « non classée ». Elle vient :
 
-- de l'**import d'un relevé CSV** exporté de la banque, chaque mois. Le format
-  BoursoBank est le premier pris en charge ; il est figé sur un export réel fourni
-  par l'utilisateur. Une opération déjà importée n'est pas recréée (dédoublonnage par
-  date, libellé, montant et compte) ;
+- de l'**import d'un relevé OFX** exporté de la banque, chaque mois ou à n'importe
+  quel rythme. Le format est figé sur un export BoursoBank réel (OFX 2.2 en XML) :
+  compte (`ACCTID`), puis par opération la date de débit (`DTPOSTED`), le montant
+  signé (`TRNAMT`), l'identifiant unique de la banque (`FITID`) et le libellé
+  (`NAME`). `DTUSER` n'est pas fiable et n'est pas lu ; il n'y a ni catégorie ni
+  commerçant séparé. Une opération déjà importée (même compte et même `FITID`) n'est
+  jamais recréée : réimporter un mois ou des périodes qui se chevauchent est sans
+  risque. Le solde du relevé est gardé pour l'affichage ;
 - d'une **saisie à la main** (espèces, oubli).
+
+**Date.** Un paiement par carte est débité un à trois jours après l'achat ; son
+libellé commence par la date d'achat (« CARTE 29/10/26 … », « AVOIR 23/09/26 … »).
+Cette date est reprise comme date de l'opération, la date de débit sinon : un achat
+du 30 septembre compte en septembre. Ce découpage du libellé est propre au format
+BoursoBank et testé sur lui.
+
+**Remboursement.** Un avoir ou un remboursement rangé dans une ligne de dépense
+vient en déduction du réel de cette ligne.
 
 **Étalement.** Une opération peut couvrir N mois (compléments pour 6 mois, assurance
 annuelle) : elle compte pour 1/N dans chacun des N mois à partir de son mois. Le mois
@@ -96,14 +111,20 @@ compte entier dans une ligne.
 
 ### Règles de classement
 
-Une règle range les opérations importées : « libellé contient … » (et facultativement
-un sens, dépense ou revenu) → une ligne, avec un étalement facultatif. Les règles sont
+Une règle range les opérations importées : « libellé contient … » (sans tenir compte
+des majuscules ni des accents, et facultativement un sens, dépense ou revenu) → une
+ligne, avec un étalement facultatif. Les règles sont
 écrites par l'utilisateur ou par l'assistant à sa demande, appliquées dans leur ordre à
 l'import ; la première qui correspond gagne. Ce qui reste est « non classé » : rangé à
 la main ou par Claude depuis l'assistant. L'API ne devine rien d'autre : pas de
 correspondance approchée, pas de catégorie déduite ailleurs que des règles.
 
 Ranger une opération à la main peut proposer de créer la règle correspondante.
+
+Certaines opérations ne peuvent pas être rangées par une règle : un prélèvement
+PayPal ou Amazon cache des achats de toute nature, un virement à une personne peut
+être un loyer ou un remboursement. Elles restent non classées et sont rangées à la
+main ou par Claude, qui peut s'aider des emails de confirmation de l'utilisateur.
 
 ### Mois
 
@@ -148,20 +169,20 @@ Menu « Budget » dans la navigation, avec :
   prévu, réel et écart, enveloppes en barre d'avancement, extras, accès aux opérations
   non classées ;
 - **Opérations** : liste avec recherche et filtres (mois, ligne, non classées), import
-  d'un CSV, saisie à la main, rangement et étalement ;
+  d'un fichier OFX, saisie à la main, rangement et étalement ;
 - **Lignes prévues** : postes et lignes, revenus, une page par ligne avec ses
   opérations et son évolution ;
 - **Règles** : liste ordonnée, création et test sur les opérations existantes ;
 - **Évolution** : graphiques par poste, extras, lignes à diminuer.
 
-Selon les ADR 0015 et 0016 ; ordinateur et smartphone (l'import CSV se fait sur
-ordinateur).
+Selon les ADR 0015 et 0016 ; ordinateur et smartphone (l'import OFX se fait sur
+ordinateur ou depuis les fichiers du téléphone).
 
 ### Assistant
 
 Outils MCP en lecture et en écriture : postes, lignes prévues et revenus ; lire un mois
 et l'évolution ; lister les opérations (dont les non classées), les ranger, les étaler,
-en saisir ; créer et modifier des règles. L'import CSV se fait dans l'application.
+en saisir ; créer et modifier des règles. L'import OFX se fait dans l'application.
 
 ## Conséquences
 
@@ -169,6 +190,6 @@ en saisir ; créer et modifier des règles. L'import CSV se fait dans l'applicat
   santé, elles ne sont jamais envoyées à l'agent de planification.
 - L'ADR 0009 gagne la notion de module de synthèse (Budget, Planning).
 - Le contrat de la Santé expose le coût mensuel des compléments du compte.
-- Hors périmètre : connexion directe à la banque (agrégateur DSP2, à étudier plus
-  tard), placements et épargne, plusieurs adultes, découpage d'une opération, import
-  de l'Excel, liste de courses et stock.
+- Les relevés importés ne sont pas conservés : seules les opérations le sont.
+- Hors périmètre : import CSV, QIF ou Excel, connexion directe à la banque (agrégateur DSP2, à étudier plus
+  tard), placements et épargne, plusieurs adultes, découpage d'une opération, liste de courses et stock.
