@@ -5,7 +5,7 @@ import { describe, it } from 'node:test'
 
 // ADR 0009: a feature module (app/<module>/) imports only core and shared, never another
 // module. `household` is the core household screen; `today` reads several modules through the API only. Add a module here when its folder is created.
-const MODULES = ['food', 'sports', 'tasks', 'health', 'household', 'today']
+const MODULES = ['food', 'sports', 'tasks', 'health', 'budget', 'household', 'today']
 const appDir = new URL('.', import.meta.url).pathname
 
 function sourceFiles(dir: string): string[] {

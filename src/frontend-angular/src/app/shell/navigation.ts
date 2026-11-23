@@ -81,6 +81,18 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
       { path: '/health/appointments', label: 'Rendez-vous' },
     ],
   },
+  {
+    id: 'budget',
+    title: 'Budget',
+    icon: 'account_balance_wallet',
+    items: [
+      { path: '/budget', label: 'Mois', exact: true },
+      { path: '/budget/operations', label: 'Opérations' },
+      { path: '/budget/lines', label: 'Lignes prévues' },
+      { path: '/budget/rules', label: 'Règles' },
+      { path: '/budget/trend', label: 'Évolution' },
+    ],
+  },
 ]
 
 /** The menu entry of a URL: the longest matching path, so `/sports/routine/42` belongs to Sport. */

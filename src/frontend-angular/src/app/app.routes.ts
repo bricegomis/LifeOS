@@ -33,6 +33,8 @@ export const routes: Routes = [
       { path: 'tasks', loadChildren: () => import('@/app/tasks/tasks.routes').then(module => module.TASK_ROUTES) },
       // Health module: private to its account (ADR 0018).
       { path: 'health', loadChildren: () => import('@/app/health/health.routes').then(module => module.HEALTH_ROUTES) },
+      // Budget module: private to its account, reads published contracts (ADR 0020).
+      { path: 'budget', loadChildren: () => import('@/app/budget/budget.routes').then(module => module.BUDGET_ROUTES) },
       { path: 'settings', loadComponent: () => import('@/app/household/settings-page.component').then(module => module.SettingsPageComponent) },
       // Old links keep working.
       { path: 'articles', pathMatch: 'full', redirectTo: 'products' },

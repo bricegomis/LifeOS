@@ -83,6 +83,18 @@ import LandscapeIcon from '@material-symbols/svg-400/rounded/landscape.svg'
 import SpeedIcon from '@material-symbols/svg-400/rounded/speed.svg'
 import StraightenIcon from '@material-symbols/svg-400/rounded/straighten.svg'
 import TrendingUpIcon from '@material-symbols/svg-400/rounded/trending_up.svg'
+import AccountBalanceWalletIcon from '@material-symbols/svg-400/rounded/account_balance_wallet.svg'
+import SavingsIcon from '@material-symbols/svg-400/rounded/savings.svg'
+import BoltIcon from '@material-symbols/svg-400/rounded/bolt.svg'
+import SwapHorizIcon from '@material-symbols/svg-400/rounded/swap_horiz.svg'
+import PaymentsIcon from '@material-symbols/svg-400/rounded/payments.svg'
+import TrendingDownIcon from '@material-symbols/svg-400/rounded/trending_down.svg'
+import TrendingFlatIcon from '@material-symbols/svg-400/rounded/trending_flat.svg'
+import RuleIcon from '@material-symbols/svg-400/rounded/rule.svg'
+import ChevronLeftIcon from '@material-symbols/svg-400/rounded/chevron_left.svg'
+import HelpIcon from '@material-symbols/svg-400/rounded/help.svg'
+import TouchAppIcon from '@material-symbols/svg-400/rounded/touch_app.svg'
+import SmartToyIcon from '@material-symbols/svg-400/rounded/smart_toy.svg'
 import KeyIcon from '@material-symbols/svg-400/rounded/key.svg'
 import RestartAltIcon from '@material-symbols/svg-400/rounded/restart_alt.svg'
 import MarkEmailUnreadIcon from '@material-symbols/svg-400/rounded/mark_email_unread.svg'
@@ -191,6 +203,18 @@ export const ICONS: Record<string, string> = {
   psychology: PsychologyIcon,
   sports: SportsIcon,
   self_improvement: SelfImprovementIcon,
+  account_balance_wallet: AccountBalanceWalletIcon,
+  savings: SavingsIcon,
+  bolt: BoltIcon,
+  swap_horiz: SwapHorizIcon,
+  payments: PaymentsIcon,
+  trending_down: TrendingDownIcon,
+  trending_flat: TrendingFlatIcon,
+  rule: RuleIcon,
+  chevron_left: ChevronLeftIcon,
+  help: HelpIcon,
+  touch_app: TouchAppIcon,
+  smart_toy: SmartToyIcon,
 }
 
 export function provideLifeosIcons() {
