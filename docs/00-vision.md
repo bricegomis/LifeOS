@@ -31,6 +31,11 @@ il signale que les repas suivants ne conviennent plus et propose de les ajuster.
 - **Choses à faire** : routines du foyer, todos ponctuels, projets.
 - **Santé** : mesures, symptômes quotidiens, rendez-vous, traitements,
   ordonnances, résultats d'analyse.
+- **Budget** : budget mensuel du foyer, dépenses d'alimentation et de compléments
+  calculées par LifeOS.
+- **Lecture** : livres, temps de lecture, objectifs.
+- **Films et séries** : vus, à voir ou écartés, avec notes ; l'assistant suggère
+  la suite.
 - D'autres domaines pourront s'ajouter sans remettre en cause les précédents.
 
 ## Utilisateur et foyer
