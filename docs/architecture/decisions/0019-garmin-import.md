@@ -35,16 +35,30 @@ cas de panne, les séances peuvent être saisies à la main.
 
 ### 1. Un service de synchro hors de l'API
 
-- Un petit service Python, `garmin-sync`, dans `src/garmin-sync`, déployé dans le
-  `docker-compose.yaml` à côté de l'API. Il utilise `python-garminconnect` à une
-  **version figée**, mise à jour seulement à la main.
+- Un petit service Python indépendant, `garmin-sync`, dans `src/garmin-sync`, avec sa
+  propre image Docker (`ghcr.io/bricegomis/lifeos-garmin-sync`, publiée par la CI comme
+  l'API et le web) et son conteneur dans la pile LifeOS (`docker-compose.yaml` et pile
+  d'intégration). Il utilise `python-garminconnect` à une **version figée**, mise à jour
+  seulement à la main. Aucune image existante ne fait ce travail (les projets connus
+  envoient Garmin vers InfluxDB ou Grafana, pas vers une API).
 - L'API n'appelle jamais Garmin. Le service lit Garmin et écrit dans LifeOS par des
   endpoints d'import dédiés, comme l'agent externe (ADR 0009).
-- Il s'authentifie sur LifeOS avec un **jeton d'import** créé dans les Réglages,
-  révocable, lié à un profil, limité aux endpoints d'import Garmin.
-- Identifiants Garmin : saisis une seule fois par une commande de connexion du service
-  (mot de passe et code MFA), jamais stockés. Seuls les jetons Garmin sont gardés, dans
-  un volume `lifeos_garmin_tokens`. Ni mot de passe ni jeton Garmin dans la base LifeOS.
+- **Configuration par variables d'environnement** de la pile LifeOS (Coolify) :
+
+  | Variable | Rôle |
+  | --- | --- |
+  | `GARMIN_EMAIL`, `GARMIN_PASSWORD` | Compte Garmin Connect |
+  | `LIFEOS_API_URL` | Adresse de l'API LifeOS vue depuis le conteneur |
+  | `LIFEOS_IMPORT_TOKEN` | Jeton d'import créé dans les Réglages de LifeOS : révocable, lié à un profil, limité aux endpoints d'import Garmin |
+
+  Le mot de passe Garmin est donc en clair dans la configuration de la pile, visible de
+  qui administre Coolify : choix accepté par l'utilisateur. Il n'est jamais dans la base
+  LifeOS.
+- Les jetons Garmin obtenus à la connexion sont gardés dans un volume
+  `lifeos_garmin_tokens`, pour ne pas se reconnecter à chaque synchro. Si le compte Garmin
+  demande un code MFA, la toute première connexion (et une reconnexion après expiration
+  des jetons) se fait à la main avec une commande interactive du conteneur ; LifeOS
+  affiche l'erreur quand c'est nécessaire.
 - **Rythme** : à 7 h, 13 h, 19 h et 23 h (Europe/Paris). Un bouton « Synchroniser
   maintenant » enregistre une demande dans LifeOS ; le service la voit en interrogeant
   l'API toutes les 5 minutes. LifeOS affiche la dernière synchro réussie et la dernière
@@ -92,7 +106,9 @@ Changements sur toutes les séances, manuelles comprises :
   | `yoga`, `pilates`, `breathwork` | `mobility` |
   | autres | `other` |
 
-  Toutes les marches sont importées. Le sport d'une séance Garmin peut être changé dans
+  **Toutes les activités sont importées**, quel que soit leur type : marche, randonnée,
+  natation en piscine ou en eau libre, etc. Un type Garmin sans correspondance devient
+  `other` et garde son type Garmin affiché. Le sport d'une séance Garmin peut être changé dans
   LifeOS (une séance HIIT qui n'était pas du crossfit) ; ce choix n'est plus écrasé.
 - **Garmin écrase** : à chaque synchro, toutes les valeurs venues de Garmin sont
   remplacées si elles ont changé dans Garmin Connect. Restent à LifeOS et ne sont
