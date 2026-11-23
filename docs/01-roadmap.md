@@ -15,7 +15,9 @@ Vision : [00-vision.md](00-vision.md).
 | 4 | Semainier | Calendrier rempli par un agent IA, propositions à valider |
 | 5 | Santé | Dossier de santé privé, relié au semainier |
 | 6 | iPhone natif | Hors ligne, widgets, notifications |
-| 7 | Budget | Dépenses du foyer suivies, à cadrer |
+| 7 | Budget | Budget mensuel du foyer, alimenté par l'alimentation et les compléments |
+| 8 | Lecture | Livres lus, en cours et à lire, temps de lecture et objectifs |
+| 9 | Films et séries | Ce qui est vu, à voir ou écarté, avec notes ; suggestions par l'assistant |
 
 ## Règles communes à toutes les étapes
 
@@ -83,7 +85,9 @@ proposé (chaque point commence par un cadrage, puis une maquette validée) :
    (compléments, routines, échéances des todos), widget « à faire aujourd'hui »,
    retrait du code Swift du widget « prochain événement » et de la Live Activity de
    cuisine. Demande macOS et Xcode.
-4. **Budget** (étape 7), à cadrer.
+4. **Budget** (étape 7), puis **Lecture** (étape 8) et **Films et séries** (étape 9).
+   Les étapes 7 à 9 sont des domaines indépendants du semainier ; elles peuvent
+   passer avant ou après lui.
 
 ## Étape 1 — Alimentation saine
 
@@ -315,27 +319,71 @@ l'usage mobile du semainier le demande.
 
 ## Étape 7 — Budget
 
-**But.** Savoir où part l'argent du foyer, au même endroit que le reste.
+**But.** Budgétiser les dépenses du foyer par mois dans LifeOS, à la place du
+fichier Excel actuel, avec les dépenses d'alimentation et de compléments calculées
+par LifeOS plutôt que saisies.
+
+**Point de départ.** Le fichier Excel de l'utilisateur, qui budgétise déjà les
+dépenses par mois : sa structure (catégories, lignes, colonnes) sert de base au
+cadrage, et son historique pourra être importé une fois.
 
 **À cadrer.**
 
-- Saisie : à la main, par photo de ticket gardée (comme les tickets de courses, sans
-  lecture automatique par l'API), par l'assistant depuis les emails, ou par import
-  d'un relevé bancaire (fichier CSV/OFX) ? Pas de connexion directe à la banque par
-  défaut.
-- Catégories (fixes ou libres), comptes, dépenses récurrentes (abonnements, loyer).
-- Budget par mois et par catégorie, avec l'avancement du mois.
-- Données partagées par le foyer ou privées par profil ?
-- Lien avec les autres modules par leurs contrats publiés : prix payés en
-  Alimentation, coût mensuel des compléments en Santé. Pas de liste de courses ni de
-  stock.
+- Ce que fait l'Excel aujourd'hui et ce qui doit être gardé ou amélioré.
+- Catégories, budget prévu par mois et par catégorie, réel et écart.
+- Dépenses récurrentes (loyer, abonnements) et ponctuelles ; revenus suivis ou non.
+- Saisie : à la main, par l'assistant (emails, factures), ou import d'un relevé
+  bancaire en fichier. Pas de connexion directe à la banque.
+- Valeurs venues des autres modules : dépense alimentaire du mois (prix saisis
+  depuis les tickets) et coût mensuel des compléments (déjà calculé en Santé). Le
+  Budget est un module de domaine : comment les lire sans croiser les domaines
+  (ADR 0009), par exemple par un module consommateur comme le Planning, est à
+  décider dans l'ADR. Le coût des compléments est une donnée de santé privée.
+- Données du foyer ou par profil.
+- Pas de liste de courses ni de stock.
 
-**Terminé quand.** Les dépenses d'un mois sont suivies dans LifeOS et le bilan du mois
-se lit en un écran.
+**Terminé quand.** Le budget du mois se tient dans LifeOS sans l'Excel, avec
+l'alimentation et les compléments remplis automatiquement, et le bilan du mois se lit
+en un écran.
+
+## Étape 8 — Lecture
+
+**But.** Suivre ses lectures et tenir un rythme de lecture.
+
+**Contenu pressenti.**
+
+- Bibliothèque de livres : titre, auteur, couverture (trouvée par l'assistant),
+  pages, format (papier, liseuse, audio) ; à lire, en cours, lu ou abandonné.
+- Séances de lecture : pages ou minutes lues un jour ; avancement du livre calculé.
+- Objectifs de temps : par jour (30 min) ou par semaine (3 h), avec série et jokers
+  comme les défis du Sport ; objectif de livres par an.
+- Note sur 10, avis, notes et citations par livre.
+- Outils de l'assistant (ajouter un livre, noter une séance, retrouver une citation,
+  conseiller la prochaine lecture).
+
+**À cadrer.** Champs exacts, objectif par jour ou par semaine (ou les deux), lien
+futur avec le semainier (créneau de lecture).
+
+## Étape 9 — Films et séries
+
+**But.** Garder la trace de ce qui est vu, à voir ou écarté, pour qu'un agent trouve
+la prochaine chose à regarder.
+
+**Contenu pressenti.**
+
+- Bibliothèque de films et de séries : titre, année, affiche (trouvée par
+  l'assistant), genres ; état vu, en cours (saison et épisode pour une série), à voir,
+  ou « pas pour moi » (connu et écarté exprès).
+- Note sur 10 et avis par titre, par profil.
+- Suggestions : l'assistant (Claude par MCP) lit la bibliothèque, les notes et les
+  titres écartés et propose quoi voir ensuite ; il peut ajouter les titres proposés
+  à « à voir ». L'API n'appelle aucun fournisseur d'IA ni de base de films (ADR 0011).
+
+**À cadrer.** Suivi par épisode ou par saison, plateforme de diffusion, visionnage
+à plusieurs profils, forme des suggestions.
 
 ## Après la roadmap
 
 Pistes non planifiées : acceptation automatique des propositions toujours validées,
 écriture vers l'agenda externe, autres personnes suivies, autres adultes connectés,
-nouveaux domaines (par exemple la lecture : livres à lire, en cours et lus, pages ou
-temps par jour, notes et citations, objectif annuel).
+nouveaux domaines.
