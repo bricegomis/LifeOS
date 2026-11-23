@@ -1,4 +1,5 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core'
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { FormsModule } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
 import { MatDialog } from '@angular/material/dialog'
@@ -10,7 +11,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { openEditor } from '@/app/shared/ui/editor-dialog'
-import { ProjectDialogComponent, type ProjectDialogResult } from './project-dialog.component'
+import { ProjectCardComponent } from './project-card.component'
+import { ProjectDialogComponent, type ProjectDialogData, type ProjectDialogResult } from './project-dialog.component'
 import { TaskImageComponent } from './task-image.component'
 import { dayLabel, projectProgress } from './task-format'
 import { TasksApiService } from './tasks-api.service'
@@ -19,20 +21,25 @@ import { TodoActionsService } from './todo-actions.service'
 import { TodoCardComponent } from './todo-card.component'
 
 /**
- * One project (ADR 0017): progress, its open todos by due day, a quick add, the done and abandoned
- * ones folded; finishing asks a second click and says how many todos stay open.
+ * One project (ADR 0017): the path of its parents, progress (sub-projects included), its sub-projects,
+ * its open todos by due day, a quick add, the done and abandoned ones folded; finishing asks a second
+ * click and says how many todos and sub-projects stay open.
  */
 @Component({
   selector: 'app-project-page',
   standalone: true,
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, RouterLink, TaskImageComponent, TodoCardComponent],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, ProjectCardComponent, RouterLink, TaskImageComponent, TodoCardComponent],
   template: `
     <div class="lo-page project-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (detail(); as d) {
         @let p = d.project;
         <header class="head">
-          <a mat-icon-button routerLink="/tasks/projects" aria-label="Retour aux projets"><mat-icon svgIcon="arrow_back" /></a>
+          @if (parent(); as up) {
+            <a mat-icon-button [routerLink]="['/tasks/project', up.id]" [attr.aria-label]="'Retour au projet « ' + up.title + ' »'"><mat-icon svgIcon="arrow_back" /></a>
+          } @else {
+            <a mat-icon-button routerLink="/tasks/projects" aria-label="Retour aux projets"><mat-icon svgIcon="arrow_back" /></a>
+          }
           <h1 class="lo-bar-title head-title">Projet</h1>
           <button mat-flat-button type="button" class="lo-desktop-only" (click)="edit(p)"><mat-icon svgIcon="edit" />Modifier</button>
           <button mat-icon-button type="button" class="lo-phone-only" (click)="edit(p)" aria-label="Modifier le projet" title="Modifier le projet">
@@ -43,6 +50,11 @@ import { TodoCardComponent } from './todo-card.component'
           <app-task-image kind="projects" [todoId]="p.id" [hasImage]="p.hasImage" [title]="p.title" [version]="p.updatedAt" [size]="96"
             [alt]="p.hasImage ? 'Photo : ' + p.title : 'Pas de photo'" />
           <div class="hero-text">
+            @if (d.ancestors.length) {
+              <nav class="crumbs" aria-label="Projets parents">
+                @for (a of d.ancestors; track a.id) { <a [routerLink]="['/tasks/project', a.id]">{{ a.title }}</a><span aria-hidden="true">›</span> }
+              </nav>
+            }
             <h2 class="hero-title">{{ p.title }}</h2>
             <span class="lo-muted">{{ p.dueOn ? 'Échéance : ' + day(p.dueOn).toLocaleLowerCase('fr') : 'Sans échéance' }}</span>
             @if (p.state !== 'active') { <span class="lo-tags"><span class="lo-tag" [class.is-ok]="p.state === 'done'">{{ p.state === 'done' ? 'Terminé' : 'Abandonné' }}</span></span> }
@@ -52,7 +64,7 @@ import { TodoCardComponent } from './todo-card.component'
         <div class="progress">
           <div class="bar" role="progressbar" [attr.aria-valuenow]="progress().percent" aria-valuemin="0" aria-valuemax="100"
             [attr.aria-label]="'Avancement : ' + progress().label"><span [style.width.%]="progress().percent"></span></div>
-          <span class="lo-muted">{{ progress().label }} (les todos abandonnés ne comptent pas)</span>
+          <span class="lo-muted">{{ progress().label }} ({{ d.subProjects.length ? 'sous-projets compris, ' : '' }}les todos abandonnés ne comptent pas)</span>
         </div>
 
         <div class="actions">
@@ -64,9 +76,27 @@ import { TodoCardComponent } from './todo-card.component'
           }
         </div>
         @if (confirming()) {
-          <p class="lo-notice" role="status">{{ p.open ? 'Il reste ' + p.open + ' todo' + (p.open > 1 ? 's' : '') + ' ouvert' + (p.open > 1 ? 's' : '') + '. Ils restent ouverts et gardent ce projet.' : 'Tous les todos sont faits.' }}</p>
+          <p class="lo-notice" role="status">{{ finishNotice() }}</p>
         }
         @if (p.notes) { <p class="notes">{{ p.notes }}</p> }
+
+        @if (d.subProjects.length || p.state === 'active') {
+          <section class="lo-section" aria-labelledby="sub-projects">
+            <div class="lo-section-head">
+              <h2 id="sub-projects">Sous-projets</h2><span class="lo-muted">{{ d.subProjects.length }}</span>
+              @if (p.state === 'active') {
+                <button mat-stroked-button type="button" class="sub-add" (click)="addSubProject(p)"><mat-icon svgIcon="add" />Nouveau sous-projet</button>
+              }
+            </div>
+            @if (d.subProjects.length) {
+              <div class="cards">
+                @for (sub of d.subProjects; track sub.id) { <app-project-card [project]="sub" [today]="today()" /> }
+              </div>
+            } @else {
+              <p class="lo-muted">Aucun sous-projet. Découpez par exemple « Chalet » en « Plafond » et « Électricité ».</p>
+            }
+          </section>
+        }
 
         <section class="lo-section" aria-labelledby="open-todos">
           <div class="lo-section-head"><h2 id="open-todos">À faire</h2><span class="lo-muted">{{ open().length }}</span></div>
@@ -116,6 +146,10 @@ import { TodoCardComponent } from './todo-card.component'
     .head-title { flex: 1 1 auto; margin: 0; }
     .hero { display: flex; align-items: center; gap: 16px; }
     .hero-text { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
+    .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-large); }
+    .crumbs a { color: var(--mat-sys-primary); text-decoration: none; }
+    .crumbs a:hover { text-decoration: underline; }
+    .sub-add { margin-left: auto; }
     .hero-title { margin: 0; font: var(--mat-sys-title-large); font-weight: 600; }
     .progress { display: flex; flex-direction: column; gap: 6px; }
     .bar { height: 8px; overflow: hidden; border-radius: 4px; background: var(--mat-sys-secondary-container); }
@@ -138,7 +172,9 @@ export class ProjectPageComponent implements OnInit {
   private readonly actions = inject(TodoActionsService)
   private readonly dialog = inject(MatDialog)
   private readonly snack = inject(MatSnackBar)
-  private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id') ?? ''
+  private readonly route = inject(ActivatedRoute)
+  private readonly destroyRef = inject(DestroyRef)
+  private id = ''
   readonly detail = signal<TaskProjectDetailDto | null>(null)
   readonly today = signal(new Date().toISOString().slice(0, 10))
   readonly error = signal('')
@@ -148,12 +184,29 @@ export class ProjectPageComponent implements OnInit {
   readonly showClosed = signal(false)
   readonly open = computed(() => this.detail()?.todos.filter(t => t.state === 'open') ?? [])
   readonly closed = computed(() => this.detail()?.todos.filter(t => t.state !== 'open') ?? [])
+  readonly parent = computed(() => this.detail()?.ancestors.at(-1) ?? null)
+  readonly finishNotice = computed(() => {
+    const d = this.detail()
+    if (!d) return ''
+    const open = d.todos.filter(t => t.state === 'open').length
+    const subs = d.subProjects.filter(s => s.state === 'active').length
+    const bits: string[] = []
+    if (open) bits.push(`${open} todo${open > 1 ? 's' : ''} ouvert${open > 1 ? 's' : ''}`)
+    if (subs) bits.push(`${subs} sous-projet${subs > 1 ? 's' : ''} en cours`)
+    return bits.length ? `Il reste ${bits.join(' et ')}. Rien ne change pour eux : ils restent ouverts et gardent ce projet.` : 'Tous les todos sont faits.'
+  })
   readonly progress = computed(() => projectProgress(this.detail()?.project.done ?? 0, this.detail()?.project.total ?? 0))
   newTitle = ''
 
   async ngOnInit(): Promise<void> {
     try { this.today.set((await firstValueFrom(this.api.today())).today) } catch { /* local day */ }
-    await this.load()
+    // The same page shows a parent and its sub-projects: reload when the id changes.
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      this.id = params.get('id') ?? ''
+      this.confirming.set(false)
+      this.showClosed.set(false)
+      void this.load()
+    })
   }
 
   day(iso: string): string { return dayLabel(iso, this.today()) }
@@ -189,8 +242,16 @@ export class ProjectPageComponent implements OnInit {
 
   reopen(): Promise<void> { return this.run(() => this.api.reopenProject(this.id), 'Projet rouvert') }
 
+  async addSubProject(project: TaskProjectDto): Promise<void> {
+    const result = await firstValueFrom(openEditor<ProjectDialogComponent, ProjectDialogData, ProjectDialogResult>(this.dialog, ProjectDialogComponent,
+      { project: null, parentId: project.id }).afterClosed())
+    if (!result) return
+    this.snack.open(result.message, undefined, { duration: 4000 })
+    await this.load()
+  }
+
   async edit(project: TaskProjectDto): Promise<void> {
-    const result = await firstValueFrom(openEditor<ProjectDialogComponent, TaskProjectDto | null, ProjectDialogResult>(this.dialog, ProjectDialogComponent, project).afterClosed())
+    const result = await firstValueFrom(openEditor<ProjectDialogComponent, ProjectDialogData, ProjectDialogResult>(this.dialog, ProjectDialogComponent, { project }).afterClosed())
     if (!result) return
     this.detail.set(result.detail)
     this.snack.open(result.message, undefined, { duration: 4000 })

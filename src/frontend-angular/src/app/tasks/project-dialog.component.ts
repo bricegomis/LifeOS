@@ -1,26 +1,33 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core'
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatIconModule } from '@angular/material/icon'
 import { MatInputModule } from '@angular/material/input'
+import { MatSelectModule } from '@angular/material/select'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { EditorFrameComponent } from '@/app/shared/ui/editor-frame.component'
 import { TaskImageComponent } from './task-image.component'
-import { initial } from './task-format'
+import { initial, projectTree, subTreeIds } from './task-format'
 import { TasksApiService } from './tasks-api.service'
 import type { TaskProjectDetailDto, TaskProjectDto } from './tasks.models'
 
 export interface ProjectDialogResult { detail: TaskProjectDetailDto, message: string }
+/** `project`: the project to edit, null for a new one; `parentId`: the parent of a new sub-project. */
+export interface ProjectDialogData { project: TaskProjectDto | null, parentId?: string }
 
-/** Creates or edits a project (ADR 0017): photo, name, due day and notes; abandoned from here (second click). */
+/**
+ * Creates or edits a project (ADR 0017): photo, name, parent project, due day and notes; abandoned from
+ * here (second click). The parent is a project in progress (or the current one), never the project itself
+ * nor one of its sub-projects.
+ */
 @Component({
   selector: 'app-project-dialog',
   standalone: true,
-  imports: [EditorFrameComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, TaskImageComponent],
+  imports: [EditorFrameComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, TaskImageComponent],
   template: `
     <app-editor-frame [heading]="project ? 'Modifier le projet' : 'Nouveau projet'" formId="project-form" [saveLabel]="project ? 'Enregistrer' : 'Ajouter'"
       [busy]="busy()" [dirty]="dirty()" [error]="error()" [dangerLabel]="project?.state === 'active' ? 'Abandonner le projet' : ''" dangerIcon="block"
@@ -54,6 +61,14 @@ export interface ProjectDialogResult { detail: TaskProjectDetailDto, message: st
           <mat-label>Nom</mat-label>
           <input matInput name="title" required maxlength="200" placeholder="Ex. Chambre de Léa" [(ngModel)]="draft.title" />
         </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="parent">
+          <mat-label>Dans le projet</mat-label>
+          <mat-select name="parent" [(ngModel)]="draft.parentId">
+            <mat-option value="">Aucun (projet principal)</mat-option>
+            @for (option of parents(); track option.id) { <mat-option [value]="option.id">{{ option.label }}</mat-option> }
+          </mat-select>
+          <mat-hint>Pour en faire un sous-projet, par exemple « Chalet » dans « Terrain ».</mat-hint>
+        </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="due">
           <mat-label>Échéance</mat-label>
           <input matInput type="date" name="dueOn" [(ngModel)]="draft.dueOn" />
@@ -82,22 +97,37 @@ export interface ProjectDialogResult { detail: TaskProjectDetailDto, message: st
     .photo-side { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 4px; }
     .photo-delete { color: var(--mat-sys-error); }
     .due { max-width: 320px; }
+    .parent { max-width: 480px; }
   `],
 })
 export class ProjectDialogComponent {
   private readonly api = inject(TasksApiService)
   private readonly ref = inject<MatDialogRef<ProjectDialogComponent, ProjectDialogResult>>(MatDialogRef)
-  readonly project = inject<TaskProjectDto | null>(MAT_DIALOG_DATA)
+  private readonly data = inject<ProjectDialogData>(MAT_DIALOG_DATA)
+  readonly project = this.data.project
   readonly busy = signal(false)
   readonly error = signal('')
   readonly preview = signal<string | null>(null)
   readonly removePhoto = signal(false)
-  readonly draft = { title: this.project?.title ?? '', notes: this.project?.notes ?? '', dueOn: this.project?.dueOn ?? '' }
+  readonly draft = {
+    title: this.project?.title ?? '', notes: this.project?.notes ?? '', dueOn: this.project?.dueOn ?? '',
+    parentId: this.project ? this.project.parentId ?? '' : this.data.parentId ?? '',
+  }
+  /** Every project of the household, to choose the parent from. */
+  private readonly all = signal<TaskProjectDto[]>([])
+  /** Projects in progress (or the current parent), without this project and its sub-projects, by path. */
+  readonly parents = computed(() => {
+    const all = this.all()
+    const excluded = this.project ? subTreeIds(all, this.project.id) : new Set<string>()
+    const current = this.project?.parentId ?? this.data.parentId
+    return projectTree(all).filter(o => !excluded.has(o.id) && (o.id === current || all.find(p => p.id === o.id)?.state === 'active'))
+  })
   private file: File | null = null
   private readonly initial = formSnapshot(this.draft)
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.releasePreview())
+    firstValueFrom(this.api.projects('all')).then(all => this.all.set(all), () => { /* top project only */ })
   }
 
   letter(): string { return initial(this.draft.title) }
@@ -125,7 +155,7 @@ export class ProjectDialogComponent {
     if (this.busy()) return
     const title = this.draft.title.trim()
     if (!title) { this.error.set('Le nom est obligatoire.'); return }
-    const request = { title, notes: this.draft.notes.trim() || null, dueOn: this.draft.dueOn || null }
+    const request = { title, notes: this.draft.notes.trim() || null, dueOn: this.draft.dueOn || null, parentId: this.draft.parentId || null }
     this.busy.set(true); this.error.set('')
     try {
       let detail = await firstValueFrom(this.project ? this.api.updateProject(this.project.id, request) : this.api.createProject(request))

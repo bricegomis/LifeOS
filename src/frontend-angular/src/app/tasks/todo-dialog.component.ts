@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core'
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
 import { MatButtonToggleModule } from '@angular/material/button-toggle'
@@ -12,7 +12,7 @@ import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { EditorFrameComponent } from '@/app/shared/ui/editor-frame.component'
 import { TaskImageComponent } from './task-image.component'
-import { draftOf, initial, PRIORITIES, todoRequest, withTag } from './task-format'
+import { draftOf, initial, PRIORITIES, projectTree, todoRequest, withTag } from './task-format'
 import { TasksApiService } from './tasks-api.service'
 import type { TodoDto } from './tasks.models'
 
@@ -82,7 +82,7 @@ export interface TodoDialogResult { todo: TodoDto, message: string }
           <mat-label>Projet</mat-label>
           <mat-select name="project" [(ngModel)]="draft.projectId">
             <mat-option value="">Aucun</mat-option>
-            @for (project of projects(); track project.id) { <mat-option [value]="project.id">{{ project.title }}</mat-option> }
+            @for (project of projectOptions(); track project.id) { <mat-option [value]="project.id">{{ project.label }}</mat-option> }
           </mat-select>
         </mat-form-field>
         <div class="lo-field-group">
@@ -141,7 +141,10 @@ export class TodoDialogComponent {
   readonly removePhoto = signal(false)
   readonly draft = draftOf(this.todo, this.data.dueOn, this.data.projectId)
   /** Projects in progress, plus the todo's current one even when closed. */
-  readonly projects = signal<{ id: string, title: string }[]>(this.todo?.projectId ? [{ id: this.todo.projectId, title: this.todo.projectTitle ?? 'Projet' }] : [])
+  readonly projects = signal<{ id: string, title: string, parentId: string | null }[]>(
+    this.todo?.projectId ? [{ id: this.todo.projectId, title: this.todo.projectTitle ?? 'Projet', parentId: null }] : [])
+  /** Sub-projects under their parent, labelled with their path. */
+  readonly projectOptions = computed(() => projectTree(this.projects()))
   readonly choices = signal([...this.data.tags, ...this.draft.tags.filter(t => !this.data.tags.includes(t))])
   newTag = ''
   private file: File | null = null
@@ -156,7 +159,7 @@ export class TodoDialogComponent {
     try {
       const active = await firstValueFrom(this.api.projects('active'))
       const current = this.projects().filter(p => !active.some(a => a.id === p.id))
-      this.projects.set([...active.map(p => ({ id: p.id, title: p.title })), ...current])
+      this.projects.set([...active.map(p => ({ id: p.id, title: p.title, parentId: p.parentId })), ...current])
     } catch { /* the select keeps the current project */ }
   }
 

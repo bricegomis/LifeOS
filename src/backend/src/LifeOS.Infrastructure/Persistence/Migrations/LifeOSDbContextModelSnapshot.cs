@@ -1666,6 +1666,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -1682,6 +1685,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("HouseholdId", "State");
+
+                    b.HasIndex("ParentId", "HouseholdId");
 
                     b.ToTable("projects", "tasks", t =>
                         {
@@ -2942,6 +2947,12 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasForeignKey("HouseholdId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Tasks.TaskProject", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Tasks.TaskRoutine", b =>

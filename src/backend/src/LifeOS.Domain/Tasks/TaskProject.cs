@@ -4,8 +4,9 @@ namespace LifeOS.Domain.Tasks;
 
 /// <summary>
 /// A plain group of todos (ADR 0017): a name, an optional image (else its initial), notes, an optional
-/// due day and a state. No steps, dependencies or milestones; its progress is computed from its todos.
-/// Finishing or abandoning it does not touch its open todos.
+/// due day, an optional parent project of the same household (a tree of any depth, never a cycle) and a
+/// state. No steps, dependencies or milestones; its progress is computed from its todos and those of its
+/// sub-projects. Finishing or abandoning it touches neither its open todos nor its sub-projects.
 /// </summary>
 public sealed class TaskProject : Entity
 {
@@ -17,6 +18,7 @@ public sealed class TaskProject : Entity
     };
 
     public Guid HouseholdId { get; private set; }
+    public Guid? ParentId { get; private set; }
     public string Title { get; private set; } = "";
     public string? Notes { get; private set; }
     public DateOnly? DueOn { get; private set; }
@@ -47,6 +49,20 @@ public sealed class TaskProject : Entity
         Title = title.Trim();
         Notes = text;
         DueOn = dueOn;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Moves the project under <paramref name="parentId"/> (a project of its household, checked by the
+    /// caller), or to the top when null. <paramref name="parentOf"/> gives each household project's
+    /// parent: the new parent can be neither the project itself nor one of its sub-projects.
+    /// </summary>
+    public void MoveUnder(Guid? parentId, Func<Guid, Guid?> parentOf, DateTimeOffset now)
+    {
+        var id = parentId == Guid.Empty ? null : parentId;
+        for (var cursor = id; cursor is { } current; cursor = parentOf(current))
+            if (current == Id) throw new ArgumentException("Un projet ne peut pas être rangé dans lui-même ni dans un de ses sous-projets.");
+        ParentId = id;
         UpdatedAt = now;
     }
 

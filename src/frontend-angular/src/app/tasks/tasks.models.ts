@@ -38,7 +38,10 @@ export interface TodoRequest {
 
 export type ProjectState = 'active' | 'done' | 'abandoned'
 
-/** `done` / `total`: done todos over the todos that are not abandoned. */
+/**
+ * `done` / `total`: done todos over the todos that are not abandoned, those of every sub-project included.
+ * `parentId`: its parent project when it is a sub-project; `subProjects`: its direct sub-projects in progress.
+ */
 export interface TaskProjectDto {
   id: string
   title: string
@@ -50,10 +53,15 @@ export interface TaskProjectDto {
   done: number
   total: number
   open: number
+  parentId: string | null
+  subProjects: number
 }
 
-export interface TaskProjectDetailDto { project: TaskProjectDto, todos: TodoDto[] }
-export interface TaskProjectRequest { title: string, notes: string | null, dueOn: string | null }
+export interface TaskProjectRefDto { id: string, title: string }
+/** Its own todos, its direct sub-projects and its ancestors from the top project down to its parent. */
+export interface TaskProjectDetailDto { project: TaskProjectDto, todos: TodoDto[], subProjects: TaskProjectDto[], ancestors: TaskProjectRefDto[] }
+/** `parentId`: a project in progress (or the current parent), never itself nor one of its sub-projects; null at the top. */
+export interface TaskProjectRequest { title: string, notes: string | null, dueOn: string | null, parentId: string | null }
 
 export type RecurrenceKind = 'fixed' | 'delay'
 export type RecurrenceUnit = 'day' | 'week' | 'month'

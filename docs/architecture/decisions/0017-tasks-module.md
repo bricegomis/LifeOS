@@ -77,10 +77,18 @@ La checklist reste propre aux todos.
 ### Projets
 
 Un projet regroupe des todos. Il porte un nom, une image facultative (même règle),
-des notes, une échéance facultative et un état (en cours, terminé, abandonné). Son
-avancement est calculé : todos faits sur todos non abandonnés. Ni étapes, ni
-dépendances, ni jalons. Terminer un projet ne touche pas ses todos ouverts : l'écran
-les signale avant de confirmer.
+des notes, une échéance facultative, un projet parent facultatif et un état (en cours,
+terminé, abandonné). Ni étapes, ni dépendances, ni jalons.
+
+Les projets forment une arborescence de profondeur libre : « Terrain » contient
+« Chalet », « Serre » et « Potager », « Chalet » contient « Plafond » et
+« Électricité ». Le parent est un projet en cours du même foyer (ou le parent actuel,
+même clos), jamais le projet lui-même ni un de ses sous-projets. Un todo appartient à
+un seul projet, à n'importe quel niveau.
+
+L'avancement est calculé : todos faits sur todos non abandonnés, ceux de tous les
+sous-projets compris. Terminer ou abandonner un projet ne touche ni ses todos ouverts
+ni ses sous-projets : l'écran les signale avant de confirmer.
 
 ### Étiquettes
 
@@ -110,7 +118,9 @@ Menu « Tâches » dans la navigation, avec :
   échéance ensuite, faits à la fin ;
 - **Routines** : liste, puis une page par routine (récurrence, prochaine
   échéance, série, historique) ;
-- **Projets** : liste avec avancement, puis une page par projet avec ses todos ;
+- **Projets** : liste des projets principaux avec avancement (une recherche cherche à
+  tous les niveaux et affiche le chemin), puis une page par projet avec le chemin de ses
+  parents, ses sous-projets et ses todos ;
 - une page par todo, modifiée par des popups, selon l'ADR 0015 et l'ADR 0016.
 
 Les écrans sont pensés pour l'ordinateur et le smartphone.
@@ -119,7 +129,7 @@ Les écrans sont pensés pour l'ordinateur et le smartphone.
 
 Le module livre ses outils MCP (ADR 0011), en lecture et en écriture : lister,
 créer, modifier, faire, rouvrir, abandonner un todo et sa checklist ; créer, modifier, faire, sauter, mettre en pause et arrêter une routine ;
-créer, modifier et clore un projet ; image par URL.
+créer, modifier (dont le projet parent) et clore un projet ; image par URL.
 
 ### Contrat de lecture
 

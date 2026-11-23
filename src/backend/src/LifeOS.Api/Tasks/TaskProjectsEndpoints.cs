@@ -12,10 +12,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LifeOS.Api.Tasks;
 
+/// <param name="ParentId">A project of the household in progress (or the current parent, even closed), never the project
+/// itself nor one of its sub-projects; none for a top project.</param>
 public sealed record TaskProjectRequest(
     [property: Required, StringLength(Todo.MaxTitleLength)] string Title,
     [property: StringLength(Todo.MaxNotesLength)] string? Notes,
-    DateOnly? DueOn);
+    DateOnly? DueOn,
+    Guid? ParentId = null);
 
 public static class TaskProjectsEndpoints
 {
@@ -68,28 +71,22 @@ public static class TaskProjectsEndpoints
 }
 
 /// <summary>
-/// The household's projects (ADR 0017), shared by the endpoints and the assistant tools; rules in
+/// The household's projects and sub-projects (ADR 0017), shared by the endpoints and the assistant tools; rules in
 /// <see cref="TaskProject"/>. A null result means "not in this household".
 /// </summary>
 public sealed class TaskProjectLibrary(LifeOSDbContext db, TaskImageStorage images, IRemoteImageSource remoteImages,
     TodoLibrary todos, TimeProvider clock, ILogger<TaskProjectLibrary> logger)
 {
-    /// <summary>In progress by default (<c>active</c>), <c>closed</c> (done or abandoned) or <c>all</c>; by due day, then name.</summary>
+    /// <summary>
+    /// In progress by default (<c>active</c>), <c>closed</c> (done or abandoned) or <c>all</c>; by due day, then name.
+    /// Each project counts the todos of its whole sub-tree; the client builds the tree from <c>ParentId</c>.
+    /// </summary>
     public async Task<List<TaskProjectDto>> ListAsync(Guid householdId, string? state, CancellationToken ct)
     {
         var code = string.IsNullOrWhiteSpace(state) ? "active" : state.Trim();
         if (code is not ("active" or "closed" or "all")) throw new ArgumentException("État : active, closed ou all.");
-        var query = db.TaskProjects.Where(p => p.HouseholdId == householdId);
-        if (code == "active") query = query.Where(p => p.State == "active");
-        if (code == "closed") query = query.Where(p => p.State != "active");
-        var projects = await query.ToListAsync(ct);
-        var ids = projects.Select(p => p.Id).ToList();
-        var counted = await db.Todos.Where(t => t.HouseholdId == householdId && t.ProjectId != null && ids.Contains(t.ProjectId.Value)).ToListAsync(ct);
-        return projects
-            .OrderBy(p => p.IsActive ? 0 : 1)
-            .ThenBy(p => p.DueOn ?? DateOnly.MaxValue)
-            .ThenBy(p => p.Title, StringComparer.CurrentCultureIgnoreCase)
-            .Select(p => TaskProjectDto.From(p, counted)).ToList();
+        var tree = await TreeAsync(householdId, ct);
+        return Sorted(tree.Projects.Where(p => code == "all" || (code == "active") == p.IsActive)).Select(tree.Dto).ToList();
     }
 
     public async Task<TaskProjectDetailDto?> GetAsync(Guid householdId, Guid id, CancellationToken ct) =>
@@ -97,16 +94,28 @@ public sealed class TaskProjectLibrary(LifeOSDbContext db, TaskImageStorage imag
 
     public async Task<TaskProjectDetailDto> CreateAsync(Guid householdId, TaskProjectRequest r, CancellationToken ct)
     {
-        var project = TaskProject.Create(householdId, r.Title, r.Notes, r.DueOn, clock.GetUtcNow());
+        var now = clock.GetUtcNow();
+        var project = TaskProject.Create(householdId, r.Title, r.Notes, r.DueOn, now);
+        project.MoveUnder(await ParentAsync(householdId, r.ParentId, null, ct), _ => null, now);
         db.TaskProjects.Add(project);
         await db.SaveChangesAsync(ct);
         return await DetailAsync(project, ct);
     }
 
-    public Task<TaskProjectDetailDto?> UpdateAsync(Guid householdId, Guid id, TaskProjectRequest r, CancellationToken ct) =>
-        ChangeAsync(householdId, id, p => p.Update(r.Title, r.Notes, r.DueOn, clock.GetUtcNow()), ct);
+    public async Task<TaskProjectDetailDto?> UpdateAsync(Guid householdId, Guid id, TaskProjectRequest r, CancellationToken ct)
+    {
+        var project = await FindAsync(householdId, id, ct);
+        if (project is null) return null;
+        var now = clock.GetUtcNow();
+        var parent = await ParentAsync(householdId, r.ParentId, project.ParentId, ct);
+        var tree = await TreeAsync(householdId, ct);
+        project.Update(r.Title, r.Notes, r.DueOn, now);
+        project.MoveUnder(parent, tree.ParentOf, now);
+        await db.SaveChangesAsync(ct);
+        return await DetailAsync(project, ct);
+    }
 
-    /// <summary>Finished; its open todos stay open and keep the project.</summary>
+    /// <summary>Finished; its open todos stay open and keep the project, its sub-projects keep their state.</summary>
     public Task<TaskProjectDetailDto?> FinishAsync(Guid householdId, Guid id, CancellationToken ct) =>
         ChangeAsync(householdId, id, p => p.Finish(clock.GetUtcNow()), ct);
 
@@ -157,8 +166,61 @@ public sealed class TaskProjectLibrary(LifeOSDbContext db, TaskImageStorage imag
 
     private async Task<TaskProjectDetailDto> DetailAsync(TaskProject project, CancellationToken ct)
     {
-        var own = await db.Todos.Where(t => t.HouseholdId == project.HouseholdId && t.ProjectId == project.Id).ToListAsync(ct);
-        return new TaskProjectDetailDto(TaskProjectDto.From(project, own), await todos.DtosAsync(project.HouseholdId, TodoLibrary.Ordered(own), ct));
+        var tree = await TreeAsync(project.HouseholdId, ct);
+        var own = tree.Todos.Where(t => t.ProjectId == project.Id);
+        var ancestors = new List<TaskProjectRefDto>();
+        for (var parent = project.ParentId; parent is { } id && tree.Find(id) is { } found; parent = found.ParentId)
+            ancestors.Insert(0, new TaskProjectRefDto(found.Id, found.Title));
+        return new TaskProjectDetailDto(tree.Dto(project), await todos.DtosAsync(project.HouseholdId, TodoLibrary.Ordered(own), ct),
+            Sorted(tree.ChildrenOf(project.Id)).Select(tree.Dto).ToList(), ancestors);
+    }
+
+    /// <summary>A project of the household in progress, or the current parent (even closed); none when null.</summary>
+    private async Task<Guid?> ParentAsync(Guid householdId, Guid? parentId, Guid? current, CancellationToken ct)
+    {
+        if (parentId is not { } id || id == Guid.Empty) return null;
+        if (id == current) return id;
+        return await db.TaskProjects.AnyAsync(p => p.Id == id && p.HouseholdId == householdId && p.State == "active", ct)
+            ? id
+            : throw new ArgumentException("Projet parent introuvable ou déjà clos dans votre foyer.");
+    }
+
+    private static IEnumerable<TaskProject> Sorted(IEnumerable<TaskProject> projects) => projects
+        .OrderBy(p => p.IsActive ? 0 : 1)
+        .ThenBy(p => p.DueOn ?? DateOnly.MaxValue)
+        .ThenBy(p => p.Title, StringComparer.CurrentCultureIgnoreCase);
+
+    private async Task<ProjectTree> TreeAsync(Guid householdId, CancellationToken ct) => new(
+        await db.TaskProjects.Where(p => p.HouseholdId == householdId).ToListAsync(ct),
+        await db.Todos.Where(t => t.HouseholdId == householdId && t.ProjectId != null).ToListAsync(ct));
+
+    /// <summary>The household's projects as a tree, with the todos of each sub-tree for progress.</summary>
+    private sealed class ProjectTree(List<TaskProject> projects, List<Todo> todos)
+    {
+        private readonly Dictionary<Guid, TaskProject> byId = projects.ToDictionary(p => p.Id);
+        private readonly ILookup<Guid?, TaskProject> children = projects.ToLookup(p => p.ParentId);
+        private readonly ILookup<Guid, Todo> todosOf = todos.ToLookup(t => t.ProjectId!.Value);
+
+        public IReadOnlyList<TaskProject> Projects => projects;
+        public IReadOnlyList<Todo> Todos => todos;
+        public TaskProject? Find(Guid id) => byId.GetValueOrDefault(id);
+        public Guid? ParentOf(Guid id) => Find(id)?.ParentId;
+        public IEnumerable<TaskProject> ChildrenOf(Guid id) => children[id];
+
+        public TaskProjectDto Dto(TaskProject project) =>
+            TaskProjectDto.From(project, SubTree(project.Id).SelectMany(id => todosOf[id]), ChildrenOf(project.Id).Count(c => c.IsActive));
+
+        private IEnumerable<Guid> SubTree(Guid id)
+        {
+            var seen = new HashSet<Guid>();
+            var stack = new Stack<Guid>([id]);
+            while (stack.TryPop(out var current))
+            {
+                if (!seen.Add(current)) continue;
+                yield return current;
+                foreach (var child in children[current]) stack.Push(child.Id);
+            }
+        }
     }
 
     private Task<TaskProject?> FindAsync(Guid householdId, Guid id, CancellationToken ct) =>

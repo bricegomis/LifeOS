@@ -53,8 +53,10 @@
   `Recurrence`) with `RoutinePass`es (done or skipped, each closing one due day); the next due day,
   lateness, streak and record are computed on read by `RoutineSchedule`, never stored; one open due
   day at a time, a pause never makes it late (`ResumedOn`). A `TaskProject` groups todos
-  (`Todo.ProjectId`, composite FK in the household); its progress is computed on read (done todos
-  over todos not abandoned) and closing it never touches its todos; a todo only joins a project in
+  (`Todo.ProjectId`, composite FK in the household) and may sit under a parent project
+  (`ParentId`, same composite FK; a tree of any depth, `MoveUnder` refuses cycles); its progress is
+  computed on read over its whole sub-tree (done todos over todos not abandoned) and closing it never
+  touches its todos or sub-projects; a todo only joins a project in
   progress. Management code is `TodoLibrary`, `TaskRoutineLibrary` and `TaskProjectLibrary`
   (registered in `Api/Tasks/TasksModule.cs`).
 - Health (ADR 0018): private to an account, not only a household. Every row carries
