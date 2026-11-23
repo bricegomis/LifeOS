@@ -105,3 +105,32 @@ export interface AppointmentListDto { today: string, upcoming: AppointmentDto[],
 export interface AppointmentRequest {
   day: string, time: string | null, who: string, reason: string | null, place: string | null, notes: string | null, bookingUrl: string | null, reportDocumentId: string | null
 }
+
+/** One day of sleep and recovery imported from Garmin (ADR 0019); private like all health data. */
+export interface WellnessDto {
+  date: string
+  sleepStart: string | null
+  sleepEnd: string | null
+  sleepSeconds: number | null
+  deepSleepSeconds: number | null
+  lightSleepSeconds: number | null
+  remSleepSeconds: number | null
+  awakeSeconds: number | null
+  sleepScore: number | null
+  sleepQuality: string | null
+  restingHeartRate: number | null
+  hrvNightAverage: number | null
+  hrvWeeklyAverage: number | null
+  hrvBaselineLow: number | null
+  hrvBaselineHigh: number | null
+  hrvStatus: string | null
+  hrvStatusLabel: string | null
+  respiration: number | null
+  spO2: number | null
+  bodyBatteryWake: number | null
+  bodyBatteryHigh: number | null
+  bodyBatteryLow: number | null
+  stressAverage: number | null
+  steps: number | null
+  updatedAt: string
+}

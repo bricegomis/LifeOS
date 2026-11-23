@@ -17,15 +17,25 @@ export interface SportTemplateDto extends SportTemplateRequest {
   isArchived: boolean
 }
 
+/** The five feelings asked by the watch at the end of a session (ADR 0019). */
+export type SessionFeel = 'very_weak' | 'weak' | 'normal' | 'strong' | 'very_strong'
+
 export interface SportSessionRequest {
   memberProfileId?: string | null
+  /** Paris day of the start. */
   date: string
+  /** Paris times, HH:mm; an end before the start is on the next day. */
+  startTime: string
+  endTime: string
   sport: string
   templateId: string | null
-  durationMinutes: number
+  /** Active time; end minus start when null. */
+  durationMinutes: number | null
   distanceKm: number | null
   calories: number | null
-  feeling: number | null
+  /** 1 (very easy) to 10 (maximal). */
+  effort: number | null
+  feel: SessionFeel | null
   averageHeartRate: number | null
   maxHeartRate: number | null
   notes: string
@@ -35,6 +45,8 @@ export interface SportSessionDto {
   id: string
   memberProfileId: string
   date: string
+  startedAt: string
+  endedAt: string
   sport: string
   sportLabel: string
   templateId: string | null
@@ -42,12 +54,50 @@ export interface SportSessionDto {
   durationMinutes: number
   distanceKm: number | null
   calories: number | null
-  feeling: number | null
+  effort: number | null
+  feel: SessionFeel | null
+  feelLabel: string | null
   averageHeartRate: number | null
   maxHeartRate: number | null
   notes: string
-  source: string
+  source: 'manual' | 'garmin'
+  elevationGainMeters: number | null
+  averageSpeedKmh: number | null
+  aerobicTrainingEffect: number | null
+  anaerobicTrainingEffect: number | null
+  /** Seconds in heart rate zones 1 to 5; Garmin only. */
+  heartRateZoneSeconds: number[] | null
+  garminActivityId: number | null
+  garminType: string | null
+  garminName: string | null
+  sportOverridden: boolean
 }
+
+/** VO2max estimated by the watch on one day (ADR 0019). */
+export interface Vo2MaxDto { date: string, sport: 'running' | 'cycling', sportLabel: string, value: number }
+
+export type GarminState = 'never' | 'ok' | 'mfa_requested' | 'code_refused' | 'code_expired' | 'credentials_refused' | 'error'
+
+/** The Garmin connection of the account, reported by the garmin-sync service. */
+export interface GarminStatusDto {
+  state: GarminState
+  stateLabel: string
+  message: string | null
+  waitsForCode: boolean
+  lastSeenAt: string | null
+  lastSuccessAt: string | null
+  lastSuccessSummary: string | null
+  lastErrorAt: string | null
+  lastError: string | null
+  nextSyncAt: string | null
+  syncRequested: boolean
+  reconnectRequested: boolean
+  codePending: boolean
+}
+
+export interface ImportTokenDto { id: string, name: string, hint: string, memberProfileId: string, createdAt: string, lastUsedAt: string | null }
+/** The secret is shown once. */
+export interface CreatedImportTokenDto { info: ImportTokenDto, token: string }
 
 export type GoalKind = 'template' | 'sport' | 'sessions' | 'volume'
 export type GoalUnit = 'kcal' | 'km' | 'hours'
@@ -58,6 +108,8 @@ export interface WeeklyGoalRequest {
   sport: string | null
   unit: GoalUnit | null
   target: number
+  /** Sports left out of a global goal (sessions or volume). */
+  excludedSports?: string[]
 }
 
 export interface WeeklyGoalDto {
@@ -72,6 +124,7 @@ export interface WeeklyGoalDto {
   label: string
   validFrom: string
   validUntil: string | null
+  excludedSports: string[]
 }
 
 export interface GoalProgressDto { goal: WeeklyGoalDto, achieved: number, reached: boolean, partial: boolean }

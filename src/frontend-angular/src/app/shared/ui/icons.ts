@@ -69,6 +69,30 @@ import MedicationIcon from '@material-symbols/svg-400/rounded/medication.svg'
 import ShoppingCartIcon from '@material-symbols/svg-400/rounded/shopping_cart.svg'
 import ChecklistIcon from '@material-symbols/svg-400/rounded/checklist.svg'
 import SentimentSatisfiedIcon from '@material-symbols/svg-400/rounded/sentiment_satisfied.svg'
+import HomeIcon from '@material-symbols/svg-400/rounded/home.svg'
+import BedtimeIcon from '@material-symbols/svg-400/rounded/bedtime.svg'
+import MonitorHeartIcon from '@material-symbols/svg-400/rounded/monitor_heart.svg'
+import BatteryChargingFullIcon from '@material-symbols/svg-400/rounded/battery_charging_full.svg'
+import DirectionsBikeIcon from '@material-symbols/svg-400/rounded/directions_bike.svg'
+import DirectionsWalkIcon from '@material-symbols/svg-400/rounded/directions_walk.svg'
+import PoolIcon from '@material-symbols/svg-400/rounded/pool.svg'
+import HikingIcon from '@material-symbols/svg-400/rounded/hiking.svg'
+import SportsGymnasticsIcon from '@material-symbols/svg-400/rounded/sports_gymnastics.svg'
+import WatchIcon from '@material-symbols/svg-400/rounded/watch.svg'
+import LandscapeIcon from '@material-symbols/svg-400/rounded/landscape.svg'
+import SpeedIcon from '@material-symbols/svg-400/rounded/speed.svg'
+import StraightenIcon from '@material-symbols/svg-400/rounded/straighten.svg'
+import TrendingUpIcon from '@material-symbols/svg-400/rounded/trending_up.svg'
+import KeyIcon from '@material-symbols/svg-400/rounded/key.svg'
+import RestartAltIcon from '@material-symbols/svg-400/rounded/restart_alt.svg'
+import MarkEmailUnreadIcon from '@material-symbols/svg-400/rounded/mark_email_unread.svg'
+import SyncProblemIcon from '@material-symbols/svg-400/rounded/sync_problem.svg'
+import TimerOffIcon from '@material-symbols/svg-400/rounded/timer_off.svg'
+import KeyOffIcon from '@material-symbols/svg-400/rounded/key_off.svg'
+import AirIcon from '@material-symbols/svg-400/rounded/air.svg'
+import PsychologyIcon from '@material-symbols/svg-400/rounded/psychology.svg'
+import SportsIcon from '@material-symbols/svg-400/rounded/sports.svg'
+import SelfImprovementIcon from '@material-symbols/svg-400/rounded/self_improvement.svg'
 
 /**
  * Material Symbols used by the app (ADR 0016), bundled as SVG so only these icons ship and nothing is
@@ -143,6 +167,30 @@ export const ICONS: Record<string, string> = {
   shopping_cart: ShoppingCartIcon,
   checklist: ChecklistIcon,
   sentiment_satisfied: SentimentSatisfiedIcon,
+  home: HomeIcon,
+  bedtime: BedtimeIcon,
+  monitor_heart: MonitorHeartIcon,
+  battery_charging_full: BatteryChargingFullIcon,
+  directions_bike: DirectionsBikeIcon,
+  directions_walk: DirectionsWalkIcon,
+  pool: PoolIcon,
+  hiking: HikingIcon,
+  sports_gymnastics: SportsGymnasticsIcon,
+  watch: WatchIcon,
+  landscape: LandscapeIcon,
+  speed: SpeedIcon,
+  straighten: StraightenIcon,
+  trending_up: TrendingUpIcon,
+  key: KeyIcon,
+  restart_alt: RestartAltIcon,
+  mark_email_unread: MarkEmailUnreadIcon,
+  sync_problem: SyncProblemIcon,
+  timer_off: TimerOffIcon,
+  key_off: KeyOffIcon,
+  air: AirIcon,
+  psychology: PsychologyIcon,
+  sports: SportsIcon,
+  self_improvement: SelfImprovementIcon,
 }
 
 export function provideLifeosIcons() {

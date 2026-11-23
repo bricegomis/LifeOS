@@ -43,6 +43,10 @@
 .session-day { flex: 0 0 56px; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-medium); }
 .session-text { display: flex; min-width: 0; flex: 1 1 auto; flex-direction: column; }
 .session-text .notes { overflow: hidden; color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-body-small); text-overflow: ellipsis; white-space: nowrap; }
+.session-row { color: inherit; text-decoration: none; }
+.session-side { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 2px; }
+.session-side .source { display: inline-flex; align-items: center; gap: 4px; }
+.session-side .source mat-icon { width: 16px; height: 16px; }
 .session-kcal { font-weight: 600; white-space: nowrap; }
 .session-kcal.is-unknown { color: var(--mat-sys-tertiary); }
 

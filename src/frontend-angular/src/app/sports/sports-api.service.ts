@@ -4,7 +4,7 @@ import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LIBRARY_IMAGE, reduceImage } from '@/app/shared/image-reduction'
 import type {
   ChallengeReportDto, DailyChallengeDto, DailyChallengeRequest, ExerciseDto, ExerciseFeeling, ExerciseProgressDto, ExerciseRequest,
-  RoutineReportDto, RoutineRequest, SportCatalog, SportSessionDto, SportSessionRequest, SportSettingsDto,
+  CreatedImportTokenDto, GarminStatusDto, ImportTokenDto, RoutineReportDto, RoutineRequest, SportCatalog, SportSessionDto, Vo2MaxDto, SportSessionRequest, SportSettingsDto,
   SportTemplateDto, SportTemplateRequest, WeekReportDto, WeeklyGoalDto, WeeklyGoalRequest,
 } from './sports.models'
 
@@ -23,6 +23,18 @@ export class SportsApiService {
     return this.api.put<SportTemplateDto>(`/sport-templates/${id(templateId)}`, request)
   }
   archiveTemplate(templateId: string): Observable<void> { return this.api.delete(`/sport-templates/${id(templateId)}`) }
+
+  session(sessionId: string): Observable<SportSessionDto> { return this.api.get<SportSessionDto>(`/sport/sessions/${id(sessionId)}`) }
+  sessions(from: string, to: string): Observable<SportSessionDto[]> { return this.api.get<SportSessionDto[]>('/sport/sessions', { from, to }) }
+  vo2max(from: string, to: string): Observable<Vo2MaxDto[]> { return this.api.get<Vo2MaxDto[]>('/sport/vo2max', { from, to }) }
+
+  garmin(): Observable<GarminStatusDto> { return this.api.get<GarminStatusDto>('/garmin') }
+  requestGarminSync(): Observable<GarminStatusDto> { return this.api.post<GarminStatusDto>('/garmin/sync', {}) }
+  reconnectGarmin(): Observable<GarminStatusDto> { return this.api.post<GarminStatusDto>('/garmin/reconnect', {}) }
+  sendGarminCode(code: string): Observable<GarminStatusDto> { return this.api.post<GarminStatusDto>('/garmin/code', { code }) }
+  importTokens(): Observable<ImportTokenDto[]> { return this.api.get<ImportTokenDto[]>('/import-tokens') }
+  createImportToken(): Observable<CreatedImportTokenDto> { return this.api.post<CreatedImportTokenDto>('/import-tokens', { name: 'garmin-sync' }) }
+  revokeImportToken(tokenId: string): Observable<void> { return this.api.delete(`/import-tokens/${id(tokenId)}`) }
 
   createSession(request: SportSessionRequest): Observable<SportSessionDto> { return this.api.post<SportSessionDto>('/sport/sessions', request) }
   updateSession(sessionId: string, request: SportSessionRequest): Observable<SportSessionDto> {

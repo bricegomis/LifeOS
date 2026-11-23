@@ -1,4 +1,4 @@
-import type { ChallengeDayStatus, ChallengeReportDto, ChallengeUnit, GoalProgressDto, SportOption, SportSessionDto, SportSessionRequest, SportTemplateDto } from './sports.models.ts'
+import type { ChallengeDayStatus, ChallengeReportDto, ChallengeUnit, GoalProgressDto, SessionFeel, SportOption, SportSessionDto, SportSessionRequest, SportTemplateDto } from './sports.models.ts'
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 const DAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.']
@@ -41,13 +41,54 @@ export function pace(sport: string, minutes: number | null, km: number | null): 
   return `Vitesse : ${decimal(km / minutes * 60)} km/h`
 }
 
-export function sessionTitle(session: SportSessionDto): string { return session.templateName ?? session.sportLabel }
+/** The watch's five feelings, weakest first (ADR 0019). */
+export const FEELS: { code: SessionFeel, label: string }[] = [
+  { code: 'very_weak', label: 'Très faible' },
+  { code: 'weak', label: 'Faible' },
+  { code: 'normal', label: 'Normale' },
+  { code: 'strong', label: 'Forte' },
+  { code: 'very_strong', label: 'Très forte' },
+]
+
+/** Paris wall clock "HH:mm" of an instant, whatever the device's time zone. */
+export function parisTime(instant: string): string {
+  return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(instant))
+}
+/** "16 h 24 – 17 h 07". */
+export function timeRange(session: Pick<SportSessionDto, 'startedAt' | 'endedAt'>): string {
+  const clock = (instant: string) => parisTime(instant).replace(':', ' h ')
+  return `${clock(session.startedAt)} – ${clock(session.endedAt)}`
+}
+
+export function sessionTitle(session: SportSessionDto): string {
+  if (session.templateName) return session.templateName
+  return session.garminName && session.garminName !== session.sportLabel ? `${session.sportLabel} · ${session.garminName}` : session.sportLabel
+}
 export function sessionDetails(session: SportSessionDto): string {
-  const bits = [session.sportLabel, duration(session.durationMinutes)]
-  if (session.distanceKm !== null) bits.push(`${decimal(session.distanceKm)} km`)
-  if (session.feeling !== null) bits.push(`ressenti ${session.feeling}/10`)
+  const bits = [timeRange(session), duration(session.durationMinutes)]
+  if (session.distanceKm !== null) bits.push(`${decimal(session.distanceKm, 2)} km`)
   if (session.averageHeartRate !== null) bits.push(`FC ${session.averageHeartRate}`)
+  if (session.effort !== null) bits.push(`effort ${session.effort}/10`)
   return bits.join(' · ')
+}
+/** Pace or speed from the watch's average speed, or from duration and distance. */
+export function sessionPace(session: SportSessionDto): string {
+  if (session.averageSpeedKmh && session.averageSpeedKmh > 0) {
+    const minutes = session.distanceKm ? session.distanceKm / session.averageSpeedKmh * 60 : 0
+    if (['running', 'walking', 'hiking'].includes(session.sport) && minutes) return pace(session.sport, minutes, session.distanceKm)
+    if (session.sport === 'swimming' && session.distanceKm) {
+      const per100 = 6 / session.averageSpeedKmh
+      return `Allure : ${Math.floor(per100)} min ${String(Math.round((per100 % 1) * 60)).padStart(2, '0')} /100 m`
+    }
+    return `Vitesse : ${decimal(session.averageSpeedKmh)} km/h`
+  }
+  return pace(session.sport, session.durationMinutes, session.distanceKm)
+}
+/** Minutes per heart rate zone with their share of the total, for bars. */
+export function zoneRows(seconds: number[] | null): { label: string, minutes: number, percent: number }[] {
+  if (!seconds || seconds.length !== 5) return []
+  const total = seconds.reduce((sum, value) => sum + value, 0) || 1
+  return seconds.map((value, index) => ({ label: `Zone ${index + 1}`, minutes: Math.round(value / 60), percent: Math.round(value * 100 / total) }))
 }
 export function sessionCalories(session: SportSessionDto): string {
   return session.calories === null ? 'kcal ?' : `${integer(session.calories)} kcal`
@@ -130,32 +171,55 @@ export function calendarWeeks<T extends { date: string }>(days: T[]): (T | null)
 
 export interface SessionDraft {
   date: string
+  startTime: string
+  endTime: string
   sport: string
   templateId: string | null
+  /** Active time; end minus start when left empty. */
   durationMinutes: number | null
   distanceKm: number | null
   calories: number | null
-  feeling: number | null
+  effort: number | null
+  feel: SessionFeel | null
   averageHeartRate: number | null
   maxHeartRate: number | null
   notes: string
 }
 
-export function emptySessionDraft(today: string): SessionDraft {
-  return { date: today, sport: 'running', templateId: null, durationMinutes: null, distanceKm: null, calories: null, feeling: null, averageHeartRate: null, maxHeartRate: null, notes: '' }
+export function emptySessionDraft(today: string, now = new Date()): SessionDraft {
+  const end = parisTime(now.toISOString())
+  const start = addMinutes(end, -60)
+  return { date: today, startTime: start, endTime: end, sport: 'running', templateId: null, durationMinutes: null, distanceKm: null, calories: null, effort: null, feel: null, averageHeartRate: null, maxHeartRate: null, notes: '' }
 }
 
 export function draftFromSession(session: SportSessionDto): SessionDraft {
   return {
-    date: session.date, sport: session.sport, templateId: session.templateId, durationMinutes: session.durationMinutes,
-    distanceKm: session.distanceKm, calories: session.calories, feeling: session.feeling,
+    date: session.date, startTime: parisTime(session.startedAt), endTime: parisTime(session.endedAt), sport: session.sport,
+    templateId: session.templateId, durationMinutes: session.durationMinutes,
+    distanceKm: session.distanceKm, calories: session.calories, effort: session.effort, feel: session.feel,
     averageHeartRate: session.averageHeartRate, maxHeartRate: session.maxHeartRate, notes: session.notes,
   }
 }
 
-/** Copies a template's values into the draft; the session keeps them as its own. */
+/** "HH:mm" shifted by minutes, on a 24 h clock. */
+export function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number)
+  const total = (((h! * 60 + m! + minutes) % 1440) + 1440) % 1440
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
+/** Minutes from start to end; an end before the start is on the next day. Null when a time is missing. */
+export function spanMinutes(start: string, end: string): number | null {
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null
+  const minutes = (value: string) => Number(value.slice(0, 2)) * 60 + Number(value.slice(3))
+  const span = minutes(end) - minutes(start)
+  return span > 0 ? span : span + 1440
+}
+
+/** Copies a template's values into the draft; the end follows the template's duration. */
 export function applyTemplate(draft: SessionDraft, template: SportTemplateDto): SessionDraft {
-  return { ...draft, templateId: template.id, sport: template.sport, durationMinutes: template.durationMinutes, distanceKm: template.distanceKm, calories: template.calories }
+  return { ...draft, templateId: template.id, sport: template.sport, endTime: addMinutes(draft.startTime, template.durationMinutes),
+    durationMinutes: null, distanceKm: template.distanceKm, calories: template.calories }
 }
 
 const numberOrNull = (value: number | string | null | undefined): number | null =>
@@ -163,13 +227,17 @@ const numberOrNull = (value: number | string | null | undefined): number | null 
 
 /** Builds the request; the distance is dropped for sports without one. Returns an error message when invalid. */
 export function sessionRequest(draft: SessionDraft, sports: SportOption[]): SportSessionRequest | string {
+  const span = spanMinutes(draft.startTime, draft.endTime)
+  if (span === null) return 'Les heures de début et de fin sont obligatoires.'
+  if (draft.startTime === draft.endTime) return 'La fin de la séance doit suivre son début.'
   const minutes = numberOrNull(draft.durationMinutes)
-  if (!minutes || minutes <= 0) return 'La durée est obligatoire.'
+  if (minutes !== null && (minutes <= 0 || minutes > span)) return 'La durée active doit tenir entre le début et la fin.'
   const hasDistance = sports.find(sport => sport.code === draft.sport)?.hasDistance ?? false
   return {
-    date: draft.date, sport: draft.sport, templateId: draft.templateId, durationMinutes: Math.round(minutes),
+    date: draft.date, startTime: draft.startTime, endTime: draft.endTime, sport: draft.sport, templateId: draft.templateId,
+    durationMinutes: minutes === null ? null : Math.round(minutes),
     distanceKm: hasDistance ? numberOrNull(draft.distanceKm) : null, calories: numberOrNull(draft.calories),
-    feeling: numberOrNull(draft.feeling), averageHeartRate: numberOrNull(draft.averageHeartRate),
+    effort: numberOrNull(draft.effort), feel: draft.feel, averageHeartRate: numberOrNull(draft.averageHeartRate),
     maxHeartRate: numberOrNull(draft.maxHeartRate), notes: draft.notes.trim(),
   }
 }

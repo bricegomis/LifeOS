@@ -4,7 +4,7 @@ import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LIBRARY_IMAGE, RECEIPT_PHOTO, reduceImage } from '@/app/shared/image-reduction'
 import type {
   AnalysisDto, AnalysisRequest, AppointmentDto, AppointmentListDto, AppointmentRequest, HealthDocumentDto, HealthDocumentRequest, MarkerDto, MarkerListDto, MarkerRequest, MeasureTypeDto,
-  CheckinRequest, SupplementDto, SupplementListDto, SupplementRequest, SymptomDayDto, SymptomEntryDto, SymptomEntryRequest, SymptomJournalDto, SymptomKind, SymptomTypeDto,
+  CheckinRequest, WellnessDto, SupplementDto, SupplementListDto, SupplementRequest, SymptomDayDto, SymptomEntryDto, SymptomEntryRequest, SymptomJournalDto, SymptomKind, SymptomTypeDto,
 } from './health.models'
 
 const id = (value: string) => encodeURIComponent(value)
@@ -13,6 +13,9 @@ const id = (value: string) => encodeURIComponent(value)
 @Injectable({ providedIn: 'root' })
 export class HealthApiService {
   private readonly api = inject(LifeosApiService)
+
+  /** Sleep and recovery imported from Garmin, oldest day first. */
+  wellness(from: string, to: string): Observable<WellnessDto[]> { return this.api.get<WellnessDto[]>('/health/wellness', { from, to }) }
 
   supplements(includeStopped = false): Observable<SupplementListDto> { return this.api.get<SupplementListDto>('/health/supplements', { includeStopped }) }
   supplement(supplementId: string): Observable<SupplementDto> { return this.api.get<SupplementDto>(`/health/supplements/${id(supplementId)}`) }

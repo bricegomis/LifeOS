@@ -22,7 +22,9 @@ export const routes: Routes = [
     component: AppLayoutComponent,
     canActivate: [requireAuthentication],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'recipes' },
+      { path: '', pathMatch: 'full', redirectTo: 'today' },
+      // The day at a glance, read from the Sport and Health endpoints (ADR 0019); the planner's future home.
+      { path: 'today', loadComponent: () => import('@/app/today/today-page.component').then(module => module.TodayPageComponent) },
       // Food module: recipes, foods, products and prices, stores, tickets.
       { path: '', loadChildren: () => import('@/app/food/food.routes').then(module => module.FOOD_ROUTES) },
       // Sport module: today, history, progress, settings (ADR 0013).
@@ -36,7 +38,6 @@ export const routes: Routes = [
       { path: 'articles', pathMatch: 'full', redirectTo: 'products' },
       { path: 'library', pathMatch: 'full', redirectTo: 'foods' },
       { path: 'planning', pathMatch: 'full', redirectTo: 'recipes' },
-      { path: 'today', pathMatch: 'full', redirectTo: 'recipes' },
       { path: 'planner', pathMatch: 'full', redirectTo: 'recipes' },
     ],
   },

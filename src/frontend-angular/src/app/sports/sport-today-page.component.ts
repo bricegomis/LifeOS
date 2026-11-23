@@ -111,15 +111,15 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
             </section>
             <section class="sport-section" aria-labelledby="sport-recent">
               <div class="sport-section-head"><h2 id="sport-recent">Dernières séances</h2>
-                <a mat-button routerLink="/sports/history"><mat-icon svgIcon="history" />Tout l’historique</a></div>
+                <a mat-button routerLink="/sports/sessions"><mat-icon svgIcon="history" />Toutes les séances</a></div>
               @if (recent().length) {
                 <div class="session-list">
                   @for (session of recent(); track session.id) {
-                    <button type="button" class="session-row" (click)="openEditor(session)">
+                    <a class="session-row" [routerLink]="['/sports/session', session.id]">
                       <span class="session-day">{{ shortDay(session.date) }}</span>
                       <span class="session-text"><strong>{{ sessionTitle(session) }}</strong><span class="lo-muted lo-small">{{ sessionDetails(session) }}</span></span>
                       <span class="session-kcal" [class.is-unknown]="session.calories === null">{{ sessionCalories(session) }}</span>
-                    </button>
+                    </a>
                   }
                 </div>
               } @else {

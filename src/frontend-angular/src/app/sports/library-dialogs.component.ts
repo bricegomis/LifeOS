@@ -147,6 +147,17 @@ export const GOAL_KINDS: { id: GoalKind, label: string }[] = [
               </mat-select>
             </mat-form-field>
           }
+          @if (draft.kind === 'sessions' || draft.kind === 'volume') {
+            <div class="lo-field-group">
+              <span class="lo-field-label">Sports exclus (par exemple la marche du quotidien)</span>
+              <div class="lo-chips" role="group" aria-label="Sports exclus">
+                @for (sport of data.sports; track sport.code) {
+                  <button type="button" class="lo-chip" [class.is-on]="excluded(sport.code)" [attr.aria-pressed]="excluded(sport.code)"
+                    (click)="toggleExcluded(sport.code)">@if (excluded(sport.code)) { <mat-icon svgIcon="check" /> }{{ sport.label }}</button>
+                }
+              </div>
+            </div>
+          }
           @if (draft.kind === 'volume') {
             <mat-form-field appearance="outline">
               <mat-label>Unité</mat-label>
@@ -173,11 +184,16 @@ export class GoalDialogComponent extends LibraryDialog {
   readonly kinds = GOAL_KINDS
   readonly activeTemplates = computed(() => this.data.templates.filter(template => !template.isArchived))
   readonly draft: WeeklyGoalRequest = this.goal
-    ? { kind: this.goal.kind, templateId: this.goal.templateId, sport: this.goal.sport, unit: this.goal.unit, target: this.goal.target }
-    : { kind: 'sessions', templateId: this.activeTemplates()[0]?.id ?? null, sport: 'running', unit: 'kcal', target: 3 }
+    ? { kind: this.goal.kind, templateId: this.goal.templateId, sport: this.goal.sport, unit: this.goal.unit, target: this.goal.target, excludedSports: [...this.goal.excludedSports] }
+    : { kind: 'sessions', templateId: this.activeTemplates()[0]?.id ?? null, sport: 'running', unit: 'kcal', target: 3, excludedSports: [] }
   private readonly initial = formSnapshot(this.draft)
 
   dirty(): boolean { return hasChanges(this.initial, this.draft) }
+  excluded(sport: string): boolean { return this.draft.excludedSports?.includes(sport) ?? false }
+  toggleExcluded(sport: string): void {
+    const current = this.draft.excludedSports ?? []
+    this.draft.excludedSports = current.includes(sport) ? current.filter(code => code !== sport) : [...current, sport]
+  }
 
   save(): Promise<void> {
     const d = this.draft, target = Number(d.target)
@@ -186,6 +202,7 @@ export class GoalDialogComponent extends LibraryDialog {
     const request: WeeklyGoalRequest = {
       kind: d.kind, target, templateId: d.kind === 'template' ? d.templateId : null,
       sport: d.kind === 'sport' ? d.sport : null, unit: d.kind === 'volume' ? d.unit : null,
+      excludedSports: d.kind === 'sessions' || d.kind === 'volume' ? d.excludedSports ?? [] : [],
     }
     return this.run(() => this.goal ? this.api.updateGoal(this.goal.id, request) : this.api.createGoal(request),
       this.goal ? 'Objectif modifié à partir de cette semaine' : 'Objectif ajouté à partir de cette semaine')

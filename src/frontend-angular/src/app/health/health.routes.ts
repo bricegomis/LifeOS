@@ -7,6 +7,7 @@ import { DocumentsPageComponent } from './documents-page.component'
 import { HealthTodayPageComponent } from './health-today-page.component'
 import { MarkerPageComponent } from './marker-page.component'
 import { MeasuresPageComponent } from './measures-page.component'
+import { SleepPageComponent } from './sleep-page.component'
 import { SupplementPageComponent } from './supplement-page.component'
 import { SupplementsPageComponent } from './supplements-page.component'
 import { SymptomsPageComponent } from './symptoms-page.component'
@@ -14,6 +15,7 @@ import { SymptomsPageComponent } from './symptoms-page.component'
 /** Health module pages (ADR 0018), loaded on demand from app.routes.ts. */
 export const HEALTH_ROUTES: Routes = [
   { path: '', component: HealthTodayPageComponent },
+  { path: 'sleep', component: SleepPageComponent },
   { path: 'supplements', component: SupplementsPageComponent },
   { path: 'supplement/:id', component: SupplementPageComponent },
   { path: 'symptoms', component: SymptomsPageComponent },

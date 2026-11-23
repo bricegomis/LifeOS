@@ -4,12 +4,13 @@ import { currentEntry, NAVIGATION_BLOCKS, pageTitle, readMenuOpen, writeMenuOpen
 
 describe('navigation', () => {
   it('groups every page in one block per domain', () => {
-    assert.deepEqual(NAVIGATION_BLOCKS.map(block => block.title), ['Alimentation', 'Sport', 'Tâches', 'Santé'])
-    assert.deepEqual(NAVIGATION_BLOCKS[0]!.items.map(item => item.path), ['/recipes', '/foods', '/products', '/stores', '/tickets'])
-    assert.deepEqual(NAVIGATION_BLOCKS[1]!.items.map(item => item.label),
-      ['Aujourd’hui', 'Historique', 'Progression', 'Routines', 'Exercices', 'Défis', 'Objectifs', 'Séances types'])
-    assert.equal(NAVIGATION_BLOCKS[1]!.items[0]!.exact, true)
-    assert.deepEqual(NAVIGATION_BLOCKS[2]!.items.map(item => item.path), ['/tasks', '/tasks/all', '/tasks/routines', '/tasks/projects'])
+    assert.deepEqual(NAVIGATION_BLOCKS.map(block => block.title), ['Accueil', 'Alimentation', 'Sport', 'Tâches', 'Santé'])
+    assert.deepEqual(NAVIGATION_BLOCKS[0]!.items.map(item => item.path), ['/today'])
+    assert.deepEqual(NAVIGATION_BLOCKS[1]!.items.map(item => item.path), ['/recipes', '/foods', '/products', '/stores', '/tickets'])
+    assert.deepEqual(NAVIGATION_BLOCKS[2]!.items.map(item => item.label),
+      ['Aujourd’hui', 'Séances', 'Progression', 'VO2max', 'Routines', 'Exercices', 'Défis', 'Objectifs', 'Séances types', 'Garmin'])
+    assert.equal(NAVIGATION_BLOCKS[2]!.items[0]!.exact, true)
+    assert.deepEqual(NAVIGATION_BLOCKS[3]!.items.map(item => item.path), ['/tasks', '/tasks/all', '/tasks/routines', '/tasks/projects'])
   })
 
   it('finds the block and page of a URL for the open block and the phone title', () => {
@@ -28,6 +29,8 @@ describe('navigation', () => {
     assert.equal(currentEntry('/tasks/routine/3')?.block.id, 'tasks')
     assert.equal(pageTitle('/health/supplements'), 'Santé · Compléments')
     assert.equal(currentEntry('/health/supplement/4')?.block.id, 'health')
+    assert.equal(currentEntry('/sports/session/9')?.block.id, 'sport')
+    assert.equal(pageTitle('/today'), 'Accueil · Aujourd’hui')
   })
 
   it('remembers the menu state and survives an unavailable storage', () => {

@@ -21,6 +21,12 @@ export interface NavigationBlock {
  */
 export const NAVIGATION_BLOCKS: NavigationBlock[] = [
   {
+    id: 'home',
+    title: 'Accueil',
+    icon: 'home',
+    items: [{ path: '/today', label: 'Aujourd’hui' }],
+  },
+  {
     id: 'food',
     title: 'Alimentation',
     icon: 'restaurant',
@@ -38,13 +44,15 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
     icon: 'fitness_center',
     items: [
       { path: '/sports', label: 'Aujourd’hui', exact: true },
-      { path: '/sports/history', label: 'Historique' },
+      { path: '/sports/sessions', label: 'Séances' },
       { path: '/sports/progress', label: 'Progression' },
+      { path: '/sports/vo2max', label: 'VO2max' },
       { path: '/sports/routines', label: 'Routines' },
       { path: '/sports/exercises', label: 'Exercices' },
       { path: '/sports/challenges', label: 'Défis' },
       { path: '/sports/goals', label: 'Objectifs' },
       { path: '/sports/templates', label: 'Séances types' },
+      { path: '/sports/garmin', label: 'Garmin' },
     ],
   },
   {
@@ -64,6 +72,7 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
     icon: 'favorite',
     items: [
       { path: '/health', label: 'Aujourd’hui', exact: true },
+      { path: '/health/sleep', label: 'Sommeil et récupération' },
       { path: '/health/supplements', label: 'Compléments' },
       { path: '/health/symptoms', label: 'Symptômes' },
       { path: '/health/analyses', label: 'Analyses' },
