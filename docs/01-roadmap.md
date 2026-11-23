@@ -56,7 +56,8 @@ attente et peuvent se chevaucher. Deux contraintes seulement :
 - les migrations de base partagent un seul historique : deux modules menés en même
   temps fusionnent leurs migrations l'une après l'autre, jamais en même temps.
 
-L'étape 4 (semainier) a besoin des contrats publiés par les étapes 1 à 3.
+L'étape 4 (semainier) lit les contrats publiés par les modules Alimentation, Sport,
+Tâches et Santé ; ils sont livrés.
 
 ## Points ouverts
 
@@ -99,6 +100,8 @@ lesquels les autres modules s'aligneront.
 6. **Refonte du modèle** et de l'interface selon la maquette : fibres, images de
    recettes, ticket photo, produits toujours complets, migration destructive. Fait.
 7. **Coût de recette**, en fourchette minimum–maximum. Fait.
+8. **Contrat de lecture** pour le semainier : recettes avec ingrédients, nutrition, coût
+   et saison. Fait.
 
 **Terminé quand.**
 
@@ -269,8 +272,9 @@ semainier, qui viendra quand le reste aura servi.
 6. **Documents et rendez-vous**, fichiers chiffrés. Fait.
 7. **Outils de l'assistant** pour tout le module. Fait.
 
-**Reste à cadrer à l'étape 4.** Ce que contient le résumé transmis au semainier et à
-l'agent ; le lien symptômes ↔ repas et sport ; l'objectif calorique.
+**Contrat de lecture.** Sommeil et récupération par jour et par compte (ADR 0019). Fait.
+
+**Reste à cadrer à l'étape 4.** Ce que le semainier et l'agent reçoivent du reste du dossier ; le lien symptômes ↔ repas et sport ; l'objectif calorique.
 
 **Terminé quand.** Compléments, symptômes, analyses et documents sont suivis dans
 LifeOS au quotidien. Le lien avec le semainier (rendez-vous, prises, objectif

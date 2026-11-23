@@ -133,6 +133,15 @@ Les photos de tickets et les images d'aliments déjà présentes sur les volumes
 deviennent orphelines : les deux volumes peuvent être vidés au même moment, par
 l'utilisateur.
 
+### 7. Contrat de lecture
+
+Le module publie pour le futur semainier (`FoodReadContract`) les recettes actives du
+foyer, toutes ou celles demandées, avec ce qu'un repas planifié garde en snapshot :
+nom, rendement, durée, catégories, ingrédients (aliment, quantité, unité, saison du mois),
+nutrition par portion marquée partielle si une valeur manque, coût minimum–maximum par
+portion et indication qu'un prix manque, nombre d'ingrédients hors saison. Tout est
+calculé à la lecture, selon les mêmes règles que la fiche recette.
+
 ## Ordre de mise en œuvre
 
 Déroulé de l'étape 1 dans la [roadmap](../../01-roadmap.md). La migration destructive

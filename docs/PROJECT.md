@@ -1,6 +1,6 @@
 # LifeOS — État actuel
 
-Mis à jour le 2026-11-23 (contrat de lecture des Tâches ; import Garmin : séances avec heures, VO2max, sommeil et récupération, service garmin-sync, page Aujourd'hui). Ce document dit ce qui existe réellement dans le code.
+Mis à jour le 2026-11-23 (contrats de lecture Tâches, Alimentation et Santé pour le futur semainier ; import Garmin : séances avec heures, VO2max, sommeil et récupération, service garmin-sync, page Aujourd'hui). Ce document dit ce qui existe réellement dans le code.
 Il est mis à jour à chaque livraison. Pour la cible, voir la
 [vision](00-vision.md), l'[ADR 0009](architecture/decisions/0009-modular-monolith-and-planning-core.md)
 et la [roadmap](01-roadmap.md).
@@ -8,8 +8,8 @@ et la [roadmap](01-roadmap.md).
 ## Où en est-on
 
 Étape 1, « Alimentation saine », livrée le 2026-11-12
-([ADR 0010](architecture/decisions/0010-simplified-food-module.md)). En cours : étape 1 bis,
-assistant Claude ([ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md)) ;
+([ADR 0010](architecture/decisions/0010-simplified-food-module.md)). Étape 1 bis,
+assistant Claude, livrée en code ([ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md)) ;
 la connexion Google par l'API (sans Supabase), l'endpoint MCP et les outils de tout le
 module Alimentation sont livrés, ainsi que le classement des aliments
 ([ADR 0012](architecture/decisions/0012-food-classification.md)). Pour connecter Claude : [assistant-claude.md](assistant-claude.md).

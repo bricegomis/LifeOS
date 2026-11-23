@@ -6,6 +6,9 @@ using LifeOS.Application.Food.Receipts;
 using LifeOS.Application.Households;
 using LifeOS.Application.Sports.Contracts;
 using LifeOS.Application.Tasks.Contracts;
+using LifeOS.Application.Food.Contracts;
+using LifeOS.Application.Health.Contracts;
+using LifeOS.Infrastructure.Food;
 using LifeOS.Infrastructure.Food.Costs;
 using LifeOS.Infrastructure.Food.Files;
 using LifeOS.Infrastructure.Food.Products;
@@ -62,6 +65,14 @@ public static class DependencyInjection
         // Tasks module: published read contract (ADR 0017)
         services.AddScoped<ITaskReadData, EfTaskReadData>();
         services.AddScoped<TaskReadContract>();
+
+        // Food module: published read contract (ADR 0010)
+        services.AddScoped<IFoodReadData, EfFoodReadData>();
+        services.AddScoped<FoodReadContract>();
+
+        // Health module: published read contract, sleep and recovery only (ADR 0018, ADR 0019)
+        services.AddScoped<IHealthReadData, EfHealthReadData>();
+        services.AddScoped<HealthReadContract>();
 
         // Food module files
         services.Configure<FoodImageStorageOptions>(configuration.GetSection("FoodImages"));

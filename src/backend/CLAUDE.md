@@ -71,6 +71,10 @@
   (registered in `Api/Tasks/TasksModule.cs`). The published read contract for the planner is
   `Application/Tasks/Contracts/TaskReadContract` (open todos, routine due days projected by
   `RoutineSchedule.DueDays`, done todos and passes per day and profile).
+- Read contracts for the future planner (ADR 0009): `Application/Food/Contracts/FoodReadContract`
+  (active recipes with ingredients, nutrition and min-max cost per serving, season of the Paris month)
+  and `Application/Health/Contracts/HealthReadContract` (Garmin sleep and recovery only, per account;
+  the rest of health stays out until the planner is scoped).
 - Health (ADR 0018): private to an account, not only a household. Every row carries
   `HouseholdId`, `OwnerUserId` and `MemberProfileId` (`HealthOwners` resolves them from the
   caller) and every query filters on household **and** account, so another member of the same

@@ -134,6 +134,15 @@ après confirmation. Claude peut aussi noter un symptôme (« j'ai mal au ventre
 cocher un complément ou créer et mettre à jour les rendez-vous (par exemple depuis
 les emails de confirmation Doctolib).
 
+### Contrat de lecture
+
+Le module publie pour le futur semainier (`HealthReadContract`) le seul sommeil et la
+récupération importés de Garmin (ADR 0019) : par jour, pour un compte du foyer seulement,
+coucher, lever, durée, score et qualité du sommeil, FC au repos, HRV de la nuit et son
+statut, Body Battery au réveil et stress moyen. Le reste du dossier (compléments,
+symptômes, analyses, documents, rendez-vous) n'y entre pas : ce que le semainier en
+recevra se décide au cadrage de l'étape 4.
+
 ## Conséquences
 
 - Nouveau schéma `health` et nouveau volume chiffré `lifeos_health_files` ; la clé de
