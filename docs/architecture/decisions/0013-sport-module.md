@@ -27,9 +27,9 @@ profil principal du foyer, son premier profil.
 
 ### Séances réalisées
 
-Une séance réalisée porte : profil, date, sport, séance type d'origine (facultative),
-durée, calories, et en option distance, ressenti, fréquence cardiaque moyenne et
-maximale, notes. Elle porte aussi sa source, `manual` seulement pour l'instant.
+Une séance réalisée porte : profil, date, heures de début et de fin, sport, séance type d'origine
+(facultative), durée active, calories, et en option distance, effort, sensation, fréquence cardiaque
+moyenne et maximale, notes. Elle porte aussi sa source, `manual` ou `garmin` (ADR 0019).
 
 - **Saisie depuis une séance type** en un geste : ses valeurs sont recopiées puis
   modifiables. La séance garde ses propres valeurs ; modifier la séance type ne
@@ -37,7 +37,9 @@ maximale, notes. Elle porte aussi sa source, `manual` seulement pour l'instant.
 - **Calories saisies**, jamais calculées (pas de formule durée × intensité × poids).
   Une valeur inconnue reste inconnue, et le total de la semaine est alors marqué
   incomplet, comme la nutrition.
-- **Ressenti** : note entière de 1 à 10 et commentaire libre.
+- **Effort et sensation** : effort perçu de 1 (très facile) à 10 (maximal) et sensation en cinq
+  niveaux, comme sur la montre ; une séance a aussi une heure de début et de fin
+  ([ADR 0019](0019-garmin-import.md)). Le commentaire va dans les notes.
 - **Musculation et crossfit en texte libre** dans les notes (exercices, séries, WOD,
   score). Pas de bibliothèque d'exercices ni de format AMRAP / EMOM à cette étape ;
   ils viendront dans un lot suivant si l'usage le demande.
@@ -48,8 +50,8 @@ maximale, notes. Elle porte aussi sa source, `manual` seulement pour l'instant.
   collectif), `racket` (Sport de raquette), `other` (Autre). Seuls les cinq premiers
   acceptent une distance. Une liste fixe est nécessaire pour
   les objectifs par sport et pour le futur semainier.
-- **Pas d'heure obligatoire** : la date suffit. Les jours sont ceux de
-  l'Europe/Paris ; la semaine va du lundi au dimanche.
+- **Heures obligatoires** depuis l'ADR 0019. Les jours sont ceux de l'Europe/Paris ; la
+  semaine va du lundi au dimanche.
 
 ### Objectifs de la semaine
 
