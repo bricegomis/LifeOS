@@ -170,11 +170,14 @@ public sealed class GarminImportTests(PostgresContainerFixture postgres)
         Assert.Null(again.MfaCode);
         Assert.False(again.Sync);
 
-        (await service.PostAsJsonAsync("/api/import/garmin/status", new GarminReportRequest("ok", null, "1 activité, 1 nuit", null))).EnsureSuccessStatusCode();
+        // The service sends Paris times; they are stored as UTC instants.
+        var next = new DateTimeOffset(2026, 11, 23, 19, 0, 0, TimeSpan.FromHours(1));
+        (await service.PostAsJsonAsync("/api/import/garmin/status", new GarminReportRequest("ok", null, "1 activité, 1 nuit", next))).EnsureSuccessStatusCode();
         var status = (await user.GetFromJsonAsync<GarminStatusDto>("/api/garmin"))!;
         Assert.Equal("ok", status.State);
         Assert.Equal("1 activité, 1 nuit", status.LastSuccessSummary);
         Assert.False(status.WaitsForCode);
+        Assert.Equal(next, status.NextSyncAt);
     }
 
     [Fact]

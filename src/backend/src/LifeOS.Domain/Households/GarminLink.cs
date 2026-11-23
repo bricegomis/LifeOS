@@ -105,7 +105,8 @@ public sealed partial class GarminLink : Entity
         }
         State = state;
         Message = text;
-        NextSyncAt = nextSyncAt;
+        // PostgreSQL stores instants in UTC only; the service sends Paris times.
+        NextSyncAt = nextSyncAt?.ToUniversalTime();
         LastSeenAt = now;
     }
 

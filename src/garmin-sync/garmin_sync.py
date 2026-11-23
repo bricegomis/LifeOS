@@ -67,7 +67,7 @@ class LifeOS:
         try:
             self._call("POST", "/api/import/garmin/status", {
                 "state": state, "message": message, "summary": summary,
-                "nextSyncAt": next_sync.isoformat() if next_sync else None,
+                "nextSyncAt": next_sync.astimezone(timezone.utc).isoformat() if next_sync else None,
             })
         except Exception as e:  # a lost report must not stop the service
             log.warning("status report failed: %s", e)
