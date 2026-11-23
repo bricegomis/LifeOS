@@ -33,6 +33,11 @@ code, identifiers and code comments are English.
   dose, period and monthly cost, one tick per supplement per day; symptom journal; blood
   markers with lab range, personal target, frequency and panels; body measures; documents
   and appointments; per-profile privacy, encrypted files, the assistant reads documents).
+- Garmin import (accepted 2026-11-23, mockup to validate): ADR 0019 (external `garmin-sync`
+  service using the unofficial python-garminconnect at a pinned version, writing through
+  import endpoints; the API never calls Garmin; sessions get start and end times, perceived
+  effort and feeling instead of the 1-10 ressenti; Garmin values overwrite, LifeOS notes stay;
+  VO2max in Sport; sleep and recovery in Health, readable by the planning agent).
 - UI kit: ADR 0016 (Angular Material 3 with a LifeOS theme, Material Symbols, screen
   conventions for lists, dialogs, add buttons and actions). Applied to every screen;
   any new or changed Angular screen uses it (see `src/frontend-angular/CLAUDE.md`).
@@ -88,7 +93,8 @@ code, identifiers and code comments are English.
   nor Planning; cross-domain rules live in Planning as signals computed on read.
 - The planner changes only through a direct user action or a user-accepted proposal.
   Planning is computed by an external agent; the API never calls an AI provider.
-- Health data is owned by a profile, not shared with the household, never sent to the agent.
+- Health data is owned by a profile, not shared with the household, never sent to the agent,
+  except sleep and recovery imported from Garmin (ADR 0019).
 - Out of scope, don't reintroduce: stock, shopping list, planning computed inside the
   API, OFF/external enrichment or name-based matching inside the API, Vue. The UI kit is
   Angular Material (ADR 0016); don't add another UI library.

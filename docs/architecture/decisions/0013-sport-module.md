@@ -128,10 +128,8 @@ du jour.
 
 ## Hors périmètre
 
-- **Import Garmin, Strava ou Apple Santé** : plus tard, avec sa propre ADR. Pour une
-  montre Garmin, l'API officielle est réservée aux entreprises ; les pistes sont
-  Strava (que Garmin alimente déjà) ou Apple Santé depuis l'app iPhone native. Le
-  modèle ne prépare que la source de la séance.
+- **Import Garmin** : cadré par l'[ADR 0019](0019-garmin-import.md) (heures de début
+  et de fin, effort et sensation à la place du ressenti, synchro depuis Garmin Connect).
 - Plans d'entraînement sur plusieurs semaines, séances attendues à date fixe.
 - Détail structuré de la musculation et du crossfit.
 - Notifications et rappels (étape 6).

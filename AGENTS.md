@@ -26,6 +26,7 @@
   ADR 0016 (UI kit: Angular Material and screen conventions),
   ADR 0017 (step 3 tasks module: todos, routines, projects, all-tasks page),
   ADR 0018 (step 5 health module: supplements, symptoms, blood markers, documents),
+  ADR 0019 (Garmin import: sessions, VO2max, sleep and recovery),
   ADR 0009 (target architecture and module boundary rules).
 - Prefer simple implementations; no unnecessary dependencies or speculative features.
 - Preserve household isolation and historical snapshots, IDs, aliases, sources and prices.

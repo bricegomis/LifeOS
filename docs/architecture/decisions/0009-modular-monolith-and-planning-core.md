@@ -35,7 +35,7 @@ Choix de l'utilisateur (2026-11-11) :
 | Moteur | Agent IA externe planifié. L'API valide et stocke. |
 | Temps | Tout élément planifié a une heure de début et une durée. |
 | Hors ligne | Lecture hors ligne et coches mises en file ; pas d'édition hors ligne. |
-| Confidentialité santé | Données privées par personne ; l'agent ne reçoit que des résumés. |
+| Confidentialité santé | Données privées par personne ; l'agent ne reçoit que des résumés, plus le sommeil et la récupération ([ADR 0019](0019-garmin-import.md)). |
 
 ## Décision
 
@@ -167,7 +167,8 @@ ou une proposition acceptée par lui.
   les résumés ; écrire uniquement des propositions.
 - Les règles et préférences de planification sont des données stockées par l'API
   et modifiables dans l'application.
-- L'agent ne lit jamais le dossier santé (§ 8).
+- L'agent ne lit jamais le dossier santé (§ 8), sauf le sommeil et la récupération
+  importés de Garmin ([ADR 0019](0019-garmin-import.md)).
 - L'assistant conversationnel, qui agit au nom de l'utilisateur pendant une
   discussion, est un autre acteur, aux droits du compte :
   [ADR 0011](0011-conversational-assistant-mcp.md).

@@ -140,6 +140,8 @@ les emails de confirmation Doctolib).
   chiffrement se sauvegarde à part.
 - Premier module où les lignes sont filtrées par profil en plus du foyer : un test
   d'isolation couvre un second membre du même foyer.
-- Hors périmètre : imports Apple Santé ou Garmin (ADR dédiée), corrélations automatiques
+- Sommeil et récupération importés de Garmin : [ADR 0019](0019-garmin-import.md), seule
+  partie de la santé lisible par l'agent de planification.
+- Hors périmètre : import Apple Santé, corrélations automatiques
   (semainier), rappels et notifications (étape 6), objectifs de santé qui génèrent
   routines, todos ou repas (après le semainier).

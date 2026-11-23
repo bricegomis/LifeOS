@@ -153,7 +153,8 @@ l'application ; un autre foyer ne voit rien de tout cela (testé).
 - Défis du jour (100 pompes, 20 min de mobilité) remplis par séries cumulées, avec
   série de jours, jokers, calendrier, totaux et paliers.
 - Un profil sur chaque donnée ; seul l'utilisateur principal est affiché.
-- Import Garmin reporté (ADR dédiée) ; seule la source de la séance est prévue.
+- Import Garmin : [ADR 0019](architecture/decisions/0019-garmin-import.md), cadré le
+  2026-11-23 (séances avec heures, VO2max, sommeil et récupération).
 
 **Déroulé.**
 
@@ -168,6 +169,9 @@ l'application ; un autre foyer ne voit rien de tout cela (testé).
 8. **Routines quotidiennes** et bibliothèque d'exercices (image, consigne, tenue ou
    répétitions, charge), une série par routine et la progression par exercice.
    Cadrage et maquette du 2026-11-16 : [ADR 0014](architecture/decisions/0014-sport-daily-routines.md). Fait.
+9. **Import Garmin** : séances, VO2max, sommeil et récupération synchronisés depuis
+   Garmin Connect. Cadrage du 2026-11-23 : [ADR 0019](architecture/decisions/0019-garmin-import.md).
+   Maquette à valider.
 
 **Terminé quand.** L'utilisateur enregistre ses séances pendant plusieurs semaines
 sans friction, tient ses défis du jour et lit son bilan hebdomadaire. Le module
