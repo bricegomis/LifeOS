@@ -12,7 +12,7 @@ téléphone, sans toucher à la production. Elle suit la branche `integration`
 | Images | `lifeos-api:latest`, `lifeos-web:latest` | `lifeos-api:integration`, `lifeos-web:integration` |
 | Fichier compose | `docker-compose.yaml` | `docker-compose.integration.yaml` |
 | Containers | `lifeos-api`, `lifeos-web` | `lifeos-integration-api`, `lifeos-integration-web` |
-| Volumes | `lifeos_receipts`, `lifeos_food_images`, `lifeos_sport_images`, `lifeos_task_images`, `lifeos_health_files` | `lifeos_integration_receipts`, `lifeos_integration_food_images`, `lifeos_integration_sport_images`, `lifeos_integration_task_images`, `lifeos_integration_health_files` |
+| Volumes | `lifeos_receipts`, `lifeos_food_images`, `lifeos_sport_images`, `lifeos_task_images`, `lifeos_health_files`, `lifeos_garmin_tokens` | `lifeos_integration_receipts`, `lifeos_integration_food_images`, `lifeos_integration_sport_images`, `lifeos_integration_task_images`, `lifeos_integration_health_files`, `lifeos_integration_garmin_tokens` |
 | Base | base de production | **base séparée** |
 
 Chaque fusion sur `integration` publie les images `:integration`. Watchtower les

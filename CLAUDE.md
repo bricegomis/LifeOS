@@ -33,7 +33,7 @@ code, identifiers and code comments are English.
   dose, period and monthly cost, one tick per supplement per day; symptom journal; blood
   markers with lab range, personal target, frequency and panels; body measures; documents
   and appointments; per-profile privacy, encrypted files, the assistant reads documents).
-- Garmin import (accepted 2026-11-23, mockup to validate): ADR 0019 (external `garmin-sync`
+- Garmin import (delivered 2026-11-23): ADR 0019 (external `garmin-sync`
   service using the unofficial python-garminconnect at a pinned version, writing through
   import endpoints; the API never calls Garmin; sessions get start and end times, perceived
   effort and feeling instead of the 1-10 ressenti; Garmin values overwrite, LifeOS notes stay;
@@ -58,6 +58,8 @@ code, identifiers and code comments are English.
   (`ios/`: SwiftUI widgets, App Intents, Live Activity). See its `CLAUDE.md`.
 - `src/backend` — ASP.NET Core (.NET 10) Clean Architecture: Domain / Application /
   Infrastructure / Api, plus `tests/`. See its `CLAUDE.md`.
+- `src/garmin-sync` — Python service copying Garmin Connect into LifeOS through the import
+  endpoints (ADR 0019); its own image `lifeos-garmin-sync`. Tests: `python -m unittest discover -s tests`.
 - `docs/` — product docs (French) and `docs/architecture/decisions/` ADRs.
 - `docker-compose.yaml` — production compose (VPS/Coolify, images from GHCR, watchtower).
 - `docker-compose.integration.yaml` — integration stack (`:integration` images, own
@@ -121,7 +123,7 @@ code, identifiers and code comments are English.
   migration is allowed there, once the user confirms what is reset.
 - Never run migrations against a shared/production database, reset user data, or
   touch the VPS. The user backs up PostgreSQL **and** the `lifeos_receipts`,
-  `lifeos_food_images`, `lifeos_sport_images`, `lifeos_task_images` and `lifeos_health_files` volumes, plus the
+  `lifeos_food_images`, `lifeos_sport_images`, `lifeos_task_images`, `lifeos_health_files` and `lifeos_garmin_tokens` volumes, plus the
   `HEALTH_FILES_KEY` encryption key kept apart, then refreshes the containers themselves.
 - When behaviour changes, update the directly affected docs (ADR status/extension,
   `docs/PROJECT.md`, `docs/02-core-model.md`, the relevant README). Replace stale

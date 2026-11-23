@@ -1,6 +1,7 @@
 # ADR 0019 — Import Garmin : séances, VO2max, sommeil et récupération
 
-Statut : accepté, cadrage du 2026-11-23. Maquette à valider avant tout code. Étend
+Statut : accepté, cadrage du 2026-11-23 ; maquette validée le 2026-11-23 (canevas des maquettes, « Garmin — ordinateur »
+et « Garmin — smartphone ») ; livré en code le 2026-11-23. Étend
 l'[ADR 0013](0013-sport-module.md) (séances réalisées) et l'[ADR 0018](0018-health-module.md)
 (module Santé). Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md)
 (modules, agent externe), l'[ADR 0011](0011-conversational-assistant-mcp.md) (assistant)
@@ -48,7 +49,7 @@ cas de panne, les séances peuvent être saisies à la main.
   | Variable | Rôle |
   | --- | --- |
   | `GARMIN_EMAIL`, `GARMIN_PASSWORD` | Compte Garmin Connect |
-  | `LIFEOS_API_URL` | Adresse de l'API LifeOS vue depuis le conteneur |
+  | `GARMIN_SYNC_API_URL` | Facultative : adresse de l'API vue depuis le conteneur, `http://api:8080` par défaut (le conteneur la reçoit en `LIFEOS_API_URL`) |
   | `LIFEOS_IMPORT_TOKEN` | Jeton d'import créé dans les Réglages de LifeOS : révocable, lié à un profil, limité aux endpoints d'import Garmin |
 
   Le mot de passe Garmin est donc en clair dans la configuration de la pile, visible de
@@ -79,8 +80,11 @@ cas de panne, les séances peuvent être saisies à la main.
   maintenant » enregistre une demande dans LifeOS ; le service la voit en interrogeant
   l'API toutes les 5 minutes. LifeOS affiche la dernière synchro réussie et la dernière
   erreur (connexion Garmin refusée, bibliothèque cassée…).
-- **Premier lancement** : tout l'historique (activités depuis 2024-12, sommeil,
-  récupération et VO2max sur la même période).
+- **Premier lancement** : toutes les activités et toute la VO2max d'un coup ; le sommeil
+  et la récupération remontent par tranches de 60 jours à chaque synchro (trois appels
+  Garmin par jour), jusqu'à la première activité.
+- Le service ne renvoie que les activités modifiées depuis la synchro précédente
+  (empreinte gardée dans le volume) et relit les 7 derniers jours de sommeil.
 - Un seul compte Garmin, celui de l'utilisateur principal. Le modèle porte le profil,
   d'autres comptes ne demanderont pas de migration.
 
@@ -182,7 +186,8 @@ Maquette cliquable avant le code, ordinateur et téléphone :
 
 - **Aujourd'hui** : la nuit (durée, score), Body Battery au réveil, HRV et FC au repos,
   les séances du jour, les pas, l'avancement des objectifs de la semaine. Page du shell
-  qui lit les contrats publiés de Sport et Santé ; elle deviendra l'accueil du semainier.
+  (`/today`, ouverte au lancement) qui lit les endpoints de Sport et Santé sans importer
+  leurs modules ; elle deviendra l'accueil du semainier.
 - **Séances par sport** : liste filtrée et bilans par semaine ou par mois (nombre,
   durée, distance, dénivelé, FC moyenne, allure ou vitesse).
 - **Page d'une séance** : valeurs Garmin, zones de FC, effort et sensation, notes.
