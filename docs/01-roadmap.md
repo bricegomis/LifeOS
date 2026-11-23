@@ -323,24 +323,33 @@ l'usage mobile du semainier le demande.
 fichier Excel actuel, avec les dépenses d'alimentation et de compléments calculées
 par LifeOS plutôt que saisies.
 
-**Point de départ.** Le fichier Excel de l'utilisateur, qui budgétise déjà les
-dépenses par mois : sa structure (catégories, lignes, colonnes) sert de base au
-cadrage, et son historique pourra être importé une fois.
+**Décisions prises.** Cadrage fait le 2026-11-23 :
+[ADR 0020](architecture/decisions/0020-budget-module.md), à partir du fichier Excel.
 
-**À cadrer.**
+- Budget privé au compte (seul adulte), comme la santé.
+- Postes et lignes prévues repris de l'Excel : fixe (loyer, crédit, abonnement),
+  enveloppe (alimentation, travaux, sorties ; remise à zéro chaque mois) ou extra
+  (non planifié, suivi seul) ; montant par mois, par an ou tous les N mois ; repère
+  « à diminuer ».
+- Salaire prévu mois par mois et salaire reçu.
+- Opérations importées d'un CSV BoursoBank chaque mois ou saisies à la main ;
+  rangées par des règles sur le libellé, le reste par l'utilisateur ou Claude ; un
+  achat peut être étalé sur N mois.
+- Compléments : prévu = coût mensuel calculé par la Santé ; alimentation : réel par
+  carte, prévu tiré du semainier plus tard. Le Budget est un module de synthèse qui
+  lit les contrats publiés (ADR 0009).
 
-- Ce que fait l'Excel aujourd'hui et ce qui doit être gardé ou amélioré.
-- Catégories, budget prévu par mois et par catégorie, réel et écart.
-- Dépenses récurrentes (loyer, abonnements) et ponctuelles ; revenus suivis ou non.
-- Saisie : à la main, par l'assistant (emails, factures), ou import d'un relevé
-  bancaire en fichier. Pas de connexion directe à la banque.
-- Valeurs venues des autres modules : dépense alimentaire du mois (prix saisis
-  depuis les tickets) et coût mensuel des compléments (déjà calculé en Santé). Le
-  Budget est un module de domaine : comment les lire sans croiser les domaines
-  (ADR 0009), par exemple par un module consommateur comme le Planning, est à
-  décider dans l'ADR. Le coût des compléments est une donnée de santé privée.
-- Données du foyer ou par profil.
-- Pas de liste de courses ni de stock.
+**Déroulé.**
+
+1. **Cadrage fonctionnel.** Fait.
+2. **Maquette cliquable** : mois, opérations et import, lignes prévues, règles,
+   évolution (ordinateur et smartphone).
+3. **Postes, lignes prévues et revenus**, puis mise en place depuis l'Excel par Claude.
+4. **Opérations** : import CSV, saisie, étalement.
+5. **Règles de classement.**
+6. **Mois et évolution.**
+7. **Compléments** calculés depuis la Santé.
+8. **Outils de l'assistant** pour tout le module.
 
 **Terminé quand.** Le budget du mois se tient dans LifeOS sans l'Excel, avec
 l'alimentation et les compléments remplis automatiquement, et le bilan du mois se lit
