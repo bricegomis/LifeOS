@@ -47,8 +47,11 @@ public sealed class ResetMigrationTests
         Assert.Equal(["__EFMigrationsHistory"], publicTables);
         var history = await db.Database.SqlQueryRaw<string>(
             "SELECT \"MigrationId\" AS \"Value\" FROM \"__EFMigrationsHistory\"").ToListAsync();
-        Assert.Equal(["20261112055644_FoodModuleReset", "20261112165315_AccountsAndOAuth", "20261113081443_FoodClassification", "20261113193133_SportModule", "20261116100043_SportRoutines", "20261116191952_SportRoutineSessions", "20261122122504_TasksTodos", "20261122131823_TasksRoutines", "20261122132750_TasksProjects", "20261122164715_HealthSupplements", "20261122165501_HealthSymptoms", "20261122170027_HealthAnalyses", "20261122171015_HealthDocuments", "20261123050124_TaskSubProjects"],
-            history.Order());
+        // The legacy rows are gone and every migration of the code is applied, starting with the reset:
+        // the list comes from the code, so a new migration needs no change here.
+        var migrations = db.Database.GetMigrations().ToList();
+        Assert.Equal("20261112055644_FoodModuleReset", migrations[0]);
+        Assert.Equal(migrations.Order(), history.Order());
         var schemas = await db.Database.SqlQueryRaw<string>(
             "SELECT DISTINCT schemaname AS \"Value\" FROM pg_tables WHERE schemaname IN ('households', 'food', 'sports', 'tasks', 'health', 'auth') ORDER BY 1").ToListAsync();
         Assert.Equal(["auth", "food", "health", "households", "sports", "tasks"], schemas);
