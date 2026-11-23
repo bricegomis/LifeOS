@@ -21,6 +21,26 @@ public sealed class TaskProjectTests
     }
 
     [Fact]
+    public void A_project_moves_under_another_but_never_under_itself_or_its_sub_projects()
+    {
+        var household = Guid.NewGuid();
+        var land = TaskProject.Create(household, "Terrain", null, null, Now);
+        var chalet = TaskProject.Create(household, "Chalet", null, null, Now);
+        var ceiling = TaskProject.Create(household, "Plafond", null, null, Now);
+        var all = new[] { land, chalet, ceiling };
+        Guid? ParentOf(Guid id) => all.Single(p => p.Id == id).ParentId;
+
+        chalet.MoveUnder(land.Id, ParentOf, Now);
+        ceiling.MoveUnder(chalet.Id, ParentOf, Now);
+        Assert.Equal((land.Id, chalet.Id), (chalet.ParentId!.Value, ceiling.ParentId!.Value));
+        Assert.Throws<ArgumentException>(() => land.MoveUnder(land.Id, ParentOf, Now));
+        Assert.Throws<ArgumentException>(() => land.MoveUnder(ceiling.Id, ParentOf, Now));
+        Assert.Null(land.ParentId);
+        ceiling.MoveUnder(Guid.Empty, ParentOf, Now);
+        Assert.Null(ceiling.ParentId);
+    }
+
+    [Fact]
     public void A_todo_moves_into_and_out_of_a_project()
     {
         var todo = Todo.Create(Guid.NewGuid(), Guid.NewGuid(), "Peindre", null, null, null, null, null, Now);

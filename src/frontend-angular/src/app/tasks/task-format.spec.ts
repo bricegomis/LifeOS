@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  addDays, dayLabel, draftOf, projectProgress, type TaskItem, durationLabel, initial, postponeChoices, postponed, tagsOf, todaySections, todoMeta, todoRequest, withTag,
+  addDays, dayLabel, draftOf, projectProgress, projectTree, subTreeIds, type TaskItem, durationLabel, initial, postponeChoices, postponed, tagsOf, todaySections, todoMeta, todoRequest, withTag,
 } from './task-format.ts'
 import type { TaskRoutineDto, TodoDto } from './tasks.models.ts'
 
@@ -100,5 +100,27 @@ describe('todo form', () => {
     assert.deepEqual(withTag(['Maison'], 'voiture'), ['Maison', 'voiture'])
     const t = todo('A', { dueOn: '2026-11-20', priority: 'high', tags: ['x'] })
     assert.deepEqual(postponed(t, null), { title: 'A', notes: null, dueOn: null, durationMinutes: null, priority: 'high', tags: ['x'], projectId: null })
+  })
+})
+
+describe('sub-projects', () => {
+  const projects = [
+    { id: 'p', title: 'Potager', parentId: 't' },
+    { id: 'e', title: 'Elec', parentId: 'c' },
+    { id: 't', title: 'Terrain', parentId: null },
+    { id: 'c', title: 'Chalet', parentId: 't' },
+    { id: 'i', title: 'Impôts', parentId: null },
+    { id: 'o', title: 'Orphelin', parentId: 'closed' },
+  ]
+
+  it('lists projects in tree order with their path', () => {
+    assert.deepEqual(projectTree(projects).map(o => [o.label, o.depth]), [
+      ['Impôts', 0], ['Orphelin', 0], ['Terrain', 0], ['Terrain › Chalet', 1], ['Terrain › Chalet › Elec', 2], ['Terrain › Potager', 1],
+    ])
+  })
+
+  it('finds a project and all its sub-projects', () => {
+    assert.deepEqual([...subTreeIds(projects, 't')].sort(), ['c', 'e', 'p', 't'])
+    assert.deepEqual([...subTreeIds(projects, 'e')], ['e'])
   })
 })

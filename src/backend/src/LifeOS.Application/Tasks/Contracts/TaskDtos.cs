@@ -18,22 +18,33 @@ public sealed record TodoDto(Guid Id, Guid MemberProfileId, string Title, string
 }
 
 /// <param name="State">active, done or abandoned.</param>
-/// <param name="Done">Its done todos.</param>
-/// <param name="Total">Its todos that are not abandoned: progress is <paramref name="Done"/> / <paramref name="Total"/>.</param>
+/// <param name="ParentId">Its parent project, when it is a sub-project.</param>
+/// <param name="Done">Done todos of the project and of all its sub-projects.</param>
+/// <param name="Total">Todos of the project and of all its sub-projects that are not abandoned: progress is
+/// <paramref name="Done"/> / <paramref name="Total"/>.</param>
+/// <param name="SubProjects">Its direct sub-projects in progress.</param>
 public sealed record TaskProjectDto(Guid Id, string Title, string? Notes, DateOnly? DueOn, string State, bool HasImage,
-    DateTimeOffset UpdatedAt, int Done, int Total)
+    DateTimeOffset UpdatedAt, int Done, int Total, Guid? ParentId = null, int SubProjects = 0)
 {
     public int Open => Total - Done;
 
-    public static TaskProjectDto From(TaskProject p, IEnumerable<Todo> todos)
+    /// <param name="todos">The todos of the project and of all its sub-projects.</param>
+    public static TaskProjectDto From(TaskProject p, IEnumerable<Todo> todos, int subProjects = 0)
     {
-        var counted = todos.Where(t => t.ProjectId == p.Id && t.State != "abandoned").ToList();
-        return new(p.Id, p.Title, p.Notes, p.DueOn, p.State, p.HasImage, p.UpdatedAt, counted.Count(t => t.State == "done"), counted.Count);
+        var counted = todos.Where(t => t.State != "abandoned").ToList();
+        return new(p.Id, p.Title, p.Notes, p.DueOn, p.State, p.HasImage, p.UpdatedAt, counted.Count(t => t.State == "done"), counted.Count,
+            p.ParentId, subProjects);
     }
 }
 
-/// <summary>A project with all its todos (open first by due day, then done and abandoned).</summary>
-public sealed record TaskProjectDetailDto(TaskProjectDto Project, IReadOnlyList<TodoDto> Todos);
+public sealed record TaskProjectRefDto(Guid Id, string Title);
+
+/// <summary>
+/// A project with its own todos (open first by due day, then done and abandoned), its direct
+/// sub-projects (in progress first) and its ancestors, from the top project down to its parent.
+/// </summary>
+public sealed record TaskProjectDetailDto(TaskProjectDto Project, IReadOnlyList<TodoDto> Todos,
+    IReadOnlyList<TaskProjectDto> SubProjects, IReadOnlyList<TaskProjectRefDto> Ancestors);
 
 /// <summary>
 /// The "Aujourd'hui" page (ADR 0017): open todos due up to <paramref name="Today"/> + 7 days (late ones

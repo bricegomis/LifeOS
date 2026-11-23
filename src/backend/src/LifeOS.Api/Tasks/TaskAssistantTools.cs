@@ -282,7 +282,8 @@ public sealed class TaskAssistantTools
     // Projects
 
     [McpServerTool(Name = "list_projects", ReadOnly = true, Title = "Projets")]
-    [Description("Les projets du foyer avec leur avancement : done / total = todos faits sur todos non abandonnés.")]
+    [Description("Les projets du foyer avec leur avancement : done / total = todos faits sur todos non abandonnés, sous-projets " +
+        "compris. parentId donne le projet parent d'un sous-projet (arborescence de profondeur libre).")]
     public static async Task<List<TaskProjectDto>> ListProjects(IHttpContextAccessor accessor, TaskProjectLibrary projects,
         [Description("active (en cours, par défaut), closed (terminés et abandonnés) ou all.")] string? state = null,
         CancellationToken ct = default)
@@ -292,7 +293,7 @@ public sealed class TaskAssistantTools
     }
 
     [McpServerTool(Name = "get_project", ReadOnly = true, Title = "Projet")]
-    [Description("Un projet avec tous ses todos.")]
+    [Description("Un projet avec ses propres todos, ses sous-projets directs et ses ancêtres (du projet racine au parent).")]
     public static async Task<TaskProjectDetailDto> GetProject(IHttpContextAccessor accessor, TaskProjectLibrary projects, Guid projectId,
         CancellationToken ct = default)
     {
@@ -301,31 +302,37 @@ public sealed class TaskAssistantTools
     }
 
     [McpServerTool(Name = "create_project", Title = "Créer un projet")]
-    [Description("Crée un projet (un simple regroupement de todos, sans étapes ni dépendances). Ajoutez ensuite ses todos avec " +
-        "create_todo et projectId.")]
+    [Description("Crée un projet (un simple regroupement de todos, sans étapes ni dépendances), éventuellement sous-projet d'un " +
+        "autre. Ajoutez ensuite ses todos avec create_todo et projectId.")]
     public static async Task<TaskProjectDetailDto> CreateProject(IHttpContextAccessor accessor, TaskProjectLibrary projects,
-        string title, DateOnly? dueOn = null, string? notes = null, [Description(ImageHelp)] string? imageUrl = null,
-        CancellationToken ct = default)
+        string title, DateOnly? dueOn = null, string? notes = null,
+        [Description("Projet parent en cours du foyer (list_projects) ; vide = projet racine.")] Guid? parentId = null,
+        [Description(ImageHelp)] string? imageUrl = null, CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        var project = await projects.CreateAsync(household.HouseholdId, AssistantRequest.Validated(new TaskProjectRequest(title, notes, dueOn)), ct);
+        var project = await projects.CreateAsync(household.HouseholdId,
+            AssistantRequest.Validated(new TaskProjectRequest(title, notes, dueOn, parentId)), ct);
         if (string.IsNullOrWhiteSpace(imageUrl)) return project;
         return (await projects.ReplaceImageFromUrlAsync(household.HouseholdId, project.Project.Id, imageUrl, ct)).OrNotFound("Projet");
     }
 
     [McpServerTool(Name = "update_project", Idempotent = true, Title = "Modifier un projet")]
-    [Description("Remplace le nom, l'échéance et les notes d'un projet (un champ omis devient vide).")]
+    [Description("Remplace le nom, l'échéance, les notes et le projet parent d'un projet (un champ omis devient vide : sans " +
+        "parentId, le projet remonte à la racine).")]
     public static async Task<TaskProjectDetailDto> UpdateProject(IHttpContextAccessor accessor, TaskProjectLibrary projects,
-        Guid projectId, string title, DateOnly? dueOn = null, string? notes = null, CancellationToken ct = default)
+        Guid projectId, string title, DateOnly? dueOn = null, string? notes = null,
+        [Description("Projet parent en cours du foyer, ou le parent actuel ; jamais le projet lui-même ni un de ses sous-projets.")]
+        Guid? parentId = null, CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        return (await projects.UpdateAsync(household.HouseholdId, projectId, AssistantRequest.Validated(new TaskProjectRequest(title, notes, dueOn)), ct))
+        return (await projects.UpdateAsync(household.HouseholdId, projectId,
+                AssistantRequest.Validated(new TaskProjectRequest(title, notes, dueOn, parentId)), ct))
             .OrNotFound("Projet");
     }
 
     [McpServerTool(Name = "close_project", Title = "Terminer, abandonner ou rouvrir un projet")]
-    [Description("Termine (finish), abandonne (abandon) ou rouvre (reopen) un projet. Ses todos ne changent jamais : les todos " +
-        "encore ouverts restent ouverts et gardent le projet ; dites-le à l'utilisateur.")]
+    [Description("Termine (finish), abandonne (abandon) ou rouvre (reopen) un projet. Ses todos et ses sous-projets ne changent " +
+        "jamais : les todos encore ouverts restent ouverts et gardent le projet ; dites-le à l'utilisateur.")]
     public static async Task<TaskProjectDetailDto> CloseProject(IHttpContextAccessor accessor, TaskProjectLibrary projects, Guid projectId,
         [Description("finish, abandon ou reopen.")] string action, CancellationToken ct = default)
     {

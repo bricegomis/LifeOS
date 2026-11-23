@@ -1,4 +1,4 @@
-import type { TaskRoutineDto, TodoDto, TodoPriority, TodoRequest } from './tasks.models.ts'
+import type { TaskProjectDto, TaskRoutineDto, TodoDto, TodoPriority, TodoRequest } from './tasks.models.ts'
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 const DAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.']
@@ -189,4 +189,39 @@ export function postponed(todo: TodoDto, dueOn: string | null): TodoRequest {
 /** "3 / 7 faits" and the bar width of a project. */
 export function projectProgress(done: number, total: number): { label: string, percent: number } {
   return { label: `${done} / ${total} fait${done > 1 ? 's' : ''}`, percent: total ? Math.round(100 * done / total) : 0 }
+}
+
+export interface ProjectOption { id: string, label: string, depth: number }
+
+/**
+ * Projects in tree order (each followed by its sub-projects, by name), labelled with their path
+ * ("Terrain › Chalet"). A project whose parent is not in the list starts its own branch.
+ */
+export function projectTree(projects: Pick<TaskProjectDto, 'id' | 'title' | 'parentId'>[]): ProjectOption[] {
+  const ids = new Set(projects.map(p => p.id))
+  const byName = (a: { title: string }, b: { title: string }) => a.title.localeCompare(b.title, 'fr', { sensitivity: 'base' })
+  const children = (parent: string | null) => projects
+    .filter(p => parent === null ? !p.parentId || !ids.has(p.parentId) : p.parentId === parent).sort(byName)
+  const out: ProjectOption[] = []
+  const visit = (parent: string | null, path: string, depth: number) => {
+    for (const p of children(parent)) {
+      if (out.some(o => o.id === p.id)) continue
+      const label = path ? `${path} › ${p.title}` : p.title
+      out.push({ id: p.id, label, depth })
+      visit(p.id, label, depth + 1)
+    }
+  }
+  visit(null, '', 0)
+  return out
+}
+
+/** The ids of a project and of all its sub-projects, from a flat list. */
+export function subTreeIds(projects: Pick<TaskProjectDto, 'id' | 'parentId'>[], id: string): Set<string> {
+  const ids = new Set([id])
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const p of projects) if (p.parentId && ids.has(p.parentId) && !ids.has(p.id)) { ids.add(p.id); grew = true }
+  }
+  return ids
 }

@@ -26,5 +26,8 @@ internal sealed class TaskProjectConfiguration : IEntityTypeConfiguration<TaskPr
         builder.Ignore(p => p.IsActive);
         builder.HasOne<Household>().WithMany().HasForeignKey(p => p.HouseholdId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(p => new { p.HouseholdId, p.State });
+        // A sub-project's parent is in the same household (nullable composite key: no parent, no check).
+        builder.HasOne<TaskProject>().WithMany().HasForeignKey(p => new { p.ParentId, p.HouseholdId })
+            .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
     }
 }
