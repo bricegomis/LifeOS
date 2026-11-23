@@ -1,0 +1,6 @@
+# Pinned on purpose (ADR 0019): the library talks to Garmin's private login; upgrade by hand
+# after checking https://github.com/cyberjunky/python-garminconnect/issues.
+garminconnect==0.3.20
+curl_cffi==0.17.0
+requests==2.34.2
+ua-generator==2.1.9

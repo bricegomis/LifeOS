@@ -11,6 +11,7 @@ env:
   IMAGE_TAG: ${{ github.ref_name == 'main' && 'latest' || 'integration' }}
   API_IMAGE: ghcr.io/bricegomis/lifeos-api
   WEB_IMAGE: ghcr.io/bricegomis/lifeos-web
+  GARMIN_SYNC_IMAGE: ghcr.io/bricegomis/lifeos-garmin-sync
 
 jobs:
   build-and-push:
@@ -72,3 +73,13 @@ jobs:
             LIFEOS_BUILD_WORKFLOW=${{ github.workflow }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
+
+      # ── Garmin sync service (ADR 0019) ──────────────────────────────────────
+      - name: Build & push garmin-sync
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/garmin-sync
+          push: true
+          tags: ${{ env.GARMIN_SYNC_IMAGE }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=garmin-sync
+          cache-to: type=gha,scope=garmin-sync,mode=max

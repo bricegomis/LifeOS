@@ -63,6 +63,28 @@ services:
       LIFEOS_API_URL: ${LIFEOS_API_URL:-${VITE_LIFEOS_API_URL:-}}
     labels:
       - com.centurylinklabs.watchtower.enable=true
+  # Garmin Connect → LifeOS (ADR 0019). Idle until GARMIN_EMAIL, GARMIN_PASSWORD and
+  # LIFEOS_IMPORT_TOKEN (created in LifeOS: Sport > Garmin) are set. Garmin tokens and the sync
+  # progress live in the volume, backed up with the others.
+  garmin-sync:
+    image: ghcr.io/bricegomis/lifeos-garmin-sync:latest
+    container_name: lifeos-garmin-sync
+    restart: unless-stopped
+    networks:
+      - proxy
+    environment:
+      GARMIN_EMAIL: ${GARMIN_EMAIL:-}
+      GARMIN_PASSWORD: ${GARMIN_PASSWORD:-}
+      LIFEOS_IMPORT_TOKEN: ${LIFEOS_IMPORT_TOKEN:-}
+      # The API inside the stack; set GARMIN_SYNC_API_URL to go through the public URL instead.
+      LIFEOS_API_URL: ${GARMIN_SYNC_API_URL:-http://api:8080}
+      GARMIN_SYNC_HOURS: ${GARMIN_SYNC_HOURS:-7,13,19,23}
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    volumes:
+      - garmin_tokens:/data
+    depends_on:
+      - api
 networks:
   proxy:
     external: true
@@ -79,3 +101,5 @@ volumes:
     name: lifeos_task_images
   health_files:
     name: lifeos_health_files
+  garmin_tokens:
+    name: lifeos_garmin_tokens

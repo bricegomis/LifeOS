@@ -25,6 +25,7 @@ jobs:
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
+      garmin_sync: ${{ steps.filter.outputs.garmin_sync }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -36,6 +37,9 @@ jobs:
               - '.github/workflows/ci.yml'
             backend:
               - 'src/backend/**'
+              - '.github/workflows/ci.yml'
+            garmin_sync:
+              - 'src/garmin-sync/**'
               - '.github/workflows/ci.yml'
 
   frontend:
@@ -140,10 +144,27 @@ jobs:
         # container via Testcontainers; ubuntu-latest runners have Docker preinstalled.
         run: dotnet test --no-build --configuration Release
 
+  garmin-sync:
+    name: garmin-sync tests
+    needs: changes
+    if: needs.changes.outputs.garmin_sync == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/garmin-sync
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements.txt
+      - run: python -m unittest discover -s tests
+      - run: docker build -t lifeos-garmin-sync:ci .
+
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, frontend, ios, backend]
+    needs: [changes, frontend, ios, backend, garmin-sync]
     runs-on: ubuntu-latest
     steps:
       - name: Fail when a needed job failed or was cancelled
