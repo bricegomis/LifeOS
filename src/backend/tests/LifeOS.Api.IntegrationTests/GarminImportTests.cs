@@ -191,8 +191,7 @@ public sealed class GarminImportTests(PostgresContainerFixture postgres)
         (await service.PostAsJsonAsync("/api/import/garmin/status", new GarminReportRequest("ok", null, "1 activité", null))).EnsureSuccessStatusCode();
 
         var http = factory.CreateClient().AsUser(userId);
-        await using var mcp = await McpClient.CreateAsync(new HttpClientTransport(
-            new HttpClientTransportOptions { Endpoint = new Uri(http.BaseAddress!, "/mcp"), TransportMode = HttpTransportMode.StreamableHttp }, http));
+        await using var mcp = await http.ConnectMcpAsync();
         var tools = (await mcp.ListToolsAsync()).Select(tool => tool.Name).ToList();
         Assert.Contains("get_sleep_and_recovery", tools);
         Assert.Contains("get_sport_session", tools);

@@ -187,10 +187,7 @@ public sealed class BudgetTests(PostgresContainerFixture postgres)
 
     private static async Task<McpClient> Connect(WebApplicationFactory<Program> factory, Guid user)
     {
-        var http = factory.CreateClient().AsUser(user);
-        return await McpClient.CreateAsync(new HttpClientTransport(
-            new HttpClientTransportOptions { Endpoint = new Uri(http.BaseAddress!, "/mcp"), TransportMode = HttpTransportMode.StreamableHttp },
-            http));
+        return await factory.CreateClient().AsUser(user).ConnectMcpAsync();
     }
 
     private static async Task<JsonElement> Call(McpClient mcp, string tool, Dictionary<string, object?> arguments)
