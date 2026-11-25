@@ -122,11 +122,12 @@ code, identifiers and code comments are English.
 ## Git and delivery
 - Commit messages: Conventional Commits with a scope, in English,
   e.g. `feat(foods): add optional food images`, `fix(reviews): ...`.
-- Work on a branch and open PRs to `integration`. `main` gets one merge per roadmap
-  step, at the end of the step (`docs/01-roadmap.md`). Pushes to `integration` publish the
-  `:integration` images for the integration stack. Pushes to `main` publish Docker images
-  (`ghcr.io/bricegomis/lifeos-{api,web}:latest`) that watchtower picks up, and deploy
-  GitHub Pages. So merging to `main` is effectively a deploy: ask first.
+- Work on a branch and open a PR to `main`; never push to `main` directly. Every merge
+  to `main` publishes Docker images (`ghcr.io/bricegomis/lifeos-{api,web,garmin-sync}:latest`)
+  that watchtower picks up, and deploys GitHub Pages: it is a deploy, so ask before
+  merging. Large lots (a new module, a destructive migration) go first through a PR to
+  `integration`, whose pushes publish the `:integration` images of the integration stack
+  (`docs/01-roadmap.md`, « Branches et livraison »).
 - Roadmap step 1 may drop existing data (user decision, 2026-11-11): a destructive
   migration is allowed there, once the user confirms what is reset.
 - Never run migrations against a shared/production database, reset user data, or

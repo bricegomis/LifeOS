@@ -38,16 +38,16 @@ Vision : [00-vision.md](00-vision.md).
 
 ## Branches et livraison
 
-- Tout le travail arrive par petites PR sur la branche `integration`.
-  La CI (tests backend, contrôles Angular) tourne sur chaque PR.
-- `main` ne reçoit qu'une fusion par étape, à la fin de l'étape, avec l'accord
-  explicite de l'utilisateur. Cette fusion publie les images et vaut déploiement ;
-  l'utilisateur sauvegarde la base et les volumes avant.
-- Chaque fusion sur `integration` met à jour la version d'intégration : une seconde
-  pile sur le VPS, avec sa propre base. Voir
-  [integration-environment.md](integration-environment.md).
-- Un module commencé mais pas terminé reste hors de la navigation quand
-  `integration` est fusionnée dans `main`.
+- Le travail arrive par petites PR sur `main`, jamais par un envoi direct. La CI
+  (tests backend, contrôles Angular, garmin-sync) tourne sur chaque PR.
+- Chaque fusion dans `main` publie les images et vaut déploiement : elle se fait avec
+  l'accord explicite de l'utilisateur, qui sauvegarde la base et les volumes avant
+  quand une migration arrive.
+- Les gros lots (un nouveau module, une migration destructive) passent d'abord par une PR
+  sur `integration`, qui met à jour la version d'intégration : une seconde pile sur le
+  VPS, avec sa propre base. Voir [integration-environment.md](integration-environment.md).
+- Un module commencé mais pas terminé reste hors de la navigation tant qu'il n'est pas
+  prêt pour `main`.
 
 ## Enchaînement des étapes
 
