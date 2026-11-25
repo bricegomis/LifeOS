@@ -54,7 +54,7 @@ code, identifiers and code comments are English.
   ADR 0010, and ADR 0008 (first week planner removed).
 - `docs/semainier-retour-experience.md`: lessons from the first planner and the
   sport needs already expressed.
-- Historical docs were deleted on 2026-11-11 (git history keeps them). If the docs
+- Historical docs were deleted on 2026-11-11 and are no longer kept anywhere. If the docs
   and the code disagree, say so instead of guessing.
 
 ## Layout

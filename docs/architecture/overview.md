@@ -51,8 +51,7 @@ garmin-sync ----- HTTPS / jeton d'import --------->   |   +-- volumes de fichier
 | [0019](decisions/0019-garmin-import.md) | Import Garmin par un service externe |
 | [0020](decisions/0020-budget-module.md) | Module Budget, privé au compte |
 
-Les ADR 0004 et 0005, entièrement remplacées, ont été supprimées ; elles restent
-dans l'historique git.
+Les ADR 0004 et 0005, entièrement remplacées, ont été supprimées.
 
 ## Configuration et livraison
 
