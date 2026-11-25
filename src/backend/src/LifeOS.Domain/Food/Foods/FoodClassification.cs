@@ -25,6 +25,8 @@ public static class FoodClassification
         ["herb_spice"] = "Herbe et épice",
         ["condiment"] = "Condiment et sauce",
         ["sweet"] = "Produit sucré",
+        ["prepared"] = "Plat préparé",
+        ["dessert"] = "Dessert",
         ["drink"] = "Boisson",
         ["other"] = "Autre",
     };
@@ -46,7 +48,7 @@ public static class FoodClassification
         ["fresh"] = "Frais",
         ["frozen"] = "Surgelé",
         ["canned"] = "Conserve",
-        ["dry"] = "Sec",
+        ["dry"] = "Épicerie",
     };
 
     /// <summary>"vegetable (Légume), fruit (Fruit), …" for error messages and tool descriptions.</summary>

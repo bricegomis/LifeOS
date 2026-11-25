@@ -24,11 +24,14 @@ public sealed class FoodAssistantTools
         "Classement : family obligatoire, une valeur parmi vegetable (Légume), fruit (Fruit), grain (Céréale et féculent), " +
         "legume (Légumineuse), meat (Viande), fish (Poisson et fruits de mer), egg (Œuf), dairy (Produit laitier), " +
         "fat (Matière grasse), nut_seed (Fruit à coque et graine), herb_spice (Herbe et épice), condiment (Condiment et sauce), " +
-        "sweet (Produit sucré), drink (Boisson), other (Autre). roles : ce que l'aliment apporte à l'assiette, zéro à plusieurs " +
+        "sweet (Produit sucré), prepared (Plat préparé), dessert (Dessert), drink (Boisson), other (Autre). La famille dit " +
+        "ce qu'est l'aliment tel qu'il est acheté ou mangé : une soupe, un plat cuisiné ou un mélange prêt à cuisiner est " +
+        "prepared, une crème dessert ou une mousse est dessert, même faits de légumes ou de lait ; leur contenu passe par " +
+        "les rôles. Un aliment est générique : pas de marque dans son nom, la marque va dans le produit. roles : ce que l'aliment apporte à l'assiette, zéro à plusieurs " +
         "parmi protein (Protéine), starch (Féculent), vegetable (Légume), fat (Matière grasse), seasoning (Assaisonnement), " +
         "sweet (Sucré) ; le tofu est une légumineuse de rôle protein, les lentilles ont les rôles protein et starch. " +
-        "conservation facultative : fresh (Frais), frozen (Surgelé), canned (Conserve), dry (Sec). seasonMonths : mois de " +
-        "saison en France métropolitaine, de 1 (janvier) à 12 (décembre), aucun si l'aliment n'est pas saisonnier (sec, " +
+        "conservation facultative : fresh (Frais), frozen (Surgelé), canned (Conserve), dry (Épicerie), à température ambiante : sec, huile, vinaigre, sauce… seasonMonths : mois de " +
+        "saison en France métropolitaine, de 1 (janvier) à 12 (décembre), aucun si l'aliment n'est pas saisonnier (épicerie, " +
         "conserve, surgelé, produit laitier…). tags : étiquettes libres du foyer, 20 au plus ; réutilisez l'orthographe " +
         "des étiquettes déjà présentes.";
 

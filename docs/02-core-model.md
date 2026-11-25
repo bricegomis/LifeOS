@@ -31,13 +31,13 @@ Rien n'est rapproché par nom.
 Chaque aliment a une **famille** (ce qu'il est, obligatoire) : Légume, Fruit, Céréale
 et féculent, Légumineuse, Viande, Poisson et fruits de mer, Œuf, Produit laitier,
 Matière grasse, Fruit à coque et graine, Herbe et épice, Condiment et sauce, Produit
-sucré, Boisson ou Autre. Facultatifs : ses **rôles** dans l'assiette (Protéine,
+sucré, Plat préparé, Dessert, Boisson ou Autre. Facultatifs : ses **rôles** dans l'assiette (Protéine,
 Féculent, Légume, Matière grasse, Assaisonnement, Sucré ; plusieurs possibles), sa
-**conservation** (Frais, Surgelé, Conserve, Sec), ses **mois de saison** et des
+**conservation** (Frais, Surgelé, Conserve, Épicerie), ses **mois de saison** et des
 **étiquettes** libres du foyer.
 
 Le tofu est une légumineuse de rôle Protéine ; les lentilles ont les rôles Protéine
-et Féculent. Aucun mois coché : l'aliment n'est pas saisonnier. « De saison »,
+et Féculent. Une soupe de légumes est un plat préparé de rôle Légume, pas un légume. Aucun mois coché : l'aliment n'est pas saisonnier. « De saison »,
 « Toute l'année » ou « Hors saison » se calcule à la lecture pour le mois en cours ;
 rien n'est masqué. Un surgelé est un aliment distinct (pas de stock). Le classement
 n'entre pas dans « À compléter ».

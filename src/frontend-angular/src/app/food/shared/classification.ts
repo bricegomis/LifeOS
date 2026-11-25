@@ -16,6 +16,8 @@ export const FAMILY_LABELS: Record<FoodFamily, string> = {
   herb_spice: 'Herbe et épice',
   condiment: 'Condiment et sauce',
   sweet: 'Produit sucré',
+  prepared: 'Plat préparé',
+  dessert: 'Dessert',
   drink: 'Boisson',
   other: 'Autre',
 }
@@ -33,7 +35,7 @@ export const CONSERVATION_LABELS: Record<Conservation, string> = {
   fresh: 'Frais',
   frozen: 'Surgelé',
   canned: 'Conserve',
-  dry: 'Sec',
+  dry: 'Épicerie',
 }
 
 export const MONTH_NAMES = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre',

@@ -368,7 +368,7 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_food_conservation", "conservation IS NULL OR conservation IN ('fresh', 'frozen', 'canned', 'dry')");
 
-                            t.HasCheckConstraint("ck_food_family", "family IN ('vegetable', 'fruit', 'grain', 'legume', 'meat', 'fish', 'egg', 'dairy', 'fat', 'nut_seed', 'herb_spice', 'condiment', 'sweet', 'drink', 'other')");
+                            t.HasCheckConstraint("ck_food_family", "family IN ('vegetable', 'fruit', 'grain', 'legume', 'meat', 'fish', 'egg', 'dairy', 'fat', 'nut_seed', 'herb_spice', 'condiment', 'sweet', 'prepared', 'dessert', 'drink', 'other')");
 
                             t.HasCheckConstraint("ck_food_fodmap", "fodmap IS NULL OR fodmap IN ('low', 'moderate', 'high')");
 

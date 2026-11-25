@@ -6,7 +6,8 @@ export type IngredientUnit = 'g' | 'ml' | 'pièce'
 export type PackageUnit = 'g' | 'kg' | 'ml' | 'L' | 'pièce'
 /** Food classification (ADR 0012); labels in `shared/classification.ts`. */
 export type FoodFamily = 'vegetable' | 'fruit' | 'grain' | 'legume' | 'meat' | 'fish' | 'egg' | 'dairy' | 'fat'
-  | 'nut_seed' | 'herb_spice' | 'condiment' | 'sweet' | 'drink' | 'other'
+  | 'nut_seed' | 'herb_spice' | 'condiment' | 'sweet' | 'prepared' | 'dessert'
+  | 'drink' | 'other'
 export type FoodRole = 'protein' | 'starch' | 'vegetable' | 'fat' | 'seasoning' | 'sweet'
 export type Conservation = 'fresh' | 'frozen' | 'canned' | 'dry'
 
