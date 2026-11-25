@@ -1,6 +1,7 @@
 # ADR 0012 — Classement des aliments
 
-Statut : accepté, 2026-11-13. Complète l'[ADR 0010](0010-simplified-food-module.md)
+Statut : accepté, 2026-11-13, étendu le 2026-11-25 (familles Plat préparé et
+Dessert, conservation « Sec » renommée « Épicerie »). Complète l'[ADR 0010](0010-simplified-food-module.md)
 avant le lot suivant de l'étape 1 bis. Maquette validée le même jour (canvas de
 l'étape 1, version 10).
 
@@ -20,9 +21,9 @@ nutrition.
 
 | Champ | Valeurs | Obligatoire |
 | --- | --- | --- |
-| Famille | Ce qu'est l'aliment, une valeur : Légume, Fruit, Céréale et féculent, Légumineuse, Viande, Poisson et fruits de mer, Œuf, Produit laitier, Matière grasse, Fruit à coque et graine, Herbe et épice, Condiment et sauce, Produit sucré, Boisson, Autre. | oui |
+| Famille | Ce qu'est l'aliment, une valeur : Légume, Fruit, Céréale et féculent, Légumineuse, Viande, Poisson et fruits de mer, Œuf, Produit laitier, Matière grasse, Fruit à coque et graine, Herbe et épice, Condiment et sauce, Produit sucré, Plat préparé, Dessert, Boisson, Autre. | oui |
 | Rôles | Ce qu'il apporte à l'assiette, zéro à plusieurs : Protéine, Féculent, Légume, Matière grasse, Assaisonnement, Sucré. | non |
-| Conservation | Frais, Surgelé, Conserve ou Sec. | non |
+| Conservation | Frais, Surgelé, Conserve ou Épicerie (à température ambiante : sec, huile, vinaigre, sauce). | non |
 | Mois de saison | Janvier à décembre, en France métropolitaine. Aucun mois : pas saisonnier, disponible toute l'année. | non |
 | Étiquettes | Libres, propres au foyer, 20 au plus de 50 caractères ; une seule orthographe par étiquette, sans tenir compte de la casse. | non |
 
@@ -30,6 +31,12 @@ nutrition.
   les lentilles ont les rôles Protéine et Féculent ; l'emmental est un produit laitier
   de rôles Protéine et Matière grasse. Le rôle ne se déduit ni de la famille ni des
   macronutriments : c'est un choix saisi, comme le reste de la fiche.
+- **La famille dit ce qu'est l'aliment tel qu'on l'achète ou le mange**, pas son
+  ingrédient principal. Une carotte est un légume ; un velouté de légumes, des haricots
+  à la tomate ou un mélange pour dhaal sont des plats préparés, de rôle Légume ou
+  Protéine ; une mousse au chocolat ou un riz au lait sont des desserts, pas des
+  produits laitiers. Sans ces deux familles, les plats tout prêts se rangeaient dans la
+  famille de leur ingrédient principal et brouillaient les filtres.
 - **Listes fixes** pour la famille, les rôles et la conservation : codes stables en
   base et dans l'API (`vegetable`, `protein`, `frozen`…), libellés français à
   l'écran. Le futur semainier et l'agent pourront s'en servir (« ce repas n'a pas de
