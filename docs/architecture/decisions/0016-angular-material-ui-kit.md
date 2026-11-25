@@ -93,7 +93,9 @@ icônes modifier et supprimer, vignette d'image chargée par l'API.
   recherche, filtre des archivés, bouton d'ajout et actions secondaires), cadre de fenêtre
   (`app-editor-frame`, ouvert par `openEditor`, plein écran sur téléphone ; sans
   `formId`, une fenêtre dont chaque ligne s'enregistre seule n'a que « Fermer »),
-  compteur − / +, registre d'icônes.
+  compteur − / +, registre d'icônes, petite fenêtre de confirmation (`ConfirmService`,
+  `shared/ui/confirm.ts`) pour toute question avant une action hors d'une fenêtre de
+  modification ; les boîtes natives du navigateur (`confirm`, `alert`) ne sont pas utilisées.
 - Toutes les fenêtres passent par `MatDialog` ; la garde de brouillon modifié
   (`dialog-guard.ts`) est conservée. L'ancienne fenêtre `lifeos-dialog` est supprimée.
 - Champs : `mat-form-field` en contour avec `matInput` ou `mat-select`, cases

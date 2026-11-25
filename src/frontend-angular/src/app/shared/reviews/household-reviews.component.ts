@@ -9,6 +9,7 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { ReviewDraftsService } from './review-drafts.service'
 import { ReviewEditorDialogComponent } from './review-editor-dialog.component'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 type ReviewTarget = 'food' | 'recipe'
 
@@ -64,6 +65,7 @@ export class HouseholdReviewsComponent implements OnChanges {
   readonly targetId = input.required<string>()
   readonly profiles = input<MemberProfileDto[]>([])
   private readonly api = inject(LifeosApiService)
+  private readonly confirm = inject(ConfirmService)
   private readonly dialog = inject(MatDialog)
   private editorRef: MatDialogRef<ReviewEditorDialogComponent> | null = null
   readonly reviews = signal<ReviewDto[]>([])
@@ -190,7 +192,8 @@ export class HouseholdReviewsComponent implements OnChanges {
   }
 
   async remove(review: ReviewDto): Promise<void> {
-    if (this.busy() || !window.confirm(`Supprimer l’avis de « ${review.profileName ?? 'ce profil'} » ?`)) return
+    if (this.busy()
+      || !await this.confirm.ask({ message: `Supprimer l’avis de « ${review.profileName ?? 'ce profil'} » ?`, confirmLabel: 'Supprimer', danger: true })) return
     this.busy.set(true)
     this.error.set('')
     try {

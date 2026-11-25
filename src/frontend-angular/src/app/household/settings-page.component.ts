@@ -17,6 +17,7 @@ import { BuildVersionComponent } from '@/app/shared/build-version.component'
 import { NativeSyncService } from '@/app/core/native/native-sync.service'
 import { DeepLinkService } from '@/app/core/native/deep-link.service'
 import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 @Component({
   selector: 'app-settings-page',
@@ -164,6 +165,7 @@ import { nativeBridgeStatus } from '@/app/core/native/native-bridge'
 })
 export class SettingsPageComponent implements OnInit {
   private readonly api = inject(LifeosApiService)
+  private readonly confirm = inject(ConfirmService)
   readonly auth = inject(AuthService)
   readonly nativeSync = inject(NativeSyncService)
   readonly deepLink = inject(DeepLinkService)
@@ -243,7 +245,8 @@ export class SettingsPageComponent implements OnInit {
   }
 
   async revokeConnection(connection: AssistantConnectionDto): Promise<void> {
-    if (this.busy() || !window.confirm(`Retirer l’accès de « ${connection.clientName} » à LifeOS ?`)) return
+    if (this.busy()
+      || !await this.confirm.ask({ message: `Retirer l’accès de « ${connection.clientName} » à LifeOS ?`, confirmLabel: 'Retirer', danger: true })) return
     this.busy.set(true)
     this.error.set('')
     try {
@@ -295,7 +298,8 @@ export class SettingsPageComponent implements OnInit {
   }
 
   async deleteProfile(profile: MemberProfileDto): Promise<void> {
-    if (this.busy() || !window.confirm(`Supprimer le profil « ${profile.displayName} » ?`)) return
+    if (this.busy()
+      || !await this.confirm.ask({ message: `Supprimer le profil « ${profile.displayName} » ?`, confirmLabel: 'Supprimer', danger: true })) return
     this.busy.set(true)
     this.error.set('')
     try {

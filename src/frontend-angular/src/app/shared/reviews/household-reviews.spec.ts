@@ -65,13 +65,15 @@ function harness() {
   const noopDecorator = () => () => {}
   const destroyRef = { onDestroy: (callback: () => void) => { onDestroy.push(callback) } }
   const reviewDraftsToken = {}
+  const confirmToken = {}
+  const confirmService = { ask: async () => { confirmations++; return confirmAnswer } }
   const input = Object.assign(signal, { required: () => signal('') })
   const imports: Record<string, unknown> = {
     '@angular/core': {
       Component: noopDecorator, Injectable: noopDecorator, Input: noopDecorator, HostListener: noopDecorator,
       DestroyRef: destroyRef, signal, input,
       output: () => ({ emit: (reviews?: ReviewDto[]) => { if (reviews) loadedReviews.push(reviews) } }),
-      inject: (token: unknown) => token === destroyRef ? destroyRef : token === reviewDraftsToken ? drafts : token === dialogToken ? {} : api,
+      inject: (token: unknown) => token === destroyRef ? destroyRef : token === reviewDraftsToken ? drafts : token === confirmToken ? confirmService : token === dialogToken ? {} : api,
     },
     '@angular/material/button': { MatButtonModule: {} },
     '@angular/material/dialog': { MatDialog: dialogToken },
@@ -82,6 +84,7 @@ function harness() {
     '@/app/core/api/lifeos-api.service': { LifeosApiService: {}, apiErrorMessage: (error: Error) => error.message },
     '@/app/shared/dialog/dialog-guard': { formSnapshot, hasChanges },
     './review-drafts.service': { ReviewDraftsService: reviewDraftsToken },
+    '@/app/shared/ui/confirm': { ConfirmService: confirmToken },
   }
   function load<T>(path: string, name: string): T {
     const source = readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -91,7 +94,6 @@ function harness() {
     const exports: Record<string, new () => T> = {}
     runInNewContext(js, {
       exports, require: (id: string) => { assert.ok(id in imports, `Missing port ${id}`); return imports[id] },
-      window: { confirm: () => { confirmations++; return confirmAnswer } },
       console,
     })
     return new exports[name]!()
@@ -214,7 +216,7 @@ describe('shared household review window', () => {
     hold(pending.promise)
     const saving = component.save()
     assert.equal(component.busy(), true)
-    assert.equal(drafts.canLeave(), false)
+    assert.equal(await drafts.canLeave(), false)
     await component.save()
     component.edit({ id: 'other' } as ReviewDto)
     assert.equal(calls.length, 1)
@@ -227,7 +229,7 @@ describe('shared household review window', () => {
     await saving
     assert.equal(component.busy(), false)
     assert.equal(component.editorOpen(), false)
-    assert.equal(drafts.canLeave(), true)
+    assert.equal(await drafts.canLeave(), true)
   })
 
   it('keeps the popup open through list refresh and exposes refresh failures after a persisted save', async () => {
@@ -252,19 +254,19 @@ describe('shared household review window', () => {
     assert.equal(component.error(), 'Lecture indisponible')
   })
 
-  it('guards browser navigation in every host and unregisters destroyed components', () => {
+  it('guards browser navigation in every host and unregisters destroyed components', async () => {
     const { component, drafts, confirm, destroy, confirmations } = harness()
     component.add()
-    assert.equal(drafts.canLeave(), true)
+    assert.equal(await drafts.canLeave(), true)
     component.comment = 'Brouillon'
     confirm(false)
-    assert.equal(drafts.canLeave(), false)
+    assert.equal(await drafts.canLeave(), false)
     assert.equal(confirmations(), 1)
     confirm(true)
-    assert.equal(drafts.canLeave(), true)
+    assert.equal(await drafts.canLeave(), true)
     destroy()
     confirm(false)
-    assert.equal(drafts.canLeave(), true)
+    assert.equal(await drafts.canLeave(), true)
   })
 
   it('ignores stale list responses after a target change', async () => {

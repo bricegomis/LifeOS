@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { filter, map } from 'rxjs'
 import { dismissDecision } from '@/app/shared/dialog/dialog-guard'
 import { HANDSET_QUERY } from './breakpoints'
+import { ConfirmService } from './confirm'
 
 /**
  * Frame of every creation and edit window (ADR 0016). On the computer: title, content, then the
@@ -62,6 +63,7 @@ import { HANDSET_QUERY } from './breakpoints'
 })
 export class EditorFrameComponent {
   private readonly ref = inject(MatDialogRef)
+  private readonly confirm = inject(ConfirmService)
   readonly heading = input.required<string>()
   readonly formId = input('')
   readonly saveLabel = input('Enregistrer')
@@ -79,19 +81,20 @@ export class EditorFrameComponent {
     { initialValue: globalThis.matchMedia?.(HANDSET_QUERY).matches ?? false })
 
   constructor() {
-    const backdrop = this.ref.backdropClick().subscribe(() => this.requestClose())
+    const backdrop = this.ref.backdropClick().subscribe(() => void this.requestClose())
     const escape = this.ref.keydownEvents().pipe(filter(event => event.key === 'Escape')).subscribe(event => {
       event.preventDefault()
-      this.requestClose()
+      void this.requestClose()
     })
     inject(DestroyRef).onDestroy(() => { backdrop.unsubscribe(); escape.unsubscribe() })
   }
 
   /** Closes, asking first when the draft was changed; ignored while saving. */
-  requestClose(): void {
+  async requestClose(): Promise<void> {
     const decision = dismissDecision({ busy: this.busy(), dirty: this.dirty() })
     if (decision === 'ignore') return
-    if (decision === 'confirm' && !globalThis.confirm('Abandonner les modifications ?')) return
+    if (decision === 'confirm'
+      && !await this.confirm.ask({ message: 'Abandonner les modifications ?', confirmLabel: 'Abandonner', cancelLabel: 'Continuer', danger: true })) return
     this.ref.close()
   }
 

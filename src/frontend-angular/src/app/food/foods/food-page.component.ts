@@ -21,6 +21,7 @@ import {
 import { FoodImageComponent } from '../shared/food-image.component'
 import { FODMAP_LABELS, NOVA_LABELS } from '../shared/format'
 import { buildFoodRequest, emptyFoodForm, foodFormFrom, foodPriceSummary, type FoodFormValues, NUTRITION_FIELDS } from './food-form'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 @Component({
   selector: 'app-food-page',
@@ -35,6 +36,7 @@ import { buildFoodRequest, emptyFoodForm, foodFormFrom, foodPriceSummary, type F
 })
 export class FoodPageComponent implements OnInit {
   private readonly api = inject(FoodApiService)
+  private readonly confirm = inject(ConfirmService)
   private readonly router = inject(Router)
   private readonly reviewDrafts = inject(ReviewDraftsService)
   /** Route parameter. */
@@ -100,9 +102,10 @@ export class FoodPageComponent implements OnInit {
 
   dirty(): boolean { return hasChanges(this.initial, this.form) }
 
-  canLeave(): boolean {
+  async canLeave(): Promise<boolean> {
     if (this.saving() || this.imageBusy()) return false
-    return (!this.dirty() || window.confirm('Abandonner les modifications de l’aliment ?')) && this.reviewDrafts.canLeave()
+    if (this.dirty() && !await this.confirm.ask({ message: 'Abandonner les modifications de l’aliment ?', confirmLabel: 'Abandonner', cancelLabel: 'Rester', danger: true })) return false
+    return this.reviewDrafts.canLeave()
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -188,7 +191,7 @@ export class FoodPageComponent implements OnInit {
 
   async removeImage(): Promise<void> {
     const food = this.food()
-    if (!food || !window.confirm('Retirer la photo de cet aliment ?')) return
+    if (!food || !await this.confirm.ask({ message: 'Retirer la photo de cet aliment ?', confirmLabel: 'Retirer', danger: true })) return
     await this.imageAction(async () => {
       await firstValueFrom(this.api.removeImage('foods', food.id))
       this.food.set({ ...food, hasImage: false, updatedAt: new Date().toISOString() })
@@ -197,7 +200,7 @@ export class FoodPageComponent implements OnInit {
 
   async archive(): Promise<void> {
     const food = this.food()
-    if (!food || !window.confirm(`Archiver « ${food.name} » ? Il disparaît des listes ; les recettes qui l’utilisent le gardent.`)) return
+    if (!food || !await this.confirm.ask({ message: `Archiver « ${food.name} » ? Il disparaît des listes ; les recettes qui l’utilisent le gardent.`, confirmLabel: 'Archiver', danger: true })) return
     try {
       await firstValueFrom(this.api.archiveFood(food.id))
       this.initial = formSnapshot(this.form)

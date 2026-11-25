@@ -13,6 +13,7 @@ import { HealthApiService } from './health-api.service'
 import type { MeasureTypeDto, MeasurementDto } from './health.models'
 import { MeasureDialogComponent, type MeasureDialogData } from './measure-dialog.component'
 import { dateLabel, num } from './marker-rules'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 /** Body measures (ADR 0018): each kind with its last value, its change and its evolution. */
 @Component({
@@ -76,6 +77,7 @@ import { dateLabel, num } from './marker-rules'
 })
 export class MeasuresPageComponent implements OnInit {
   private readonly api = inject(HealthApiService)
+  private readonly confirm = inject(ConfirmService)
   private readonly dialog = inject(MatDialog)
   private readonly snack = inject(MatSnackBar)
   readonly handset = toSignal(inject(BreakpointObserver).observe(HANDSET_QUERY).pipe(map(state => state.matches)),
@@ -121,7 +123,7 @@ export class MeasuresPageComponent implements OnInit {
   }
 
   async remove(v: MeasurementDto): Promise<void> {
-    if (!globalThis.confirm('Supprimer cette mesure ?')) return
+    if (!await this.confirm.ask({ message: 'Supprimer cette mesure ?', confirmLabel: 'Supprimer', danger: true })) return
     try { await firstValueFrom(this.api.removeMeasurement(v.id)); this.snack.open('Mesure supprimée', undefined, { duration: 3000 }); await this.load() }
     catch (error) { this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 }) }
   }

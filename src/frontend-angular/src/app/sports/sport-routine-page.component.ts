@@ -15,6 +15,7 @@ import {
 } from './routine-format'
 import { SportsApiService } from './sports-api.service'
 import type { RoutineLineDto, RoutineReportDto, RoutineSessionDto, SportSettingsDto } from './sports.models'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 /**
  * Doing a routine (ADR 0014, ADR 0015): today's open pass with one "Série faite" button per exercise
@@ -139,6 +140,7 @@ import type { RoutineLineDto, RoutineReportDto, RoutineSessionDto, SportSettings
 })
 export class SportRoutinePageComponent implements OnInit {
   private readonly api = inject(SportsApiService)
+  private readonly confirm = inject(ConfirmService)
   private readonly route = inject(ActivatedRoute)
   private readonly dialog = inject(MatDialog)
   private readonly snack = inject(MatSnackBar)
@@ -211,7 +213,8 @@ export class SportRoutinePageComponent implements OnInit {
 
   async deletePass(session: RoutineSessionDto): Promise<void> {
     const report = this.report()
-    if (!report || !globalThis.confirm(`Supprimer le passage de ${clockTime(session.startedAt)} et ses coches ?`)) return
+    if (!report
+      || !await this.confirm.ask({ message: `Supprimer le passage de ${clockTime(session.startedAt)} et ses coches ?`, confirmLabel: 'Supprimer', danger: true })) return
     if (await this.call(session.id, this.api.deletePass(report.routine.id, session.id))) this.snack.open('Passage supprimé', undefined, { duration: 4000 })
   }
 
