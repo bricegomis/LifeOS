@@ -74,6 +74,9 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 
 - iPhone : le widget « prochain événement » est vide et son code Swift reste à
   retirer ; voir [ios-v1.md](ios-v1.md). Traité à l'étape 6.
+- Routes de l'API : préfixes inégaux (`/api/foods` et `/api/sport-templates` à côté de
+  `/api/sport/...`, `/api/health/...`). Harmonisées à l'étape 6, avec la recompilation de
+  l'app iPhone qui embarque son propre front.
 
 ## Technique
 

@@ -66,8 +66,6 @@ code, identifiers and code comments are English.
   endpoints (ADR 0019); its own image `lifeos-garmin-sync`. Tests: `python -m unittest discover -s tests`.
 - `docs/` — product docs (French) and `docs/architecture/decisions/` ADRs.
 - `docker-compose.yaml` — production compose (VPS/Coolify, images from GHCR, watchtower).
-- `docker-compose.integration.yaml` — integration stack (`:integration` images, own
-  database and volumes); see `docs/integration-environment.md`.
 
 ## Domain invariants that are easy to break
 - Every persisted business row is filtered by `household_id` at the application layer
@@ -125,9 +123,8 @@ code, identifiers and code comments are English.
 - Work on a branch and open a PR to `main`; never push to `main` directly. Every merge
   to `main` publishes Docker images (`ghcr.io/bricegomis/lifeos-{api,web,garmin-sync}:latest`)
   that watchtower picks up, and deploys GitHub Pages: it is a deploy, so ask before
-  merging. Large lots (a new module, a destructive migration) go first through a PR to
-  `integration`, whose pushes publish the `:integration` images of the integration stack
-  (`docs/01-roadmap.md`, « Branches et livraison »).
+  merging. There is no integration environment for now (single user, little data); it
+  will come back once the app holds critical data (`docs/01-roadmap.md`).
 - Roadmap step 1 may drop existing data (user decision, 2026-11-11): a destructive
   migration is allowed there, once the user confirms what is reset.
 - Never run migrations against a shared/production database, reset user data, or

@@ -43,9 +43,9 @@ Vision : [00-vision.md](00-vision.md).
 - Chaque fusion dans `main` publie les images et vaut déploiement : elle se fait avec
   l'accord explicite de l'utilisateur, qui sauvegarde la base et les volumes avant
   quand une migration arrive.
-- Les gros lots (un nouveau module, une migration destructive) passent d'abord par une PR
-  sur `integration`, qui met à jour la version d'intégration : une seconde pile sur le
-  VPS, avec sa propre base. Voir [integration-environment.md](integration-environment.md).
+- Pas de version d'intégration pour l'instant : un seul utilisateur, peu de données. Une
+  seconde pile, avec sa propre base, sera remise en place quand l'appli contiendra des
+  données critiques.
 - Un module commencé mais pas terminé reste hors de la navigation tant qu'il n'est pas
   prêt pour `main`.
 
@@ -311,7 +311,9 @@ calorique) se fait quand le semainier existe.
 **Contenu prévu.** Lecture hors ligne des prochains jours, coches mises en file,
 notifications, widgets du semainier. Retrait du code Swift du widget « prochain
 événement » et de la Live Activity de cuisine (session de cuisine supprimée par
-l'ADR 0010).
+l'ADR 0010). Harmonisation des routes de l'API (`/api/food/...`, `/api/sport/templates`
+au lieu de `/api/foods`, `/api/sport-templates`…) : l'app iPhone embarque son propre
+front, elle doit être recompilée en même temps.
 Demande macOS et Xcode ; l'installation réelle reste une vérification humaine.
 
 Cette étape ne dépend pas de l'étape 5 : elle peut passer avant la santé si

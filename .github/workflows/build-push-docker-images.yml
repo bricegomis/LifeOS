@@ -1,14 +1,13 @@
 name: Build & Push Docker Images
 
-# main publishes the production images (:latest); integration publishes the
-# images of the integration stack (:integration). See docs/integration-environment.md.
+# main publishes the production images (:latest), which watchtower picks up on the VPS.
 on:
   push:
-    branches: [main, integration]
+    branches: [main]
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_TAG: ${{ github.ref_name == 'main' && 'latest' || 'integration' }}
+  IMAGE_TAG: latest
   API_IMAGE: ghcr.io/bricegomis/lifeos-api
   WEB_IMAGE: ghcr.io/bricegomis/lifeos-web
   GARMIN_SYNC_IMAGE: ghcr.io/bricegomis/lifeos-garmin-sync
