@@ -10,7 +10,7 @@ code, identifiers and code comments are English.
 ## Sources of truth (read before changing behaviour)
 - Where we are going: `docs/00-vision.md`, ADR 0009 (modular monolith, planner core,
   proposals, external AI agent, per-person health privacy) and `docs/01-roadmap.md`
-  (six steps; each starts with a scoping session, then a clickable mockup the user
+  (nine steps, step 4 being the planner; each starts with a scoping session, then a clickable mockup the user
   validates before any backend or real UI code).
 - Step 1 target: ADR 0010 (simplified food module: receipts become a stored photo,
   JSON import/OCR/purchases/household groups/cooking session removed, fibres and
@@ -49,9 +49,9 @@ code, identifiers and code comments are English.
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly
   and only proposes planner changes; enrichment is done by the assistant, never the API).
-- What exists today: `docs/PROJECT.md` (kept current at every delivery), ADR 0006
-  (foods/products/receipts), ADR 0007 (recipes, household reviews) and ADR 0008
-  (first week planner removed). The code still follows these until each step 1 lot lands.
+- What exists today: `docs/PROJECT.md` (kept current at every delivery). ADR 0006
+  (foods/products/receipts) and ADR 0007 (recipes, household reviews) as amended by
+  ADR 0010, and ADR 0008 (first week planner removed).
 - `docs/semainier-retour-experience.md`: lessons from the first planner and the
   sport needs already expressed.
 - Historical docs were deleted on 2026-11-11 (git history keeps them). If the docs

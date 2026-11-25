@@ -28,7 +28,8 @@
   through `EncryptedFileStorage`) live on durable volumes, only served through authenticated,
   household-checked routes. The storage code is shared, outside the modules
   (`Infrastructure/Files`, `Api/Files`); each module declares its own storage class
-  (`FoodImageStorage`, `ReceiptPhotoStorage`, `SportImageStorage`, `TaskImageStorage`).
+  (`FoodImageStorage`, `ReceiptPhotoStorage`, `SportImageStorage`, `TaskImageStorage`,
+  `HealthFileStorage`).
 - A receipt is only a stored photo (ADR 0010): no OCR, no lines, no purchases.
 - Sport (ADR 0013): every row carries a household profile (`SportProfiles` resolves the
   main one, the household's first profile, when none is given). Reports are computed on
