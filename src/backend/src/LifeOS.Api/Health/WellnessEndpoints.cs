@@ -41,10 +41,10 @@ public static class WellnessEndpoints
     {
         app.MapGet("/api/health/wellness", async (DateOnly? from, DateOnly? to, HouseholdContext household, WellnessLibrary wellness, CancellationToken ct) =>
                 Results.Ok(await wellness.ListAsync(household, from, to, ct)))
-            .RequireAuthorization().WithTags("Health").Produces<List<WellnessDto>>();
+            .RequireAuthorization().WithTags("Santé").Produces<List<WellnessDto>>();
         app.MapGet("/api/health/wellness/{date}/raw", async (DateOnly date, HouseholdContext household, WellnessLibrary wellness, CancellationToken ct) =>
                 await wellness.RawAsync(household, date, ct) is { } raw ? Results.Text(raw, "application/json") : Results.NotFound())
-            .RequireAuthorization().WithTags("Health");
+            .RequireAuthorization().WithTags("Santé");
         var import = app.MapGroup("/api/import/garmin").RequireAuthorization(ImportTokenAuthentication.Policy).WithTags("Import").AddRequestValidation();
         import.MapPost("/wellness", async (WellnessImportRequest request, HouseholdContext household, WellnessLibrary wellness, CancellationToken ct) =>
             {

@@ -22,7 +22,7 @@ public static class ProfilesEndpoints
 {
     public static IEndpointRouteBuilder MapProfilesEndpoints(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/households/profiles").RequireAuthorization().WithTags("Member profiles").AddRequestValidation();
+        var g = app.MapGroup("/api/households/profiles").RequireAuthorization().WithTags("Profils").AddRequestValidation();
         g.MapPost("/", Create);
         g.MapPut("/{id:guid}", Update);
         g.MapDelete("/{id:guid}", Delete);

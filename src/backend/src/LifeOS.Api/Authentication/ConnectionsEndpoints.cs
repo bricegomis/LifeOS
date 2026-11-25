@@ -14,7 +14,7 @@ public static class ConnectionsEndpoints
 {
     public static void MapConnectionsEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/account/connections").WithTags("Account").RequireAuthorization();
+        var group = app.MapGroup("/api/account/connections").WithTags("Compte").RequireAuthorization();
         group.MapGet("/", ListAsync).Produces<IReadOnlyList<AssistantConnectionDto>>();
         group.MapDelete("/{id}", RevokeAsync);
     }

@@ -11,7 +11,7 @@ public static class HouseholdEndpoints
 {
     public static IEndpointRouteBuilder MapHouseholdEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/households").WithTags("Households").RequireAuthorization();
+        var group = app.MapGroup("/api/households").WithTags("Foyer").RequireAuthorization();
         group.MapGet("/current", GetCurrent).WithName("GetCurrentHousehold").Produces<HouseholdDto>();
         group.MapGet("/members", GetMembers).WithName("GetHouseholdMembers").Produces<HouseholdMembersResponse>();
         group.MapPost("/", GetCurrent).WithName("CreateOrGetCurrentHousehold").Produces<HouseholdDto>();
