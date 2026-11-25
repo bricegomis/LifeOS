@@ -64,7 +64,6 @@ Tâches et Santé ; ils sont livrés.
 
 ## Points ouverts
 
-- Mise en place de la pile d'intégration sur le VPS (par l'utilisateur).
 - Accès à Docker sur le poste de développement, nécessaire pour lancer en local les
   tests d'intégration et une base PostgreSQL.
 
