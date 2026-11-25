@@ -2,6 +2,7 @@ using LifeOS.Domain.Food.Recipes;
 using LifeOS.Domain.Food.Foods;
 using LifeOS.Domain.Households;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace LifeOS.Infrastructure.Food.Recipes;
@@ -22,7 +23,12 @@ internal sealed class RecipeConfiguration : IEntityTypeConfiguration<Recipe>
         builder.Property(recipe => recipe.Tags)
             .HasConversion(
                 tags => string.Join(Recipe.TagSeparator, tags),
-                value => string.IsNullOrEmpty(value) ? new List<string>() : new List<string>(value.Split(Recipe.TagSeparator)))
+                value => string.IsNullOrEmpty(value) ? new List<string>() : new List<string>(value.Split(Recipe.TagSeparator)),
+                // Compares the tags themselves, so a change inside the list is saved too.
+                new ValueComparer<List<string>>(
+                    (left, right) => left!.SequenceEqual(right!),
+                    tags => tags.Aggregate(0, (hash, tag) => HashCode.Combine(hash, tag.GetHashCode())),
+                    tags => tags.ToList()))
             .HasMaxLength(1000);
         builder.Property(recipe => recipe.ImagePath).HasMaxLength(500);
         builder.Property(recipe => recipe.ImageContentType).HasMaxLength(100);

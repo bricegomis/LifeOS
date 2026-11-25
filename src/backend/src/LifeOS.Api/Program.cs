@@ -52,6 +52,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Health files are refused without their encryption key (ADR 0018); say so at startup rather than at the first upload.
+if (string.IsNullOrWhiteSpace(builder.Configuration["HealthFiles:EncryptionKey"]))
+{
+    app.Logger.LogWarning("HealthFiles:EncryptionKey is not set: health documents and supplement photos will be refused.");
+}
+
 // Applies pending EF Core migrations at startup so the schema is always up to date with the
 // deployed code (ADR 0001). Skipped when explicitly disabled, e.g. by integration tests that
 // manage migrations themselves against an ephemeral test database.
