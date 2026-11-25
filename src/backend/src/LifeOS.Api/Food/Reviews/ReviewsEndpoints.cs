@@ -35,7 +35,7 @@ public static class ReviewsEndpoints
 
     public static IEndpointRouteBuilder MapReviewsEndpoints(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/reviews").RequireAuthorization().WithTags("Household reviews").AddRequestValidation();
+        var g = app.MapGroup("/api/reviews").RequireAuthorization().WithTags("Avis").AddRequestValidation();
         g.MapGet("/foods/{foodId:guid}", (Guid foodId, HouseholdContext h, ReviewLibrary r, CancellationToken ct) => List(ReviewTarget.Food(foodId), h, r, ct));
         g.MapPost("/foods/{foodId:guid}", (Guid foodId, SaveReviewRequest request, HouseholdContext h, ReviewLibrary r, CancellationToken ct) =>
             Create(ReviewTarget.Food(foodId), request, h, r, ct));

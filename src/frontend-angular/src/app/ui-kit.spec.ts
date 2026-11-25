@@ -45,6 +45,10 @@ describe('UI kit (ADR 0016)', () => {
     assert.deepEqual(colours, [])
   })
 
+  it('asks through the Material confirmation window, not the browser dialogs', () => {
+    assert.deepEqual(offenders(/\b(window|globalThis)\.(confirm|alert|prompt)\(/g), [])
+  })
+
   it('no longer uses the former shared classes and dialog', () => {
     assert.deepEqual(offenders(/\b(lifeos-button[\w-]*|lifeos-input|text-input|app-lifeos-dialog|dialogExtraActions)\b/g), [])
   })

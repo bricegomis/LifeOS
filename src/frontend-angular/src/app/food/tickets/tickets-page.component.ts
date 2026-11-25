@@ -15,6 +15,7 @@ import type { FoodDto, ProductDto, ReceiptDto, StoreDto, UpdateReceiptRequest } 
 import { PriceFormComponent } from '../products/price-form.component'
 import { ProductEditorComponent, type ProductEditorData } from '../products/product-editor.component'
 import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleReceipts, type ReceiptFilter } from './receipt-view'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 /**
  * A receipt is only a stored photo (ADR 0010): take or pick a picture, optionally say where
@@ -166,6 +167,7 @@ import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleRecei
 })
 export class TicketsPageComponent implements OnInit, OnDestroy {
   private readonly api = inject(LifeosApiService)
+  private readonly confirm = inject(ConfirmService)
   private readonly food = inject(FoodApiService)
   private readonly dialog = inject(MatDialog)
   private readonly snack = inject(MatSnackBar)
@@ -205,8 +207,9 @@ export class TicketsPageComponent implements OnInit, OnDestroy {
     if (this.draftFile() || this.contextDirty()) { event.preventDefault(); event.returnValue = '' }
   }
 
-  canLeave(): boolean {
-    return !(this.draftFile() || this.contextDirty()) || window.confirm('Quitter sans enregistrer ce ticket ?')
+  async canLeave(): Promise<boolean> {
+    return !(this.draftFile() || this.contextDirty())
+      || this.confirm.ask({ message: 'Quitter sans enregistrer ce ticket ?', confirmLabel: 'Quitter', cancelLabel: 'Rester', danger: true })
   }
 
   subtitle(receipt: ReceiptDto): string { return receiptSubtitle(receipt, this.stores()) }
@@ -275,9 +278,10 @@ export class TicketsPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  select(receipt: ReceiptDto): void {
+  async select(receipt: ReceiptDto): Promise<void> {
     if (this.selected()?.id === receipt.id) return
-    if (this.contextDirty() && !window.confirm('Abandonner les modifications de ce ticket ?')) return
+    if (this.contextDirty()
+      && !await this.confirm.ask({ message: 'Abandonner les modifications de ce ticket ?', confirmLabel: 'Abandonner', danger: true })) return
     this.showSelected(receipt)
     void this.loadPhoto(receipt)
   }

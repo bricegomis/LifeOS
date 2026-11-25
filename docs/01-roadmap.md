@@ -38,16 +38,16 @@ Vision : [00-vision.md](00-vision.md).
 
 ## Branches et livraison
 
-- Tout le travail arrive par petites PR sur la branche `integration`.
-  La CI (tests backend, contrôles Angular) tourne sur chaque PR.
-- `main` ne reçoit qu'une fusion par étape, à la fin de l'étape, avec l'accord
-  explicite de l'utilisateur. Cette fusion publie les images et vaut déploiement ;
-  l'utilisateur sauvegarde la base et les volumes avant.
-- Chaque fusion sur `integration` met à jour la version d'intégration : une seconde
-  pile sur le VPS, avec sa propre base. Voir
-  [integration-environment.md](integration-environment.md).
-- Un module commencé mais pas terminé reste hors de la navigation quand
-  `integration` est fusionnée dans `main`.
+- Le travail arrive par petites PR sur `main`, jamais par un envoi direct. La CI
+  (tests backend, contrôles Angular, garmin-sync) tourne sur chaque PR.
+- Chaque fusion dans `main` publie les images et vaut déploiement : elle se fait avec
+  l'accord explicite de l'utilisateur, qui sauvegarde la base et les volumes avant
+  quand une migration arrive.
+- Pas de version d'intégration pour l'instant : un seul utilisateur, peu de données. Une
+  seconde pile, avec sa propre base, sera remise en place quand l'appli contiendra des
+  données critiques.
+- Un module commencé mais pas terminé reste hors de la navigation tant qu'il n'est pas
+  prêt pour `main`.
 
 ## Enchaînement des étapes
 
@@ -64,7 +64,6 @@ Tâches et Santé ; ils sont livrés.
 
 ## Points ouverts
 
-- Mise en place de la pile d'intégration sur le VPS (par l'utilisateur).
 - Accès à Docker sur le poste de développement, nécessaire pour lancer en local les
   tests d'intégration et une base PostgreSQL.
 
@@ -311,7 +310,9 @@ calorique) se fait quand le semainier existe.
 **Contenu prévu.** Lecture hors ligne des prochains jours, coches mises en file,
 notifications, widgets du semainier. Retrait du code Swift du widget « prochain
 événement » et de la Live Activity de cuisine (session de cuisine supprimée par
-l'ADR 0010).
+l'ADR 0010). Harmonisation des routes de l'API (`/api/food/...`, `/api/sport/templates`
+au lieu de `/api/foods`, `/api/sport-templates`…) : l'app iPhone embarque son propre
+front, elle doit être recompilée en même temps.
 Demande macOS et Xcode ; l'installation réelle reste une vérification humaine.
 
 Cette étape ne dépend pas de l'étape 5 : elle peut passer avant la santé si

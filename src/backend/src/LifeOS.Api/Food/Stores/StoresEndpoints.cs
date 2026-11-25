@@ -24,7 +24,7 @@ public static class StoresEndpoints
 {
     public static IEndpointRouteBuilder MapStoresEndpoints(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/stores").WithTags("Stores").RequireAuthorization().AddRequestValidation();
+        var g = app.MapGroup("/api/stores").WithTags("Magasins").RequireAuthorization().AddRequestValidation();
         g.MapGet("/", List).WithName("GetStores").Produces<List<StoreDto>>();
         g.MapGet("/{storeId:guid}", Get).WithName("GetStore").Produces<StoreDto>().ProducesProblem(StatusCodes.Status404NotFound);
         g.MapPost("/", Create).WithName("CreateStore").Produces<StoreDto>(StatusCodes.Status201Created).ProducesValidationProblem();

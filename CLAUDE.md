@@ -10,7 +10,7 @@ code, identifiers and code comments are English.
 ## Sources of truth (read before changing behaviour)
 - Where we are going: `docs/00-vision.md`, ADR 0009 (modular monolith, planner core,
   proposals, external AI agent, per-person health privacy) and `docs/01-roadmap.md`
-  (six steps; each starts with a scoping session, then a clickable mockup the user
+  (nine steps, step 4 being the planner; each starts with a scoping session, then a clickable mockup the user
   validates before any backend or real UI code).
 - Step 1 target: ADR 0010 (simplified food module: receipts become a stored photo,
   JSON import/OCR/purchases/household groups/cooking session removed, fibres and
@@ -49,12 +49,12 @@ code, identifiers and code comments are English.
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly
   and only proposes planner changes; enrichment is done by the assistant, never the API).
-- What exists today: `docs/PROJECT.md` (kept current at every delivery), ADR 0006
-  (foods/products/receipts), ADR 0007 (recipes, household reviews) and ADR 0008
-  (first week planner removed). The code still follows these until each step 1 lot lands.
+- What exists today: `docs/PROJECT.md` (kept current at every delivery). ADR 0006
+  (foods/products/receipts) and ADR 0007 (recipes, household reviews) as amended by
+  ADR 0010, and ADR 0008 (first week planner removed).
 - `docs/semainier-retour-experience.md`: lessons from the first planner and the
   sport needs already expressed.
-- Historical docs were deleted on 2026-11-11 (git history keeps them). If the docs
+- Historical docs were deleted on 2026-11-11 and are no longer kept anywhere. If the docs
   and the code disagree, say so instead of guessing.
 
 ## Layout
@@ -66,8 +66,6 @@ code, identifiers and code comments are English.
   endpoints (ADR 0019); its own image `lifeos-garmin-sync`. Tests: `python -m unittest discover -s tests`.
 - `docs/` — product docs (French) and `docs/architecture/decisions/` ADRs.
 - `docker-compose.yaml` — production compose (VPS/Coolify, images from GHCR, watchtower).
-- `docker-compose.integration.yaml` — integration stack (`:integration` images, own
-  database and volumes); see `docs/integration-environment.md`.
 
 ## Domain invariants that are easy to break
 - Every persisted business row is filtered by `household_id` at the application layer
@@ -122,11 +120,11 @@ code, identifiers and code comments are English.
 ## Git and delivery
 - Commit messages: Conventional Commits with a scope, in English,
   e.g. `feat(foods): add optional food images`, `fix(reviews): ...`.
-- Work on a branch and open PRs to `integration`. `main` gets one merge per roadmap
-  step, at the end of the step (`docs/01-roadmap.md`). Pushes to `integration` publish the
-  `:integration` images for the integration stack. Pushes to `main` publish Docker images
-  (`ghcr.io/bricegomis/lifeos-{api,web}:latest`) that watchtower picks up, and deploy
-  GitHub Pages. So merging to `main` is effectively a deploy: ask first.
+- Work on a branch and open a PR to `main`; never push to `main` directly. Every merge
+  to `main` publishes Docker images (`ghcr.io/bricegomis/lifeos-{api,web,garmin-sync}:latest`)
+  that watchtower picks up, and deploys GitHub Pages: it is a deploy, so ask before
+  merging. There is no integration environment for now (single user, little data); it
+  will come back once the app holds critical data (`docs/01-roadmap.md`).
 - Roadmap step 1 may drop existing data (user decision, 2026-11-11): a destructive
   migration is allowed there, once the user confirms what is reset.
 - Never run migrations against a shared/production database, reset user data, or

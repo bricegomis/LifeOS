@@ -4,8 +4,12 @@ import tseslint from 'typescript-eslint'
 export default tseslint.config(
   {
     files: ['**/*.ts'],
-    extends: [...angular.configs.tsRecommended],
+    extends: [...tseslint.configs.recommended, ...angular.configs.tsRecommended],
     processor: angular.processInlineTemplates,
+    rules: {
+      // A leading underscore marks a parameter kept on purpose (fakes, callbacks).
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
   },
   {
     files: ['**/*.html'],

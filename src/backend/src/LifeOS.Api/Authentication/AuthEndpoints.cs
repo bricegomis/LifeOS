@@ -21,8 +21,9 @@ public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app)
     {
-        app.MapMethods("/connect/authorize", [HttpMethods.Get, HttpMethods.Post], AuthorizeAsync).ExcludeFromDescription();
-        app.MapPost("/connect/token", TokenAsync).ExcludeFromDescription();
+        // OpenIddict checks the request itself; the handler signs the user in with Google when needed.
+        app.MapMethods("/connect/authorize", [HttpMethods.Get, HttpMethods.Post], AuthorizeAsync).AllowAnonymous().ExcludeFromDescription();
+        app.MapPost("/connect/token", TokenAsync).AllowAnonymous().ExcludeFromDescription();
     }
 
     private static async Task<IResult> AuthorizeAsync(

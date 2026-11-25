@@ -38,8 +38,7 @@ cas de panne, les séances peuvent être saisies à la main.
 
 - Un petit service Python indépendant, `garmin-sync`, dans `src/garmin-sync`, avec sa
   propre image Docker (`ghcr.io/bricegomis/lifeos-garmin-sync`, publiée par la CI comme
-  l'API et le web) et son conteneur dans la pile LifeOS (`docker-compose.yaml` et pile
-  d'intégration). Il utilise `python-garminconnect` à une **version figée**, mise à jour
+  l'API et le web) et son conteneur dans la pile LifeOS (`docker-compose.yaml`). Il utilise `python-garminconnect` à une **version figée**, mise à jour
   seulement à la main. Aucune image existante ne fait ce travail (les projets connus
   envoient Garmin vers InfluxDB ou Grafana, pas vers une API).
 - L'API n'appelle jamais Garmin. Le service lit Garmin et écrit dans LifeOS par des
@@ -226,7 +225,7 @@ séance type d'une séance Garmin, et les séances manuelles avec leurs heures.
 
 ## Conséquences
 
-- Nouveau service dans le compose de production et d'intégration, nouveau volume
+- Nouveau service dans le compose de production, nouveau volume
   `lifeos_garmin_tokens` à sauvegarder avec les autres.
 - La bibliothèque peut casser sans prévenir : la page Réglages le montre, la saisie
   manuelle reste possible, la synchro rattrape au retour.

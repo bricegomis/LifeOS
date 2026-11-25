@@ -29,8 +29,9 @@
   (`food/food.routes.ts`). `module-boundaries.spec.ts` fails when a module imports
   another module; sub-features of one module (`food/recipes`, `food/foods`) may share
   `food/shared`.
-- Screens follow the validated mockups: photos everywhere (`food/shared/food-image.component.ts`
-  loads authenticated images as blobs), a filter bar on top of every list page,
+- Screens follow the validated mockups: photos everywhere (each module's image component, e.g.
+  `food/shared/food-image.component.ts`, keeps its own placeholder and loads the authenticated
+  image as a blob through `authenticatedImageUrl()` of `shared/ui/authenticated-image.ts`), a filter bar on top of every list page,
   prices secondary and read-only on everyday screens.
 - UI kit (ADR 0016), the norm for every screen, new or changed: Angular Material 3 with the
   LifeOS theme (`src/theme.scss`) and the LifeOS building blocks.
@@ -50,7 +51,9 @@
     a `light-dark()` value), so a screen must read well in both schemes.
   - Windows: `openEditor(dialog, Component, data)` + `app-editor-frame` (full screen on the
     phone, dangerous action bottom left with a second-click confirmation; without `formId`
-    the window only has "Fermer"). Feedback after an action: `MatSnackBar`.
+    the window only has "Fermer"). Any other question before an action (delete, archive,
+    leave a modified page) goes through `ConfirmService.ask()` of `shared/ui/confirm.ts`, a
+    small Material window; never `window.confirm`/`alert`. Feedback after an action: `MatSnackBar`.
   - `src/app/ui-kit.spec.ts` fails on native selects/inputs/text areas, PrimeIcons, old
     tokens, fixed colours or the former shared classes. Don't add another UI library.
 - Dialogs keep the dirty-draft guard of `dialog-guard.ts` (through `app-editor-frame`):

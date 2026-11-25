@@ -14,6 +14,7 @@ import { FoodApiService } from '../food-api.service'
 import type { FoodDto, ProductDto, StoreDto } from '../food.models'
 import { formatDate, formatEuro, formatQuantity } from '../shared/format'
 import { buildProductRequest, PACKAGE_UNITS, type ProductFormValues } from './product-form'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 export interface ProductEditorData {
   product: ProductDto | null
@@ -103,6 +104,7 @@ export interface ProductEditorData {
 })
 export class ProductEditorComponent {
   private readonly api = inject(FoodApiService)
+  private readonly confirm = inject(ConfirmService)
   private readonly ref = inject<MatDialogRef<ProductEditorComponent, ProductDto>>(MatDialogRef)
   readonly data = inject<ProductEditorData>(MAT_DIALOG_DATA)
   readonly product = signal(this.data.product)
@@ -135,7 +137,7 @@ export class ProductEditorComponent {
 
   async removePrice(priceId: string): Promise<void> {
     const product = this.product()
-    if (!product || !window.confirm('Supprimer ce prix relevé ?')) return
+    if (!product || !await this.confirm.ask({ message: 'Supprimer ce prix relevé ?', confirmLabel: 'Supprimer', danger: true })) return
     await this.run(async () => this.product.set(await firstValueFrom(this.api.removePrice(product.id, priceId))))
   }
 

@@ -53,9 +53,7 @@ public sealed class AssistantMcpTests(PostgresContainerFixture postgres)
         (await factory.CreateClient().AsUser(Guid.NewGuid()).PostAsync("/api/households/profiles",
             JsonContent(new { displayName = "Voisin", portionCoefficient = 1m }))).EnsureSuccessStatusCode();
 
-        await using var mcp = await McpClient.CreateAsync(new HttpClientTransport(
-            new HttpClientTransportOptions { Endpoint = new Uri(http.BaseAddress!, "/mcp"), TransportMode = HttpTransportMode.StreamableHttp },
-            http));
+        await using var mcp = await http.ConnectMcpAsync();
 
         var tools = await mcp.ListToolsAsync();
         Assert.Contains(tools, tool => tool.Name == "get_household");

@@ -1,7 +1,6 @@
-import { Component, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core'
+import { Component, input } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
-import { firstValueFrom } from 'rxjs'
-import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { authenticatedImageUrl } from '@/app/shared/ui/authenticated-image'
 
 /**
  * An exercise photo served by the API (authenticated, so loaded as a blob); an image icon without one
@@ -32,7 +31,6 @@ import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
   `],
 })
 export class ExerciseImageComponent {
-  private readonly api = inject(LifeosApiService)
   readonly exerciseId = input.required<string>()
   readonly hasImage = input(false)
   /** Changes when the image was replaced, to reload it. */
@@ -41,33 +39,8 @@ export class ExerciseImageComponent {
   readonly size = input(56)
   /** Full height of a card, `size` wide. */
   readonly fill = input(false)
-  readonly url = signal<string | null>(null)
-  private loadId = 0
-
-  constructor() {
-    effect(() => {
-      const id = this.exerciseId(); const hasImage = this.hasImage(); this.version()
-      // Untracked: load() reads `url` synchronously, which would otherwise rerun this effect forever.
-      untracked(() => void this.load(id, hasImage))
-    })
-    inject(DestroyRef).onDestroy(() => this.release())
-  }
-
-  private async load(id: string, hasImage: boolean): Promise<void> {
-    const current = ++this.loadId
-    this.release()
-    if (!hasImage) return
-    try {
-      const blob = await firstValueFrom(this.api.getBlob(`/sport/exercises/${encodeURIComponent(id)}/image`))
-      if (current === this.loadId) this.url.set(URL.createObjectURL(blob))
-    } catch {
-      if (current === this.loadId) this.url.set(null)
-    }
-  }
-
-  private release(): void {
-    const url = this.url()
-    if (url) URL.revokeObjectURL(url)
-    this.url.set(null)
-  }
+  readonly url = authenticatedImageUrl(() => {
+    this.version()
+    return this.hasImage() ? `/sport/exercises/${encodeURIComponent(this.exerciseId())}/image` : null
+  })
 }

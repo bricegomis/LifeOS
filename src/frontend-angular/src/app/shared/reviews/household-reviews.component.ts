@@ -1,4 +1,4 @@
-import { Component, DestroyRef, HostListener, Input, OnChanges, SimpleChanges, inject, output, signal } from '@angular/core'
+import { Component, DestroyRef, HostListener, OnChanges, SimpleChanges, inject, input, output, signal } from '@angular/core'
 import { MatButtonModule } from '@angular/material/button'
 import { MatDialog, type MatDialogRef } from '@angular/material/dialog'
 import { MatIconModule } from '@angular/material/icon'
@@ -9,6 +9,7 @@ import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
 import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { ReviewDraftsService } from './review-drafts.service'
 import { ReviewEditorDialogComponent } from './review-editor-dialog.component'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 type ReviewTarget = 'food' | 'recipe'
 
@@ -21,7 +22,7 @@ type ReviewTarget = 'food' | 'recipe'
     <section class="reviews" aria-labelledby="reviews-title">
       <div class="lo-panel-head">
         <h2 id="reviews-title">Avis du foyer</h2>
-        @if (profiles.length) {
+        @if (profiles().length) {
           <button mat-stroked-button type="button" [disabled]="busy()" (click)="add()"><mat-icon svgIcon="rate_review" />Ajouter un avis</button>
         }
       </div>
@@ -50,7 +51,7 @@ type ReviewTarget = 'food' | 'recipe'
       } @else if (!loading()) {
         <p class="lo-muted">Aucun avis pour le moment. Les avis restent visibles dans votre foyer.</p>
       }
-      @if (!profiles.length) { <p class="lo-muted">Ajoutez d’abord un profil dans Paramètres pour saisir un avis.</p> }
+      @if (!profiles().length) { <p class="lo-muted">Ajoutez d’abord un profil dans Paramètres pour saisir un avis.</p> }
     </section>
   `,
   styles: [`
@@ -60,10 +61,11 @@ type ReviewTarget = 'food' | 'recipe'
   `],
 })
 export class HouseholdReviewsComponent implements OnChanges {
-  @Input({ required: true }) targetType: ReviewTarget = 'food'
-  @Input({ required: true }) targetId = ''
-  @Input() profiles: MemberProfileDto[] = []
+  readonly targetType = input.required<ReviewTarget>()
+  readonly targetId = input.required<string>()
+  readonly profiles = input<MemberProfileDto[]>([])
   private readonly api = inject(LifeosApiService)
+  private readonly confirm = inject(ConfirmService)
   private readonly dialog = inject(MatDialog)
   private editorRef: MatDialogRef<ReviewEditorDialogComponent> | null = null
   readonly reviews = signal<ReviewDto[]>([])
@@ -99,7 +101,7 @@ export class HouseholdReviewsComponent implements OnChanges {
 
   async load(): Promise<void> {
     const version = ++this.loadVersion
-    if (!this.targetId) { this.reviews.set([]); this.loading.set(false); return }
+    if (!this.targetId()) { this.reviews.set([]); this.loading.set(false); return }
     this.loading.set(true)
     this.error.set('')
     try {
@@ -190,7 +192,8 @@ export class HouseholdReviewsComponent implements OnChanges {
   }
 
   async remove(review: ReviewDto): Promise<void> {
-    if (this.busy() || !window.confirm(`Supprimer l’avis de « ${review.profileName ?? 'ce profil'} » ?`)) return
+    if (this.busy()
+      || !await this.confirm.ask({ message: `Supprimer l’avis de « ${review.profileName ?? 'ce profil'} » ?`, confirmLabel: 'Supprimer', danger: true })) return
     this.busy.set(true)
     this.error.set('')
     try {
@@ -205,6 +208,6 @@ export class HouseholdReviewsComponent implements OnChanges {
   }
 
   private path(): string {
-    return `/reviews/${this.targetType}s/${encodeURIComponent(this.targetId)}`
+    return `/reviews/${this.targetType()}s/${encodeURIComponent(this.targetId())}`
   }
 }

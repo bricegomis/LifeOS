@@ -7,11 +7,14 @@
   follow it; `src/app/ui-kit.spec.ts` checks it.
 - ASP.NET Core / EF Core / PostgreSQL in `src/backend`.
 - The API signs users in with Google and is its own OAuth server (ADR 0011); no Supabase.
-- Generic foods, recipes, sport session templates and receipts kept as stored photos.
+- Modules in place: Food (generic foods, recipes, products and prices, receipts kept as
+  stored photos), Sport (sessions, goals, challenges, exercises, routines, Garmin import),
+  Tasks, Health (private to the account) and the synthesis module Budget (private to the
+  account). `src/garmin-sync` copies Garmin Connect through the import endpoints.
   The week planner was removed (ADR 0008) and will be rebuilt later.
 - Products are commercial price references subordinate to foods, not a competing library.
 - Target (ADR 0009): modular monolith with Food, Sport, Tasks, Health and Planning
-  modules; the planner is the core, filled by proposals from an external AI agent
+  modules, plus synthesis modules such as Budget (ADR 0020); the planner is the core, filled by proposals from an external AI agent
   that the user validates.
 - No stock, shopping list, automatic enrichment or Vue frontend.
 
@@ -27,6 +30,7 @@
   ADR 0017 (step 3 tasks module: todos, routines, projects, all-tasks page),
   ADR 0018 (step 5 health module: supplements, symptoms, blood markers, documents),
   ADR 0019 (Garmin import: sessions, VO2max, sleep and recovery),
+  ADR 0020 (budget: planned lines, OFX operations, rules, private to the account),
   ADR 0009 (target architecture and module boundary rules).
 - Prefer simple implementations; no unnecessary dependencies or speculative features.
 - Preserve household isolation and historical snapshots, IDs, aliases, sources and prices.

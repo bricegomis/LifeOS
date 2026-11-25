@@ -21,6 +21,7 @@ import { type RecipeIngredientsData, RecipeIngredientsDialogComponent } from './
 import { recipeNutrition } from './recipe-nutrition'
 import type { RecipeCostDto, RecipeDto, RecipeIngredientDto } from './recipe.models'
 import { RecipesApiService } from './recipes-api.service'
+import { ConfirmService } from '@/app/shared/ui/confirm'
 
 /** A recipe: photo, ingredients with their season, preparation, reviews, nutrition per portion and cost range. */
 @Component({
@@ -32,6 +33,7 @@ import { RecipesApiService } from './recipes-api.service'
 })
 export class RecipePageComponent implements OnInit {
   private readonly recipesApi = inject(RecipesApiService)
+  private readonly confirm = inject(ConfirmService)
   private readonly foodApi = inject(FoodApiService)
   private readonly dialog = inject(MatDialog)
   private readonly router = inject(Router)
@@ -91,7 +93,7 @@ export class RecipePageComponent implements OnInit {
     }
   }
 
-  canLeave(): boolean { return !this.busy() && this.reviewDrafts.canLeave() }
+  async canLeave(): Promise<boolean> { return !this.busy() && await this.reviewDrafts.canLeave() }
 
   meta(recipe: RecipeDto): string {
     return `${recipe.servings} portion${recipe.servings > 1 ? 's' : ''} · ${recipe.durationMinutes} min`
@@ -143,7 +145,7 @@ export class RecipePageComponent implements OnInit {
 
   async removeImage(): Promise<void> {
     const recipe = this.recipe()
-    if (!recipe || !window.confirm('Retirer la photo de cette recette ?')) return
+    if (!recipe || !await this.confirm.ask({ message: 'Retirer la photo de cette recette ?', confirmLabel: 'Retirer', danger: true })) return
     await this.run(async () => {
       await firstValueFrom(this.foodApi.removeImage('recipes', recipe.id))
       this.recipe.set({ ...recipe, hasImage: false, updatedAt: new Date().toISOString() })
@@ -152,7 +154,7 @@ export class RecipePageComponent implements OnInit {
 
   async archive(): Promise<void> {
     const recipe = this.recipe()
-    if (!recipe || !window.confirm(`Archiver « ${recipe.name} » ? Elle disparaît de la liste des recettes.`)) return
+    if (!recipe || !await this.confirm.ask({ message: `Archiver « ${recipe.name} » ? Elle disparaît de la liste des recettes.`, confirmLabel: 'Archiver', danger: true })) return
     await this.run(async () => {
       await firstValueFrom(this.recipesApi.archive(recipe.id))
       await this.router.navigate(['/recipes'])

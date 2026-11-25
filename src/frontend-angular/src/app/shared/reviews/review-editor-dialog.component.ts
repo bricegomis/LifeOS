@@ -9,7 +9,7 @@ import { EditorFrameComponent } from '@/app/shared/ui/editor-frame.component'
 
 /** The draft owned by `app-household-reviews`: the window only edits it and asks it to save. */
 export interface ReviewEditorHost {
-  profiles: MemberProfileDto[]
+  profiles(): MemberProfileDto[]
   target: string
   score: number | null
   comment: string
@@ -32,7 +32,7 @@ export interface ReviewEditorHost {
         <mat-form-field appearance="outline">
           <mat-label>Profil</mat-label>
           <mat-select name="target" required [disabled]="!!host.editingId() || host.busy()" [(ngModel)]="host.target">
-            @for (profile of host.profiles; track profile.id) { <mat-option [value]="profile.id">{{ profile.displayName }}</mat-option> }
+            @for (profile of host.profiles(); track profile.id) { <mat-option [value]="profile.id">{{ profile.displayName }}</mat-option> }
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" class="score">

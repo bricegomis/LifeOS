@@ -33,7 +33,7 @@ public static class RecipeCostEndpoints
 {
     public static IEndpointRouteBuilder MapRecipeCostEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/recipes").WithTags("Recipes").RequireAuthorization();
+        var group = app.MapGroup("/api/recipes").WithTags("Recettes").RequireAuthorization();
         group.MapGet("/costs", All).WithName("GetRecipeCosts").Produces<List<RecipeCostDto>>();
         group.MapGet("/{recipeId:guid}/cost", One).WithName("GetRecipeCost").Produces<RecipeCostDto>().ProducesProblem(StatusCodes.Status404NotFound);
         return app;

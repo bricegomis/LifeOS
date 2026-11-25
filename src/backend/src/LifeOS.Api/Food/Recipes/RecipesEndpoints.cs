@@ -17,7 +17,7 @@ public static class RecipesEndpoints
 {
     public static IEndpointRouteBuilder MapRecipesEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/recipes").WithTags("Recipes").RequireAuthorization().AddRequestValidation();
+        var group = app.MapGroup("/api/recipes").WithTags("Recettes").RequireAuthorization().AddRequestValidation();
         group.MapGet("/", List).WithName("GetRecipes").Produces<List<RecipeDto>>();
         group.MapGet("/{recipeId:guid}", Get).WithName("GetRecipeById").Produces<RecipeDto>().ProducesProblem(StatusCodes.Status404NotFound);
         group.MapPost("/", Create).WithName("CreateRecipe").Produces<RecipeDto>(StatusCodes.Status201Created).ProducesValidationProblem();

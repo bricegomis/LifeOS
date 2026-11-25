@@ -4,9 +4,11 @@ Ce document décrit ce qui tourne aujourd'hui. La cible (modules, semainier, age
 est dans l'[ADR 0009](decisions/0009-modular-monolith-and-planning-core.md).
 
 ```text
-Angular 22 -- HTTPS / Bearer (jeton LifeOS) --> ASP.NET Core -- EF Core / Npgsql --> PostgreSQL
-                                                 |
-                                                 +-- Google (connexion uniquement)
+Angular 22 ------ HTTPS / Bearer (jeton LifeOS) --> ASP.NET Core -- EF Core / Npgsql --> PostgreSQL
+Claude (MCP) ---- HTTPS / Bearer (jeton MCP) ----->   |   |
+garmin-sync ----- HTTPS / jeton d'import --------->   |   +-- volumes de fichiers
+   |                                                  +-- Google (connexion uniquement)
+   +-- Garmin Connect (seul le service l'appelle, jamais l'API)
 ```
 
 - `src/frontend-angular` est le seul client, aussi empaqueté pour iPhone avec
@@ -17,8 +19,15 @@ Angular 22 -- HTTPS / Bearer (jeton LifeOS) --> ASP.NET Core -- EF Core / Npgsql
 - `src/backend` résout le compte du jeton vers un foyer, filtre chaque requête par
   ce foyer et persiste dans PostgreSQL. Des clés étrangères composites empêchent
   les liens entre foyers.
-- Les photos de tickets et les images d'aliments sont sur des volumes durables,
-  servies uniquement par des routes authentifiées.
+- Les photos de tickets, les images (aliments, recettes, exercices, tâches) et les
+  fichiers de santé sont sur des volumes durables, servis uniquement par des routes
+  authentifiées ; les fichiers de santé sont chiffrés au repos (`HealthFiles:EncryptionKey`).
+- Modules (ADR 0009) : Foyer, Alimentation, Sport, Tâches, Santé et le module de synthèse
+  Budget, chacun avec son schéma PostgreSQL. Santé et Budget sont privés au compte.
+- L'endpoint `/mcp` expose les outils de l'assistant Claude (ADR 0011), avec les droits du
+  compte connecté.
+- `src/garmin-sync` est un conteneur à part qui lit Garmin Connect et écrit par
+  `/api/import/garmin/*` avec un jeton d'import (ADR 0019).
 
 ## Décisions en vigueur
 
@@ -32,9 +41,17 @@ Angular 22 -- HTTPS / Bearer (jeton LifeOS) --> ASP.NET Core -- EF Core / Npgsql
 | [0009](decisions/0009-modular-monolith-and-planning-core.md) | Monolithe modulaire, semainier au cœur, agent IA externe |
 | [0010](decisions/0010-simplified-food-module.md) | Alimentation simplifiée |
 | [0011](decisions/0011-conversational-assistant-mcp.md) | Assistant Claude (MCP), connexion et serveur OAuth propres (remplace 0002) |
+| [0012](decisions/0012-food-classification.md) | Classement des aliments |
+| [0013](decisions/0013-sport-module.md) | Module Sport : séances, objectifs, défis |
+| [0014](decisions/0014-sport-daily-routines.md) | Sport : exercices et routines quotidiennes |
+| [0015](decisions/0015-sport-pages-and-routine-sessions.md) | Sport : une page par élément, passages de routine |
+| [0016](decisions/0016-angular-material-ui-kit.md) | Kit d'interface Angular Material 3 |
+| [0017](decisions/0017-tasks-module.md) | Module Tâches |
+| [0018](decisions/0018-health-module.md) | Module Santé, privé au compte |
+| [0019](decisions/0019-garmin-import.md) | Import Garmin par un service externe |
+| [0020](decisions/0020-budget-module.md) | Module Budget, privé au compte |
 
-Les ADR 0004 et 0005, entièrement remplacées, ont été supprimées ; elles restent
-dans l'historique git.
+Les ADR 0004 et 0005, entièrement remplacées, ont été supprimées.
 
 ## Configuration et livraison
 
@@ -47,6 +64,6 @@ dans l'historique git.
 - Les migrations s'appliquent au démarrage de l'API, sauf `SkipDatabaseMigration=true`.
   Sauvegarde PostgreSQL avant toute livraison avec migration ; retour arrière par
   restauration.
-- Une fusion dans `main` publie les images Docker de l'API et d'Angular, que le
+- Une fusion dans `main` publie les images Docker de l'API, d'Angular et de garmin-sync, que le
   serveur récupère seul. Un build ou une fusion ne prouve pas que la production
   fonctionne.
