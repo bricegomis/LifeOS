@@ -3,7 +3,6 @@ import { Router } from '@angular/router'
 import { Capacitor } from '@capacitor/core'
 import { App as CapApp } from '@capacitor/app'
 import { AuthService } from '@/app/core/auth/auth.service'
-import { validatedReturnPath } from '@/app/core/auth/auth-flow'
 import { parseNativeUrl } from './native-url'
 
 @Injectable({ providedIn: 'root' })

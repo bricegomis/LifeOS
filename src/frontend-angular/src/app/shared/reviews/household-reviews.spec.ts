@@ -13,6 +13,11 @@ function signal<T>(initial: T) {
   return Object.assign(() => value, { set: (next: T) => { value = next } })
 }
 
+/** Sets a signal input as the parent template would. */
+function setInput<T>(input: () => T, value: T): void {
+  (input as unknown as { set(next: T): void }).set(value)
+}
+
 function deferred<T>() {
   let resolve!: (value: T) => void
   const promise = new Promise<T>(done => { resolve = done })
@@ -60,7 +65,6 @@ function harness() {
   const noopDecorator = () => () => {}
   const destroyRef = { onDestroy: (callback: () => void) => { onDestroy.push(callback) } }
   const reviewDraftsToken = {}
-  let drafts: ReviewDraftsService
   const input = Object.assign(signal, { required: () => signal('') })
   const imports: Record<string, unknown> = {
     '@angular/core': {
@@ -92,9 +96,10 @@ function harness() {
     })
     return new exports[name]!()
   }
-  drafts = load<ReviewDraftsService>('./review-drafts.service.ts', 'ReviewDraftsService')
+  const drafts = load<ReviewDraftsService>('./review-drafts.service.ts', 'ReviewDraftsService')
   const component = load<HouseholdReviewsComponent>('./household-reviews.component.ts', 'HouseholdReviewsComponent')
-  component.targetId = 'target/1'
+  setInput(component.targetType, 'food')
+  setInput(component.targetId, 'target/1')
   return {
     component, drafts, review, calls, windows, loadedReviews,
     fail: (message: string) => { failure = message },
@@ -143,7 +148,7 @@ describe('shared household review window', () => {
   for (const [targetType, segment] of [['food', 'foods'], ['recipe', 'recipes']] as const) {
     it(`saves and refreshes ${targetType} reviews in the original encoded scope, including zero`, async () => {
       const { component, calls, loadedReviews } = harness()
-      component.targetType = targetType
+      setInput(component.targetType, targetType)
       component.add()
       component.target = 'profile-2'
       component.score = 0
@@ -268,7 +273,7 @@ describe('shared household review window', () => {
     hold(pending.promise)
     const loading = component.load()
     hold(null)
-    component.targetId = ''
+    setInput(component.targetId, '')
     await component.load()
     pending.resolve(null)
     await loading
