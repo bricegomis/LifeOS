@@ -1,7 +1,6 @@
-import { Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core'
+import { Component, computed, input } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon'
-import { firstValueFrom } from 'rxjs'
-import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { authenticatedImageUrl } from '@/app/shared/ui/authenticated-image'
 
 /**
  * A private health image (decrypted by the API, loaded as a blob); without one, the name's initial or
@@ -32,7 +31,6 @@ import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
   `],
 })
 export class HealthImageComponent {
-  private readonly api = inject(LifeosApiService)
   /** API path of the image, e.g. `/health/supplements/{id}/image`; none when there is no image. */
   readonly path = input<string | null>(null)
   readonly name = input('')
@@ -42,32 +40,5 @@ export class HealthImageComponent {
   readonly alt = input('')
   readonly size = input(56)
   readonly letter = computed(() => (this.name().trim().charAt(0) || '?').toLocaleUpperCase('fr'))
-  readonly url = signal<string | null>(null)
-  private loadId = 0
-
-  constructor() {
-    effect(() => {
-      const path = this.path(); this.version()
-      untracked(() => void this.load(path))
-    })
-    inject(DestroyRef).onDestroy(() => this.release())
-  }
-
-  private async load(path: string | null): Promise<void> {
-    const current = ++this.loadId
-    this.release()
-    if (!path) return
-    try {
-      const blob = await firstValueFrom(this.api.getBlob(path))
-      if (current === this.loadId) this.url.set(URL.createObjectURL(blob))
-    } catch {
-      if (current === this.loadId) this.url.set(null)
-    }
-  }
-
-  private release(): void {
-    const url = this.url()
-    if (url) URL.revokeObjectURL(url)
-    this.url.set(null)
-  }
+  readonly url = authenticatedImageUrl(() => { this.version(); return this.path() })
 }

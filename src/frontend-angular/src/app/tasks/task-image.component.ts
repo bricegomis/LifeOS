@@ -1,6 +1,5 @@
-import { Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core'
-import { firstValueFrom } from 'rxjs'
-import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { Component, computed, input } from '@angular/core'
+import { authenticatedImageUrl } from '@/app/shared/ui/authenticated-image'
 import { initial } from './task-format'
 
 /**
@@ -29,7 +28,6 @@ import { initial } from './task-format'
   `],
 })
 export class TaskImageComponent {
-  private readonly api = inject(LifeosApiService)
   /** Id of the todo or routine. */
   readonly todoId = input.required<string>()
   readonly kind = input<'todos' | 'routines' | 'projects'>('todos')
@@ -40,33 +38,8 @@ export class TaskImageComponent {
   readonly alt = input('')
   readonly size = input(56)
   readonly letter = computed(() => initial(this.title()))
-  readonly url = signal<string | null>(null)
-  private loadId = 0
-
-  constructor() {
-    effect(() => {
-      const id = this.todoId(); const kind = this.kind(); const hasImage = this.hasImage(); this.version()
-      // Untracked: load() reads `url` synchronously, which would otherwise rerun this effect forever.
-      untracked(() => void this.load(kind, id, hasImage))
-    })
-    inject(DestroyRef).onDestroy(() => this.release())
-  }
-
-  private async load(kind: string, id: string, hasImage: boolean): Promise<void> {
-    const current = ++this.loadId
-    this.release()
-    if (!hasImage) return
-    try {
-      const blob = await firstValueFrom(this.api.getBlob(`/tasks/${kind}/${encodeURIComponent(id)}/image`))
-      if (current === this.loadId) this.url.set(URL.createObjectURL(blob))
-    } catch {
-      if (current === this.loadId) this.url.set(null)
-    }
-  }
-
-  private release(): void {
-    const url = this.url()
-    if (url) URL.revokeObjectURL(url)
-    this.url.set(null)
-  }
+  readonly url = authenticatedImageUrl(() => {
+    this.version()
+    return this.hasImage() ? `/tasks/${this.kind()}/${encodeURIComponent(this.todoId())}/image` : null
+  })
 }

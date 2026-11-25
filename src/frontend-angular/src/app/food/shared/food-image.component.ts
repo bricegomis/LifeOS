@@ -1,6 +1,5 @@
-import { Component, computed, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core'
-import { firstValueFrom } from 'rxjs'
-import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { Component, computed, input } from '@angular/core'
+import { authenticatedImageUrl } from '@/app/shared/ui/authenticated-image'
 import { tintFor } from './tint'
 
 /**
@@ -26,7 +25,6 @@ import { tintFor } from './tint'
   `],
 })
 export class FoodImageComponent {
-  private readonly api = inject(LifeosApiService)
   /** `/foods/{id}/image` or `/recipes/{id}/image`. */
   readonly path = input.required<string>()
   readonly hasImage = input(false)
@@ -37,38 +35,10 @@ export class FoodImageComponent {
   readonly label = input('')
   readonly width = input('48px')
   readonly height = input('48px')
-  readonly url = signal<string | null>(null)
+  readonly url = authenticatedImageUrl(() => { this.version(); return this.hasImage() ? this.path() : null })
   /** Warm tint of the name; in the dark scheme it is mixed into the dark surface so the label stays readable. */
   readonly tint = computed(() => {
     const tint = tintFor(this.name())
     return `light-dark(${tint}, color-mix(in srgb, ${tint} 30%, var(--mat-sys-surface-container-high)))`
   })
-  private loadId = 0
-
-  constructor() {
-    effect(() => {
-      const path = this.path(); const hasImage = this.hasImage(); this.version()
-      // Untracked: load() reads `url` synchronously, which would otherwise rerun this effect forever.
-      untracked(() => void this.load(path, hasImage))
-    })
-    inject(DestroyRef).onDestroy(() => this.release())
-  }
-
-  private async load(path: string, hasImage: boolean): Promise<void> {
-    const current = ++this.loadId
-    this.release()
-    if (!hasImage) return
-    try {
-      const blob = await firstValueFrom(this.api.getBlob(path))
-      if (current === this.loadId) this.url.set(URL.createObjectURL(blob))
-    } catch {
-      if (current === this.loadId) this.url.set(null)
-    }
-  }
-
-  private release(): void {
-    const url = this.url()
-    if (url) URL.revokeObjectURL(url)
-    this.url.set(null)
-  }
 }

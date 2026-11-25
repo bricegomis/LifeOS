@@ -29,8 +29,9 @@
   (`food/food.routes.ts`). `module-boundaries.spec.ts` fails when a module imports
   another module; sub-features of one module (`food/recipes`, `food/foods`) may share
   `food/shared`.
-- Screens follow the validated mockups: photos everywhere (`food/shared/food-image.component.ts`
-  loads authenticated images as blobs), a filter bar on top of every list page,
+- Screens follow the validated mockups: photos everywhere (each module's image component, e.g.
+  `food/shared/food-image.component.ts`, keeps its own placeholder and loads the authenticated
+  image as a blob through `authenticatedImageUrl()` of `shared/ui/authenticated-image.ts`), a filter bar on top of every list page,
   prices secondary and read-only on everyday screens.
 - UI kit (ADR 0016), the norm for every screen, new or changed: Angular Material 3 with the
   LifeOS theme (`src/theme.scss`) and the LifeOS building blocks.
