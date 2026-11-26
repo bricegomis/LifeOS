@@ -72,12 +72,10 @@ Tâches et Santé ; ils sont livrés.
 Le semainier (étape 4) attend que les modules aient servi. D'ici là, dans cet ordre
 proposé (chaque point commence par un cadrage, puis une maquette validée) :
 
-1. **Accueil « Aujourd'hui » unifié.** Un seul écran avec ce qu'il y a à faire et à
-   cocher dans la journée : todos et routines du foyer du jour ou en retard,
-   compléments à prendre, routines sportives et défis du jour, en plus de la nuit et
-   de l'énergie déjà affichées. On coche depuis cet écran. Rien n'est placé dans le
-   temps et aucun agent n'intervient : l'écran lit les contrats publiés des modules.
-   Il deviendra l'accueil du semainier.
+1. **Accueil « Aujourd'hui » unifié** — livré le 2026-11-26
+   ([ADR 0021](architecture/decisions/0021-today-home.md)) : todos et routines du foyer du jour
+   ou en retard, routines sportives, défis et compléments cochés depuis l'accueil, avec la nuit
+   et l'énergie. Il deviendra l'accueil du semainier.
 2. **Usage réel.** Une à deux semaines d'usage de Sport, Tâches et Santé, avec la
    liste de ce qui gêne, traitée en une passe.
 3. **iPhone, première partie** (étape 6 sans le semainier) : notifications

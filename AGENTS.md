@@ -31,6 +31,7 @@
   ADR 0018 (step 5 health module: supplements, symptoms, blood markers, documents),
   ADR 0019 (Garmin import: sessions, VO2max, sleep and recovery),
   ADR 0020 (budget: planned lines, OFX operations, rules, private to the account),
+  ADR 0021 (home page « Aujourd'hui »: what is left to tick today),
   ADR 0009 (target architecture and module boundary rules).
 - Prefer simple implementations; no unnecessary dependencies or speculative features.
 - Preserve household isolation and historical snapshots, IDs, aliases, sources and prices.

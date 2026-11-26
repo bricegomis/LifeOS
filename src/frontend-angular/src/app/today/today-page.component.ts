@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon'
 import { RouterLink } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
+import { TodayAgendaComponent } from './today-agenda.component'
 import { hrvText, sleepText, stepsText, type TodayNight } from './today-rules'
 
 interface TodayWellness extends TodayNight { date: string }
@@ -13,21 +14,25 @@ interface TodayWeek { monday: string, sunday: string, goals: TodayGoal[] }
 interface TodayGarmin { state: string, stateLabel: string, waitsForCode: boolean, lastSuccessAt: string | null }
 
 /**
- * The day at a glance (ADR 0019): last night, energy, today's sessions and steps, the week's goals.
- * A shell page that reads the Sport and Health endpoints; it becomes the planner's home (ADR 0009).
+ * The day at a glance (ADR 0019, ADR 0021): what is left to tick today first, then last night, energy,
+ * today's sessions and steps, the week's goals.
+ * A shell page that reads the Tasks, Sport and Health endpoints; it becomes the planner's home (ADR 0009).
  */
 @Component({
   selector: 'app-today-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [MatButtonModule, MatIconModule, RouterLink, TodayAgendaComponent],
   template: `
-    <div class="lo-page">
+    <div class="lo-page is-wide">
       <header class="lo-page-head"><h1 class="lo-bar-title">Aujourd’hui</h1></header>
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (garminWarning(); as warning) {
         <p class="lo-notice warn" role="status"><mat-icon svgIcon="mark_email_unread" /><span>{{ warning }}</span>
           <a mat-flat-button routerLink="/sports/garmin">{{ garmin()?.waitsForCode ? 'Saisir le code' : 'Voir' }}</a></p>
       }
+      <div class="columns">
+      <app-today-agenda class="todo-column" />
+      <div class="well-column">
       <section class="lo-section" aria-labelledby="today-night">
         <div class="lo-section-head"><h2 id="today-night">Cette nuit</h2><a mat-button routerLink="/health/sleep"><mat-icon svgIcon="bedtime" />Sommeil</a></div>
         <div class="lo-stats">
@@ -79,9 +84,13 @@ interface TodayGarmin { state: string, stateLabel: string, waitsForCode: boolean
         </div>
         @if (garmin(); as g) { <p class="lo-help">Synchro Garmin : {{ g.stateLabel.toLowerCase() }}{{ g.lastSuccessAt ? ', dernière réussie à ' + time(g.lastSuccessAt) : '' }}.</p> }
       </section>
+      </div>
+      </div>
     </div>
   `,
   styles: [`
+    .columns { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+    .todo-column, .well-column { display: flex; min-width: 0; flex: 1 1 340px; flex-direction: column; gap: 16px; }
     .lo-notice.warn { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
     .lo-notice.warn span { flex: 1 1 200px; }
     .lo-row-main { gap: 12px; color: inherit; text-decoration: none; }
