@@ -44,4 +44,15 @@ public sealed class MarkerTests
     [Fact]
     public void Ranges_must_be_ordered() =>
         Assert.Throws<ArgumentException>(() => Marker.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "TSH", "mUI/L", 4, 0.4m, null, null, 12, null));
+
+    [Fact]
+    public void Explanations_are_trimmed_blank_clears_them_and_length_is_bounded()
+    {
+        var marker = Ferritin();
+        marker.Describe("  Réserves de fer.  ", "Carence possible.", " ");
+        Assert.Equal(("Réserves de fer.", "Carence possible.", (string?)null), (marker.Description, marker.WhenLow, marker.WhenHigh));
+        marker.Describe(null, "", null);
+        Assert.Null(marker.WhenLow);
+        Assert.Throws<ArgumentException>(() => marker.Describe(new string('a', Marker.MaxTextLength + 1), null, null));
+    }
 }

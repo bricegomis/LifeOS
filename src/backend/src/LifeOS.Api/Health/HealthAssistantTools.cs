@@ -147,20 +147,32 @@ public sealed class HealthAssistantTools
         [Description("Cible personnelle (souvent plus étroite), à confirmer avec l'utilisateur.")] decimal? targetMin = null, decimal? targetMax = null,
         [Description("Mois entre deux mesures ; 0 = une fois.")] int frequencyMonths = 12,
         [Description("Bilans auxquels il appartient (ex. Bilan fer).")] List<string>? panels = null,
+        [Description(DescriptionHelp)] string? description = null,
+        [Description(WhenLowHelp)] string? whenLow = null,
+        [Description(WhenHighHelp)] string? whenHigh = null,
         CancellationToken ct = default) =>
         await library.CreateMarkerAsync(await AssistantRequest.HouseholdAsync(accessor),
-            AssistantRequest.Validated(new MarkerRequest(name, unit, labMin, labMax, targetMin, targetMax, frequencyMonths, panels)), ct);
+            AssistantRequest.Validated(new MarkerRequest(name, unit, labMin, labMax, targetMin, targetMax, frequencyMonths, panels, description, whenLow, whenHigh)), ct);
+
+    private const string DescriptionHelp = "À quoi il sert : ce qu'il mesure, en langage simple (quelques phrases, 2000 caractères maximum).";
+    private const string WhenLowHelp = "Si trop bas : causes fréquentes, signes possibles, ce qu'il faut savoir ou faire (informatif, pas un diagnostic).";
+    private const string WhenHighHelp = "Si trop haut : causes fréquentes, signes possibles, ce qu'il faut savoir ou faire (informatif, pas un diagnostic).";
 
     [McpServerTool(Name = "update_marker", Idempotent = true, Title = "Modifier un marqueur")]
-    [Description("Modifie un marqueur ; un champ omis reste inchangé. archive = true l'archive, false le rétablit.")]
+    [Description("Modifie un marqueur ; un champ omis reste inchangé, un texte vide (\"\") l'efface. archive = true l'archive, false le rétablit.")]
     public static async Task<MarkerDto> UpdateMarker(IHttpContextAccessor accessor, AnalysisLibrary library, Guid markerId,
         string? name = null, string? unit = null, decimal? labMin = null, decimal? labMax = null, decimal? targetMin = null, decimal? targetMax = null,
-        int? frequencyMonths = null, List<string>? panels = null, bool? archive = null, CancellationToken ct = default)
+        int? frequencyMonths = null, List<string>? panels = null,
+        [Description(DescriptionHelp)] string? description = null,
+        [Description(WhenLowHelp)] string? whenLow = null,
+        [Description(WhenHighHelp)] string? whenHigh = null,
+        bool? archive = null, CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
         var m = (await library.MarkerAsync(household, markerId, ct)).OrNotFound("Marqueur");
         var request = AssistantRequest.Validated(new MarkerRequest(name ?? m.Name, unit ?? m.Unit, labMin ?? m.LabMin, labMax ?? m.LabMax, targetMin ?? m.TargetMin,
-            targetMax ?? m.TargetMax, frequencyMonths ?? m.FrequencyMonths, panels ?? m.Panels));
+            targetMax ?? m.TargetMax, frequencyMonths ?? m.FrequencyMonths, panels ?? m.Panels,
+            description ?? m.Description, whenLow ?? m.WhenLow, whenHigh ?? m.WhenHigh));
         return (await library.UpdateMarkerAsync(household, markerId, request, archive, ct)).OrNotFound("Marqueur");
     }
 

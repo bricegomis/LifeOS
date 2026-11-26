@@ -84,7 +84,10 @@ calculé par le semainier (ADR 0009), jamais dans ce module.
 nom, une unité, une **plage de référence** du laboratoire (min et/ou max), une **cible
 personnelle** (min et/ou max, souvent plus exigeante que la plage du labo), une
 **fréquence** (une fois, tous les N mois) et des **bilans** : groupes nommés (bilan
-thyroïde, bilan fer) qui disent quoi demander au médecin.
+thyroïde, bilan fer) qui disent quoi demander au médecin. Trois textes facultatifs
+l'expliquent : **à quoi il sert**, **si trop bas** et **si trop haut** (causes fréquentes,
+ce qu'il faut savoir). Ils sont saisis à la main ou rédigés par l'assistant ; l'API n'en
+invente aucun. Ils sont informatifs et ne remplacent pas l'avis d'un médecin.
 
 Une **analyse** : une date, un laboratoire facultatif, un document facultatif (le PDF ou
 la photo, partie 4), et une valeur par marqueur mesuré. Les valeurs sont saisies à la

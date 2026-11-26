@@ -10,6 +10,7 @@ namespace LifeOS.Domain.Health;
 public sealed class Marker : Entity
 {
     public const int MaxPanels = 10;
+    public const int MaxTextLength = 2000;
 
     public Guid HouseholdId { get; private set; }
     public Guid OwnerUserId { get; private set; }
@@ -23,6 +24,12 @@ public sealed class Marker : Entity
     /// <summary>Months between two measures; 0 = once.</summary>
     public int FrequencyMonths { get; private set; }
     public List<string> Panels { get; private set; } = [];
+    /// <summary>What it measures and what it is used for.</summary>
+    public string? Description { get; private set; }
+    /// <summary>What a value below the range can mean and what to know about it.</summary>
+    public string? WhenLow { get; private set; }
+    /// <summary>What a value above the range can mean and what to know about it.</summary>
+    public string? WhenHigh { get; private set; }
     public bool IsArchived { get; private set; }
 
     private Marker() { }
@@ -55,6 +62,21 @@ public sealed class Marker : Entity
         TargetMax = targetMax;
         FrequencyMonths = frequencyMonths;
         Panels = cleanPanels;
+    }
+
+    /// <summary>Sets the explanation texts; blank clears one.</summary>
+    public void Describe(string? description, string? whenLow, string? whenHigh)
+    {
+        Description = Clean(description, "Description");
+        WhenLow = Clean(whenLow, "Si trop bas");
+        WhenHigh = Clean(whenHigh, "Si trop haut");
+    }
+
+    private static string? Clean(string? text, string label)
+    {
+        var clean = string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        if (clean?.Length > MaxTextLength) throw new ArgumentException($"{label} : {MaxTextLength} caractères maximum.");
+        return clean;
     }
 
     public void Archive() => IsArchived = true;

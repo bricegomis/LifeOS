@@ -17,6 +17,9 @@ internal sealed class MarkerConfiguration : IEntityTypeConfiguration<Marker>
         foreach (var p in new[] { nameof(Marker.LabMin), nameof(Marker.LabMax), nameof(Marker.TargetMin), nameof(Marker.TargetMax) })
             builder.Property(p).HasPrecision(14, 4);
         builder.Property(m => m.Panels).HasColumnName("panels").IsRequired();
+        builder.Property(m => m.Description).HasMaxLength(Marker.MaxTextLength);
+        builder.Property(m => m.WhenLow).HasMaxLength(Marker.MaxTextLength);
+        builder.Property(m => m.WhenHigh).HasMaxLength(Marker.MaxTextLength);
         HealthOwnership.Configure(builder);
     }
 }

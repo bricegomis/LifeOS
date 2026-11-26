@@ -79,10 +79,17 @@ export interface MarkerDto {
   nextDueOn: string | null
   due: boolean
   late: boolean
+  /** What it measures and what it is used for. */
+  description: string | null
+  /** What a value below the range can mean. */
+  whenLow: string | null
+  /** What a value above the range can mean. */
+  whenHigh: string | null
 }
 export interface MarkerListDto { today: string, markers: MarkerDto[], panels: string[] }
 export interface MarkerRequest {
-  name: string, unit: string, labMin: number | null, labMax: number | null, targetMin: number | null, targetMax: number | null, frequencyMonths: number, panels: string[]
+  name: string, unit: string, labMin: number | null, labMax: number | null, targetMin: number | null, targetMax: number | null, frequencyMonths: number, panels: string[],
+  description: string | null, whenLow: string | null, whenHigh: string | null
 }
 export interface AnalysisValueDto { markerId: string, markerName: string, unit: string, value: number, status: MarkerStatus }
 export interface AnalysisDto { id: string, day: string, laboratory: string | null, notes: string | null, documentId: string | null, values: AnalysisValueDto[] }

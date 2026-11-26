@@ -86,7 +86,8 @@
   `SupplementIntake` per day taken; monthly cost and streak are computed on read. Symptoms:
   `SymptomType` (the owner's list, seeded with defaults on first read), `SymptomEntry` (1-10)
   and `CalmDay` ("rien à signaler", dropped when a symptom is noted that day). A `Marker` has a
-  lab range, a personal target, a frequency (0 = once) and panels; an `Analysis` holds one value
+  lab range, a personal target, a frequency (0 = once), panels and three optional texts (`Description`, `WhenLow`,
+  `WhenHigh`, written by hand or by the assistant); an `Analysis` holds one value
   per marker; status, trend and next due day are computed on read. `MeasureType` (defaults on
   first read) and `Measurement`. A `HealthDocument` (type, title, day, doctor, notes) owns its
   encrypted files (photos or PDF, 20 at most); an analysis may point to it (set null on delete). An

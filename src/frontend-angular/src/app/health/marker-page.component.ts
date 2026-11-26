@@ -12,7 +12,7 @@ import type { MarkerDto } from './health.models'
 import { MarkerDialogComponent, type MarkerDialogData } from './marker-dialog.component'
 import { dateLabel, dueLabel, frequencyLabel, monthLabel, num, rangeBar, rangeLabel, STATUS, TREND, valueLabel } from './marker-rules'
 
-/** One marker (ADR 0018): last value placed against the lab range and the target, evolution, details and values. */
+/** One marker (ADR 0018): last value placed against the lab range and the target, what it is for and what a low or high value can mean, evolution, details and values. */
 @Component({
   selector: 'app-marker-page',
   standalone: true,
@@ -44,6 +44,14 @@ import { dateLabel, dueLabel, frequencyLabel, monthLabel, num, rangeBar, rangeLa
             <span><i class="key target-key"></i>Ta cible : {{ range(m.targetMin, m.targetMax, m.unit) }}</span>
           </div>
         </section>
+        @if (m.description || m.whenLow || m.whenHigh) {
+          <section class="lo-card about" aria-label="À savoir">
+            @if (m.description) { <div class="detail"><span class="lo-field-label">À quoi il sert</span><p class="text">{{ m.description }}</p></div> }
+            @if (m.whenLow) { <div class="detail" [class.is-now]="m.status === 'below_lab'"><span class="lo-field-label">Si trop bas</span><p class="text">{{ m.whenLow }}</p></div> }
+            @if (m.whenHigh) { <div class="detail" [class.is-now]="m.status === 'above_lab'"><span class="lo-field-label">Si trop haut</span><p class="text">{{ m.whenHigh }}</p></div> }
+            <p class="lo-muted note">Informatif, ne remplace pas l’avis d’un médecin.</p>
+          </section>
+        }
         @if (m.values.length) {
           <section class="lo-section" aria-labelledby="evolution">
             <h2 id="evolution">Évolution</h2>
@@ -94,7 +102,10 @@ import { dateLabel, dueLabel, frequencyLabel, monthLabel, num, rangeBar, rangeLa
     .col-bar[data-status='in_target'] { background: var(--mat-sys-primary); }
     .col-bar[data-status='below_lab'], .col-bar[data-status='above_lab'] { background: var(--mat-sys-error); }
     .col-label { padding-bottom: 6px; white-space: nowrap; }
-    .details { display: flex; flex-direction: column; }
+    .details, .about { display: flex; flex-direction: column; }
+    .text { margin: 4px 0 0; white-space: pre-line; }
+    .is-now { border-left: 4px solid var(--mat-sys-error); }
+    .note { margin: 0; padding: 8px 16px 12px; font: var(--mat-sys-body-small); }
     .detail { display: flex; flex-direction: column; padding: 12px 16px; }
     .detail + .detail { border-top: 1px solid var(--mat-sys-outline-variant); }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; color: inherit; text-decoration: none; }

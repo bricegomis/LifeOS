@@ -65,9 +65,12 @@ public sealed record MarkerValueDto(Guid AnalysisId, DateOnly Day, decimal Value
 /// <param name="NextDueOn">When to measure it again; today when never measured, null when once is enough.</param>
 /// <param name="Due">To measure within 30 days, or late.</param>
 /// <param name="Values">Oldest first.</param>
+/// <param name="Description">What it measures and what it is used for.</param>
+/// <param name="WhenLow">What a value below the range can mean.</param>
+/// <param name="WhenHigh">What a value above the range can mean.</param>
 public sealed record MarkerDto(Guid Id, string Name, string Unit, decimal? LabMin, decimal? LabMax, decimal? TargetMin, decimal? TargetMax,
     int FrequencyMonths, IReadOnlyList<string> Panels, bool IsArchived, IReadOnlyList<MarkerValueDto> Values, string? Status, string? Trend,
-    DateOnly? NextDueOn, bool Due, bool Late)
+    DateOnly? NextDueOn, bool Due, bool Late, string? Description, string? WhenLow, string? WhenHigh)
 {
     public static MarkerDto From(Marker m, IEnumerable<Analysis> analyses, DateOnly today)
     {
@@ -77,7 +80,8 @@ public sealed record MarkerDto(Guid Id, string Name, string Unit, decimal? LabMi
         var previous = values.Count > 1 ? values[^2].Value : (decimal?)null;
         var next = m.NextDueOn(last?.Day, today);
         return new(m.Id, m.Name, m.Unit, m.LabMin, m.LabMax, m.TargetMin, m.TargetMax, m.FrequencyMonths, m.Panels, m.IsArchived, values,
-            last?.Status, last is null ? null : m.TrendOf(previous, last.Value), next, !m.IsArchived && next <= today.AddDays(30), !m.IsArchived && next < today);
+            last?.Status, last is null ? null : m.TrendOf(previous, last.Value), next, !m.IsArchived && next <= today.AddDays(30), !m.IsArchived && next < today,
+            m.Description, m.WhenLow, m.WhenHigh);
     }
 }
 

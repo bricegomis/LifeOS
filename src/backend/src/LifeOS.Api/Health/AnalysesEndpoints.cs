@@ -11,12 +11,18 @@ namespace LifeOS.Api.Health;
 
 /// <param name="FrequencyMonths">Months between two measures, 0 = once.</param>
 /// <param name="Panels">Panel names, e.g. "Bilan fer".</param>
+/// <param name="Description">What it measures and what it is used for.</param>
+/// <param name="WhenLow">What a value below the range can mean.</param>
+/// <param name="WhenHigh">What a value above the range can mean.</param>
 public sealed record MarkerRequest(
     [property: Required, StringLength(100)] string Name,
     [property: Required, StringLength(30)] string Unit,
     decimal? LabMin, decimal? LabMax, decimal? TargetMin, decimal? TargetMax,
     [property: Range(0, 120)] int FrequencyMonths,
-    IReadOnlyList<string>? Panels);
+    IReadOnlyList<string>? Panels,
+    [property: StringLength(Marker.MaxTextLength)] string? Description = null,
+    [property: StringLength(Marker.MaxTextLength)] string? WhenLow = null,
+    [property: StringLength(Marker.MaxTextLength)] string? WhenHigh = null);
 
 public sealed record AnalysisValueRequest(Guid MarkerId, decimal Value);
 
@@ -110,6 +116,7 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
         var owner = await owners.ResolveAsync(household, ct);
         var marker = Marker.Create(owner.HouseholdId, owner.UserId, owner.ProfileId, r.Name, r.Unit, r.LabMin, r.LabMax, r.TargetMin, r.TargetMax,
             r.FrequencyMonths, r.Panels);
+        marker.Describe(r.Description, r.WhenLow, r.WhenHigh);
         db.Markers.Add(marker);
         await db.SaveChangesAsync(ct);
         return MarkerDto.From(marker, [], Today);
@@ -120,7 +127,11 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
     {
         var marker = await MyMarkers(household).SingleOrDefaultAsync(m => m.Id == id, ct);
         if (marker is null) return null;
-        if (r is not null) marker.Update(r.Name, r.Unit, r.LabMin, r.LabMax, r.TargetMin, r.TargetMax, r.FrequencyMonths, r.Panels);
+        if (r is not null)
+        {
+            marker.Update(r.Name, r.Unit, r.LabMin, r.LabMax, r.TargetMin, r.TargetMax, r.FrequencyMonths, r.Panels);
+            marker.Describe(r.Description, r.WhenLow, r.WhenHigh);
+        }
         if (archive == true) marker.Archive();
         if (archive == false) marker.Restore();
         await db.SaveChangesAsync(ct);

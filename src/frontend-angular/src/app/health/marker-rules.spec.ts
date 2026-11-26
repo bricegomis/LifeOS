@@ -27,7 +27,8 @@ describe('markers', () => {
     const draft = markerDraftOf(null)
     assert.equal(markerRequest({ ...draft, name: 'TSH' }), 'L’unité est obligatoire.')
     assert.equal(markerRequest({ ...draft, name: 'TSH', unit: 'mUI/L', labMin: '4', labMax: '0,4' }), 'Plage du labo : le minimum dépasse le maximum.')
-    assert.deepEqual(markerRequest({ ...draft, name: ' TSH ', unit: 'mUI/L', labMin: '0,4', labMax: '4', targetMin: '1', targetMax: '2' }),
-      { name: 'TSH', unit: 'mUI/L', labMin: 0.4, labMax: 4, targetMin: 1, targetMax: 2, frequencyMonths: 12, panels: [] })
+    assert.deepEqual(markerRequest({ ...draft, name: ' TSH ', unit: 'mUI/L', labMin: '0,4', labMax: '4', targetMin: '1', targetMax: '2', whenLow: ' Hyperthyroïdie possible. ', whenHigh: '  ' }),
+      { name: 'TSH', unit: 'mUI/L', labMin: 0.4, labMax: 4, targetMin: 1, targetMax: 2, frequencyMonths: 12, panels: [],
+        description: null, whenLow: 'Hyperthyroïdie possible.', whenHigh: null })
   })
 })

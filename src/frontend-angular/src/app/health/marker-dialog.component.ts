@@ -15,7 +15,7 @@ import type { MarkerDto } from './health.models'
 
 export interface MarkerDialogData { marker: MarkerDto | null, panels: string[] }
 
-/** Creates or edits a marker (ADR 0018): unit, lab range, personal target, frequency and panels; archived from here. */
+/** Creates or edits a marker (ADR 0018): unit, lab range, personal target, frequency, panels and explanations; archived from here. */
 @Component({
   selector: 'app-marker-dialog',
   standalone: true,
@@ -65,6 +65,12 @@ export interface MarkerDialogData { marker: MarkerDto | null, panels: string[] }
             <button mat-stroked-button type="button" (click)="addPanel()">Ajouter</button>
           </div>
         </div>
+        <mat-form-field appearance="outline"><mat-label>À quoi il sert</mat-label>
+          <textarea matInput name="description" rows="3" maxlength="2000" [(ngModel)]="draft.description"></textarea></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Si trop bas</mat-label>
+          <textarea matInput name="whenLow" rows="3" maxlength="2000" [(ngModel)]="draft.whenLow"></textarea></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Si trop haut</mat-label>
+          <textarea matInput name="whenHigh" rows="3" maxlength="2000" [(ngModel)]="draft.whenHigh"></textarea></mat-form-field>
       </form>
     </app-editor-frame>
   `,

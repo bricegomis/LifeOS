@@ -56,14 +56,16 @@ export function rangeBar(m: MarkerDto): { labLeft: number, labWidth: number, tar
 }
 
 export interface MarkerDraft {
-  name: string, unit: string, labMin: string, labMax: string, targetMin: string, targetMax: string, frequencyMonths: number, panels: string[]
+  name: string, unit: string, labMin: string, labMax: string, targetMin: string, targetMax: string, frequencyMonths: number, panels: string[],
+  description: string, whenLow: string, whenHigh: string
 }
 
 export function markerDraftOf(m: MarkerDto | null): MarkerDraft {
   const s = (v: number | null) => v === null ? '' : num(v)
   return m
-    ? { name: m.name, unit: m.unit, labMin: s(m.labMin), labMax: s(m.labMax), targetMin: s(m.targetMin), targetMax: s(m.targetMax), frequencyMonths: m.frequencyMonths, panels: [...m.panels] }
-    : { name: '', unit: '', labMin: '', labMax: '', targetMin: '', targetMax: '', frequencyMonths: 12, panels: [] }
+    ? { name: m.name, unit: m.unit, labMin: s(m.labMin), labMax: s(m.labMax), targetMin: s(m.targetMin), targetMax: s(m.targetMax), frequencyMonths: m.frequencyMonths, panels: [...m.panels],
+      description: m.description ?? '', whenLow: m.whenLow ?? '', whenHigh: m.whenHigh ?? '' }
+    : { name: '', unit: '', labMin: '', labMax: '', targetMin: '', targetMax: '', frequencyMonths: 12, panels: [], description: '', whenLow: '', whenHigh: '' }
 }
 
 export function parseNumber(value: string | number | null): number | null {
@@ -79,5 +81,7 @@ export function markerRequest(d: MarkerDraft): MarkerRequest | string {
   if ([labMin, labMax, targetMin, targetMax].some(v => Number.isNaN(v))) return 'Les bornes sont des nombres.'
   if (labMin !== null && labMax !== null && labMin > labMax) return 'Plage du labo : le minimum dépasse le maximum.'
   if (targetMin !== null && targetMax !== null && targetMin > targetMax) return 'Cible : le minimum dépasse le maximum.'
-  return { name: d.name.trim(), unit: d.unit.trim(), labMin, labMax, targetMin, targetMax, frequencyMonths: d.frequencyMonths, panels: d.panels }
+  const text = (v: string) => v.trim() || null
+  return { name: d.name.trim(), unit: d.unit.trim(), labMin, labMax, targetMin, targetMax, frequencyMonths: d.frequencyMonths, panels: d.panels,
+    description: text(d.description), whenLow: text(d.whenLow), whenHigh: text(d.whenHigh) }
 }

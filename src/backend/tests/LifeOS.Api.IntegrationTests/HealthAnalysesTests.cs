@@ -20,7 +20,9 @@ public sealed class HealthAnalysesTests(PostgresContainerFixture postgres)
     {
         await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
         using var client = factory.CreateClient().AsUser(Guid.NewGuid());
-        var ferritin = await Read<MarkerDto>(await client.PostAsJsonAsync("/api/health/markers", new MarkerRequest("Ferritine", "µg/L", 30, 400, 80, 150, 6, ["Bilan fer"])));
+        var ferritin = await Read<MarkerDto>(await client.PostAsJsonAsync("/api/health/markers", new MarkerRequest("Ferritine", "µg/L", 30, 400, 80, 150, 6, ["Bilan fer"],
+            "Réserves de fer.", "Carence en fer possible.", "Surcharge ou inflammation possible.")));
+        Assert.Equal(("Réserves de fer.", "Carence en fer possible.", "Surcharge ou inflammation possible."), (ferritin.Description, ferritin.WhenLow, ferritin.WhenHigh));
         var homocysteine = await Read<MarkerDto>(await client.PostAsJsonAsync("/api/health/markers", new MarkerRequest("Homocystéine", "µmol/L", 5, 15, 5, 8, 0, ["Métabolisme"])));
         Assert.True(homocysteine.Due); // never measured: to do
         Assert.False(homocysteine.Late);
