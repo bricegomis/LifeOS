@@ -8,12 +8,14 @@ import { AppLayoutComponent } from '@/app/shell/app-layout.component'
 const requireAuthentication: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthService)
   const router = inject(Router)
+  // inject() only works before the first await.
+  const lastRoute = inject(LastRouteService)
 
   await auth.ensureReady()
   if (!auth.authenticated()) return router.createUrlTree(['/login'], { queryParams: { redirect: state.url } })
   // Back from the sign-in page: go where the user was heading; otherwise an installed app
   // reopened on its start address goes back to the page left last.
-  const launchTarget = inject(LastRouteService).takeLaunchTarget()
+  const launchTarget = lastRoute.takeLaunchTarget()
   const returnPath = auth.takeReturnPath() ?? launchTarget
   return returnPath && returnPath !== '/' && returnPath !== state.url ? router.parseUrl(returnPath) : true
 }
