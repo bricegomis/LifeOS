@@ -45,6 +45,9 @@ code, identifiers and code comments are English.
   planned lines fixed/envelope/extra, planned and received income, bank OFX operations (deduplicated by FITID)
   classified by user rules or the assistant, spreading over N months; Budget is a synthesis
   module that may read published contracts, e.g. the supplements monthly cost).
+- Home page (delivered 2026-11-26): ADR 0021 (« Aujourd'hui » lists what is left to tick today —
+  late and due todos and household routines, sport routines to start, challenges with « + Série »,
+  supplements by moment — through the modules' own endpoints; ticked items fold into « Fait aujourd'hui »).
 - Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly

@@ -19,8 +19,9 @@
   `health/symptom-rules.ts`, `health/marker-rules.ts`, `health/document-rules.ts`),
   `budget` (private budget, ADR 0020: month, operations with OFX import and classification, planned lines, one page per line
   `budget/line/:id`, rules, evolution; rules in `budget/budget-rules.ts`),
-  `household` (settings: profiles, versions, account), and `today` (the day at a glance, `/today`, the home page:
-  it reads the Sport and Health endpoints through the API client without importing their modules). Garmin (ADR 0019):
+  `household` (settings: profiles, versions, account), and `today` (the day at a glance, `/today`, the home page, ADR 0021:
+  what is left to tick today, then the night and energy; it reads and ticks through the Tasks, Sport and Health endpoints
+  with the API client, without importing their modules; rules in `today/today-items.ts`). Garmin (ADR 0019):
   `sports/session/:id`, `sports/vo2max`, `sports/garmin` (connection, MFA code, import token) and `health/sleep`;
   charts through `shared/ui/line-chart.component.ts` (geometry in `shared/ui/chart-geometry.ts`).
 - A module folder holds its models, its API service (all HTTP calls), pure rules in
