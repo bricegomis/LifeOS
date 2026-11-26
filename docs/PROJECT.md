@@ -81,6 +81,9 @@ ligne. Stock, liste de courses et enrichissement externe sont hors périmètre.
 ## Technique
 
 Angular 22 (`src/frontend-angular`), aussi empaqueté pour iPhone avec Capacitor 7.
+Le site s'installe sur l'écran d'accueil comme une web app (manifeste, icônes, plein
+écran) ; installé, ou dans l'app iPhone, il rouvre sur la dernière page visitée si elle
+date de moins de 12 h, sinon sur « Aujourd'hui ». Pas de mode hors ligne.
 API ASP.NET Core / EF Core / PostgreSQL (`src/backend`). L'API connecte avec Google
 et émet ses propres jetons ([ADR 0011](architecture/decisions/0011-conversational-assistant-mcp.md),
 [guide](google-oauth.md)). Schéma d'ensemble : [architecture/overview.md](architecture/overview.md).

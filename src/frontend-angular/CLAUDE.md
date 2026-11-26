@@ -64,7 +64,10 @@
   API's own access token (`core/auth`: OAuth code + PKCE against the API, ADR 0011;
   no Supabase). No demo/fallback data:
   an empty library stays empty.
-- Hash-based routing; post-login redirects accept known internal routes only.
+- Hash-based routing; post-login redirects accept known internal routes only. The site is an
+  installable web app (`public/manifest.webmanifest`, icons rendered from `favicon.svg`);
+  `core/navigation/last-route*.ts` reopens the installed app (or the iPhone app) on the page left
+  last, under 12 hours old, when it starts on its start address.
 
 ## Tests
 - `npm test` runs `node --test "src/**/*.spec.ts"` (Node's runner with native TS
