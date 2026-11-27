@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LifeOS.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(LifeOSDbContext))]
-    [Migration("20261127165454_MeasureTargets")]
+    [Migration("20261127171558_MeasureTargets")]
     partial class MeasureTargets
     {
         /// <inheritdoc />
@@ -1793,6 +1793,9 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("PerSide")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.HasIndex("HouseholdId");
@@ -1828,10 +1831,13 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("LoggedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("RoutineId")
+                    b.Property<Guid>("MemberProfileId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("SessionId")
+                    b.Property<Guid?>("RoutineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SessionId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("SetsDone")
@@ -1846,6 +1852,10 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("HouseholdId", "ExerciseId");
 
+                    b.HasIndex("MemberProfileId", "ExerciseId");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
                     b.HasIndex("RoutineId", "Date");
 
                     b.HasIndex("RoutineId", "HouseholdId");
@@ -1858,6 +1868,8 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("exercise_completions", "sports", t =>
                         {
                             t.HasCheckConstraint("ck_exercise_completion_load", "\"LoadKg\" IS NULL OR (\"LoadKg\" >= 0 AND \"LoadKg\" <= 500)");
+
+                            t.HasCheckConstraint("ck_exercise_completion_pass", "(\"RoutineId\" IS NULL) = (\"SessionId\" IS NULL)");
 
                             t.HasCheckConstraint("ck_exercise_completion_sets", "\"SetsDone\" >= 1 AND \"SetsDone\" <= 20");
 
@@ -1884,19 +1896,13 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("StartedOn")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("StoppedOn")
-                        .HasColumnType("date");
-
                     b.HasKey("Id");
 
                     b.HasIndex("HouseholdId", "MemberProfileId");
 
                     b.HasIndex("MemberProfileId", "HouseholdId");
 
-                    b.ToTable("routines", "sports", t =>
-                        {
-                            t.HasCheckConstraint("ck_routine_period", "\"StoppedOn\" IS NULL OR \"StoppedOn\" >= \"StartedOn\"");
-                        });
+                    b.ToTable("routines", "sports");
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Sports.RoutineSession", b =>
@@ -3507,19 +3513,24 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("LifeOS.Domain.Sports.Routine", null)
                         .WithMany()
                         .HasForeignKey("RoutineId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("LifeOS.Domain.Sports.RoutineSession", null)
                         .WithMany()
                         .HasForeignKey("SessionId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Sports.Routine", b =>
