@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { dueLabel, frequencyLabel, markerDraftOf, markerRequest, rangeBar, rangeLabel } from './marker-rules.ts'
+import { dueLabel, frequencyLabel, isOffTarget, markerDraftOf, markerRequest, measureTypeRequest, rangeBar, rangeLabel } from './marker-rules.ts'
 import type { MarkerDto } from './health.models.ts'
 
 function marker(more: Partial<MarkerDto> = {}): MarkerDto {
@@ -21,6 +21,18 @@ describe('markers', () => {
   it('places the lab range, the target and the last value on one scale', () => {
     const bar = rangeBar(marker())
     assert.ok(bar.labLeft < bar.targetLeft && bar.targetLeft < bar.value! && bar.value! < bar.targetLeft + bar.targetWidth)
+    assert.equal(rangeBar(marker({ targetMin: null, targetMax: null })).targetWidth, 0) // no target, no target band
+  })
+
+  it('tells values out of the target from values without a target', () => {
+    assert.deepEqual((['in_target', 'normal', 'below_lab', 'above_lab', 'in_lab', null] as const).map(isOffTarget), [false, true, true, true, false, false])
+  })
+
+  it('checks a body measure kind with an optional target', () => {
+    assert.deepEqual(measureTypeRequest(' Taille ', 'cm', '', ' '), { name: 'Taille', unit: 'cm', targetMin: null, targetMax: null })
+    assert.deepEqual(measureTypeRequest('Poids', 'kg', '70', '74,5'), { name: 'Poids', unit: 'kg', targetMin: 70, targetMax: 74.5 })
+    assert.equal(measureTypeRequest('Poids', 'kg', '75', '74'), 'Cible : le minimum dépasse le maximum.')
+    assert.equal(measureTypeRequest('Poids', '', '', ''), 'Nom et unité sont obligatoires.')
   })
 
   it('checks a marker form', () => {

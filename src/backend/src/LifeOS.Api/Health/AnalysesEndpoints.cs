@@ -31,7 +31,9 @@ public sealed record AnalysisValueRequest(Guid MarkerId, decimal Value);
 public sealed record AnalysisRequest(DateOnly? Day, [property: StringLength(100)] string? Laboratory, [property: StringLength(Analysis.MaxNotesLength)] string? Notes,
     Guid? DocumentId, [property: Required] IReadOnlyList<AnalysisValueRequest> Values);
 
-public sealed record MeasureTypeRequest([property: Required, StringLength(100)] string Name, [property: Required, StringLength(30)] string Unit);
+/// <param name="TargetMin">Optional personal target; leave both empty for what does not change (height…).</param>
+public sealed record MeasureTypeRequest([property: Required, StringLength(100)] string Name, [property: Required, StringLength(30)] string Unit,
+    decimal? TargetMin = null, decimal? TargetMax = null);
 
 /// <param name="Day">Today when omitted.</param>
 public sealed record MeasurementRequest(Guid MeasureTypeId, DateOnly? Day, decimal Value, [property: StringLength(500)] string? Note);
@@ -75,6 +77,9 @@ public static class AnalysesEndpoints
             Results.Ok(await library.MeasuresAsync(household, ct))).Produces<List<MeasureTypeDto>>();
         measures.MapPost("/types", async (MeasureTypeRequest request, HouseholdContext household, AnalysisLibrary library, CancellationToken ct) =>
             Results.Ok(await library.CreateMeasureTypeAsync(household, request, ct))).Produces<MeasureTypeDto>().ProducesValidationProblem();
+        measures.MapPut("/types/{id:guid}", async (Guid id, MeasureTypeRequest request, HouseholdContext household, AnalysisLibrary library, CancellationToken ct) =>
+            await library.UpdateMeasureTypeAsync(household, id, request, ct) is { } type ? Results.Ok(type) : Results.NotFound())
+            .Produces<MeasureTypeDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
         measures.MapPost("/types/{id:guid}/archive", async (Guid id, bool? restore, HouseholdContext household, AnalysisLibrary library, CancellationToken ct) =>
             await library.ArchiveMeasureTypeAsync(household, id, !(restore ?? false), ct) is { } type ? Results.Ok(type) : Results.NotFound())
             .Produces<MeasureTypeDto>().ProducesProblem(StatusCodes.Status404NotFound);
@@ -198,10 +203,19 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
     public async Task<MeasureTypeDto> CreateMeasureTypeAsync(HouseholdContext household, MeasureTypeRequest r, CancellationToken ct)
     {
         var owner = await owners.ResolveAsync(household, ct);
-        var type = MeasureType.Create(owner.HouseholdId, owner.UserId, owner.ProfileId, r.Name, r.Unit);
+        var type = MeasureType.Create(owner.HouseholdId, owner.UserId, owner.ProfileId, r.Name, r.Unit, r.TargetMin, r.TargetMax);
         db.MeasureTypes.Add(type);
         await db.SaveChangesAsync(ct);
         return MeasureDto(type, []);
+    }
+
+    public async Task<MeasureTypeDto?> UpdateMeasureTypeAsync(HouseholdContext household, Guid id, MeasureTypeRequest r, CancellationToken ct)
+    {
+        var type = await MyMeasureTypes(household).SingleOrDefaultAsync(t => t.Id == id, ct);
+        if (type is null) return null;
+        type.Update(r.Name, r.Unit, r.TargetMin, r.TargetMax);
+        await db.SaveChangesAsync(ct);
+        return MeasureDto(type, await db.Measurements.Where(m => m.MeasureTypeId == id && m.OwnerUserId == household.UserId).ToListAsync(ct));
     }
 
     public async Task<MeasureTypeDto?> ArchiveMeasureTypeAsync(HouseholdContext household, Guid id, bool archive, CancellationToken ct)
@@ -244,9 +258,12 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
     private Task<bool> DocumentExistsAsync(HouseholdContext household, Guid id, CancellationToken ct) =>
         db.HealthDocuments.AnyAsync(d => d.Id == id && d.HouseholdId == household.HouseholdId && d.OwnerUserId == household.UserId, ct);
 
-    private static MeasureTypeDto MeasureDto(MeasureType t, IEnumerable<Measurement> values) =>
-        new(t.Id, t.Name, t.Unit, t.IsArchived, values.Where(v => v.MeasureTypeId == t.Id).OrderBy(v => v.Day)
-            .Select(v => new MeasurementDto(v.Id, v.Day, v.Value, v.Note)).ToList());
+    private static MeasureTypeDto MeasureDto(MeasureType t, IEnumerable<Measurement> values)
+    {
+        var list = values.Where(v => v.MeasureTypeId == t.Id).OrderBy(v => v.Day)
+            .Select(v => new MeasurementDto(v.Id, v.Day, v.Value, v.Note, t.StatusOf(v.Value))).ToList();
+        return new(t.Id, t.Name, t.Unit, t.TargetMin, t.TargetMax, t.IsArchived, list, list.LastOrDefault()?.Status);
+    }
 
     private IQueryable<Marker> MyMarkers(HouseholdContext household) =>
         db.Markers.Where(m => m.HouseholdId == household.HouseholdId && m.OwnerUserId == household.UserId);

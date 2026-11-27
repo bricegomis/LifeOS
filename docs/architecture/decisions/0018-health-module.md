@@ -93,14 +93,19 @@ Une **analyse** : une date, un laboratoire facultatif, un document facultatif (l
 la photo, partie 4), et une valeur par marqueur mesuré. Les valeurs sont saisies à la
 main ou par l'assistant, qui lit le document ; l'API ne lit rien elle-même (pas d'OCR).
 
-Lu par marqueur : la dernière valeur, sa position (sous la plage, dans la plage, dans la
-cible, au-dessus), la **tendance** par rapport à la valeur précédente (mieux, pire,
+Lu par marqueur : la dernière valeur, sa position (sous la plage du labo, au-dessus, dans
+la cible, dans la plage du labo hors cible ; sans cible fixée : « dans la norme du labo,
+sans cible », jamais « dans ta cible »), la **tendance** par rapport à la valeur précédente (mieux, pire,
 stable, selon qu'elle se rapproche ou s'éloigne de la cible) et une courbe. Un marqueur
 est **à refaire** quand sa fréquence est dépassée depuis sa dernière valeur ; la page
-liste ceux à refaire bientôt ou en retard.
+liste ceux à refaire bientôt ou en retard, et compte les marqueurs dont la dernière valeur
+est hors de la cible et ceux mesurés sans cible.
 
-**Mesures corporelles** : poids, tour de taille, tension, etc. Un type de mesure a un nom
-et une unité ; une mesure a une date, une valeur et une note. Courbe dans le temps.
+**Mesures corporelles** : poids, tour de taille, tension, etc. Un type de mesure a un nom,
+une unité et une **cible personnelle facultative** (min et/ou max ; aucune pour ce qui ne
+change pas, comme la taille) ; une mesure a une date, une valeur et une note. Chaque valeur
+est placée sous, dans ou au-dessus de la cible quand il y en a une. Courbe dans le temps.
+Une tension se suit en deux mesures (systolique, diastolique).
 
 ### 4. Documents et rendez-vous
 

@@ -9,12 +9,12 @@ import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { EditorFrameComponent } from '@/app/shared/ui/editor-frame.component'
 import { HealthApiService } from './health-api.service'
-import { parseNumber } from './marker-rules'
+import { measureTypeRequest, parseNumber } from './marker-rules'
 import type { MeasureTypeDto } from './health.models'
 
 export interface MeasureDialogData { types: MeasureTypeDto[], today: string, typeId?: string }
 
-/** Notes a body measure (ADR 0018), or creates a new kind of measure with its unit. */
+/** Notes a body measure (ADR 0018), or creates a new kind of measure with its unit and optional target. */
 @Component({
   selector: 'app-measure-dialog',
   standalone: true,
@@ -36,6 +36,13 @@ export interface MeasureDialogData { types: MeasureTypeDto[], today: string, typ
           <div class="lo-form-row">
             <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>Nom</mat-label><input matInput name="name" maxlength="100" placeholder="Ex. Tension systolique" [(ngModel)]="name" /></mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>Unité</mat-label><input matInput name="unit" maxlength="30" placeholder="Ex. mmHg" [(ngModel)]="unit" /></mat-form-field>
+          </div>
+          <div class="lo-field-group">
+            <span class="lo-field-label">Ta cible, facultative</span>
+            <div class="lo-form-row">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>Min</mat-label><input matInput name="targetMin" inputmode="decimal" [(ngModel)]="targetMin" /></mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>Max</mat-label><input matInput name="targetMax" inputmode="decimal" [(ngModel)]="targetMax" /></mat-form-field>
+            </div>
           </div>
         }
         <div class="lo-form-row">
@@ -59,6 +66,8 @@ export class MeasureDialogComponent {
   typeId = this.data.typeId ?? this.types[0]?.id ?? ''
   name = ''
   unit = ''
+  targetMin = ''
+  targetMax = ''
   value = ''
   day = this.data.today
   note = ''
@@ -69,10 +78,11 @@ export class MeasureDialogComponent {
     if (this.busy()) return
     const value = parseNumber(this.value)
     if (value === null || Number.isNaN(value)) { this.error.set('La valeur est un nombre.'); return }
-    if (!this.typeId && (!this.name.trim() || !this.unit.trim())) { this.error.set('Nom et unité de la nouvelle mesure sont obligatoires.'); return }
+    const type = this.typeId ? null : measureTypeRequest(this.name, this.unit, this.targetMin, this.targetMax)
+    if (typeof type === 'string') { this.error.set(type); return }
     this.busy.set(true); this.error.set('')
     try {
-      const typeId = this.typeId || (await firstValueFrom(this.api.createMeasureType(this.name.trim(), this.unit.trim()))).id
+      const typeId = this.typeId || (await firstValueFrom(this.api.createMeasureType(type!))).id
       await firstValueFrom(this.api.addMeasurement(typeId, value, this.day || null, this.note.trim() || null))
       this.ref.close('Mesure notée')
     } catch (error) { this.error.set(apiErrorMessage(error)); this.busy.set(false) }

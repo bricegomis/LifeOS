@@ -58,7 +58,12 @@ public sealed class HealthAnalysesTests(PostgresContainerFixture postgres)
         var weight = types.Single(t => t.Name == "Poids");
         var updated = await Read<MeasureTypeDto>(await client.PostAsJsonAsync("/api/health/measures/values", new MeasurementRequest(weight.Id, null, 75.9m, "Le matin")));
         Assert.Equal(75.9m, Assert.Single(updated.Values).Value);
-        var tension = await Read<MeasureTypeDto>(await client.PostAsJsonAsync("/api/health/measures/types", new MeasureTypeRequest("Tension systolique", "mmHg")));
+        Assert.Null(updated.Status); // no target yet
+        var targeted = await Read<MeasureTypeDto>(await client.PutAsJsonAsync($"/api/health/measures/types/{weight.Id}", new MeasureTypeRequest("Poids", "kg", null, 74)));
+        Assert.Equal(("above_target", (decimal?)74), (targeted.Status, targeted.TargetMax));
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/health/measures/types/{weight.Id}", new MeasureTypeRequest("Poids", "kg", 80, 74))).StatusCode);
+        var tension = await Read<MeasureTypeDto>(await client.PostAsJsonAsync("/api/health/measures/types", new MeasureTypeRequest("Tension systolique", "mmHg", null, 120)));
+        Assert.Equal((decimal?)120, tension.TargetMax);
         Assert.Equal(4, (await Read<List<MeasureTypeDto>>(await client.GetAsync("/api/health/measures"))).Count);
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/health/measures/values/{updated.Values[0].Id}")).StatusCode);
         Assert.True((await Read<MeasureTypeDto>(await client.PostAsync($"/api/health/measures/types/{tension.Id}/archive", null))).IsArchived);

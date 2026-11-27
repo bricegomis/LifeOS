@@ -295,6 +295,18 @@ semainier, qui viendra quand le reste aura servi.
 
 **Contrat de lecture.** Sommeil et récupération par jour et par compte (ADR 0019). Fait.
 
+**ADR à écrire (notées le 2026-11-27, à cadrer avant tout code).**
+
+- **Génotype** : des résultats qui ne sont pas des nombres (ApoE, déjà connu : E3 ;
+  polymorphismes MTHFR, thyroïde…), importés d'un rapport SelfDecode que l'utilisateur
+  possède. Comment les stocker (variant, génotype, interprétation), les relier aux
+  marqueurs et les montrer, sans que l'API lise elle-même le rapport.
+- **Marqueurs calculés et âge biologique** : ratios et indices tirés d'autres marqueurs
+  (TyG, TG/HDL, neutrophiles / lymphocytes, testostérone libre et biodisponible,
+  testostérone / estradiol, LH / FSH, IMC) et âge biologique (PhenoAge, UK Biobank).
+  Calculés par l'API à partir de marqueurs reliés explicitement (jamais par leur nom) ou
+  par l'assistant ; prudence médicale sur l'affichage.
+
 **Reste à cadrer à l'étape 4.** Ce que le semainier et l'agent reçoivent du reste du dossier ; le lien symptômes ↔ repas et sport ; l'objectif calorique.
 
 **Terminé quand.** Compléments, symptômes, analyses et documents sont suivis dans

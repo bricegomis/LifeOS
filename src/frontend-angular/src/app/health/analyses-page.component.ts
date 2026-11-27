@@ -15,7 +15,7 @@ import { HealthApiService } from './health-api.service'
 import type { AnalysisDto, MarkerListDto } from './health.models'
 import { MarkerCardComponent } from './marker-card.component'
 import { MarkerDialogComponent, type MarkerDialogData } from './marker-dialog.component'
-import { dateLabel } from './marker-rules'
+import { dateLabel, isOffTarget } from './marker-rules'
 
 type Tab = 'markers' | 'analyses' | 'panels'
 
@@ -39,7 +39,14 @@ type Tab = 'markers' | 'analyses' | 'panels'
       @if (list(); as l) {
         @switch (tab()) {
           @case ('markers') {
-            <div><button mat-stroked-button type="button" (click)="addMarker()"><mat-icon svgIcon="add" />Nouveau marqueur</button></div>
+            <div class="markers-head"><button mat-stroked-button type="button" (click)="addMarker()"><mat-icon svgIcon="add" />Nouveau marqueur</button>
+              @if (l.markers.length) {
+                <span class="lo-tags" aria-label="Position des dernières valeurs">
+                  <span class="lo-tag" [class.is-warn]="offTarget()" [class.is-ok]="!offTarget()">{{ offTarget() }} hors de ta cible</span>
+                  @if (noTarget()) { <span class="lo-tag">{{ noTarget() }} sans cible</span> }
+                </span>
+              }
+            </div>
             @if (due().length) {
               <section class="lo-section"><div class="lo-section-head"><h2>À faire ou refaire</h2><span class="lo-muted">{{ due().length }}</span></div>
                 <div class="cards">@for (m of due(); track m.id) { <app-marker-card [marker]="m" /> }</div></section>
@@ -56,7 +63,7 @@ type Tab = 'markers' | 'analyses' | 'panels'
                 <a class="row" [routerLink]="['/health/analysis', a.id]">
                   <span class="row-text"><strong>Analyse du {{ date(a.day) }}</strong>
                     <span class="lo-muted">{{ [a.laboratory, a.values.length + ' marqueur' + (a.values.length > 1 ? 's' : '')].filter(x => x).join(' · ') }}</span></span>
-                  <span class="lo-tag" [class.is-ok]="!outOfTarget(a)" [class.is-warn]="outOfTarget(a)">{{ outOfTarget(a) ? outOfTarget(a) + ' hors de ta cible' : 'Tout dans ta cible' }}</span>
+                  <span class="lo-tag" [class.is-ok]="!outOfTarget(a) && !withoutTarget(a)" [class.is-warn]="outOfTarget(a)">{{ analysisTag(a) }}</span>
                 </a>
               } @empty { <p class="lo-empty">Aucune analyse.</p> }
             </div>
@@ -80,6 +87,7 @@ type Tab = 'markers' | 'analyses' | 'panels'
     .tab { min-height: 48px; padding: 0 16px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--mat-sys-on-surface-variant);
       font: var(--mat-sys-title-small); cursor: pointer; }
     .tab.is-on { border-bottom-color: var(--mat-sys-primary); color: var(--mat-sys-primary); }
+    .markers-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
     .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; color: inherit; text-decoration: none; }
     .row + .row { border-top: 1px solid var(--mat-sys-outline-variant); }
@@ -102,11 +110,19 @@ export class AnalysesPageComponent implements OnInit {
   readonly due = computed(() => this.list()?.markers.filter(m => m.due) ?? [])
   readonly upToDate = computed(() => this.list()?.markers.filter(m => !m.due) ?? [])
   readonly date = dateLabel
+  /** Last values out of the personal target (in the lab range or not), and markers measured without a target. */
+  readonly offTarget = computed(() => this.list()?.markers.filter(m => !m.isArchived && isOffTarget(m.status)).length ?? 0)
+  readonly noTarget = computed(() => this.list()?.markers.filter(m => !m.isArchived && m.status === 'in_lab').length ?? 0)
 
   async ngOnInit(): Promise<void> { await this.load() }
 
   inPanel(panel: string) { return this.list()?.markers.filter(m => m.panels.includes(panel)) ?? [] }
-  outOfTarget(a: AnalysisDto): number { return a.values.filter(v => v.status !== 'in_target').length }
+  outOfTarget(a: AnalysisDto): number { return a.values.filter(v => isOffTarget(v.status)).length }
+  withoutTarget(a: AnalysisDto): number { return a.values.filter(v => v.status === 'in_lab').length }
+  analysisTag(a: AnalysisDto): string {
+    const off = this.outOfTarget(a), none = this.withoutTarget(a)
+    return off ? `${off} hors de ta cible` : none ? `${none} sans cible` : 'Tout dans ta cible'
+  }
 
   async addMarker(): Promise<void> {
     const data: MarkerDialogData = { marker: null, panels: this.list()?.panels ?? [] }

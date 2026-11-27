@@ -57,8 +57,9 @@ export interface SymptomJournalDto { today: string, from: string, days: SymptomD
 export interface SymptomEntryRequest { symptomTypeId: string, day: string | null, time: string | null, intensity: number, note: string | null }
 export interface CheckinRequest { day: string | null, calm: boolean, symptoms: { symptomTypeId: string, intensity: number }[] }
 
-export type MarkerStatus = 'below_lab' | 'above_lab' | 'in_target' | 'normal'
-export type MarkerTrend = 'better' | 'worse' | 'stable' | 'in_target'
+/** in_lab: in the lab range while no personal target is set. */
+export type MarkerStatus = 'below_lab' | 'above_lab' | 'in_target' | 'normal' | 'in_lab'
+export type MarkerTrend = 'better' | 'worse' | 'stable' | 'in_target' | 'in_lab'
 export interface MarkerValueDto { analysisId: string, day: string, value: number, status: MarkerStatus }
 export interface MarkerDto {
   id: string
@@ -94,8 +95,13 @@ export interface MarkerRequest {
 export interface AnalysisValueDto { markerId: string, markerName: string, unit: string, value: number, status: MarkerStatus }
 export interface AnalysisDto { id: string, day: string, laboratory: string | null, notes: string | null, documentId: string | null, values: AnalysisValueDto[] }
 export interface AnalysisRequest { day: string | null, laboratory: string | null, notes: string | null, documentId: string | null, values: { markerId: string, value: number }[] }
-export interface MeasurementDto { id: string, day: string, value: number, note: string | null }
-export interface MeasureTypeDto { id: string, name: string, unit: string, isArchived: boolean, values: MeasurementDto[] }
+export type MeasureStatus = 'below_target' | 'in_target' | 'above_target'
+export interface MeasurementDto { id: string, day: string, value: number, note: string | null, status: MeasureStatus | null }
+/** A kind of body measure with an optional personal target; status is the last value's, null without a target. */
+export interface MeasureTypeDto {
+  id: string, name: string, unit: string, targetMin: number | null, targetMax: number | null, isArchived: boolean, values: MeasurementDto[], status: MeasureStatus | null
+}
+export interface MeasureTypeRequest { name: string, unit: string, targetMin: number | null, targetMax: number | null }
 
 export type HealthDocumentType = 'ordonnance' | 'compte_rendu' | 'resultat' | 'bilan' | 'autre'
 export interface HealthDocumentFileDto { id: string, contentType: string, size: number, originalName: string | null }

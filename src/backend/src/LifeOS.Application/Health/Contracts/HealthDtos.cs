@@ -60,8 +60,8 @@ public sealed record SymptomJournalDto(DateOnly Today, DateOnly From, IReadOnlyL
 public sealed record MarkerValueDto(Guid AnalysisId, DateOnly Day, decimal Value, string Status);
 
 /// <param name="FrequencyMonths">0: once.</param>
-/// <param name="Status">Of the last value: below_lab, above_lab, in_target or normal (in the lab range, outside the target).</param>
-/// <param name="Trend">From the previous value: better, worse, stable or in_target; null with less than two values.</param>
+/// <param name="Status">Of the last value: below_lab, above_lab, in_target, normal (in the lab range, outside the target) or in_lab (in the lab range, no target set).</param>
+/// <param name="Trend">From the previous value: better, worse, stable, in_target or in_lab (no target set); null with less than two values.</param>
 /// <param name="NextDueOn">When to measure it again; today when never measured, null when once is enough.</param>
 /// <param name="Due">To measure within 30 days, or late.</param>
 /// <param name="Values">Oldest first.</param>
@@ -98,10 +98,14 @@ public sealed record AnalysisDto(Guid Id, DateOnly Day, string? Laboratory, stri
             .OrderBy(v => v.MarkerName).ToList());
 }
 
-public sealed record MeasurementDto(Guid Id, DateOnly Day, decimal Value, string? Note);
+/// <param name="Status">below_target, in_target or above_target; null without a target.</param>
+public sealed record MeasurementDto(Guid Id, DateOnly Day, decimal Value, string? Note, string? Status);
 
+/// <param name="TargetMin">Optional personal target (min and/or max).</param>
 /// <param name="Values">Oldest first.</param>
-public sealed record MeasureTypeDto(Guid Id, string Name, string Unit, bool IsArchived, IReadOnlyList<MeasurementDto> Values);
+/// <param name="Status">Of the last value: below_target, in_target or above_target; null without a target or a value.</param>
+public sealed record MeasureTypeDto(Guid Id, string Name, string Unit, decimal? TargetMin, decimal? TargetMax, bool IsArchived,
+    IReadOnlyList<MeasurementDto> Values, string? Status);
 
 public sealed record HealthDocumentFileDto(Guid Id, string ContentType, long Size, string? OriginalName);
 
