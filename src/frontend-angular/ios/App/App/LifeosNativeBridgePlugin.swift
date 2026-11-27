@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Capacitor
 import WidgetKit
 import ActivityKit
@@ -17,7 +18,8 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "startLiveActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateLiveActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endLiveActivity", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "reloadWidgetTimelines", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "reloadWidgetTimelines", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setKeepAwake", returnType: CAPPluginReturnPromise)
     ]
     
     // MARK: - Snapshot
@@ -224,5 +226,15 @@ public class LifeosNativeBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func reloadWidgetTimelines(_ call: CAPPluginCall) {
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve()
+    }
+
+    // MARK: - Screen
+    /// Keeps the screen on (guided run of a sport routine) or lets it sleep again.
+    @objc func setKeepAwake(_ call: CAPPluginCall) {
+        let enabled = call.getBool("enabled") ?? false
+        DispatchQueue.main.async {
+            UIApplication.shared.isIdleTimerDisabled = enabled
+            call.resolve()
+        }
     }
 }

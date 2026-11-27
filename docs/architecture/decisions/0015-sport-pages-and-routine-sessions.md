@@ -162,6 +162,33 @@ L'effort et la gêne s'affichent dans la progression de l'exercice, à côté de
 valeur et de la charge. **La cible reste réglée à la main** : l'application ne
 propose pas de l'augmenter.
 
+### Mode guidé
+
+Ajouté le 2026-11-27, à la demande de l'utilisateur. La page « Faire la routine » propose un
+bouton **Mode guidé** (« Continuer en mode guidé » quand un passage est en cours), qui ouvre
+la page `sports/routine/:id/run`, sur ordinateur comme sur téléphone :
+
+- les séries s'enchaînent **en circuit** : une série de chaque exercice dans l'ordre de la
+  routine, puis on recommence pour le tour suivant, tant qu'un exercice a des séries à faire
+  (« Chaise 3 × 45 s, Pont 1 × 12, Gainage 2 × 30 s » donne 3 tours et 6 séries) ;
+- l'écran montre une série à la fois : photo, nom, cible d'une série, consigne, « Tour 2 / 3 ·
+  série 2 / 3 » et l'exercice suivant ;
+- un exercice **tenu** se fait au chrono : « Démarrer le chrono » lance 5 s de « Préparez-vous »,
+  puis le compte à rebours de la cible, avec un bip sur les 3 dernières secondes, un double bip
+  et une vibration à la fin ; la série est alors cochée et l'exercice suivant s'affiche. Pause,
+  « Recommencer la série » et « Valider sans chrono » sont proposés ;
+- un exercice en **répétitions** se valide par « Fait » ;
+- chaque série est cochée dans le passage en cours comme sur la page de la routine ; le mode
+  guidé reprend donc à la première série non cochée, et « Annuler la série précédente » retire
+  la dernière série cochée pendant le mode guidé ;
+- l'écran reste allumé tant que la page est ouverte : par la veille native d'iOS dans l'app
+  iPhone, par l'API web de verrouillage d'écran dans le navigateur quand il la connaît ; le son
+  demande un premier appui et peut être coupé par le mode silencieux du téléphone ;
+- à la dernière série, le passage se termine comme ailleurs (message, fenêtre de ressenti),
+  puis on revient à la page de la routine.
+
+Rien ne change dans l'API : le mode guidé n'utilise que l'ouverture d'un passage et la coche par série.
+
 ### Assistant
 
 - `create_exercise` accepte une URL d'image.
@@ -185,10 +212,6 @@ L'état des routines du jour gagne le nombre de passages terminés.
 - Rappels au fil de la journée (étape 6, notifications).
 - Progression automatique ou suggérée de la charge : version ultérieure.
 - Valeur, charge ou ressenti différents d'une série à l'autre ; temps de repos.
-- **Mode « démarrer une routine »**, prévu pour l'itération suivante, une fois cette
-  base en place : une page dédiée sur téléphone qui déroule la routine, avec un
-  chronomètre pour un exercice tenu et un bouton « Fait » pour un exercice en
-  répétitions. Il s'appuiera sur les passages et la coche par série décrits ici.
 
 ## Conséquences
 

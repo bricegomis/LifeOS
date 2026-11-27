@@ -49,6 +49,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
               <h2 id="open-pass">Passage de {{ clockTime(current.startedAt) }}</h2>
               <span class="lo-muted">{{ current.exercisesDone }} / {{ current.exercisesTotal }} exercices</span>
             </div>
+            <div><a mat-flat-button class="start" [routerLink]="['/sports/routine', report.routine.id, 'run']"><mat-icon svgIcon="timer" />Continuer en mode guidé</a></div>
             @for (line of report.routine.lines; track line.exerciseId) {
               @let button = buttonOf(line);
               <article class="lo-card lo-media-card exercise" [class.is-done]="button.full">
@@ -75,8 +76,12 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
             <p class="lo-help">Un appui par série faite, avec la cible ; la flèche retire la dernière. Le passage se termine à la dernière série.</p>
           </section>
         } @else if (report.plannedToday && report.routine.isActive) {
-          <div><button mat-flat-button type="button" class="start" [disabled]="pending() === 'start'" (click)="start()">
-            <mat-icon svgIcon="play_arrow" />{{ report.completedToday ? 'Nouveau passage' : 'Commencer un passage' }}</button></div>
+          <div class="start-row">
+            <a mat-flat-button class="start" [routerLink]="['/sports/routine', report.routine.id, 'run']"><mat-icon svgIcon="timer" />Mode guidé</a>
+            <button mat-stroked-button type="button" class="free" [disabled]="pending() === 'start'" (click)="start()">
+              <mat-icon svgIcon="play_arrow" />{{ report.completedToday ? 'Nouveau passage' : 'Commencer un passage' }}</button>
+          </div>
+          <p class="lo-help">Le mode guidé enchaîne les exercices un par un, avec un chrono et un bip pour les exercices tenus.</p>
         } @else if (report.routine.isActive) {
           <p class="lo-muted">Pas prévue aujourd’hui. {{ nextDayLabel(report.today, report.nextPlannedDay) }}</p>
         }
@@ -115,6 +120,8 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
     .head .lo-page-title { flex: 1 1 200px; }
     .tonal, .start { --mat-button-filled-container-color: var(--mat-sys-secondary-container); --mat-button-filled-label-text-color: var(--mat-sys-on-secondary-container); }
     .start { --mat-button-filled-container-color: var(--mat-sys-primary); --mat-button-filled-label-text-color: var(--mat-sys-on-primary); min-height: 48px; }
+    .start-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .free { min-height: 48px; }
     .exercise { min-height: 112px; }
     .exercise.is-done { border-color: var(--mat-sys-primary); }
     .exercise-body { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; }

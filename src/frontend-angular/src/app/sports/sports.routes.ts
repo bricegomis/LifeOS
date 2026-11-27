@@ -5,6 +5,7 @@ import { RoutinesPageComponent } from './routines-page.component'
 import { SportHistoryPageComponent } from './sport-history-page.component'
 import { SportProgressPageComponent } from './sport-progress-page.component'
 import { SportRoutinePageComponent } from './sport-routine-page.component'
+import { SportRoutineRunPageComponent } from './sport-routine-run-page.component'
 import { SportGarminPageComponent } from './sport-garmin-page.component'
 import { SportSessionPageComponent } from './sport-session-page.component'
 import { SportTodayPageComponent } from './sport-today-page.component'
@@ -14,6 +15,7 @@ import { SportVo2MaxPageComponent } from './sport-vo2max-page.component'
 export const SPORT_ROUTES: Routes = [
   { path: '', component: SportTodayPageComponent },
   { path: 'routine/:id', component: SportRoutinePageComponent },
+  { path: 'routine/:id/run', component: SportRoutineRunPageComponent },
   { path: 'sessions', component: SportHistoryPageComponent },
   { path: 'session/:id', component: SportSessionPageComponent },
   { path: 'vo2max', component: SportVo2MaxPageComponent },
