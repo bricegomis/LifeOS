@@ -12,6 +12,10 @@ body {
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button:not(:disabled) { cursor: pointer; }
+/* The SVG fills its icon box: kept inline, it sat on the text baseline of the inherited line height,
+   so an icon button grew its icon (`min-height: fit-content`) past the button and Firefox cut it. */
+.mat-icon > svg { display: block; }
+.mat-mdc-icon-button > .mat-icon { vertical-align: top; }
 a { color: var(--mat-sys-primary); text-decoration: none; }
 h1, h2, h3, p { margin: 0; }
 h1, h2, h3 { line-height: 1.2; }
