@@ -1,8 +1,11 @@
 import { Component, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog'
 import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatIconModule } from '@angular/material/icon'
 import { MatInputModule } from '@angular/material/input'
+import { Router } from '@angular/router'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { formSnapshot, hasChanges } from '@/app/shared/dialog/dialog-guard'
@@ -22,7 +25,7 @@ function parisToday(): string { return new Intl.DateTimeFormat('fr-CA', { timeZo
 @Component({
   selector: 'app-exercise-log-dialog',
   standalone: true,
-  imports: [EditorFrameComponent, ExerciseImageComponent, FormsModule, MatFormFieldModule, MatInputModule],
+  imports: [EditorFrameComponent, ExerciseImageComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   template: `
     <app-editor-frame heading="Faire l’exercice" formId="exercise-log-form" saveLabel="Noter" [busy]="busy()" [dirty]="dirty()" [error]="error()">
       <form id="exercise-log-form" class="lo-form" (ngSubmit)="save()">
@@ -51,6 +54,12 @@ function parisToday(): string { return new Intl.DateTimeFormat('fr-CA', { timeZo
           <input matInput type="number" name="load" min="0" max="500" step="0.5" inputmode="decimal" placeholder="Poids du corps" [(ngModel)]="draft.loadKg" />
           <mat-hint>Vide ou 0 = au poids du corps.</mat-hint>
         </mat-form-field>
+        @if (exercise.measure === 'hold') {
+          <div class="lo-field-group">
+            <div><button mat-stroked-button type="button" (click)="runTimer()"><mat-icon svgIcon="timer" />Faire au chrono</button></div>
+            <span class="lo-help">Les séries s’enchaînent avec un compte à rebours et des bips, puis sont notées aujourd’hui.</span>
+          </div>
+        }
       </form>
     </app-editor-frame>
   `,
@@ -64,6 +73,7 @@ function parisToday(): string { return new Intl.DateTimeFormat('fr-CA', { timeZo
 export class ExerciseLogDialogComponent {
   private readonly api = inject(SportsApiService)
   private readonly ref = inject<MatDialogRef<ExerciseLogDialogComponent, ExerciseCompletionDto>>(MatDialogRef)
+  private readonly router = inject(Router)
   readonly exercise = inject<ExerciseDto>(MAT_DIALOG_DATA)
   readonly today = parisToday()
   readonly valueLabel = logValueLabel(this.exercise)
@@ -73,6 +83,16 @@ export class ExerciseLogDialogComponent {
   private readonly initial = formSnapshot(this.draft)
 
   dirty(): boolean { return hasChanges(this.initial, this.draft) }
+
+  /** Opens the chrono page with the sets, seconds and load typed so far. */
+  async runTimer(): Promise<void> {
+    const queryParams: Record<string, string> = {}
+    if (this.draft.setsDone) queryParams['sets'] = String(this.draft.setsDone)
+    if (this.draft.value) queryParams['value'] = String(this.draft.value)
+    queryParams['load'] = this.draft.loadKg === null ? '' : String(this.draft.loadKg)
+    this.ref.close()
+    await this.router.navigate(['/sports/exercise', this.exercise.id, 'run'], { queryParams })
+  }
 
   async save(): Promise<void> {
     if (this.busy()) return

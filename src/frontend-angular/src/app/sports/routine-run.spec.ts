@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  countdownText, currentStepIndex, elapsedPercent, nextLabel, nextStep, roundCount, runSteps, runSummary, setCount, setKey, setNumber, setTarget,
+  countdownText, currentStepIndex, elapsedPercent, nextLabel, nextStep, roundCount, runSteps, runSummary, setCount, setKey, setNumber, setsCompleted, setTarget, soloLine,
   sideLabel, stepPosition, warningSecond,
 } from './routine-run.ts'
 import type { ExerciseCompletionDto, RoutineLineDto, RoutineSessionDto } from './sports.models.ts'
@@ -76,6 +76,15 @@ describe('guided routine run', () => {
     assert.equal(nextLabel(steps[2]!, 2, steps[1]!), 'Ensuite : Fente, 10 rép. par côté')
     assert.equal(currentStepIndex(steps, pass({ e4: 1 })), 2)
     assert.equal(currentStepIndex(steps, pass({ e4: 1, e5: 1 }), new Set(['e4:2'])), 5)
+  })
+
+  it('runs an exercise done alone as a routine line of its own, counting whole sets only', () => {
+    const plankAlone = soloLine({ id: 'e9', name: 'Planche latérale', instructions: null, measure: 'hold', defaultLoadKg: null, hasImage: false,
+      isArchived: false, measureLocked: false, perSide: true }, 2, 30, null)
+    const steps = runSteps([plankAlone])
+    assert.equal(steps.length, 4)
+    assert.deepEqual([0, 1, 2, 3, 4].map(index => setsCompleted(steps, index)), [0, 0, 1, 1, 2])
+    assert.equal(setsCompleted(runSteps([plank]), 1), 1)
   })
 
   it('counts down in whole seconds and beeps on the last three', () => {

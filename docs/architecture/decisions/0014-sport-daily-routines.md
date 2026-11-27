@@ -75,6 +75,13 @@ Il compte dans la progression de l'exercice, jamais dans une routine, une série
 calendrier. Un exercice noté seul, ou resté d'une routine supprimée, se supprime depuis la
 progression ; une coche dans un passage se retire depuis sa routine.
 
+Un exercice **tenu** se fait aussi **au chrono** (« Faire au chrono » dans cette fenêtre, page
+`sports/exercise/:id/run`) : séries, secondes et charge réglées, puis les séries s'enchaînent comme
+dans le mode guidé d'une routine ([ADR 0015](0015-sport-pages-and-routine-sessions.md)) : 5 s de
+« Préparez-vous », bips, côté gauche puis côté droit pour un exercice par côté. Chaque série se
+lance d'un appui ; à la dernière, les séries sont notées aujourd'hui. « Terminer » note plus tôt
+les séries déjà faites ; quitter la page ne note rien.
+
 ### Réalisation du jour
 
 Depuis l'[ADR 0015](0015-sport-pages-and-routine-sessions.md), une routine se fait en
