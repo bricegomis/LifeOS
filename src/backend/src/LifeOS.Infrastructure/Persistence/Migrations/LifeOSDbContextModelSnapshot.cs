@@ -1166,6 +1166,14 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("TargetMax")
+                        .HasPrecision(14, 4)
+                        .HasColumnType("numeric(14,4)");
+
+                    b.Property<decimal?>("TargetMin")
+                        .HasPrecision(14, 4)
+                        .HasColumnType("numeric(14,4)");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasMaxLength(30)

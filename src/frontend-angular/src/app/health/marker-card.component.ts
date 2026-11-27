@@ -46,6 +46,7 @@ export class MarkerCardComponent {
   readonly meta = computed(() => {
     const m = this.marker()
     const last = this.last()
-    return `${last ? 'Dernière : ' + dateLabel(last.day) : 'Jamais mesuré'} · cible ${rangeLabel(m.targetMin, m.targetMax, m.unit)}`
+    const target = m.targetMin === null && m.targetMax === null ? 'sans cible' : `cible ${rangeLabel(m.targetMin, m.targetMax, m.unit)}`
+    return `${last ? 'Dernière : ' + dateLabel(last.day) : 'Jamais mesuré'} · ${target}`
   })
 }

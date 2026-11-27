@@ -133,7 +133,7 @@ public sealed class HealthAssistantTools
 
     [McpServerTool(Name = "list_markers", ReadOnly = true, Title = "Marqueurs")]
     [Description("Les marqueurs suivis (sanguins ou autres) avec unité, plage du labo, cible personnelle, fréquence (0 = une fois), bilans, " +
-        "valeurs dans le temps, position de la dernière (below_lab, above_lab, in_target, normal = dans le labo hors cible), tendance " +
+        "valeurs dans le temps, position de la dernière (below_lab, above_lab, in_target, normal = dans le labo hors cible, in_lab = dans le labo sans cible fixée), tendance " +
         "et prochaine mesure (due, late). " + PrivacyNote)]
     public static async Task<MarkerListDto> ListMarkers(IHttpContextAccessor accessor, AnalysisLibrary library, bool includeArchived = false,
         CancellationToken ct = default) =>
@@ -213,15 +213,32 @@ public sealed class HealthAssistantTools
         await library.RemoveAnalysisAsync(await AssistantRequest.HouseholdAsync(accessor), analysisId, ct) ? "Analyse supprimée." : throw AssistantRequest.NotFound("Analyse");
 
     [McpServerTool(Name = "list_body_measures", ReadOnly = true, Title = "Mesures corporelles")]
-    [Description("Les mesures corporelles suivies (poids, tour de taille, fréquence cardiaque au repos… créées la première fois) et leurs valeurs.")]
+    [Description("Les mesures corporelles suivies (poids, tour de taille, fréquence cardiaque au repos… créées la première fois), leur cible " +
+        "personnelle facultative et leurs valeurs, avec la position de chacune (below_target, in_target, above_target ; null sans cible).")]
     public static async Task<List<MeasureTypeDto>> ListBodyMeasures(IHttpContextAccessor accessor, AnalysisLibrary library, CancellationToken ct = default) =>
         await library.MeasuresAsync(await AssistantRequest.HouseholdAsync(accessor), ct);
 
     [McpServerTool(Name = "create_body_measure_type", Title = "Suivre une nouvelle mesure")]
     [Description("Ajoute une mesure corporelle à suivre (ex. Tension systolique, mmHg), quand list_body_measures ne l'a pas.")]
     public static async Task<MeasureTypeDto> CreateBodyMeasureType(IHttpContextAccessor accessor, AnalysisLibrary library, string name, string unit,
+        [Description("Cible personnelle, minimum (facultatif).")] decimal? targetMin = null,
+        [Description("Cible personnelle, maximum (facultatif).")] decimal? targetMax = null,
         CancellationToken ct = default) =>
-        await library.CreateMeasureTypeAsync(await AssistantRequest.HouseholdAsync(accessor), AssistantRequest.Validated(new MeasureTypeRequest(name, unit)), ct);
+        await library.CreateMeasureTypeAsync(await AssistantRequest.HouseholdAsync(accessor),
+            AssistantRequest.Validated(new MeasureTypeRequest(name, unit, targetMin, targetMax)), ct);
+
+    [McpServerTool(Name = "update_body_measure_type", Idempotent = true, Title = "Modifier une mesure suivie")]
+    [Description("Modifie le nom, l'unité ou la cible personnelle d'une mesure suivie ; un champ omis reste inchangé, clearTarget = true retire la cible.")]
+    public static async Task<MeasureTypeDto> UpdateBodyMeasureType(IHttpContextAccessor accessor, AnalysisLibrary library, Guid measureTypeId,
+        string? name = null, string? unit = null, decimal? targetMin = null, decimal? targetMax = null, bool clearTarget = false,
+        CancellationToken ct = default)
+    {
+        var household = await AssistantRequest.HouseholdAsync(accessor);
+        var t = (await library.MeasuresAsync(household, ct)).SingleOrDefault(x => x.Id == measureTypeId).OrNotFound("Mesure");
+        var request = AssistantRequest.Validated(new MeasureTypeRequest(name ?? t.Name, unit ?? t.Unit,
+            clearTarget ? targetMin : targetMin ?? t.TargetMin, clearTarget ? targetMax : targetMax ?? t.TargetMax));
+        return (await library.UpdateMeasureTypeAsync(household, measureTypeId, request, ct)).OrNotFound("Mesure");
+    }
 
     [McpServerTool(Name = "add_body_measure", Title = "Noter une mesure")]
     [Description("Note une valeur d'une mesure corporelle, dans son unité.")]

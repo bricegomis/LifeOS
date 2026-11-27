@@ -3,7 +3,7 @@ import { from, switchMap, type Observable } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LIBRARY_IMAGE, RECEIPT_PHOTO, reduceImage } from '@/app/shared/image-reduction'
 import type {
-  AnalysisDto, AnalysisRequest, AppointmentDto, AppointmentListDto, AppointmentRequest, HealthDocumentDto, HealthDocumentRequest, MarkerDto, MarkerListDto, MarkerRequest, MeasureTypeDto,
+  AnalysisDto, AnalysisRequest, AppointmentDto, AppointmentListDto, AppointmentRequest, HealthDocumentDto, HealthDocumentRequest, MarkerDto, MarkerListDto, MarkerRequest, MeasureTypeDto, MeasureTypeRequest,
   CheckinRequest, WellnessDto, SupplementDto, SupplementListDto, SupplementRequest, SymptomDayDto, SymptomEntryDto, SymptomEntryRequest, SymptomJournalDto, SymptomKind, SymptomTypeDto,
 } from './health.models'
 
@@ -65,7 +65,10 @@ export class HealthApiService {
   removeAnalysis(analysisId: string): Observable<void> { return this.api.delete(`/health/analyses/${id(analysisId)}`) }
   /** The body measures with their values (created with a default list the first time). */
   measures(): Observable<MeasureTypeDto[]> { return this.api.get<MeasureTypeDto[]>('/health/measures') }
-  createMeasureType(name: string, unit: string): Observable<MeasureTypeDto> { return this.api.post<MeasureTypeDto>('/health/measures/types', { name, unit }) }
+  createMeasureType(request: MeasureTypeRequest): Observable<MeasureTypeDto> { return this.api.post<MeasureTypeDto>('/health/measures/types', request) }
+  updateMeasureType(typeId: string, request: MeasureTypeRequest): Observable<MeasureTypeDto> {
+    return this.api.put<MeasureTypeDto>(`/health/measures/types/${id(typeId)}`, request)
+  }
   archiveMeasureType(typeId: string, restore = false): Observable<MeasureTypeDto> {
     return this.api.post<MeasureTypeDto>(`/health/measures/types/${id(typeId)}/archive${restore ? '?restore=true' : ''}`, {})
   }

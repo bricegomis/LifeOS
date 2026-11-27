@@ -82,14 +82,18 @@ public sealed class Marker : Entity
     public void Archive() => IsArchived = true;
     public void Restore() => IsArchived = false;
 
+    public bool HasTarget => TargetMin is not null || TargetMax is not null;
+
     /// <summary>
     /// Where a value stands: <c>below_lab</c> or <c>above_lab</c> out of the laboratory range, else
-    /// <c>in_target</c> or <c>normal</c> (in the lab range but outside the personal target).
+    /// <c>in_target</c> or <c>normal</c> (in the lab range but outside the personal target), or
+    /// <c>in_lab</c> when no personal target is set.
     /// </summary>
     public string StatusOf(decimal value)
     {
         if (LabMin is { } labMin && value < labMin) return "below_lab";
         if (LabMax is { } labMax && value > labMax) return "above_lab";
+        if (!HasTarget) return "in_lab";
         return DistanceToTarget(value) == 0 ? "in_target" : "normal";
     }
 
@@ -105,13 +109,14 @@ public sealed class Marker : Entity
 
     /// <summary>
     /// From the previous value to the last: <c>better</c> or <c>worse</c> when it moves toward or away from
-    /// the target by more than 2 % of its span, else <c>stable</c> (<c>in_target</c> when both are inside).
+    /// the target by more than 2 % of its span, else <c>stable</c> (<c>in_target</c> when both are inside,
+    /// <c>in_lab</c> when both are inside the lab range and no target is set).
     /// </summary>
     public string? TrendOf(decimal? previous, decimal last)
     {
         if (previous is not { } before) return null;
         var (a, b) = (DistanceToTarget(before), DistanceToTarget(last));
-        if (a == 0 && b == 0) return "in_target";
+        if (a == 0 && b == 0) return HasTarget ? "in_target" : "in_lab";
         var low = TargetMin ?? LabMin ?? 0;
         var high = TargetMax ?? LabMax ?? Math.Max(low, last);
         var span = Math.Max(high - low, Math.Abs(last) * 0.1m);
@@ -192,7 +197,10 @@ public sealed class AnalysisValue
     }
 }
 
-/// <summary>A kind of body measure (weight, waist, resting heart rate…) with its unit.</summary>
+/// <summary>
+/// A kind of body measure (weight, waist, resting heart rate…) with its unit and an optional personal
+/// target (min and/or max; none for what cannot change, such as height).
+/// </summary>
 public sealed class MeasureType : Entity
 {
     public static readonly IReadOnlyList<(string Name, string Unit)> Defaults =
@@ -203,23 +211,39 @@ public sealed class MeasureType : Entity
     public Guid MemberProfileId { get; private set; }
     public string Name { get; private set; } = "";
     public string Unit { get; private set; } = "";
+    public decimal? TargetMin { get; private set; }
+    public decimal? TargetMax { get; private set; }
     public bool IsArchived { get; private set; }
 
     private MeasureType() { }
 
-    public static MeasureType Create(Guid householdId, Guid ownerUserId, Guid memberProfileId, string name, string unit)
+    public static MeasureType Create(Guid householdId, Guid ownerUserId, Guid memberProfileId, string name, string unit,
+        decimal? targetMin = null, decimal? targetMax = null)
     {
         var type = new MeasureType { Id = Guid.NewGuid(), HouseholdId = householdId, OwnerUserId = ownerUserId, MemberProfileId = memberProfileId };
-        type.Update(name, unit);
+        type.Update(name, unit, targetMin, targetMax);
         return type;
     }
 
-    public void Update(string name, string unit)
+    public void Update(string name, string unit, decimal? targetMin, decimal? targetMax)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100) throw new ArgumentException("Nom de la mesure obligatoire (100 caractères maximum).");
         if (string.IsNullOrWhiteSpace(unit) || unit.Trim().Length > 30) throw new ArgumentException("Unité obligatoire (30 caractères maximum).");
+        if (targetMin > targetMax) throw new ArgumentException("Cible : le minimum dépasse le maximum.");
+        if (targetMin is < -1_000_000 or > 1_000_000 || targetMax is < -1_000_000 or > 1_000_000) throw new ArgumentException("Cible hors limites.");
         Name = name.Trim();
         Unit = unit.Trim();
+        TargetMin = targetMin;
+        TargetMax = targetMax;
+    }
+
+    /// <summary><c>below_target</c>, <c>in_target</c> or <c>above_target</c>; null without a target.</summary>
+    public string? StatusOf(decimal value)
+    {
+        if (TargetMin is null && TargetMax is null) return null;
+        if (TargetMin is { } min && value < min) return "below_target";
+        if (TargetMax is { } max && value > max) return "above_target";
+        return "in_target";
     }
 
     public void Archive() => IsArchived = true;

@@ -12,10 +12,11 @@ import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { HealthApiService } from './health-api.service'
 import type { MeasureTypeDto, MeasurementDto } from './health.models'
 import { MeasureDialogComponent, type MeasureDialogData } from './measure-dialog.component'
-import { dateLabel, num } from './marker-rules'
+import { dateLabel, MEASURE_STATUS, num, rangeLabel } from './marker-rules'
+import { MeasureTypeDialogComponent } from './measure-type-dialog.component'
 import { ConfirmService } from '@/app/shared/ui/confirm'
 
-/** Body measures (ADR 0018): each kind with its last value, its change and its evolution. */
+/** Body measures (ADR 0018): each kind with its last value, its change, its optional target and its evolution. */
 @Component({
   selector: 'app-measures-page',
   standalone: true,
@@ -31,14 +32,16 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
         <section class="lo-section">
           <div class="lo-section-head"><h2>{{ t.name }}</h2>
             <span class="lo-muted">{{ summary(t) }}</span>
+            @if (t.status) { <span [class]="'lo-tag ' + measureStatus[t.status].tag">{{ measureStatus[t.status].label }}</span> }
             <span class="head-actions">
               <button mat-button type="button" (click)="add(t.id)"><mat-icon svgIcon="add" />Noter</button>
-              <button mat-button type="button" (click)="archive(t)">Archiver</button>
+              <button mat-icon-button type="button" (click)="edit(t)" [attr.aria-label]="'Modifier « ' + t.name + ' »'" title="Modifier la mesure et sa cible"><mat-icon svgIcon="edit" /></button>
             </span></div>
+          <p class="lo-muted target">{{ targetText(t) }}</p>
           @if (t.values.length) {
             <div class="lo-card chart" role="img" [attr.aria-label]="t.name + ' dans le temps'">
               @for (v of recent(t); track v.id) {
-                <div class="col"><span class="col-value">{{ num(v.value) }}</span><span class="col-bar" [style.height.px]="height(t, v)"></span>
+                <div class="col"><span class="col-value">{{ num(v.value) }}</span><span class="col-bar" [attr.data-status]="v.status" [style.height.px]="height(t, v)"></span>
                   <span class="lo-muted col-label">{{ short(v.day) }}</span></div>
               }
             </div>
@@ -68,6 +71,9 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
     .col { display: flex; min-width: 44px; flex: 1 1 0; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; }
     .col-value { font: var(--mat-sys-label-medium); }
     .col-bar { width: 100%; max-width: 48px; border-radius: 6px 6px 0 0; background: var(--mat-sys-secondary); }
+    .col-bar[data-status='in_target'] { background: var(--mat-sys-primary); }
+    .col-bar[data-status='below_target'], .col-bar[data-status='above_target'] { background: var(--mat-sys-tertiary); }
+    .target { margin: 0; }
     .col-label { padding-bottom: 6px; white-space: nowrap; }
     .values summary { cursor: pointer; color: var(--mat-sys-primary); font: var(--mat-sys-label-large); padding: 8px 0; }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 4px 4px 16px; }
@@ -86,6 +92,7 @@ export class MeasuresPageComponent implements OnInit {
   readonly error = signal('')
   readonly num = num
   readonly date = dateLabel
+  readonly measureStatus = MEASURE_STATUS
 
   async ngOnInit(): Promise<void> { await this.load() }
 
@@ -103,6 +110,10 @@ export class MeasuresPageComponent implements OnInit {
     return `${num(last.value)} ${t.unit}${diff !== null ? ` (${diff > 0 ? '+' : ''}${num(diff)})` : ''}`
   }
 
+  targetText(t: MeasureTypeDto): string {
+    return t.targetMin === null && t.targetMax === null ? 'Sans cible' : `Ta cible : ${rangeLabel(t.targetMin, t.targetMax, t.unit)}`
+  }
+
   height(t: MeasureTypeDto, v: MeasurementDto): number {
     const values = this.recent(t).map(x => x.value)
     const [min, max] = [Math.min(...values), Math.max(...values)]
@@ -112,6 +123,13 @@ export class MeasuresPageComponent implements OnInit {
   async add(typeId: string | null): Promise<void> {
     const data: MeasureDialogData = { types: this.types(), today: new Date().toISOString().slice(0, 10), typeId: typeId ?? undefined }
     const message = await firstValueFrom(openEditor<MeasureDialogComponent, MeasureDialogData, string>(this.dialog, MeasureDialogComponent, data).afterClosed())
+    if (!message) return
+    this.snack.open(message, undefined, { duration: 4000 })
+    await this.load()
+  }
+
+  async edit(t: MeasureTypeDto): Promise<void> {
+    const message = await firstValueFrom(openEditor<MeasureTypeDialogComponent, MeasureTypeDto, string>(this.dialog, MeasureTypeDialogComponent, t).afterClosed())
     if (!message) return
     this.snack.open(message, undefined, { duration: 4000 })
     await this.load()

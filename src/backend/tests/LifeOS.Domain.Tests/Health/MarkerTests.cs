@@ -34,6 +34,15 @@ public sealed class MarkerTests
     }
 
     [Fact]
+    public void Without_a_target_a_value_is_only_placed_against_the_lab_range()
+    {
+        var marker = Marker.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "TSH", "mUI/L", 0.27m, 4.2m, null, null, 12, null);
+        Assert.Equal(("below_lab", "in_lab", "above_lab"), (marker.StatusOf(0.1m), marker.StatusOf(1.56m), marker.StatusOf(5)));
+        Assert.Equal("in_lab", marker.TrendOf(1.2m, 1.56m));
+        Assert.Equal("in_lab", Marker.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Glycémie", "g/L", null, null, null, null, 12, null).StatusOf(0.94m));
+    }
+
+    [Fact]
     public void A_marker_is_due_after_its_frequency_or_when_never_measured()
     {
         Assert.Equal(Today, Ferritin().NextDueOn(null, Today));
@@ -54,5 +63,15 @@ public sealed class MarkerTests
         marker.Describe(null, "", null);
         Assert.Null(marker.WhenLow);
         Assert.Throws<ArgumentException>(() => marker.Describe(new string('a', Marker.MaxTextLength + 1), null, null));
+    }
+
+    [Fact]
+    public void A_body_measure_target_is_optional_and_places_each_value()
+    {
+        var height = MeasureType.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Taille", "cm");
+        Assert.Null(height.StatusOf(180));
+        var weight = MeasureType.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Poids", "kg", 70, 74);
+        Assert.Equal(("below_target", "in_target", "above_target"), (weight.StatusOf(69), weight.StatusOf(72), weight.StatusOf(76)));
+        Assert.Throws<ArgumentException>(() => weight.Update("Poids", "kg", 75, 74));
     }
 }
