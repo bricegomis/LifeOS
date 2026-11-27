@@ -22,7 +22,7 @@ import { dateLabel, dueLabel, frequencyLabel, monthLabel, num, rangeBar, rangeLa
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (marker(); as m) {
         <header class="head">
-          <a mat-icon-button routerLink="/health/analyses" aria-label="Retour aux analyses"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button routerLink="/health/markers" aria-label="Retour aux marqueurs"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">{{ m.name }}</h1>
           <button mat-icon-button type="button" (click)="edit(m)" aria-label="Modifier le marqueur" title="Modifier le marqueur"><mat-icon svgIcon="edit" /></button>
         </header>

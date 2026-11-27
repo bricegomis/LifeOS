@@ -134,7 +134,7 @@ par les outils MCP, après confirmation. L'API ne va rien chercher seule (ADR 00
 
 Groupe « Santé » dans le menu : **Aujourd'hui** (compléments à cocher, bilan du jour,
 prochains rendez-vous, marqueurs à refaire), **Compléments** (avec coût par mois),
-**Symptômes** (journal), **Analyses** (marqueurs, bilans, analyses), **Mesures**,
+**Symptômes** (journal), **Marqueurs** (tous, filtrés par position et par suivi), **Analyses** (marqueurs, bilans, analyses), **Mesures**,
 **Documents** et **Rendez-vous**, une page par élément et des fenêtres de modification,
 selon les ADR 0015 et 0016.
 

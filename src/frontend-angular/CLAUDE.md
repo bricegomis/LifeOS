@@ -13,7 +13,7 @@
   routine page `sports/routine/:id` with its passes and its guided run `sports/routine/:id/run`, the chrono of an exercise done alone `sports/exercise/:id/run`; rules in `sports/routine-format.ts` and `sports/routine-run.ts`),
   `tasks` (today, all tasks with search, routines, projects, one page per todo `tasks/todo/:id`, routine
   `tasks/routine/:id` and project `tasks/project/:id`, their windows; rules in `tasks/task-format.ts` and `tasks/routine-rules.ts`),
-  `health` (private health: today, supplements, symptoms, analyses with markers and panels, body
+  `health` (private health: today, supplements, symptoms, analyses with markers and panels, a markers page `health/markers` with position and follow-up filters, body
   measures, documents with encrypted files, appointments, one page per supplement, marker, analysis and document; images through
   `health/health-image.component.ts`; rules in `health/supplement-rules.ts`,
   `health/symptom-rules.ts`, `health/marker-rules.ts`, `health/document-rules.ts`),

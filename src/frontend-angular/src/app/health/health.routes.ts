@@ -6,6 +6,7 @@ import { DocumentPageComponent } from './document-page.component'
 import { DocumentsPageComponent } from './documents-page.component'
 import { HealthTodayPageComponent } from './health-today-page.component'
 import { MarkerPageComponent } from './marker-page.component'
+import { MarkersPageComponent } from './markers-page.component'
 import { MeasuresPageComponent } from './measures-page.component'
 import { SleepPageComponent } from './sleep-page.component'
 import { SupplementPageComponent } from './supplement-page.component'
@@ -20,6 +21,7 @@ export const HEALTH_ROUTES: Routes = [
   { path: 'supplement/:id', component: SupplementPageComponent },
   { path: 'symptoms', component: SymptomsPageComponent },
   { path: 'analyses', component: AnalysesPageComponent },
+  { path: 'markers', component: MarkersPageComponent },
   { path: 'marker/:id', component: MarkerPageComponent },
   { path: 'analysis/:id', component: AnalysisPageComponent },
   { path: 'measures', component: MeasuresPageComponent },

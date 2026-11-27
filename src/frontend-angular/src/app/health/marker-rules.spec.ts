@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { dueLabel, frequencyLabel, isOffTarget, markerDraftOf, markerRequest, measureTypeRequest, rangeBar, rangeLabel } from './marker-rules.ts'
+import { dueLabel, filterMarkers, frequencyLabel, isOffTarget, markerDraftOf, markerRequest, measureTypeRequest, rangeBar, rangeLabel } from './marker-rules.ts'
 import type { MarkerDto } from './health.models.ts'
 
 function marker(more: Partial<MarkerDto> = {}): MarkerDto {
@@ -43,5 +43,30 @@ describe('markers', () => {
     assert.deepEqual(markerRequest({ ...draft, name: ' TSH ', unit: 'mUI/L', labMin: '0,4', labMax: '4', targetMin: '1', targetMax: '2', whenLow: ' Hyperthyroïdie possible. ', whenHigh: '  ' }),
       { name: 'TSH', unit: 'mUI/L', labMin: 0.4, labMax: 4, targetMin: 1, targetMax: 2, frequencyMonths: 12, panels: [],
         description: null, whenLow: 'Hyperthyroïdie possible.', whenHigh: null })
+  })
+
+  it('filters markers by position, follow-up, panel and name', () => {
+    const list = [
+      marker({ id: 'f', name: 'Ferritine', panels: ['Fer'] }),
+      marker({ id: 'v', name: 'Vitamine D', status: 'normal', due: true, late: true }),
+      marker({ id: 'c', name: 'CRP', status: 'above_lab' }),
+      marker({ id: 't', name: 'TSH', status: 'in_lab', targetMin: null, targetMax: null }),
+      marker({ id: 'b', name: 'B12', values: [], status: null, nextDueOn: null, due: true }),
+    ]
+    const ids = (more: Partial<Parameters<typeof filterMarkers>[1]>) =>
+      filterMarkers(list, { query: '', position: 'all', followUp: 'all', panel: '', ...more }).map(m => m.id)
+    assert.deepEqual(ids({}), ['b', 'c', 'f', 't', 'v']) // by name
+    assert.deepEqual(ids({ position: 'in_target' }), ['f'])
+    assert.deepEqual(ids({ position: 'off_target' }), ['c', 'v'])
+    assert.deepEqual(ids({ position: 'in_lab_range' }), ['f', 't', 'v'])
+    assert.deepEqual(ids({ position: 'off_lab_range' }), ['c'])
+    assert.deepEqual(ids({ position: 'no_target' }), ['t'])
+    assert.deepEqual(ids({ followUp: 'due' }), ['b', 'v'])
+    assert.deepEqual(ids({ followUp: 'late' }), ['v'])
+    assert.deepEqual(ids({ followUp: 'never' }), ['b'])
+    assert.deepEqual(ids({ followUp: 'up_to_date' }), ['c', 'f', 't'])
+    assert.deepEqual(ids({ panel: 'Fer' }), ['f'])
+    assert.deepEqual(ids({ query: 'vitamine' }), ['v'])
+    assert.deepEqual(ids({ query: 'fer' }), ['f']) // panel name too
   })
 })

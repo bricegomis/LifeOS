@@ -75,6 +75,7 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
       { path: '/health/sleep', label: 'Sommeil et récupération' },
       { path: '/health/supplements', label: 'Compléments' },
       { path: '/health/symptoms', label: 'Symptômes' },
+      { path: '/health/markers', label: 'Marqueurs' },
       { path: '/health/analyses', label: 'Analyses' },
       { path: '/health/measures', label: 'Mesures' },
       { path: '/health/documents', label: 'Documents' },

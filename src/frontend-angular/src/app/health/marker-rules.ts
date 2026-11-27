@@ -107,3 +107,57 @@ export function markerRequest(d: MarkerDraft): MarkerRequest | string {
   return { name: d.name.trim(), unit: d.unit.trim(), labMin, labMax, targetMin, targetMax, frequencyMonths: d.frequencyMonths, panels: d.panels,
     description: text(d.description), whenLow: text(d.whenLow), whenHigh: text(d.whenHigh) }
 }
+
+export type MarkerPositionFilter = 'all' | 'in_target' | 'off_target' | 'in_lab_range' | 'off_lab_range' | 'no_target'
+export type MarkerFollowUpFilter = 'all' | 'due' | 'late' | 'never' | 'up_to_date'
+export interface MarkerFilter { query: string, position: MarkerPositionFilter, followUp: MarkerFollowUpFilter, panel: string }
+
+export const POSITION_FILTERS: { value: MarkerPositionFilter, label: string }[] = [
+  { value: 'all', label: 'Toutes les positions' },
+  { value: 'in_target', label: 'Dans ta cible' },
+  { value: 'off_target', label: 'Hors de ta cible' },
+  { value: 'in_lab_range', label: 'Dans la norme du labo' },
+  { value: 'off_lab_range', label: 'Hors de la norme du labo' },
+  { value: 'no_target', label: 'Sans cible' },
+]
+
+export const FOLLOW_UP_FILTERS: { value: MarkerFollowUpFilter, label: string }[] = [
+  { value: 'all', label: 'Tout le suivi' },
+  { value: 'due', label: 'À faire ou refaire' },
+  { value: 'late', label: 'En retard' },
+  { value: 'never', label: 'Jamais mesuré' },
+  { value: 'up_to_date', label: 'À jour' },
+]
+
+/** Position of the last value; a marker never measured has none and only shows under "all". */
+export function matchesPosition(status: MarkerStatus | null, filter: MarkerPositionFilter): boolean {
+  switch (filter) {
+    case 'all': return true
+    case 'in_target': return status === 'in_target'
+    case 'off_target': return isOffTarget(status)
+    case 'in_lab_range': return status === 'in_target' || status === 'normal' || status === 'in_lab'
+    case 'off_lab_range': return status === 'below_lab' || status === 'above_lab'
+    case 'no_target': return status === 'in_lab'
+  }
+}
+
+export function matchesFollowUp(m: MarkerDto, filter: MarkerFollowUpFilter): boolean {
+  switch (filter) {
+    case 'all': return true
+    case 'due': return m.due
+    case 'late': return m.late
+    case 'never': return !m.values.length
+    case 'up_to_date': return !m.due
+  }
+}
+
+function normalize(value: string): string { return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('fr') }
+
+/** Markers page: search in the name and panels (case and accents ignored), position, follow-up and panel filters; by name. */
+export function filterMarkers(markers: MarkerDto[], f: MarkerFilter): MarkerDto[] {
+  const wanted = normalize(f.query.trim())
+  return markers
+    .filter(m => !wanted || normalize([m.name, ...m.panels].join(' ')).includes(wanted))
+    .filter(m => matchesPosition(m.status, f.position) && matchesFollowUp(m, f.followUp) && (!f.panel || m.panels.includes(f.panel)))
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+}

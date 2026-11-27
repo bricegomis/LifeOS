@@ -59,7 +59,7 @@ import { appointmentWhen, inDays } from './document-rules'
       }
       @if (dueMarkers().length) {
         <section class="lo-section" aria-labelledby="markers">
-          <div class="lo-section-head"><h2 id="markers">Marqueurs à faire ou refaire</h2><a mat-button routerLink="/health/analyses"><mat-icon svgIcon="biotech" />Analyses</a></div>
+          <div class="lo-section-head"><h2 id="markers">Marqueurs à faire ou refaire</h2><a mat-button routerLink="/health/markers"><mat-icon svgIcon="biotech" />Marqueurs</a></div>
           <div class="cards">@for (m of dueMarkers(); track m.id) { <app-marker-card [marker]="m" /> }</div>
         </section>
       }
