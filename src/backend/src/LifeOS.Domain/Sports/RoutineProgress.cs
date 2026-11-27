@@ -2,7 +2,7 @@ namespace LifeOS.Domain.Sports;
 
 public enum RoutineDayStatus
 {
-    /// <summary>Before the start or after the stop.</summary>
+    /// <summary>Before the start.</summary>
     NotCounted,
     /// <summary>Not one of the routine's days: it neither counts nor breaks the streak.</summary>
     NotPlanned,
@@ -44,11 +44,10 @@ public sealed record RoutineProgress(
     public static RoutineProgress Compute(Routine routine,
         IReadOnlyDictionary<DateOnly, IReadOnlyList<IReadOnlyDictionary<Guid, int>>> passesByDay, DateOnly today, DateOnly calendarFrom)
     {
-        var lastDay = routine.StoppedOn is { } stopped && stopped < today ? stopped : today;
         var days = new Dictionary<DateOnly, RoutineDay>();
         var jokersUsed = new Dictionary<DateOnly, int>();
         int streak = 0, record = 0;
-        for (var day = routine.StartedOn; day <= lastDay; day = day.AddDays(1))
+        for (var day = routine.StartedOn; day <= today; day = day.AddDays(1))
         {
             var version = routine.VersionOn(day);
             if (!version.IsPlanned(day))
@@ -77,18 +76,15 @@ public sealed record RoutineProgress(
         for (var day = calendarFrom; day <= today; day = day.AddDays(1))
             calendar.Add(days.GetValueOrDefault(day) ?? new RoutineDay(day, 0, 0, RoutineDayStatus.NotCounted));
 
-        var running = routine.IsActive || routine.StoppedOn >= today;
         var current = routine.VersionOn(today);
-        var todayDay = running ? days.GetValueOrDefault(today) : null;
-        DateOnly? next = null;
-        if (routine.IsActive)
-            next = Enumerable.Range(1, 7).Select(today.AddDays).First(current.IsPlanned);
+        var todayDay = days.GetValueOrDefault(today);
+        var next = Enumerable.Range(1, 7).Select(today.AddDays).First(current.IsPlanned);
         return new RoutineProgress(
             PlannedToday: todayDay is { Status: not RoutineDayStatus.NotPlanned },
             DoneToday: todayDay?.Done ?? 0,
             TotalToday: todayDay?.Planned ?? 0,
             PassesToday: todayDay?.Passes ?? 0,
-            Streak: running ? streak : 0,
+            Streak: streak,
             Record: record,
             JokersPerWeek: current.JokersPerWeek,
             JokersLeftThisWeek: Math.Max(0, current.JokersPerWeek - jokersUsed.GetValueOrDefault(SportWeek.Monday(today))),
@@ -102,7 +98,7 @@ public sealed record ExerciseWeek(DateOnly Monday, int? BestValue, decimal? Best
 
 /// <summary>
 /// Follow-up of one exercise (ADR 0014): its best value and best load per week and since the
-/// start, all routines and passes together. Value and load are never combined into a score.
+/// start, all routines, passes and exercises done alone together. Value and load are never combined into a score.
 /// </summary>
 /// <param name="Recent">Latest ticks first, with their feeling (ADR 0015).</param>
 public sealed record ExerciseProgress(int? BestValue, decimal? BestLoadKg, int DaysDone, IReadOnlyList<ExerciseWeek> Weeks,

@@ -59,7 +59,28 @@ besoin, une charge (la charge habituelle de l'exercice par défaut). Exemple : �
 - **La cible se règle à la main.** L'application ne propose pas de l'augmenter.
 - Une cible, une liste d'exercices ou des jours modifiés valent à partir du jour
   même ; les jours passés restent jugés avec la routine d'alors.
-- Une routine peut être arrêtée ; son historique reste.
+- Une routine ne s'arrête pas (changé le 2026-11-27, à la demande de l'utilisateur) : elle
+  existe ou elle est **supprimée**. La supprimer efface ses versions, ses passages, sa série et
+  son calendrier ; les exercices faits restent dans l'historique de chaque exercice, sans
+  routine ni passage. Les routines arrêtées avant ce changement ont été remises en route
+  (leurs jours d'arrêt comptent désormais comme des jours prévus).
+
+### Exercice fait seul
+
+Ajouté le 2026-11-27, à la demande de l'utilisateur. Un exercice se fait aussi **hors de toute
+routine**, pour l'essayer ou parce qu'on l'aime bien : « Faire » sur la liste des exercices
+note un jour (aujourd'hui par défaut, jamais dans le futur), un nombre de séries (1 à 20), une
+valeur par série et une charge (la charge habituelle par défaut, vide ou 0 = poids du corps).
+Il compte dans la progression de l'exercice, jamais dans une routine, une série ou un
+calendrier. Un exercice noté seul, ou resté d'une routine supprimée, se supprime depuis la
+progression ; une coche dans un passage se retire depuis sa routine.
+
+Un exercice **tenu** se fait aussi **au chrono** (« Faire au chrono » dans cette fenêtre, page
+`sports/exercise/:id/run`) : séries, secondes et charge réglées, puis les séries s'enchaînent comme
+dans le mode guidé d'une routine ([ADR 0015](0015-sport-pages-and-routine-sessions.md)) : 5 s de
+« Préparez-vous », bips, côté gauche puis côté droit pour un exercice par côté. Chaque série se
+lance d'un appui ; à la dernière, les séries sont notées aujourd'hui. « Terminer » note plus tôt
+les séries déjà faites ; quitter la page ne note rien.
 
 ### Réalisation du jour
 
@@ -87,7 +108,7 @@ rouvre pas, on le supprime.
   faits dans le meilleur passage (0, moins de 50 %, moins de 100 %, faite, joker),
   grisée les jours non prévus, avec le nombre de passages quand il dépasse 1.
 - **Progression par exercice** : courbe de la valeur et de la charge dans le temps,
-  toutes routines confondues, avec le record de valeur et le record de charge. Rien
+  toutes routines et exercices faits seuls confondus, par profil, avec le record de valeur et le record de charge. Rien
   n'est combiné : pas de score « secondes × kg ».
 - Pas de totaux cumulés ni de paliers.
 

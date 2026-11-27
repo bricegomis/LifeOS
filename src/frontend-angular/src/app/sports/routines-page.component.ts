@@ -23,7 +23,7 @@ import type { RoutineDto, RoutineReportDto } from './sports.models'
   imports: [ListPageComponent, MatButtonModule, MatIconModule],
   template: `
     <app-list-page heading="Routines" intro="Des exercices à faire certains jours, avec leur cible." addLabel="Ajouter une routine"
-      archivedLabel="Afficher les arrêtées" [(query)]="query" [(showArchived)]="showStopped" (add)="open(null)">
+      [(query)]="query" (add)="open(null)">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (loaded()) {
         @if (shown().length) {
@@ -34,9 +34,8 @@ import type { RoutineDto, RoutineReportDto } from './sports.models'
                   <span class="lo-lead-icon" aria-hidden="true"><mat-icon svgIcon="event_repeat" /></span>
                   <span class="lo-row-text"><span class="lo-row-title">{{ report.routine.name }}</span>
                     <span class="lo-row-sub">{{ summary(report.routine) }}</span></span>
-                  @if (!report.routine.isActive) { <span class="lo-tag">Arrêtée</span> }
                 </button>
-                @if (report.routine.isActive && report.plannedToday) {
+                @if (report.plannedToday) {
                   <span class="lo-row-action">
                     <button mat-flat-button type="button" class="tonal" (click)="go(report)" [attr.aria-label]="(openPass(report) ? 'Continuer' : 'Faire') + ' la routine ' + report.routine.name">
                       <mat-icon svgIcon="play_arrow" />{{ openPass(report) ? 'Continuer' : 'Faire' }}</button>
@@ -62,12 +61,11 @@ export class RoutinesPageComponent implements OnInit {
   private readonly router = inject(Router)
   readonly openPass = openPass
   readonly query = signal('')
-  readonly showStopped = signal(false)
   readonly loaded = signal(false)
   readonly error = signal('')
   readonly routines = signal<RoutineReportDto[]>([])
   readonly shown = computed(() => this.routines()
-    .filter(report => (this.showStopped() || report.routine.isActive) && matchesQuery(report.routine.name, this.query())))
+    .filter(report => matchesQuery(report.routine.name, this.query())))
 
   async ngOnInit(): Promise<void> {
     await this.load()
@@ -94,7 +92,7 @@ export class RoutinesPageComponent implements OnInit {
   }
 
   private async load(): Promise<void> {
-    try { this.routines.set(await firstValueFrom(this.api.routines(0, true))); this.error.set('') }
+    try { this.routines.set(await firstValueFrom(this.api.routines(0))); this.error.set('') }
     catch (error) { this.error.set(apiErrorMessage(error)) }
     finally { this.loaded.set(true) }
   }

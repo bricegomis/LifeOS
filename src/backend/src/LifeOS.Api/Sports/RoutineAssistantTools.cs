@@ -112,12 +112,11 @@ public sealed class RoutineAssistantTools
     public static async Task<IReadOnlyList<RoutineReportDto>> ListRoutines(IHttpContextAccessor accessor, SportProfiles profiles,
         SportReadContract contract,
         [Description("Semaines de calendrier jour par jour à joindre (0 à 53).")] int calendarWeeks = 0,
-        bool includeStopped = false,
         [Description(SportAssistantTools.ProfileHelp)] Guid? profileId = null, CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
         var profile = await profiles.ResolveAsync(household.HouseholdId, profileId, ct);
-        return await contract.RoutinesAsync(household.HouseholdId, profile, calendarWeeks, includeStopped, ct);
+        return await contract.RoutinesAsync(household.HouseholdId, profile, calendarWeeks, ct);
     }
 
     [McpServerTool(Name = "create_routine", Title = "Créer une routine")]
@@ -150,14 +149,42 @@ public sealed class RoutineAssistantTools
         return (await routines.UpdateAsync(household.HouseholdId, routineId, request, ct)).OrNotFound("Routine");
     }
 
-    [McpServerTool(Name = "stop_routine", Destructive = true, Title = "Arrêter une routine")]
-    [Description("Arrête une routine après aujourd'hui ; son historique est conservé. Demandez confirmation avant.")]
-    public static async Task<string> StopRoutine(IHttpContextAccessor accessor, RoutineLibrary routines,
+    [McpServerTool(Name = "delete_routine", Destructive = true, Title = "Supprimer une routine")]
+    [Description("Supprime une routine avec ses passages, sa série et son calendrier. Les exercices faits restent dans " +
+        "l'historique de chaque exercice (get_exercise_progress). Irréversible : demandez confirmation avant.")]
+    public static async Task<string> DeleteRoutine(IHttpContextAccessor accessor, RoutineLibrary routines,
         Guid routineId, CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        if (!await routines.StopAsync(household.HouseholdId, routineId, ct)) throw AssistantRequest.NotFound("Routine");
-        return "Routine arrêtée.";
+        if (!await routines.DeleteAsync(household.HouseholdId, routineId, ct)) throw AssistantRequest.NotFound("Routine");
+        return "Routine supprimée ; l'historique des exercices est gardé.";
+    }
+
+    [McpServerTool(Name = "log_exercise", Title = "Noter un exercice fait seul")]
+    [Description("Note un exercice fait hors de toute routine (« j'ai essayé la planche, 2 × 40 s »). Il compte dans la " +
+        "progression de l'exercice, pas dans une routine. " + MeasureHelp)]
+    public static async Task<ExerciseCompletionDto> LogExercise(IHttpContextAccessor accessor, ExerciseLibrary exercises,
+        Guid exerciseId,
+        [Description("Séries faites (1 à 20).")] int setsDone,
+        [Description("Secondes ou répétitions par série (par côté pour un exercice par côté).")] int value,
+        [Description("Charge en kg ; la charge habituelle de l'exercice si omis, 0 = au poids du corps.")] decimal? loadKg = null,
+        [Description("Jour (aaaa-MM-jj) ; aujourd'hui si omis, jamais dans le futur.")] DateOnly? date = null,
+        [Description(SportAssistantTools.ProfileHelp)] Guid? profileId = null, CancellationToken ct = default)
+    {
+        var household = await AssistantRequest.HouseholdAsync(accessor);
+        var request = AssistantRequest.Validated(new ExerciseLogRequest(setsDone, value, loadKg, date, profileId));
+        return (await exercises.LogAsync(household.HouseholdId, exerciseId, request, ct)).OrNotFound("Exercice");
+    }
+
+    [McpServerTool(Name = "delete_exercise_log", Destructive = true, Idempotent = true, Title = "Supprimer un exercice noté")]
+    [Description("Supprime un exercice noté hors routine, ou resté après la suppression de sa routine (recent de " +
+        "get_exercise_progress, sans sessionId). Une coche dans un passage se retire par uncomplete_exercise.")]
+    public static async Task<string> DeleteExerciseLog(IHttpContextAccessor accessor, ExerciseLibrary exercises,
+        Guid exerciseId, Guid completionId, CancellationToken ct = default)
+    {
+        var household = await AssistantRequest.HouseholdAsync(accessor);
+        if (!await exercises.DeleteLogAsync(household.HouseholdId, exerciseId, completionId, ct)) throw AssistantRequest.NotFound("Exercice noté");
+        return "Exercice noté supprimé.";
     }
 
     [McpServerTool(Name = "complete_exercise", Idempotent = true, Title = "Cocher un exercice")]

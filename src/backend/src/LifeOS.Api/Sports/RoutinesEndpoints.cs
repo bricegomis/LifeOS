@@ -57,10 +57,10 @@ public static class RoutinesEndpoints
     public static IEndpointRouteBuilder MapRoutinesEndpoints(this IEndpointRouteBuilder app)
     {
         var g = app.MapGroup("/api/sport/routines").RequireAuthorization().WithTags("Sport").AddRequestValidation();
-        g.MapGet("/", async (Guid? profileId, int? calendarWeeks, bool? includeStopped, HouseholdContext household,
+        g.MapGet("/", async (Guid? profileId, int? calendarWeeks, HouseholdContext household,
                 SportProfiles profiles, SportReadContract contract, CancellationToken ct) =>
             Results.Ok(await contract.RoutinesAsync(household.HouseholdId, await profiles.ResolveAsync(household.HouseholdId, profileId, ct),
-                calendarWeeks ?? 1, includeStopped ?? false, ct)))
+                calendarWeeks ?? 1, ct)))
             .Produces<List<RoutineReportDto>>();
         g.MapPost("/", async (RoutineRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
         {
@@ -71,7 +71,7 @@ public static class RoutinesEndpoints
             await routines.UpdateAsync(household.HouseholdId, id, request, ct) is { } report ? Results.Ok(report) : Results.NotFound())
             .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
         g.MapDelete("/{id:guid}", async (Guid id, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
-            await routines.StopAsync(household.HouseholdId, id, ct) ? Results.NoContent() : Results.NotFound())
+            await routines.DeleteAsync(household.HouseholdId, id, ct) ? Results.NoContent() : Results.NotFound())
             .Produces(StatusCodes.Status204NoContent).ProducesProblem(StatusCodes.Status404NotFound);
         g.MapPut("/{id:guid}/completions", async (Guid id, ExerciseCompletionRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
             await routines.CompleteAsync(household.HouseholdId, id, request, ct) is { } report ? Results.Ok(report) : Results.NotFound())
@@ -128,12 +128,20 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         return await ReportAsync(routine, ct);
     }
 
-    public async Task<bool> StopAsync(Guid householdId, Guid id, CancellationToken ct)
+    /// <summary>
+    /// Deletes a routine with its versions and passes: its streak and calendar go with it. Its ticks stay as
+    /// the exercises' history, without routine or pass.
+    /// </summary>
+    public async Task<bool> DeleteAsync(Guid householdId, Guid id, CancellationToken ct)
     {
         var routine = await FindAsync(householdId, id, ct);
         if (routine is null) return false;
-        routine.Stop(SportClock.Today(clock));
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await db.ExerciseCompletions.Where(c => c.RoutineId == id && c.HouseholdId == householdId)
+            .ExecuteUpdateAsync(set => set.SetProperty(c => c.RoutineId, (Guid?)null).SetProperty(c => c.SessionId, (Guid?)null), ct);
+        db.Routines.Remove(routine);
         await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         return true;
     }
 
@@ -317,6 +325,6 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         db.Routines.SingleOrDefaultAsync(r => r.Id == id && r.HouseholdId == householdId, ct);
 
     private async Task<RoutineReportDto> ReportAsync(Routine routine, CancellationToken ct) =>
-        (await contract.RoutinesAsync(routine.HouseholdId, routine.MemberProfileId, 1, includeStopped: true, ct))
+        (await contract.RoutinesAsync(routine.HouseholdId, routine.MemberProfileId, 1, ct))
         .Single(report => report.Routine.Id == routine.Id);
 }

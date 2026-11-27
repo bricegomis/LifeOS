@@ -110,8 +110,6 @@ public sealed class RoutineTests
         Assert.Throws<ArgumentException>(() => RoutineSession.Start(routine, Monday, Now, Monday, hasOpenPass: true));
         var alternate = Tendons(Monday.AddDays(-7), TuesdayThursdaySaturday);
         Assert.Throws<ArgumentException>(() => RoutineSession.Start(alternate, Monday, Now, Monday, false));
-        routine.Stop(Monday);
-        Assert.Throws<ArgumentException>(() => RoutineSession.Start(routine, Monday, Now, Monday, false));
     }
 
     [Fact]
@@ -214,17 +212,21 @@ public sealed class RoutineTests
     }
 
     [Fact]
-    public void A_stopped_routine_keeps_its_record_but_has_no_streak()
+    public void An_exercise_done_alone_has_no_routine_nor_pass_and_takes_the_usual_load()
     {
-        var start = Monday.AddDays(-4);
-        var routine = Tendons(start);
-        routine.Stop(Monday.AddDays(-2));
-        var progress = RoutineProgress.Compute(routine, Done(start, 2, 2, 2), Monday, start);
-        Assert.Equal(0, progress.Streak);
-        Assert.Equal(3, progress.Record);
-        Assert.False(progress.PlannedToday);
-        Assert.Null(progress.NextPlannedDay);
-        Assert.Equal(RoutineDayStatus.NotCounted, progress.Calendar[^1].Status);
+        var alone = ExerciseCompletion.CreateAlone(WallSit, Profile, Monday, 2, 40, null, Monday, Now);
+        Assert.False(alone.InRoutine);
+        Assert.Equal((Profile, 2, 40, (decimal?)10), (alone.MemberProfileId, alone.SetsDone, alone.Value, alone.LoadKg));
+        Assert.Null(ExerciseCompletion.CreateAlone(WallSit, Profile, Monday, 1, 40, 0, Monday, Now).LoadKg);
+        Assert.Throws<ArgumentException>(() => ExerciseCompletion.CreateAlone(WallSit, Profile, Monday.AddDays(1), 1, 40, null, Monday, Now));
+        Assert.Throws<ArgumentException>(() => ExerciseCompletion.CreateAlone(WallSit, Profile, Monday, 21, 40, null, Monday, Now));
+        Assert.Throws<ArgumentException>(() => ExerciseCompletion.CreateAlone(WallSit, Profile, Monday, 1, 0, null, Monday, Now));
+        Assert.Throws<ArgumentException>(() => ExerciseCompletion.CreateAlone(WallSit, Guid.Empty, Monday, 1, 40, null, Monday, Now));
+
+        var routine = Tendons(Monday);
+        var tick = ExerciseCompletion.Create(routine, RoutineSession.Start(routine, Monday, Now, Monday, false), WallSit.Id, 1, null, null, Now, false);
+        Assert.True(tick.InRoutine);
+        Assert.Equal(routine.MemberProfileId, tick.MemberProfileId);
     }
 
     [Fact]

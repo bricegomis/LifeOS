@@ -94,7 +94,7 @@ public sealed record RoutineLineDto(Guid ExerciseId, string ExerciseName, string
 
 /// <param name="Days">Days of the week, 1 (Monday) to 7 (Sunday).</param>
 public sealed record RoutineDto(Guid Id, Guid MemberProfileId, string Name, IReadOnlyList<int> Days, int JokersPerWeek,
-    IReadOnlyList<RoutineLineDto> Lines, DateOnly StartedOn, DateOnly? StoppedOn, bool IsActive)
+    IReadOnlyList<RoutineLineDto> Lines, DateOnly StartedOn)
 {
     public static RoutineDto From(Routine r, DateOnly today, IReadOnlyDictionary<Guid, Exercise> exercises)
     {
@@ -106,16 +106,17 @@ public sealed record RoutineDto(Guid Id, Guid MemberProfileId, string Name, IRea
                 var e = exercises[line.ExerciseId];
                 return new RoutineLineDto(e.Id, e.Name, e.Instructions, e.Measure, e.HasImage, line.Sets, line.Target, line.LoadKg, e.PerSide);
             }).ToList(),
-            r.StartedOn, r.StoppedOn, r.IsActive);
+            r.StartedOn);
     }
 }
 
-/// <param name="SetsDone">Sets ticked, each at <paramref name="Value"/> and <paramref name="LoadKg"/>.</param>
-public sealed record ExerciseCompletionDto(Guid SessionId, Guid ExerciseId, DateOnly Date, int SetsDone, int Value, decimal? LoadKg,
+/// <param name="SessionId">The pass it was ticked in; null when done alone or once its routine was deleted.</param>
+/// <param name="SetsDone">Sets done, each at <paramref name="Value"/> and <paramref name="LoadKg"/>.</param>
+public sealed record ExerciseCompletionDto(Guid Id, Guid? SessionId, Guid ExerciseId, DateOnly Date, int SetsDone, int Value, decimal? LoadKg,
     DateTimeOffset LoggedAt)
 {
     public static ExerciseCompletionDto From(ExerciseCompletion c) =>
-        new(c.SessionId, c.ExerciseId, c.Date, c.SetsDone, c.Value, c.LoadKg, c.LoggedAt);
+        new(c.Id, c.SessionId, c.ExerciseId, c.Date, c.SetsDone, c.Value, c.LoadKg, c.LoggedAt);
 }
 
 /// <summary>One pass of a routine (ADR 0015); finished when every exercise has all its sets.</summary>
@@ -132,7 +133,7 @@ public sealed record RoutineDayDto(DateOnly Date, int Done, int Planned, int Per
 /// <param name="CompletedToday">At least one pass finished today.</param>
 /// <param name="PassesToday">Passes finished today.</param>
 /// <param name="TodaySessions">Today's passes, oldest first; at most one in progress.</param>
-/// <param name="NextPlannedDay">Next day of the routine after today; null once stopped.</param>
+/// <param name="NextPlannedDay">Next day of the routine after today.</param>
 public sealed record RoutineReportDto(
     RoutineDto Routine, DateOnly Today, bool PlannedToday, int DoneToday, int TotalToday, bool CompletedToday, int PassesToday,
     DateOnly? NextPlannedDay, int Streak, int Record, int JokersPerWeek, int JokersLeftThisWeek,

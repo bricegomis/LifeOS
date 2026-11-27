@@ -37,7 +37,8 @@ Chaque page suit le même gabarit :
 - la liste des éléments, avec un bouton « Ajouter » ;
 - un appui sur un élément ouvre sa **fenêtre de modification** (popup) ; la création
   utilise la même fenêtre ;
-- arrêter ou archiver se fait depuis cette fenêtre, avec confirmation ;
+- arrêter, archiver ou supprimer (une routine, [ADR 0014](0014-sport-daily-routines.md)) se fait
+  depuis cette fenêtre, avec confirmation ;
 - les éléments arrêtés ou archivés sont masqués par défaut, affichables par un filtre.
 
 Tout se crée et se modifie sur ordinateur comme sur téléphone, séances types

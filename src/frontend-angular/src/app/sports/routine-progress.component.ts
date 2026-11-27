@@ -1,10 +1,14 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
+import { MatButtonModule } from '@angular/material/button'
 import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatIconModule } from '@angular/material/icon'
+import { MatSnackBar } from '@angular/material/snack-bar'
 import { MatSelectModule } from '@angular/material/select'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
-import { daysLabel, exerciseCharts, hasLoad, kilos, measureUnit, routineDayLevel, routineDayTitle } from './routine-format'
+import { ConfirmService } from '@/app/shared/ui/confirm'
+import { completionText, daysLabel, exerciseCharts, kilos, measureUnit, routineDayLevel, routineDayTitle } from './routine-format'
 import { calendarWeeks, dayMonth } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto } from './sports.models'
@@ -13,7 +17,7 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
 @Component({
   selector: 'app-routine-progress',
   standalone: true,
-  imports: [FormsModule, MatFormFieldModule, MatSelectModule],
+  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatSelectModule],
   template: `
     @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
     @if (loaded() && (routines().length || exercises().length)) {
@@ -24,7 +28,7 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
             <div class="lo-chips" role="group" aria-label="Routine affichée">
               @for (report of routines(); track report.routine.id) {
                 <button type="button" class="lo-filter-chip" [class.is-on]="selected()?.routine?.id === report.routine.id" [attr.aria-pressed]="selected()?.routine?.id === report.routine.id"
-                  (click)="selectedId.set(report.routine.id)">{{ report.routine.name }}{{ report.routine.isActive ? '' : ' (arrêtée)' }}</button>
+                  (click)="selectedId.set(report.routine.id)">{{ report.routine.name }}</button>
               }
             </div>
             @if (selected(); as report) {
@@ -90,14 +94,19 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
                       </div>
                     </div>
                   }
-                  <p class="lo-muted lo-small">Meilleure valeur de chaque semaine sur 12 semaines, toutes routines et tous passages confondus.</p>
+                  <p class="lo-muted lo-small">Meilleure valeur de chaque semaine sur 12 semaines, routines et exercices faits seuls confondus.</p>
                   @if (data.recent.length) {
                     <table class="recent">
                       <caption>Dernières fois</caption>
-                      <thead><tr><th scope="col">Jour</th><th scope="col">Fait</th></tr></thead>
+                      <thead><tr><th scope="col">Jour</th><th scope="col">Fait</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
                       <tbody>
-                        @for (tick of data.recent; track tick.sessionId) {
-                          <tr><td>{{ dayMonth(tick.date) }}</td><td>{{ doneLine(item, tick) }}</td></tr>
+                        @for (tick of data.recent; track tick.id) {
+                          <tr><td>{{ dayMonth(tick.date) }}</td>
+                            <td>{{ completionText(item.measure, tick) }}@if (!tick.sessionId) { <span class="lo-muted"> · hors routine</span> }</td>
+                            <td class="actions">@if (!tick.sessionId) {
+                              <button mat-icon-button type="button" [disabled]="deleting() === tick.id" (click)="remove(item, tick)"
+                                [attr.aria-label]="'Supprimer ' + item.name + ' du ' + dayMonth(tick.date)" title="Supprimer"><mat-icon svgIcon="delete" /></button>
+                            }</td></tr>
                         }
                       </tbody>
                     </table>
@@ -121,11 +130,16 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
     .recent caption { padding-bottom: 6px; text-align: left; font-weight: 700; }
     .recent th { color: var(--mat-sys-on-surface-variant); font: var(--mat-sys-label-medium); text-align: left; }
     .recent th, .recent td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--mat-sys-outline-variant); }
+    .recent .actions { width: 48px; padding: 0; text-align: right; }
   `],
 })
 export class RoutineProgressComponent implements OnInit {
   private readonly api = inject(SportsApiService)
+  private readonly confirm = inject(ConfirmService)
+  private readonly snack = inject(MatSnackBar)
   readonly loaded = signal(false)
+  readonly deleting = signal('')
+  readonly completionText = completionText
   readonly error = signal('')
   readonly routines = signal<RoutineReportDto[]>([])
   readonly exercises = signal<ExerciseDto[]>([])
@@ -145,9 +159,9 @@ export class RoutineProgressComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const [routines, exercises] = await Promise.all([firstValueFrom(this.api.routines(12, true)), firstValueFrom(this.api.exercises(true))])
+      const [routines, exercises] = await Promise.all([firstValueFrom(this.api.routines(12)), firstValueFrom(this.api.exercises(true))])
       this.routines.set(routines); this.exercises.set(exercises)
-      const first = routines.find(report => report.routine.isActive)?.routine.lines[0]?.exerciseId
+      const first = routines[0]?.routine.lines[0]?.exerciseId
       const exercise = exercises.find(item => item.id === first) ?? exercises[0]
       if (exercise) await this.pick(exercise.id)
     } catch (error) { this.error.set(apiErrorMessage(error)) }
@@ -166,10 +180,16 @@ export class RoutineProgressComponent implements OnInit {
 
   level(day: RoutineDayDto): string { return routineDayLevel(day) }
   readonly dayMonth = dayMonth
-  /** "4 séries × 45 s à 10 kg". */
-  doneLine(exercise: ExerciseDto, tick: ExerciseCompletionDto): string {
-    const load = hasLoad(tick.loadKg) ? ` à ${kilos(tick.loadKg)} kg` : ''
-    return `${tick.setsDone} série${tick.setsDone > 1 ? 's' : ''} × ${tick.value} ${measureUnit(exercise.measure)}${load}`
+  /** Deletes an exercise done outside a pass (alone, or kept from a deleted routine). */
+  async remove(exercise: ExerciseDto, tick: ExerciseCompletionDto): Promise<void> {
+    if (this.deleting() || !await this.confirm.ask({ message: `Supprimer « ${exercise.name} » du ${dayMonth(tick.date)} ?`, confirmLabel: 'Supprimer', danger: true })) return
+    this.deleting.set(tick.id)
+    try {
+      await firstValueFrom(this.api.deleteExerciseLog(exercise.id, tick.id))
+      this.snack.open('Supprimé de la progression', undefined, { duration: 4000 })
+      await this.pick(exercise.id)
+    } catch (error) { this.snack.open(apiErrorMessage(error), 'OK', { duration: 6000 }) }
+    finally { this.deleting.set('') }
   }
   cellTitle(day: RoutineDayDto): string { return routineDayTitle(day, dayMonth(day.date)) }
 }

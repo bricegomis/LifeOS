@@ -1,5 +1,5 @@
 import { measureUnit, setsDone, hasLoad, kilos, sideSuffix } from './routine-format.ts'
-import type { RoutineLineDto, RoutineSessionDto } from './sports.models.ts'
+import type { ExerciseDto, RoutineLineDto, RoutineSessionDto } from './sports.models.ts'
 
 /**
  * Guided run of a routine (ADR 0015, « Mode guidé »): the exercises one after the other, as a circuit.
@@ -59,6 +59,8 @@ export function nextStep(steps: RunStep[], index: number, pass: RoutineSessionDt
 
 /** Sets of the run: a per-side set counts once. */
 export function setCount(steps: RunStep[]): number { return steps.filter(step => step.side !== 'right').length }
+/** Sets fully done before the step at `index`: a set counts once its right side (or its only step) is done. */
+export function setsCompleted(steps: RunStep[], index: number): number { return steps.slice(0, index).filter(step => step.side !== 'left').length }
 /** 1-based number of the set the step belongs to. */
 export function setNumber(steps: RunStep[], index: number): number { return setCount(steps.slice(0, index + 1)) }
 
@@ -108,4 +110,15 @@ export function runSummary(lines: RoutineLineDto[]): string {
   const rounds = roundCount(lines), sets = setCount(runSteps(lines))
   const plural = (count: number, word: string) => `${count} ${word}${count > 1 ? 's' : ''}`
   return [plural(lines.length, 'exercice'), rounds > 1 ? plural(rounds, 'tour') : '', plural(sets, 'série')].filter(Boolean).join(' · ')
+}
+
+/**
+ * An exercise done alone on the chrono: a routine line of its own, so it runs like one exercise of the
+ * guided run (lead seconds, beeps, left then right side).
+ */
+export function soloLine(exercise: ExerciseDto, sets: number, target: number, loadKg: number | null): RoutineLineDto {
+  return {
+    exerciseId: exercise.id, exerciseName: exercise.name, instructions: exercise.instructions, measure: exercise.measure,
+    hasImage: exercise.hasImage, perSide: exercise.perSide, sets, target, loadKg,
+  }
 }

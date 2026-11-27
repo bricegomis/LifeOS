@@ -91,7 +91,7 @@ type Done = { kind: 'left', key: string } | { kind: 'set', exerciseId: string, k
           } @else {
             <p class="lo-muted">Toutes les séries sont faites.</p>
           }
-        } @else if (report.routine.isActive && report.plannedToday) {
+        } @else if (report.plannedToday) {
           <section class="lo-section start" aria-labelledby="run-start">
             <h2 id="run-start">{{ runSummary(report.routine.lines) }}</h2>
             <p class="lo-help">Les exercices s’enchaînent dans l’ordre de la routine, une série à la fois{{ rounds() > 1 ? ', puis on recommence pour le tour suivant' : '' }}.
@@ -110,10 +110,8 @@ type Done = { kind: 'left', key: string } | { kind: 'set', exerciseId: string, k
             <div><button mat-flat-button type="button" class="main" [disabled]="pending() === 'start'" (click)="startPass()">
               <mat-icon svgIcon="play_arrow" />{{ report.completedToday ? 'Nouveau passage' : 'Commencer' }}</button></div>
           </section>
-        } @else if (report.routine.isActive) {
-          <p class="lo-muted">Pas prévue aujourd’hui. {{ nextDayLabel(report.today, report.nextPlannedDay) }}</p>
         } @else {
-          <p class="lo-muted">Cette routine est arrêtée.</p>
+          <p class="lo-muted">Pas prévue aujourd’hui. {{ nextDayLabel(report.today, report.nextPlannedDay) }}</p>
         }
       } @else if (!error()) {
         <p class="lo-empty">Routine introuvable. <a routerLink="/sports/routines">Voir les routines</a></p>
@@ -327,7 +325,7 @@ export class SportRoutineRunPageComponent implements OnInit, OnDestroy {
 
   private async reload(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id')
-    this.report.set((await firstValueFrom(this.api.routines(1, true))).find(item => item.routine.id === id) ?? null)
+    this.report.set((await firstValueFrom(this.api.routines(1))).find(item => item.routine.id === id) ?? null)
   }
 
   private async call(key: string, request: Observable<RoutineReportDto>): Promise<RoutineReportDto | null> {

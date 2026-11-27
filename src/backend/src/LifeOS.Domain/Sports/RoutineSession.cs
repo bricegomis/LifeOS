@@ -50,16 +50,22 @@ public sealed class RoutineSession : Entity
 }
 
 /// <summary>
-/// An exercise ticked in a pass (ADR 0014, ADR 0015): how many of its sets are done, the value and load of
-/// each set (the target unless corrected through the API). One per exercise and per pass.
+/// An exercise done by a profile (ADR 0014, ADR 0015): how many sets, the value and load of each set. Ticked
+/// in a pass of a routine (the target unless corrected through the API; one per exercise and per pass), or
+/// done alone, outside any routine. It is the exercise's history: deleting the routine keeps it, without
+/// its routine and pass; deleting a pass deletes its ticks.
 /// </summary>
 public sealed class ExerciseCompletion : Entity
 {
+    public const int MaxSets = 20;
+
     public Guid HouseholdId { get; private set; }
-    public Guid RoutineId { get; private set; }
-    public Guid SessionId { get; private set; }
+    public Guid MemberProfileId { get; private set; }
+    /// <summary>Null for an exercise done alone, or once its routine was deleted; set together with <see cref="SessionId"/>.</summary>
+    public Guid? RoutineId { get; private set; }
+    public Guid? SessionId { get; private set; }
     public Guid ExerciseId { get; private set; }
-    /// <summary>Day of the pass, kept for the follow-up reads.</summary>
+    /// <summary>Day done (the day of the pass for a tick), kept for the follow-up reads.</summary>
     public DateOnly Date { get; private set; }
     public int SetsDone { get; private set; }
     public int Value { get; private set; }
@@ -77,12 +83,31 @@ public sealed class ExerciseCompletion : Entity
         var done = routine.CheckCompletion(session.Date, exerciseId, value, loadKg);
         var completion = new ExerciseCompletion
         {
-            Id = Guid.NewGuid(), HouseholdId = routine.HouseholdId, RoutineId = routine.Id, SessionId = session.Id, ExerciseId = exerciseId,
+            Id = Guid.NewGuid(), HouseholdId = routine.HouseholdId, MemberProfileId = routine.MemberProfileId,
+            RoutineId = routine.Id, SessionId = session.Id, ExerciseId = exerciseId,
             Date = session.Date, Value = done.Value, LoadKg = done.LoadKg, LoggedAt = now,
         };
         completion.SetSets(routine, setsDone, now, passFinished: false);
         return completion;
     }
+
+    /// <summary>An exercise done alone, outside any routine: to try it, or just because it is liked.</summary>
+    public static ExerciseCompletion CreateAlone(Exercise exercise, Guid memberProfileId, DateOnly date, int setsDone, int value,
+        decimal? loadKg, DateOnly today, DateTimeOffset now)
+    {
+        if (memberProfileId == Guid.Empty) throw new ArgumentException("Profil obligatoire.");
+        if (exercise.IsArchived) throw new ArgumentException("Cet exercice est archivé.");
+        if (date > today) throw new ArgumentException("Impossible de faire un exercice dans le futur.");
+        if (setsDone is < 1 or > MaxSets) throw new ArgumentException($"Séries faites : 1 à {MaxSets}.");
+        return new ExerciseCompletion
+        {
+            Id = Guid.NewGuid(), HouseholdId = exercise.HouseholdId, MemberProfileId = memberProfileId, ExerciseId = exercise.Id,
+            Date = date, SetsDone = setsDone, Value = RoutineLine.CheckTarget(value),
+            LoadKg = RoutineLine.NormalizeLoad(loadKg ?? exercise.DefaultLoadKg), LoggedAt = now,
+        };
+    }
+
+    public bool InRoutine => RoutineId is not null;
 
     /// <summary>Sets done, 1 to the sets of the target; a finished pass is not reopened (delete it and do it again).</summary>
     public void SetSets(Routine routine, int setsDone, DateTimeOffset now, bool passFinished)
