@@ -2,6 +2,7 @@ import { Component, DestroyRef, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { MatButtonModule } from '@angular/material/button'
 import { MatButtonToggleModule } from '@angular/material/button-toggle'
+import { MatCheckboxModule } from '@angular/material/checkbox'
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog'
 import { MatFormFieldModule } from '@angular/material/form-field'
 import { MatIconModule } from '@angular/material/icon'
@@ -21,7 +22,7 @@ export interface ExerciseDialogResult { exercise: ExerciseDto, message: string }
 @Component({
   selector: 'app-exercise-dialog',
   standalone: true,
-  imports: [EditorFrameComponent, ExerciseImageComponent, FormsModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [EditorFrameComponent, ExerciseImageComponent, FormsModule, MatButtonModule, MatButtonToggleModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule],
   template: `
     <app-editor-frame [heading]="exercise ? 'Modifier l’exercice' : 'Nouvel exercice'" formId="exercise-form" [saveLabel]="exercise ? 'Enregistrer' : 'Ajouter'"
       [busy]="busy()" [dirty]="dirty()" [error]="error()" [dangerLabel]="exercise && !exercise.isArchived ? 'Archiver' : ''" (danger)="archive()">
@@ -68,6 +69,10 @@ export interface ExerciseDialogResult { exercise: ExerciseDto, message: string }
             </mat-button-toggle-group>
           }
         </div>
+        <div class="lo-field-group">
+          <mat-checkbox name="perSide" [(ngModel)]="draft.perSide">Par côté : gauche puis droite</mat-checkbox>
+          <span class="lo-help">Une série couvre les deux côtés ; la cible (secondes ou répétitions) vaut pour chaque côté.</span>
+        </div>
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="load-field">
           <mat-label>Charge habituelle (kg)</mat-label>
           <input matInput type="number" name="load" min="0" max="500" step="0.5" inputmode="decimal" placeholder="Poids du corps" [(ngModel)]="draft.defaultLoadKg" />
@@ -104,7 +109,8 @@ export class ExerciseDialogComponent {
   readonly removePhoto = signal(false)
   private file: File | null = null
   readonly draft: ExerciseRequest = this.exercise
-    ? { name: this.exercise.name, instructions: this.exercise.instructions ?? '', measure: this.exercise.measure, defaultLoadKg: this.exercise.defaultLoadKg }
+    ? { name: this.exercise.name, instructions: this.exercise.instructions ?? '', measure: this.exercise.measure, defaultLoadKg: this.exercise.defaultLoadKg,
+      perSide: this.exercise.perSide }
     : emptyExerciseDraft()
   private readonly initial = formSnapshot(this.draft)
 

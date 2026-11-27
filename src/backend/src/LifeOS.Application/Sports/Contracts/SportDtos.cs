@@ -78,17 +78,19 @@ public sealed record ChallengeReportDto(
 /// <param name="Measure">hold (seconds) or reps.</param>
 /// <param name="DefaultLoadKg">Usual load offered as the target in a routine; null means bodyweight.</param>
 /// <param name="MeasureLocked">The exercise has been done: its measure no longer changes.</param>
+/// <param name="PerSide">Done on the left then on the right; a set's target applies to each side.</param>
 public sealed record ExerciseDto(Guid Id, string Name, string? Instructions, string Measure, decimal? DefaultLoadKg, bool HasImage,
-    bool IsArchived, bool MeasureLocked)
+    bool IsArchived, bool MeasureLocked, bool PerSide)
 {
     public static ExerciseDto From(Exercise e, bool measureLocked) =>
-        new(e.Id, e.Name, e.Instructions, e.Measure, e.DefaultLoadKg, e.HasImage, e.IsArchived, measureLocked);
+        new(e.Id, e.Name, e.Instructions, e.Measure, e.DefaultLoadKg, e.HasImage, e.IsArchived, measureLocked, e.PerSide);
 }
 
 /// <param name="Target">Seconds or repetitions per set.</param>
 /// <param name="LoadKg">Null means bodyweight.</param>
+/// <param name="PerSide">The exercise is done on the left then on the right; Target applies to each side.</param>
 public sealed record RoutineLineDto(Guid ExerciseId, string ExerciseName, string? Instructions, string Measure,
-    bool HasImage, int Sets, int Target, decimal? LoadKg);
+    bool HasImage, int Sets, int Target, decimal? LoadKg, bool PerSide);
 
 /// <param name="Days">Days of the week, 1 (Monday) to 7 (Sunday).</param>
 public sealed record RoutineDto(Guid Id, Guid MemberProfileId, string Name, IReadOnlyList<int> Days, int JokersPerWeek,
@@ -102,7 +104,7 @@ public sealed record RoutineDto(Guid Id, Guid MemberProfileId, string Name, IRea
             version.OrderedLines.Select(line =>
             {
                 var e = exercises[line.ExerciseId];
-                return new RoutineLineDto(e.Id, e.Name, e.Instructions, e.Measure, e.HasImage, line.Sets, line.Target, line.LoadKg);
+                return new RoutineLineDto(e.Id, e.Name, e.Instructions, e.Measure, e.HasImage, line.Sets, line.Target, line.LoadKg, e.PerSide);
             }).ToList(),
             r.StartedOn, r.StoppedOn, r.IsActive);
     }

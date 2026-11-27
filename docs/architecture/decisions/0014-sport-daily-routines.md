@@ -36,6 +36,9 @@ porte :
 - une mesure : `hold` (tenue, en secondes) ou `reps` (répétitions) ;
 - une charge habituelle facultative en kg, par pas de 0,5 ; vide ou 0 veut dire au
   poids du corps ([ADR 0015](0015-sport-pages-and-routine-sessions.md)).
+- « par côté » (gainage latéral, fente) : l'exercice se fait à gauche puis à droite ; une
+  série couvre les deux côtés et la cible vaut pour chaque côté (« 3 × 30 s par côté »). Ce
+  réglage peut changer même après réalisation : il ne change pas ce qui est compté.
 
 La mesure d'un exercice ne change plus une fois qu'il a été réalisé, pour que son
 historique reste comparable. Un exercice peut être archivé ; son historique reste.

@@ -15,14 +15,17 @@ export function measureLabel(measure: ExerciseMeasure): string { return measure 
 /** A load is optional (ADR 0015): none or 0 means bodyweight. */
 export function hasLoad(loadKg: number | null | undefined): loadKg is number { return loadKg !== null && loadKg !== undefined && loadKg > 0 }
 export function exerciseSummary(exercise: ExerciseDto): string {
-  return measureLabel(exercise.measure) + (hasLoad(exercise.defaultLoadKg) ? ` · ${kilos(exercise.defaultLoadKg)} kg` : ' · poids du corps')
+  return measureLabel(exercise.measure) + (exercise.perSide ? ' par côté' : '')
+    + (hasLoad(exercise.defaultLoadKg) ? ` · ${kilos(exercise.defaultLoadKg)} kg` : ' · poids du corps')
 }
+/** " par côté" after the target of a per-side exercise. */
+export function sideSuffix(line: Pick<RoutineLineDto, 'perSide'>): string { return line.perSide ? ' par côté' : '' }
 
-/** "2 × 45 s · 10 kg": the target of a routine line. */
+/** "2 × 45 s · 10 kg" or "3 × 30 s par côté": the target of a routine line. */
 export function targetText(line: RoutineLineDto): string {
   const sets = line.sets > 1 ? `${line.sets} × ` : ''
   const load = hasLoad(line.loadKg) ? ` · ${kilos(line.loadKg)} kg` : ''
-  return `${sets}${line.target} ${measureUnit(line.measure)}${load}`
+  return `${sets}${line.target} ${measureUnit(line.measure)}${sideSuffix(line)}${load}`
 }
 /** "3 × 60 s à 12 kg": what was done in a pass. */
 export function doneText(line: RoutineLineDto, completion: ExerciseCompletionDto): string {
@@ -203,11 +206,11 @@ export function optionalLoad(value: number | string | null | undefined): number 
   return load === 0 ? null : load
 }
 
-export function emptyExerciseDraft(): ExerciseRequest { return { name: '', instructions: '', measure: 'hold', defaultLoadKg: null } }
+export function emptyExerciseDraft(): ExerciseRequest { return { name: '', instructions: '', measure: 'hold', defaultLoadKg: null, perSide: false } }
 export function exerciseRequest(draft: ExerciseRequest): ExerciseRequest | string {
   const name = draft.name.trim()
   if (!name) return 'Donnez un nom à l’exercice.'
   const load = optionalLoad(draft.defaultLoadKg)
   if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.'
-  return { name, instructions: draft.instructions?.trim() || null, measure: draft.measure, defaultLoadKg: load }
+  return { name, instructions: draft.instructions?.trim() || null, measure: draft.measure, defaultLoadKg: load, perSide: draft.perSide }
 }

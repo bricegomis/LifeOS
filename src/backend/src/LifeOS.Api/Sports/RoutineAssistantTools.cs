@@ -15,6 +15,8 @@ public sealed class RoutineAssistantTools
     public const string MeasureHelp = "Mesure : hold (tenue, en secondes) ou reps (répétitions).";
     public const string LoadHelp = "Charge habituelle en kg, par pas de 0,5, proposée comme cible quand l'exercice est ajouté à " +
         "une routine ; vide ou 0 = au poids du corps.";
+    public const string PerSideHelp = "true pour un exercice fait d'un côté puis de l'autre (gainage latéral, fente) : une série " +
+        "couvre les deux côtés et la cible (secondes ou répétitions) vaut pour chaque côté.";
     public const string PassHelp = "Une routine peut être faite plusieurs fois le même jour : chaque fois est un passage. Un passage " +
         "est terminé quand chaque exercice a toutes ses séries cochées ; un passage terminé ne se rouvre pas (supprimez-le). Un seul " +
         "passage en cours à la fois par routine et par jour.";
@@ -38,24 +40,25 @@ public sealed class RoutineAssistantTools
         [Description("Consigne : position, points d'attention (2000 caractères maximum).")] string? instructions = null,
         [Description("Adresse https d'une image (JPEG, PNG ou WebP, 10 Mo maximum) à mettre sur l'exercice ; l'image " +
             "elle-même, pas la page qui la contient.")] string? imageUrl = null,
+        [Description(PerSideHelp)] bool perSide = false,
         CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
         var exercise = await exercises.CreateAsync(household.HouseholdId,
-            AssistantRequest.Validated(new ExerciseRequest(name, instructions, measure, defaultLoadKg)), ct);
+            AssistantRequest.Validated(new ExerciseRequest(name, instructions, measure, defaultLoadKg, perSide)), ct);
         if (string.IsNullOrWhiteSpace(imageUrl)) return exercise;
         return (await exercises.ReplaceImageFromUrlAsync(household.HouseholdId, exercise.Id, imageUrl, ct)).OrNotFound("Exercice");
     }
 
     [McpServerTool(Name = "update_exercise", Idempotent = true, Title = "Modifier un exercice")]
-    [Description("Remplace tout un exercice (une consigne ou une charge omise devient vide). La mesure d'un exercice déjà réalisé " +
+    [Description("Remplace tout un exercice (une consigne ou une charge omise devient vide, perSide omis devient false). La mesure d'un exercice déjà réalisé " +
         "ne change pas. Les routines gardent leur propre charge. " + MeasureHelp)]
     public static async Task<ExerciseDto> UpdateExercise(IHttpContextAccessor accessor, ExerciseLibrary exercises,
         Guid exerciseId, string name, string measure, [Description(LoadHelp)] decimal? defaultLoadKg = null, string? instructions = null,
-        CancellationToken ct = default)
+        [Description(PerSideHelp)] bool perSide = false, CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        var request = AssistantRequest.Validated(new ExerciseRequest(name, instructions, measure, defaultLoadKg));
+        var request = AssistantRequest.Validated(new ExerciseRequest(name, instructions, measure, defaultLoadKg, perSide));
         return (await exercises.UpdateAsync(household.HouseholdId, exerciseId, request, ct)).OrNotFound("Exercice");
     }
 

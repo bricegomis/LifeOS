@@ -1,17 +1,21 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  countdownText, currentStepIndex, elapsedPercent, nextLabel, nextStep, roundCount, runSteps, runSummary, setTarget, stepPosition, warningSecond,
+  countdownText, currentStepIndex, elapsedPercent, nextLabel, nextStep, roundCount, runSteps, runSummary, setCount, setKey, setNumber, setTarget,
+  sideLabel, stepPosition, warningSecond,
 } from './routine-run.ts'
 import type { ExerciseCompletionDto, RoutineLineDto, RoutineSessionDto } from './sports.models.ts'
 
-function line(exerciseId: string, name: string, sets: number, target: number, measure: 'hold' | 'reps', loadKg: number | null = null): RoutineLineDto {
-  return { exerciseId, exerciseName: name, instructions: null, measure, hasImage: false, sets, target, loadKg }
+function line(exerciseId: string, name: string, sets: number, target: number, measure: 'hold' | 'reps', loadKg: number | null = null,
+  perSide = false): RoutineLineDto {
+  return { exerciseId, exerciseName: name, instructions: null, measure, hasImage: false, sets, target, loadKg, perSide }
 }
 const wallSit = line('e1', 'Chaise', 3, 45, 'hold', 10)
 const bridge = line('e2', 'Pont fessier', 1, 12, 'reps')
 const plank = line('e3', 'Gainage', 2, 30, 'hold')
 const lines = [wallSit, bridge, plank]
+const sidePlank = line('e4', 'Gainage latéral', 2, 30, 'hold', null, true)
+const lunge = line('e5', 'Fente', 1, 10, 'reps', null, true)
 
 function pass(ticks: Record<string, number>): RoutineSessionDto {
   const completions: ExerciseCompletionDto[] = Object.entries(ticks).map(([exerciseId, setsDone]) => ({
@@ -51,6 +55,27 @@ describe('guided routine run', () => {
     assert.equal(nextLabel(steps[1]!, 3, steps[0]!), 'Ensuite : Pont fessier, 12 rép.')
     assert.equal(nextLabel(steps[3]!, 3, steps[2]!), 'Ensuite : Chaise, 45 s · 10 kg (tour 2)')
     assert.equal(nextLabel(null, 3, steps[5]!), 'Dernière série du passage')
+  })
+
+  it('splits a per-side set into its left then its right side, ticked once after the right', () => {
+    const steps = runSteps([sidePlank, lunge])
+    assert.deepEqual(steps.map(step => `${step.line.exerciseId}:${step.round}:${step.side}`),
+      ['e4:1:left', 'e4:1:right', 'e5:1:left', 'e5:1:right', 'e4:2:left', 'e4:2:right'])
+    assert.equal(setCount(steps), 3)
+    assert.deepEqual(steps.map((_, index) => setNumber(steps, index)), [1, 1, 2, 2, 3, 3])
+    assert.equal(runSummary([sidePlank, lunge]), '2 exercices · 2 tours · 3 séries')
+    assert.equal(setTarget(sidePlank), '30 s par côté')
+    assert.equal(sideLabel('left'), 'Côté gauche')
+    assert.equal(sideLabel(null), '')
+
+    // The left side lives in the page; the pass only knows whole sets.
+    assert.equal(currentStepIndex(steps, null), 0)
+    const left = new Set([setKey(steps[0]!)])
+    assert.equal(currentStepIndex(steps, null, left), 1)
+    assert.equal(nextLabel(nextStep(steps, 0, null, left), 2, steps[0]!), 'Ensuite : côté droit')
+    assert.equal(nextLabel(steps[2]!, 2, steps[1]!), 'Ensuite : Fente, 10 rép. par côté')
+    assert.equal(currentStepIndex(steps, pass({ e4: 1 })), 2)
+    assert.equal(currentStepIndex(steps, pass({ e4: 1, e5: 1 }), new Set(['e4:2'])), 5)
   })
 
   it('counts down in whole seconds and beeps on the last three', () => {
