@@ -230,7 +230,7 @@ export class TodayAgendaComponent implements OnInit {
     }
     await Promise.all([
       load(this.api.get<TodayTasks>('/tasks/today'), value => this.tasks.set(value)),
-      load(this.api.get<TodaySportRoutine[]>('/sport/routines', { calendarWeeks: 1, includeStopped: false }), value => this.sportRoutines.set(value)),
+      load(this.api.get<TodaySportRoutine[]>('/sport/routines', { calendarWeeks: 1 }), value => this.sportRoutines.set(value)),
       load(this.api.get<TodayChallenge[]>('/sport/challenges', { calendarWeeks: 1, includeStopped: false }), value => this.challenges.set(value)),
       load(this.api.get<{ supplements: TodaySupplement[] }>('/health/supplements', { includeStopped: false }), value => this.supplements.set(value.supplements)),
     ])

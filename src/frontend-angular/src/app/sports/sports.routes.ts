@@ -2,6 +2,7 @@ import type { Routes } from '@angular/router'
 import { ExercisesPageComponent } from './exercises-page.component'
 import { ChallengesPageComponent, GoalsPageComponent, TemplatesPageComponent } from './library-pages.component'
 import { RoutinesPageComponent } from './routines-page.component'
+import { SportExerciseRunPageComponent } from './sport-exercise-run-page.component'
 import { SportHistoryPageComponent } from './sport-history-page.component'
 import { SportProgressPageComponent } from './sport-progress-page.component'
 import { SportRoutinePageComponent } from './sport-routine-page.component'
@@ -24,6 +25,7 @@ export const SPORT_ROUTES: Routes = [
   { path: 'progress', component: SportProgressPageComponent },
   { path: 'routines', component: RoutinesPageComponent },
   { path: 'exercises', component: ExercisesPageComponent },
+  { path: 'exercise/:id/run', component: SportExerciseRunPageComponent },
   { path: 'challenges', component: ChallengesPageComponent },
   { path: 'goals', component: GoalsPageComponent },
   { path: 'templates', component: TemplatesPageComponent },

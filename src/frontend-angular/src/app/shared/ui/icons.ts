@@ -4,6 +4,7 @@ import { MatIconRegistry } from '@angular/material/icon'
 import MenuIcon from '@material-symbols/svg-400/rounded/menu.svg'
 import CloseIcon from '@material-symbols/svg-400/rounded/close.svg'
 import ArrowBackIcon from '@material-symbols/svg-400/rounded/arrow_back.svg'
+import ArrowForwardIcon from '@material-symbols/svg-400/rounded/arrow_forward.svg'
 import ChevronRightIcon from '@material-symbols/svg-400/rounded/chevron_right.svg'
 import KeyboardArrowDownIcon from '@material-symbols/svg-400/rounded/keyboard_arrow_down.svg'
 import SettingsIcon from '@material-symbols/svg-400/rounded/settings.svg'
@@ -114,6 +115,7 @@ export const ICONS: Record<string, string> = {
   menu: MenuIcon,
   close: CloseIcon,
   arrow_back: ArrowBackIcon,
+  arrow_forward: ArrowForwardIcon,
   chevron_right: ChevronRightIcon,
   keyboard_arrow_down: KeyboardArrowDownIcon,
   settings: SettingsIcon,

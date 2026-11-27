@@ -191,6 +191,8 @@ export interface ExerciseRequest {
   measure: ExerciseMeasure
   /** Usual load in kg, offered as the target in a routine; null means bodyweight. */
   defaultLoadKg: number | null
+  /** Done on the left then on the right: one set covers both sides, its target applies to each side. */
+  perSide: boolean
 }
 
 export interface ExerciseDto extends ExerciseRequest {
@@ -217,6 +219,8 @@ export interface RoutineLineDto extends RoutineLineRequest {
   instructions: string | null
   measure: ExerciseMeasure
   hasImage: boolean
+  /** Left then right; the target applies to each side. */
+  perSide: boolean
 }
 
 export interface RoutineDto {
@@ -226,12 +230,15 @@ export interface RoutineDto {
   jokersPerWeek: number
   lines: RoutineLineDto[]
   startedOn: string
-  stoppedOn: string | null
-  isActive: boolean
 }
 
+/** An exercise done alone, outside any routine; the usual load when loadKg is null, 0 = bodyweight. */
+export interface ExerciseLogRequest { setsDone: number, value: number, loadKg: number | null, date: string | null }
+
 export interface ExerciseCompletionDto {
-  sessionId: string
+  id: string
+  /** The pass it was ticked in; null when done alone, or once its routine was deleted. */
+  sessionId: string | null
   exerciseId: string
   date: string
   setsDone: number

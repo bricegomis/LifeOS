@@ -1,5 +1,5 @@
 import type {
-  ExerciseCompletionDto, ExerciseDto, ExerciseMeasure, ExerciseProgressDto, ExerciseRequest, RoutineDayDto, RoutineDto,
+  ExerciseCompletionDto, ExerciseDto, ExerciseLogRequest, ExerciseMeasure, ExerciseProgressDto, ExerciseRequest, RoutineDayDto, RoutineDto,
   RoutineLineDto, RoutineReportDto, RoutineRequest, RoutineSessionDto,
 } from './sports.models.ts'
 
@@ -15,14 +15,17 @@ export function measureLabel(measure: ExerciseMeasure): string { return measure 
 /** A load is optional (ADR 0015): none or 0 means bodyweight. */
 export function hasLoad(loadKg: number | null | undefined): loadKg is number { return loadKg !== null && loadKg !== undefined && loadKg > 0 }
 export function exerciseSummary(exercise: ExerciseDto): string {
-  return measureLabel(exercise.measure) + (hasLoad(exercise.defaultLoadKg) ? ` · ${kilos(exercise.defaultLoadKg)} kg` : ' · poids du corps')
+  return measureLabel(exercise.measure) + (exercise.perSide ? ' par côté' : '')
+    + (hasLoad(exercise.defaultLoadKg) ? ` · ${kilos(exercise.defaultLoadKg)} kg` : ' · poids du corps')
 }
+/** " par côté" after the target of a per-side exercise. */
+export function sideSuffix(line: Pick<RoutineLineDto, 'perSide'>): string { return line.perSide ? ' par côté' : '' }
 
-/** "2 × 45 s · 10 kg": the target of a routine line. */
+/** "2 × 45 s · 10 kg" or "3 × 30 s par côté": the target of a routine line. */
 export function targetText(line: RoutineLineDto): string {
   const sets = line.sets > 1 ? `${line.sets} × ` : ''
   const load = hasLoad(line.loadKg) ? ` · ${kilos(line.loadKg)} kg` : ''
-  return `${sets}${line.target} ${measureUnit(line.measure)}${load}`
+  return `${sets}${line.target} ${measureUnit(line.measure)}${sideSuffix(line)}${load}`
 }
 /** "3 × 60 s à 12 kg": what was done in a pass. */
 export function doneText(line: RoutineLineDto, completion: ExerciseCompletionDto): string {
@@ -203,11 +206,38 @@ export function optionalLoad(value: number | string | null | undefined): number 
   return load === 0 ? null : load
 }
 
-export function emptyExerciseDraft(): ExerciseRequest { return { name: '', instructions: '', measure: 'hold', defaultLoadKg: null } }
+/** What the window « Faire l'exercice » holds: the load starts at the exercise's usual load, empty = bodyweight. */
+export interface ExerciseLogDraft { date: string, setsDone: number | string | null, value: number | string | null, loadKg: number | string | null }
+
+export function emptyLogDraft(exercise: ExerciseDto, today: string): ExerciseLogDraft {
+  return { date: today, setsDone: 1, value: null, loadKg: exercise.defaultLoadKg }
+}
+/** "Secondes par série (par côté)" or "Répétitions par série". */
+export function logValueLabel(exercise: ExerciseDto): string {
+  return (exercise.measure === 'hold' ? 'Secondes par série' : 'Répétitions par série') + (exercise.perSide ? ' (par côté)' : '')
+}
+/** An exercise done alone: 1 to 20 sets, a value of 1 to 10 000, an optional load, never in the future. */
+export function exerciseLogRequest(draft: ExerciseLogDraft, today: string): ExerciseLogRequest | string {
+  const sets = Number(draft.setsDone), value = Number(draft.value)
+  if (!draft.date || draft.date > today) return 'Choisissez un jour, au plus tard aujourd’hui.'
+  if (!Number.isInteger(sets) || sets < 1 || sets > 20) return 'Séries : 1 à 20.'
+  if (draft.value === null || draft.value === '' || !Number.isInteger(value) || value < 1 || value > 10000) return 'Valeur par série : 1 à 10 000.'
+  const load = optionalLoad(draft.loadKg)
+  if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.'
+  // 0 says bodyweight explicitly: null would take the exercise's usual load.
+  return { date: draft.date, setsDone: sets, value, loadKg: load ?? 0 }
+}
+/** "2 séries × 40 s à 10 kg", for a tick or an exercise done alone. */
+export function completionText(measure: ExerciseMeasure, completion: ExerciseCompletionDto): string {
+  const load = hasLoad(completion.loadKg) ? ` à ${kilos(completion.loadKg)} kg` : ''
+  return `${completion.setsDone} série${completion.setsDone > 1 ? 's' : ''} × ${completion.value} ${measureUnit(measure)}${load}`
+}
+
+export function emptyExerciseDraft(): ExerciseRequest { return { name: '', instructions: '', measure: 'hold', defaultLoadKg: null, perSide: false } }
 export function exerciseRequest(draft: ExerciseRequest): ExerciseRequest | string {
   const name = draft.name.trim()
   if (!name) return 'Donnez un nom à l’exercice.'
   const load = optionalLoad(draft.defaultLoadKg)
   if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.'
-  return { name, instructions: draft.instructions?.trim() || null, measure: draft.measure, defaultLoadKg: load }
+  return { name, instructions: draft.instructions?.trim() || null, measure: draft.measure, defaultLoadKg: load, perSide: draft.perSide }
 }

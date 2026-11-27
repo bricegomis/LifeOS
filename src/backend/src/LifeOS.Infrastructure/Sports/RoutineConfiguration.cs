@@ -34,13 +34,11 @@ internal sealed class RoutineConfiguration : IEntityTypeConfiguration<Routine>
 {
     public void Configure(EntityTypeBuilder<Routine> builder)
     {
-        builder.ToTable("routines", SportsSchema.Name, t =>
-            t.HasCheckConstraint("ck_routine_period", "\"StoppedOn\" IS NULL OR \"StoppedOn\" >= \"StartedOn\""));
+        builder.ToTable("routines", SportsSchema.Name);
         builder.HasKey(r => r.Id);
         builder.Property(r => r.Id).ValueGeneratedNever();
         builder.HasAlternateKey(r => new { r.Id, r.HouseholdId });
         builder.Property(r => r.Name).HasMaxLength(100).IsRequired();
-        builder.Ignore(r => r.IsActive);
         builder.HasOne<Household>().WithMany().HasForeignKey(r => r.HouseholdId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<MemberProfile>().WithMany().HasForeignKey(r => new { r.MemberProfileId, r.HouseholdId })
             .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
@@ -99,10 +97,14 @@ internal sealed class ExerciseCompletionConfiguration : IEntityTypeConfiguration
             t.HasCheckConstraint("ck_exercise_completion_value", "\"Value\" >= 1 AND \"Value\" <= 10000");
             t.HasCheckConstraint("ck_exercise_completion_load", "\"LoadKg\" IS NULL OR (\"LoadKg\" >= 0 AND \"LoadKg\" <= 500)");
             t.HasCheckConstraint("ck_exercise_completion_sets", "\"SetsDone\" >= 1 AND \"SetsDone\" <= 20");
+            t.HasCheckConstraint("ck_exercise_completion_pass", "(\"RoutineId\" IS NULL) = (\"SessionId\" IS NULL)");
         });
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).ValueGeneratedNever();
         builder.Property(c => c.LoadKg).HasPrecision(5, 1);
+        builder.Ignore(c => c.InRoutine);
+        builder.HasOne<MemberProfile>().WithMany().HasForeignKey(c => new { c.MemberProfileId, c.HouseholdId })
+            .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<Routine>().WithMany().HasForeignKey(c => new { c.RoutineId, c.HouseholdId })
             .HasPrincipalKey(r => new { r.Id, r.HouseholdId }).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<RoutineSession>().WithMany().HasForeignKey(c => new { c.SessionId, c.HouseholdId })
@@ -112,5 +114,6 @@ internal sealed class ExerciseCompletionConfiguration : IEntityTypeConfiguration
         builder.HasIndex(c => new { c.SessionId, c.ExerciseId }).IsUnique();
         builder.HasIndex(c => new { c.RoutineId, c.Date });
         builder.HasIndex(c => new { c.HouseholdId, c.ExerciseId });
+        builder.HasIndex(c => new { c.MemberProfileId, c.ExerciseId });
     }
 }

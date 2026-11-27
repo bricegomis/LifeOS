@@ -19,7 +19,7 @@ import { SportsApiService } from './sports-api.service'
 import type { ExerciseDto, RoutineDto } from './sports.models'
 
 export interface RoutineDialogData { routine: RoutineDto | null, exercises: ExerciseDto[] }
-export interface RoutineDialogResult { routineId: string, message: string }
+export interface RoutineDialogResult { routineId: string, message: string, deleted?: boolean }
 
 /** Creates or edits a routine (ADR 0014): days, jokers and its exercises with their targets. */
 @Component({
@@ -29,7 +29,7 @@ export interface RoutineDialogResult { routineId: string, message: string }
     MatIconModule, MatInputModule, MatSelectModule],
   template: `
     <app-editor-frame [heading]="routine ? 'Modifier la routine' : 'Nouvelle routine'" formId="routine-form" [saveLabel]="routine ? 'Enregistrer' : 'Ajouter'"
-      [busy]="busy()" [dirty]="dirty()" [error]="error()" [dangerLabel]="routine?.isActive ? 'Arrêter' : ''" (danger)="stop()">
+      [busy]="busy()" [dirty]="dirty()" [error]="error()" [dangerLabel]="routine ? 'Supprimer' : ''" dangerIcon="delete" (danger)="remove()">
       <form id="routine-form" class="lo-form" (ngSubmit)="save()">
         <mat-form-field appearance="outline">
           <mat-label>Nom</mat-label>
@@ -169,12 +169,14 @@ export class RoutineDialogComponent {
     }
   }
 
-  async stop(): Promise<void> {
+  /** Deletes the routine, its passes, streak and calendar; the exercises done stay in each exercise's history. */
+  async remove(): Promise<void> {
     if (!this.routine || this.busy()) return
     this.busy.set(true); this.error.set('')
     try {
-      await firstValueFrom(this.api.stopRoutine(this.routine.id))
-      this.ref.close({ routineId: this.routine.id, message: `« ${this.routine.name} » arrêtée ; son historique est conservé` })
+      await firstValueFrom(this.api.deleteRoutine(this.routine.id))
+      this.ref.close({ routineId: this.routine.id, deleted: true,
+        message: `« ${this.routine.name} » supprimée ; les exercices faits restent dans leur progression` })
     } catch (error) {
       this.error.set(apiErrorMessage(error))
       this.busy.set(false)

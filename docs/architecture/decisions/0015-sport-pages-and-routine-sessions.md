@@ -37,7 +37,8 @@ Chaque page suit le même gabarit :
 - la liste des éléments, avec un bouton « Ajouter » ;
 - un appui sur un élément ouvre sa **fenêtre de modification** (popup) ; la création
   utilise la même fenêtre ;
-- arrêter ou archiver se fait depuis cette fenêtre, avec confirmation ;
+- arrêter, archiver ou supprimer (une routine, [ADR 0014](0014-sport-daily-routines.md)) se fait
+  depuis cette fenêtre, avec confirmation ;
 - les éléments arrêtés ou archivés sont masqués par défaut, affichables par un filtre.
 
 Tout se crée et se modifie sur ordinateur comme sur téléphone, séances types
@@ -164,6 +165,12 @@ la page `sports/routine/:id/run`, sur ordinateur comme sur téléphone :
   et une vibration à la fin ; la série est alors cochée et l'exercice suivant s'affiche. Pause,
   « Recommencer la série » et « Valider sans chrono » sont proposés ;
 - un exercice en **répétitions** se valide par « Fait » ;
+- un exercice **par côté** ([ADR 0014](0014-sport-daily-routines.md)) fait de chaque série deux
+  étapes, « Côté gauche » puis « Côté droit » : en répétitions, « Fait à gauche » puis « Fait à
+  droite » ; au chrono, la fin du côté gauche enchaîne seule 5 s de « Changez de côté » puis le
+  compte à rebours du côté droit. La série n'est cochée qu'après le côté droit ; un côté gauche
+  fait n'est gardé que par la page ouverte (en la quittant, la série reprend au côté gauche).
+  « Annuler » revient d'une étape (« Annuler le côté gauche », « Annuler le côté droit ») ;
 - chaque série est cochée dans le passage en cours comme sur la page de la routine ; le mode
   guidé reprend donc à la première série non cochée, et « Annuler la série précédente » retire
   la dernière série cochée pendant le mode guidé ;
@@ -173,7 +180,8 @@ la page `sports/routine/:id/run`, sur ordinateur comme sur téléphone :
 - à la dernière série, le passage se termine comme ailleurs (message),
   puis on revient à la page de la routine.
 
-Rien ne change dans l'API : le mode guidé n'utilise que l'ouverture d'un passage et la coche par série.
+Le mode guidé n'utilise que l'ouverture d'un passage et la coche par série ; l'API ne porte que
+le réglage « par côté » de l'exercice, repris sur les lignes de routine.
 
 ### Assistant
 

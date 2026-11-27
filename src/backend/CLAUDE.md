@@ -50,8 +50,10 @@
   jokers, ordered lines with targets and an optional load, null = bodyweight); a change
   applies from today and past days are judged with the version they had. A routine is done
   in passes (`RoutineSession`, several per day, one unfinished at a time, with an optional comment); an
-  `ExerciseCompletion` is one exercise in one pass with its sets done, value and load (no
-  feeling: effort and discomfort were removed on 2026-11-27). A pass is finished, never stored, when every line of that
+  `ExerciseCompletion` is one exercise done by a profile with its sets, value and load (no
+  feeling: effort and discomfort were removed on 2026-11-27), ticked in a pass or done alone
+  (`CreateAlone`, no routine nor pass). A routine is never stopped, only deleted: its passes go,
+  its completions stay as the exercises' history (routine and pass set to null first). A pass is finished, never stored, when every line of that
   day has all its sets; a finished pass is not reopened. A day is done once one pass is
   finished. Days that are not planned are skipped by the streak.
 - Tasks (ADR 0017): a `Todo` belongs to a household profile (`TaskProfiles`, main profile by

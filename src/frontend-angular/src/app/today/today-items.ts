@@ -29,7 +29,7 @@ export interface TodayTaskRoutine {
 export interface TodayTasks { today: string, todos: TodayTodo[], routines: TodayTaskRoutine[] }
 
 export interface TodaySportRoutine {
-  routine: { id: string, name: string, lines: unknown[], isActive: boolean }
+  routine: { id: string, name: string, lines: unknown[] }
   plannedToday: boolean
   completedToday: boolean
   streak: number
@@ -140,7 +140,7 @@ export function taskItems(tasks: TodayTasks): TodayItem[] {
 
 export function sportRoutineItems(reports: TodaySportRoutine[]): TodayItem[] {
   return reports.flatMap((report): TodayItem[] => {
-    if (!report.routine.isActive || (!report.plannedToday && !report.completedToday)) return []
+    if (!report.plannedToday && !report.completedToday) return []
     const open = report.todaySessions.find(session => !session.finished)
     const exercises = report.routine.lines.length
     const sub = report.completedToday

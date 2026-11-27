@@ -15,7 +15,7 @@ public interface ISportReadData
     /// <summary>Sum of the entries per challenge and per day.</summary>
     Task<IReadOnlyDictionary<Guid, Dictionary<DateOnly, int>>> DayTotalsAsync(Guid householdId, IReadOnlyCollection<Guid> challengeIds, CancellationToken ct);
     Task<IReadOnlyList<ChallengeEntry>> EntriesAsync(Guid householdId, IReadOnlyCollection<Guid> challengeIds, DateOnly day, CancellationToken ct);
-    Task<IReadOnlyList<Routine>> RoutinesAsync(Guid householdId, Guid profileId, bool activeOnly, CancellationToken ct);
+    Task<IReadOnlyList<Routine>> RoutinesAsync(Guid householdId, Guid profileId, CancellationToken ct);
     /// <summary>Every exercise of the household by id, archived ones included.</summary>
     Task<IReadOnlyDictionary<Guid, Exercise>> ExercisesAsync(Guid householdId, CancellationToken ct);
     Task<IReadOnlyList<ExerciseCompletion>> CompletionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct);
@@ -63,13 +63,13 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
             entries.Where(e => e.ChallengeId == challenge.Id).OrderBy(e => e.LoggedAt).ToList(), today)).ToList();
     }
 
-    /// <summary>Running routines (or all of them) with today's passes, streak and a calendar of <paramref name="calendarWeeks"/> weeks.</summary>
+    /// <summary>Routines with today's passes, streak and a calendar of <paramref name="calendarWeeks"/> weeks.</summary>
     public async Task<IReadOnlyList<RoutineReportDto>> RoutinesAsync(Guid householdId, Guid profileId, int calendarWeeks,
-        bool includeStopped, CancellationToken ct)
+        CancellationToken ct)
     {
         if (calendarWeeks is < 0 or > 53) throw new ArgumentException("Calendrier : 0 à 53 semaines.");
         var today = Today();
-        var routines = await data.RoutinesAsync(householdId, profileId, !includeStopped, ct);
+        var routines = await data.RoutinesAsync(householdId, profileId, ct);
         var exercises = await data.ExercisesAsync(householdId, ct);
         var ids = routines.Select(r => r.Id).ToList();
         var completions = (await data.CompletionsAsync(householdId, ids, ct)).ToLookup(c => c.SessionId);

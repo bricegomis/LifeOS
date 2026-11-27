@@ -12,6 +12,7 @@ public sealed record RoutineLineInput(Exercise Exercise, int Sets, int Target, d
 /// A daily routine of a profile (ADR 0014): an ordered list of exercises with their targets, done
 /// on its days of the week. Its days, jokers and exercises change from a given day, so past days
 /// are judged with the routine they had. Done on a day when one of its passes has every exercise done (ADR 0015).
+/// A routine is never stopped: it runs until it is deleted, with its passes; the exercises done stay.
 /// </summary>
 public sealed class Routine : Entity
 {
@@ -26,8 +27,6 @@ public sealed class Routine : Entity
     public Guid MemberProfileId { get; private set; }
     public string Name { get; private set; } = "";
     public DateOnly StartedOn { get; private set; }
-    /// <summary>Last day counted; null while the routine runs.</summary>
-    public DateOnly? StoppedOn { get; private set; }
     public IReadOnlyList<RoutineVersion> Versions => _versions;
 
     private Routine() { }
@@ -41,8 +40,6 @@ public sealed class Routine : Entity
         routine._versions.Add(RoutineVersion.Create(householdId, today, days, jokersPerWeek, lines));
         return routine;
     }
-
-    public bool IsActive => StoppedOn is null;
 
     public void Rename(string name)
     {
@@ -58,7 +55,6 @@ public sealed class Routine : Entity
     /// <summary>New days, jokers, exercises or targets apply from today; past days keep theirs.</summary>
     public void Change(int days, int jokersPerWeek, IReadOnlyList<RoutineLineInput> lines, DateOnly today)
     {
-        if (!IsActive) throw new ArgumentException("Cette routine est arrêtée.");
         var changed = RoutineVersion.Create(HouseholdId, today, days, jokersPerWeek, lines);
         var current = VersionOn(today);
         if (current.SameAs(changed)) return;
@@ -67,16 +63,9 @@ public sealed class Routine : Entity
         else _versions.Add(changed);
     }
 
-    /// <summary>Stops counting after today; the history stays.</summary>
-    public void Stop(DateOnly today)
-    {
-        if (IsActive) StoppedOn = today < StartedOn ? StartedOn : today;
-    }
-
-    /// <summary>A day the routine can be done on: planned, running, not before its start and not in the future.</summary>
+    /// <summary>A day the routine can be done on: planned, not before its start and not in the future.</summary>
     public void CheckDay(DateOnly day, DateOnly today)
     {
-        if (!IsActive) throw new ArgumentException("Cette routine est arrêtée.");
         if (day > today) throw new ArgumentException("Impossible de faire une routine dans le futur.");
         if (day < StartedOn) throw new ArgumentException("Ce jour est avant le début de la routine.");
         if (!VersionOn(day).IsPlanned(day)) throw new ArgumentException("La routine n'est pas prévue ce jour-là.");

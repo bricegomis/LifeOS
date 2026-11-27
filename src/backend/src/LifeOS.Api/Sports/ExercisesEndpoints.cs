@@ -14,11 +14,24 @@ namespace LifeOS.Api.Sports;
 
 /// <param name="Measure">hold (seconds) or reps; frozen once the exercise has been done.</param>
 /// <param name="DefaultLoadKg">Usual load in kg, by steps of 0.5, offered as the target in a routine; none or 0 means bodyweight.</param>
+/// <param name="PerSide">Done on the left then on the right; a set's target applies to each side.</param>
 public sealed record ExerciseRequest(
     [property: Required, StringLength(100)] string Name,
     [property: StringLength(Exercise.MaxInstructionsLength)] string? Instructions,
     [property: Required] string Measure,
-    decimal? DefaultLoadKg = null);
+    decimal? DefaultLoadKg = null,
+    bool PerSide = false);
+
+/// <summary>An exercise done alone, outside any routine.</summary>
+/// <param name="Value">Seconds or repetitions per set (per side for a per-side exercise).</param>
+/// <param name="LoadKg">The exercise's usual load when omitted; 0 means bodyweight.</param>
+/// <param name="Date">Today when omitted; never in the future.</param>
+public sealed record ExerciseLogRequest(
+    [property: Range(1, ExerciseCompletion.MaxSets)] int SetsDone,
+    [property: Range(1, 10000)] int Value,
+    decimal? LoadKg = null,
+    DateOnly? Date = null,
+    Guid? ProfileId = null);
 
 public static class ExercisesEndpoints
 {
@@ -61,6 +74,13 @@ public static class ExercisesEndpoints
             await exercises.ProgressAsync(household.HouseholdId, id, profileId, weeks ?? 12, ct) is { } progress
                 ? Results.Ok(progress) : Results.NotFound())
             .Produces<ExerciseProgressDto>().ProducesProblem(StatusCodes.Status404NotFound);
+        g.MapPost("/{id:guid}/logs", async (Guid id, ExerciseLogRequest request, HouseholdContext household, ExerciseLibrary exercises, CancellationToken ct) =>
+            await exercises.LogAsync(household.HouseholdId, id, request, ct) is { } log ? Results.Ok(log) : Results.NotFound())
+            .Produces<ExerciseCompletionDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
+        g.MapDelete("/{id:guid}/logs/{completionId:guid}", async (Guid id, Guid completionId, HouseholdContext household,
+                ExerciseLibrary exercises, CancellationToken ct) =>
+            await exercises.DeleteLogAsync(household.HouseholdId, id, completionId, ct) ? Results.NoContent() : Results.NotFound())
+            .Produces(StatusCodes.Status204NoContent).ProducesProblem(StatusCodes.Status404NotFound);
         return app;
     }
 }
@@ -83,7 +103,7 @@ public sealed class ExerciseLibrary(LifeOSDbContext db, SportImageStorage images
 
     public async Task<ExerciseDto> CreateAsync(Guid householdId, ExerciseRequest r, CancellationToken ct)
     {
-        var exercise = Exercise.Create(householdId, r.Name, r.Instructions, r.Measure, r.DefaultLoadKg);
+        var exercise = Exercise.Create(householdId, r.Name, r.Instructions, r.Measure, r.DefaultLoadKg, r.PerSide);
         db.Exercises.Add(exercise);
         await db.SaveChangesAsync(ct);
         return ExerciseDto.From(exercise, measureLocked: false);
@@ -94,18 +114,18 @@ public sealed class ExerciseLibrary(LifeOSDbContext db, SportImageStorage images
         var exercise = await FindAsync(householdId, id, ct);
         if (exercise is null) return null;
         var done = await IsDoneAsync(exercise, ct);
-        exercise.Update(r.Name, r.Instructions, r.Measure, r.DefaultLoadKg, done);
+        exercise.Update(r.Name, r.Instructions, r.Measure, r.DefaultLoadKg, done, r.PerSide);
         await db.SaveChangesAsync(ct);
         return ExerciseDto.From(exercise, done);
     }
 
-    /// <summary>Archives an exercise no running routine uses today; its history stays.</summary>
+    /// <summary>Archives an exercise no routine uses today; its history stays.</summary>
     public async Task<bool> ArchiveAsync(Guid householdId, Guid id, CancellationToken ct)
     {
         var exercise = await FindAsync(householdId, id, ct);
         if (exercise is null) return false;
         var today = SportClock.Today(clock);
-        var running = await db.Routines.Where(r => r.HouseholdId == householdId && r.StoppedOn == null).ToListAsync(ct);
+        var running = await db.Routines.Where(r => r.HouseholdId == householdId).ToListAsync(ct);
         if (running.FirstOrDefault(r => r.VersionOn(today).Lines.Any(line => line.ExerciseId == id)) is { } routine)
             throw new ArgumentException($"Cet exercice fait partie de la routine « {routine.Name} » ; retirez-le d'abord.");
         exercise.Archive();
@@ -148,6 +168,30 @@ public sealed class ExerciseLibrary(LifeOSDbContext db, SportImageStorage images
         if (!await db.Exercises.AnyAsync(e => e.Id == id && e.HouseholdId == householdId, ct)) return null;
         var profile = await profiles.ResolveAsync(householdId, profileId, ct);
         return await contract.ExerciseProgressAsync(householdId, profile, id, weeks, ct);
+    }
+
+    /// <summary>Notes the exercise done alone by a profile (the main one by default); it joins the exercise's history.</summary>
+    public async Task<ExerciseCompletionDto?> LogAsync(Guid householdId, Guid id, ExerciseLogRequest r, CancellationToken ct)
+    {
+        var exercise = await FindAsync(householdId, id, ct);
+        if (exercise is null) return null;
+        var profile = await profiles.ResolveAsync(householdId, r.ProfileId, ct);
+        var today = SportClock.Today(clock);
+        var log = ExerciseCompletion.CreateAlone(exercise, profile, r.Date ?? today, r.SetsDone, r.Value, r.LoadKg, today, clock.GetUtcNow());
+        db.ExerciseCompletions.Add(log);
+        await db.SaveChangesAsync(ct);
+        return ExerciseCompletionDto.From(log);
+    }
+
+    /// <summary>Deletes an exercise done outside a pass; a tick in a pass is removed from its routine.</summary>
+    public async Task<bool> DeleteLogAsync(Guid householdId, Guid id, Guid completionId, CancellationToken ct)
+    {
+        var log = await db.ExerciseCompletions.SingleOrDefaultAsync(c => c.Id == completionId && c.ExerciseId == id && c.HouseholdId == householdId, ct);
+        if (log is null) return false;
+        if (log.InRoutine) throw new ArgumentException("Cet exercice a été coché dans un passage : décochez-le depuis sa routine.");
+        db.ExerciseCompletions.Remove(log);
+        await db.SaveChangesAsync(ct);
+        return true;
     }
 
     private Task<Exercise?> FindAsync(Guid householdId, Guid id, CancellationToken ct) =>
