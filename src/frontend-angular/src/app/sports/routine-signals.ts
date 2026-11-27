@@ -1,3 +1,5 @@
+import { LifeosNativeBridge, nativeBridgeStatus } from '@/app/core/native/native-bridge'
+
 /**
  * Beeps, vibration and screen wake lock for the guided run of a routine. Browsers only play sound after a
  * tap: `unlock()` is called from the button that starts a countdown. Everything fails silently when the
@@ -46,16 +48,25 @@ export class RoutineSignals {
     document.removeEventListener('visibilitychange', this.onVisible)
     void this.wakeLock?.release().catch(() => undefined)
     this.wakeLock = null
+    this.native(false)
     void this.context?.close().catch(() => undefined)
     this.context = null
   }
 
   private async lock(): Promise<void> {
+    // In the iPhone app the web wake lock is unreliable: the native side disables the idle timer.
+    this.native(true)
     if (this.wakeLock && !this.wakeLock.released) return
     try {
       const wakeLock = (navigator as { wakeLock?: { request(type: 'screen'): Promise<{ released?: boolean, release(): Promise<void> }> } }).wakeLock
       if (wakeLock) this.wakeLock = await wakeLock.request('screen')
     } catch { /* the screen may lock */ }
+  }
+
+  /** Older iPhone app builds lack the method: the call fails and the screen may lock. */
+  private native(enabled: boolean): void {
+    if (nativeBridgeStatus() !== 'available') return
+    void LifeosNativeBridge.setKeepAwake({ enabled }).catch(() => undefined)
   }
 
   private tone(frequency: number, duration: number, delay = 0): void {

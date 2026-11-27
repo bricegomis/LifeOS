@@ -23,6 +23,8 @@ export interface LifeosNativeBridgePlugin {
   /** Legacy cleanup only: ends a Live Activity started by an older version. */
   endLiveActivity(): Promise<void>
   reloadWidgetTimelines(): Promise<void>
+  /** Keeps the screen on, or lets it sleep again (guided run of a sport routine). */
+  setKeepAwake(options: { enabled: boolean }): Promise<void>
 }
 
 export const LifeosNativeBridge = registerPlugin<LifeosNativeBridgePlugin>('LifeosNativeBridge', {
@@ -45,6 +47,9 @@ export const LifeosNativeBridge = registerPlugin<LifeosNativeBridgePlugin>('Life
     },
     async reloadWidgetTimelines() {
       // no-op on web
+    },
+    async setKeepAwake() {
+      // the web uses the Screen Wake Lock API instead
     },
   },
 })

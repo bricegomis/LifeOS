@@ -181,7 +181,8 @@ la page `sports/routine/:id/run`, sur ordinateur comme sur téléphone :
 - chaque série est cochée dans le passage en cours comme sur la page de la routine ; le mode
   guidé reprend donc à la première série non cochée, et « Annuler la série précédente » retire
   la dernière série cochée pendant le mode guidé ;
-- l'écran reste allumé tant que la page est ouverte quand l'appareil le permet ; le son
+- l'écran reste allumé tant que la page est ouverte : par la veille native d'iOS dans l'app
+  iPhone, par l'API web de verrouillage d'écran dans le navigateur quand il la connaît ; le son
   demande un premier appui et peut être coupé par le mode silencieux du téléphone ;
 - à la dernière série, le passage se termine comme ailleurs (message, fenêtre de ressenti),
   puis on revient à la page de la routine.
