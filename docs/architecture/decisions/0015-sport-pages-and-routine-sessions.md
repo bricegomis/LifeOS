@@ -1,6 +1,6 @@
-# ADR 0015 — Sport : une page par élément, passages de routine et ressenti
+# ADR 0015 — Sport : une page par élément et passages de routine
 
-Statut : accepté et livré en code, 2026-11-16. Cadrage d'un lot ajouté à l'étape 2 de la
+Statut : accepté et livré en code, 2026-11-16 ; ressenti par exercice retiré le 2026-11-27. Cadrage d'un lot ajouté à l'étape 2 de la
 [roadmap](../../01-roadmap.md). Maquette validée le 2026-11-16 (canevas des maquettes,
 rangée « Sport — pages par élément, passages et ressenti »). Étend
 l'[ADR 0013](0013-sport-module.md) et l'[ADR 0014](0014-sport-daily-routines.md).
@@ -21,8 +21,8 @@ Retours après les premiers jours d'usage (2026-11-16) :
 - une routine courte (« Boulot », 5 minutes, sans matériel) se fait plusieurs fois
   par jour, mais un exercice ne se coche qu'une fois par jour : seul le premier
   passage est enregistré ;
-- rien ne permet de noter comment un exercice s'est passé (effort, gêne), ce qui
-  sert à décider d'augmenter ou non une charge.
+- rien ne permet de noter comment un exercice s'est passé (effort, gêne) ; ajouté, puis
+  retiré le 2026-11-27 (voir plus bas).
 
 ## Décision
 
@@ -77,7 +77,7 @@ page le referme. La barre du haut rappelle la page affichée (« Sport · Routin
 
 **La photo d'un exercice l'accompagne partout où il est affiché** : liste des
 exercices, lignes de la fenêtre d'une routine, carte de l'exercice pendant un
-passage, écran de ressenti. Elle occupe la gauche de la carte sur toute sa hauteur ;
+passage, mode guidé. Elle occupe la gauche de la carte sur toute sa hauteur ;
 sans photo, un pictogramme d'image en tient lieu.
 
 La fenêtre d'un exercice contient la photo dès la création : elle est choisie dans
@@ -114,8 +114,7 @@ exercice se coche une fois par passage.
   charge de la cible. L'écran ne propose plus de saisir une autre valeur ou une
   autre charge ; l'API et l'assistant le peuvent encore. Pour faire évoluer les
   chiffres, on modifie la cible de la routine.
-- L'effort et la gêne se notent **une fois par exercice** et valent pour toutes ses
-  séries ; seul le nombre de séries faites est compté.
+- Seul le nombre de séries faites est compté.
 - Un passage est **terminé** quand tous les exercices de la routine ce jour-là sont
   faits ; l'heure de fin est celle de la dernière coche. Cet état se déduit des
   coches, il n'est pas saisi. Tant que le passage est en cours, une série se
@@ -136,31 +135,14 @@ exercice se coche une fois par passage.
   dernières semaines. La progression d'un exercice (courbe, records) prend tous
   les passages où au moins une de ses séries est cochée.
 
-### Ressenti par exercice
+### Pas de ressenti par exercice
 
-Chaque exercice d'un passage peut porter, en plus de sa valeur et de sa charge :
-
-- un **effort** perçu, de 1 à 10 ;
-- une **gêne**, de 0 à 10 ; 0 veut dire « aucune gêne », différent de « non noté ».
-
-Quand un passage se termine, l'écran propose de noter les exercices. Chaque note
-se règle par un **compteur** : « − » à gauche pour diminuer, « + » à droite pour
-augmenter. Il part d'une **valeur proposée**, 7 pour l'effort et 2 pour la gêne.
-« Enregistrer » garde les valeurs affichées pour tous les exercices ; « Passer »
-n'enregistre aucun ressenti, et on peut y revenir le jour même. Le commentaire du
-passage se saisit au même endroit.
-
-Les valeurs proposées sont un **réglage du profil**, modifiable sur la page
-Routines avec les mêmes compteurs.
-
-La gêne est une **donnée d'entraînement** du module Sport : visible du foyer et
-lisible par l'assistant, comme le ressenti d'une séance réalisée. Le diagnostic, les
-soins et le suivi médical restent au module Santé, propre au profil et jamais
-transmis à l'assistant.
-
-L'effort et la gêne s'affichent dans la progression de l'exercice, à côté de la
-valeur et de la charge. **La cible reste réglée à la main** : l'application ne
-propose pas de l'augmenter.
+Le 2026-11-27, l'utilisateur a retiré le ressenti des routines : l'effort (1 à 10) et la
+gêne (0 à 10) par exercice, la fenêtre « Passage terminé » qui les demandait, le commentaire
+du passage et les valeurs proposées du profil. Trop long à remplir pour ce qu'il apportait.
+Un passage terminé affiche seulement un message. **La cible reste réglée à la main** :
+l'application ne propose pas de l'augmenter. Le ressenti d'une séance réalisée (effort et
+sensation, [ADR 0019](0019-garmin-import.md)) n'est pas concerné.
 
 ### Mode guidé
 
@@ -184,7 +166,7 @@ la page `sports/routine/:id/run`, sur ordinateur comme sur téléphone :
 - l'écran reste allumé tant que la page est ouverte : par la veille native d'iOS dans l'app
   iPhone, par l'API web de verrouillage d'écran dans le navigateur quand il la connaît ; le son
   demande un premier appui et peut être coupé par le mode silencieux du téléphone ;
-- à la dernière série, le passage se termine comme ailleurs (message, fenêtre de ressenti),
+- à la dernière série, le passage se termine comme ailleurs (message),
   puis on revient à la page de la routine.
 
 Rien ne change dans l'API : le mode guidé n'utilise que l'ouverture d'un passage et la coche par série.
@@ -193,13 +175,13 @@ Rien ne change dans l'API : le mode guidé n'utilise que l'ouverture d'un passag
 
 - `create_exercise` accepte une URL d'image.
 - `complete_exercise` coche dans le passage en cours du jour, ou en ouvre un ; il
-  accepte le nombre de séries faites (toutes par défaut), l'effort et la gêne.
+  accepte le nombre de séries faites (toutes par défaut), la valeur et la charge.
   `uncomplete_exercise` vise un passage.
 - Nouvel outil pour enregistrer un passage entier en un appel : routine, date, heure
-  facultative, exercices avec valeur, charge, effort et gêne, commentaire.
+  facultative, exercices avec séries, valeur et charge.
 - Nouvel outil pour supprimer un passage.
 - `list_routines` renvoie les passages du jour ; `get_exercise_progress` renvoie
-  l'effort et la gêne des dernières coches.
+  les dernières coches.
 - Un objectif de la semaine se modifie par `change_weekly_goal`, déjà présent.
 
 ### Contrat publié
@@ -211,12 +193,14 @@ L'état des routines du jour gagne le nombre de passages terminés.
 - Objectif de passages par jour, jour « partiel », seuil de jour réussi.
 - Rappels au fil de la journée (étape 6, notifications).
 - Progression automatique ou suggérée de la charge : version ultérieure.
-- Valeur, charge ou ressenti différents d'une série à l'autre ; temps de repos.
+- Ressenti par exercice ; valeur ou charge différentes d'une série à l'autre ; temps de repos.
 
 ## Conséquences
 
 - Migration additive `SportRoutineSessions` : nouvelle table des passages ; les
-  coches gagnent leur passage, le nombre de séries faites, l'effort et la gêne.
+  coches gagnent leur passage et le nombre de séries faites. La migration
+  `RoutineFeelingRemoved` (2026-11-27) supprime l'effort, la gêne, le commentaire du passage
+  et la table `sports.profile_settings`, avec leurs données.
   L'unicité passe de (routine, exercice, jour) à (passage, exercice).
 - **Reprise de l'existant** : pour chaque routine et chaque jour ayant des coches,
   un passage est créé et les reçoit ; son début est la première coche, sa fin la
@@ -229,7 +213,7 @@ L'état des routines du jour gagne le nombre de passages terminés.
 - L'ADR 0014 excluait la saisie série par série : elle est levée pour la coche
   seulement.
 - L'ADR 0014 est mis à jour à la livraison : « une ligne par exercice et par jour »
-  devient « par passage », et la gêne sort de son hors-périmètre.
+  devient « par passage ».
 - Les écrans de réglages du sport (`sport-settings-page`, `routine-settings`) sont
   remplacés par cinq pages et leurs fenêtres de modification.
 - La barre d'onglets du téléphone et les sous-onglets du Sport (`sport-nav`) sont

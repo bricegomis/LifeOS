@@ -25,7 +25,6 @@ public sealed class SportReadContractTests
         public List<Exercise> Exercises { get; } = [];
         public List<ExerciseCompletion> Completions { get; } = [];
         public List<RoutineSession> Passes { get; } = [];
-        public SportProfileSettings? Settings { get; set; }
 
         public Task<IReadOnlyList<SportSession>> SessionsAsync(Guid householdId, Guid? profileId, DateOnly from, DateOnly to, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<SportSession>>(Sessions.Where(s => s.HouseholdId == householdId && (profileId == null || s.MemberProfileId == profileId)
@@ -49,8 +48,6 @@ public sealed class SportReadContractTests
             Task.FromResult<IReadOnlyList<ExerciseCompletion>>(Completions.Where(c => routineIds.Contains(c.RoutineId)).ToList());
         public Task<IReadOnlyList<RoutineSession>> RoutineSessionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<RoutineSession>>(Passes.Where(p => routineIds.Contains(p.RoutineId)).ToList());
-        public Task<SportProfileSettings?> SettingsAsync(Guid householdId, Guid profileId, CancellationToken ct) =>
-            Task.FromResult(Settings is { } s && s.MemberProfileId == profileId ? s : null);
         public Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<ExerciseCompletion>>(Completions.Where(c => c.ExerciseId == exerciseId
                 && Routines.Any(r => r.Id == c.RoutineId && r.MemberProfileId == profileId)).ToList());
@@ -151,9 +148,7 @@ public sealed class SportReadContractTests
         data.Completions.Add(ExerciseCompletion.Create(routine, morning, wallSit.Id, 2, null, null, now.AddHours(-9), false));
         data.Completions.Add(ExerciseCompletion.Create(routine, morning, bridge.Id, 2, null, null, now.AddHours(-9), false));
         var evening = Pass(Friday, now);
-        var tick = ExerciseCompletion.Create(routine, evening, wallSit.Id, 1, 60, 12, now, false);
-        tick.SetFeeling(8, 1);
-        data.Completions.Add(tick);
+        data.Completions.Add(ExerciseCompletion.Create(routine, evening, wallSit.Id, 1, 60, 12, now, false));
         var contract = new SportReadContract(data, LateEvening);
 
         var report = Assert.Single(await contract.RoutinesAsync(Household, Profile, 1, false, CancellationToken.None));
@@ -172,7 +167,7 @@ public sealed class SportReadContractTests
         Assert.False(open.Finished);
         Assert.Equal((0, 2), (open.ExercisesDone, open.ExercisesTotal));
         var ticked = Assert.Single(open.Completions);
-        Assert.Equal((1, 60, 8, 1), (ticked.SetsDone, ticked.Value, ticked.Effort, ticked.Discomfort));
+        Assert.Equal((1, 60), (ticked.SetsDone, ticked.Value));
         Assert.Equal(5, report.Calendar.Count);
         Assert.Equal(["not_counted", "not_counted", "done", "done", "done"], report.Calendar.Select(day => day.Status));
         Assert.Equal(1, report.Calendar[^1].Passes);
@@ -181,12 +176,7 @@ public sealed class SportReadContractTests
         Assert.Equal(60, progress.BestValue);
         Assert.Equal(12m, progress.BestLoadKg);
         Assert.Equal(3, progress.DaysDone);
-        Assert.Equal(8, progress.Recent[0].Effort);
+        Assert.Equal(60, progress.Recent[0].Value);
         Assert.Null((await contract.ExerciseProgressAsync(Household, Other, wallSit.Id, 2, CancellationToken.None)).BestValue);
-
-        Assert.Equal((7, 2), ((await contract.SettingsAsync(Household, Profile, CancellationToken.None)) is var d ? (d.DefaultEffort, d.DefaultDiscomfort) : default));
-        data.Settings = SportProfileSettings.Create(Household, Profile);
-        data.Settings.Change(6, 0);
-        Assert.Equal(6, (await contract.SettingsAsync(Household, Profile, CancellationToken.None)).DefaultEffort);
     }
 }

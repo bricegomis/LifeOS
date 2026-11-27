@@ -16,8 +16,8 @@ module Alimentation sont livrés, ainsi que le classement des aliments
 Étape 2, « Sport », livrée en code le 2026-11-13 ([ADR 0013](architecture/decisions/0013-sport-module.md)) :
 séances réalisées, objectifs de la semaine, défis du jour et outils de l'assistant ; routines
 quotidiennes et bibliothèque d'exercices ajoutées le 2026-11-16
-([ADR 0014](architecture/decisions/0014-sport-daily-routines.md)), puis passages de routine,
-ressenti et une page par élément le même jour ([ADR 0015](architecture/decisions/0015-sport-pages-and-routine-sessions.md)) ;
+([ADR 0014](architecture/decisions/0014-sport-daily-routines.md)), puis passages de routine
+et une page par élément le même jour (ressenti par exercice retiré le 2026-11-27) ([ADR 0015](architecture/decisions/0015-sport-pages-and-routine-sessions.md)) ;
 import Garmin livré le 2026-11-23 ([ADR 0019](architecture/decisions/0019-garmin-import.md)) ;
 reste l'usage réel pendant quelques semaines.
 Étape 3, « Tâches », commencée le 2026-11-22 ([ADR 0017](architecture/decisions/0017-tasks-module.md)) :

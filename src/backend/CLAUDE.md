@@ -50,11 +50,10 @@
   jokers, ordered lines with targets and an optional load, null = bodyweight); a change
   applies from today and past days are judged with the version they had. A routine is done
   in passes (`RoutineSession`, several per day, one unfinished at a time); an
-  `ExerciseCompletion` is one exercise in one pass with its sets done and optional effort
-  (1-10) and discomfort (0-10). A pass is finished, never stored, when every line of that
+  `ExerciseCompletion` is one exercise in one pass with its sets done, value and load (no
+  feeling: effort and discomfort were removed on 2026-11-27). A pass is finished, never stored, when every line of that
   day has all its sets; a finished pass is not reopened. A day is done once one pass is
-  finished. Days that are not planned are skipped by the streak. Profile feeling defaults
-  live in `SportProfileSettings`.
+  finished. Days that are not planned are skipped by the streak.
 - Tasks (ADR 0017): a `Todo` belongs to a household profile (`TaskProfiles`, main profile by
   default) and is `open`, `done` (with its day) or `abandoned`; an open todo is late after its
   due day until it is done, postponed (an update with a new due day) or abandoned, nothing slides

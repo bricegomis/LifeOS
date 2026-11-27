@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  clockTime, daysLabel, doneText, draftFromRoutine, emptyRoutineDraft, exerciseCharts, exerciseRequest, exerciseSummary, feelingDrafts, moveLine,
+  clockTime, daysLabel, doneText, draftFromRoutine, emptyRoutineDraft, exerciseCharts, exerciseRequest, exerciseSummary, moveLine,
   newLine, nextDayLabel, openPass, optionalLoad, passesLine, routineAction, routineCelebration, routineChip, routineDayLevel, routinePercent,
-  routineRequest, routineSummary, setButton, setsDone, stepWithin, targetText,
+  routineRequest, routineSummary, setButton, setsDone, targetText,
 } from './routine-format.ts'
 import type { ExerciseCompletionDto, ExerciseDto, RoutineDto, RoutineLineDto, RoutineReportDto, RoutineSessionDto } from './sports.models.ts'
 
@@ -14,7 +14,7 @@ function line(exercise: ExerciseDto, sets: number, target: number, loadKg: numbe
   return { exerciseId: exercise.id, exerciseName: exercise.name, instructions: exercise.instructions, measure: exercise.measure, hasImage: false, sets, target, loadKg }
 }
 function tick(exerciseId: string, sets: number, patch: Partial<ExerciseCompletionDto> = {}): ExerciseCompletionDto {
-  return { sessionId: 's', exerciseId, date: '2026-11-17', setsDone: sets, value: 45, loadKg: null, effort: null, discomfort: null, loggedAt: '', ...patch }
+  return { sessionId: 's', exerciseId, date: '2026-11-17', setsDone: sets, value: 45, loadKg: null, loggedAt: '', ...patch }
 }
 function pass(finished: boolean, startedAt: string, completions: ExerciseCompletionDto[] = []): RoutineSessionDto {
   return { id: startedAt, date: '2026-11-17', startedAt, finishedAt: null, finished, exercisesDone: finished ? 2 : 1, exercisesTotal: 2, comment: null, completions }
@@ -84,15 +84,6 @@ describe('routine formatting', () => {
     assert.equal(full.percent, 100)
   })
 
-  it('offers the profile’s feeling unless one was noted, within its bounds', () => {
-    const ended = pass(true, 'x', [tick('e1', 2, { effort: 8 }), tick('e2', 1)])
-    assert.deepEqual(feelingDrafts(ended, { defaultEffort: 7, defaultDiscomfort: 2 }), [
-      { exerciseId: 'e1', effort: 8, discomfort: 2 }, { exerciseId: 'e2', effort: 7, discomfort: 2 },
-    ])
-    assert.equal(stepWithin(10, 1, 1, 10), 10)
-    assert.equal(stepWithin(0, -1, 0, 10), 0)
-    assert.equal(stepWithin(7, -1, 1, 10), 6)
-  })
 
   it('colours a calendar day by the share of exercises ticked, apart from days off', () => {
     const day = (status: RoutineReportDto['calendar'][number]['status'], percent: number) => routineDayLevel({ date: '', done: 0, planned: 2, percent, status, passes: 0 })

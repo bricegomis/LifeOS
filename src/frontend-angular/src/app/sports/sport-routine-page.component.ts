@@ -9,17 +9,16 @@ import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { ExerciseImageComponent } from './exercise-image.component'
 import { RoutineDialogComponent, type RoutineDialogData, type RoutineDialogResult } from './routine-dialog.component'
-import { RoutineFeelingDialogComponent, type FeelingDialogData } from './routine-feeling-dialog.component'
 import {
   clockTime, daysLabel, nextDayLabel, openPass, routineCelebration, setButton, setsDone, targetText,
 } from './routine-format'
 import { SportsApiService } from './sports-api.service'
-import type { RoutineLineDto, RoutineReportDto, RoutineSessionDto, SportSettingsDto } from './sports.models'
+import type { RoutineLineDto, RoutineReportDto, RoutineSessionDto } from './sports.models'
 import { ConfirmService } from '@/app/shared/ui/confirm'
 
 /**
  * Doing a routine (ADR 0014, ADR 0015): today's open pass with one "Série faite" button per exercise
- * that fills set after set, the passes of the day, and the feeling window when a pass ends.
+ * that fills set after set, the passes of the day.
  */
 @Component({
   selector: 'app-sport-routine-page',
@@ -95,12 +94,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
                   <span class="lo-lead-icon" aria-hidden="true"><mat-icon svgIcon="schedule" /></span>
                   <span class="lo-row-text">
                     <span class="lo-row-title">{{ passTime(session) }} · {{ session.finished ? 'Terminé' : 'En cours, ' + session.exercisesDone + ' / ' + session.exercisesTotal }}</span>
-                    @if (session.finished) { <span class="lo-row-sub">{{ feelingLine(session) }}</span> }
                   </span>
-                  @if (session.finished) {
-                    <button mat-icon-button type="button" (click)="openFeeling(report, session)" [attr.aria-label]="hasFeeling(session) ? 'Modifier le ressenti' : 'Noter le ressenti'"
-                      [attr.title]="hasFeeling(session) ? 'Modifier le ressenti' : 'Noter le ressenti'"><mat-icon svgIcon="rate_review" /></button>
-                  }
                   <button mat-icon-button type="button" class="delete" (click)="deletePass(session)" aria-label="Supprimer le passage" title="Supprimer le passage">
                     <mat-icon svgIcon="delete" />
                   </button>
@@ -156,7 +150,6 @@ export class SportRoutinePageComponent implements OnInit {
   readonly pending = signal('')
   readonly report = signal<RoutineReportDto | null>(null)
   readonly pass = computed(() => { const report = this.report(); return report ? openPass(report) : null })
-  private settings: SportSettingsDto = { memberProfileId: '', defaultEffort: 7, defaultDiscomfort: 2 }
   readonly photoSize = globalThis.matchMedia?.('(max-width: 760px)').matches ? 96 : 128
 
   readonly daysLabel = daysLabel
@@ -167,7 +160,6 @@ export class SportRoutinePageComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       await this.reload()
-      try { this.settings = await firstValueFrom(this.api.settings()) } catch { /* 7 and 2 */ }
     } catch (error) { this.error.set(apiErrorMessage(error)) }
     finally { this.loading.set(false) }
   }
@@ -176,17 +168,6 @@ export class SportRoutinePageComponent implements OnInit {
   buttonOf(line: RoutineLineDto) { return setButton(line, this.done(line)) }
   passTime(session: RoutineSessionDto): string {
     return session.finishedAt ? `${clockTime(session.startedAt)} – ${clockTime(session.finishedAt)}` : clockTime(session.startedAt)
-  }
-  hasFeeling(session: RoutineSessionDto): boolean {
-    return !!session.comment || session.completions.some(item => item.effort !== null || item.discomfort !== null)
-  }
-  feelingLine(session: RoutineSessionDto): string {
-    if (!this.hasFeeling(session)) return 'Ressenti non noté'
-    const efforts = session.completions.flatMap(item => item.effort === null ? [] : [item.effort])
-    const discomforts = session.completions.flatMap(item => item.discomfort === null ? [] : [item.discomfort])
-    const effort = efforts.length ? `effort jusqu’à ${Math.max(...efforts)}` : 'effort non noté'
-    const discomfort = discomforts.length ? `gêne jusqu’à ${Math.max(...discomforts)}` : 'gêne non notée'
-    return `Ressenti : ${effort} · ${discomfort}`
   }
 
   async start(): Promise<void> {
@@ -204,17 +185,7 @@ export class SportRoutinePageComponent implements OnInit {
     const finished = after.todaySessions.find(session => session.id === pass.id)
     if (finished?.finished) {
       const message = routineCelebration(before, after)
-      if (message) this.snack.open(message, undefined, { duration: 5000 })
-      await this.openFeeling(after, finished)
-    }
-  }
-
-  async openFeeling(report: RoutineReportDto, session: RoutineSessionDto): Promise<void> {
-    const saved = await firstValueFrom(openEditor<RoutineFeelingDialogComponent, FeelingDialogData, RoutineReportDto>(
-      this.dialog, RoutineFeelingDialogComponent, { report, session, settings: this.settings }).afterClosed())
-    if (saved) {
-      this.report.set(saved)
-      this.snack.open('Ressenti enregistré', undefined, { duration: 4000 })
+      this.snack.open(message || 'Passage terminé', undefined, { duration: 5000 })
     }
   }
 

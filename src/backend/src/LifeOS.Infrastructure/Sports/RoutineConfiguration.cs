@@ -83,7 +83,6 @@ internal sealed class RoutineSessionConfiguration : IEntityTypeConfiguration<Rou
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).ValueGeneratedNever();
         builder.HasAlternateKey(s => new { s.Id, s.HouseholdId });
-        builder.Property(s => s.Comment).HasMaxLength(RoutineSession.MaxCommentLength);
         builder.HasOne<Routine>().WithMany().HasForeignKey(s => new { s.RoutineId, s.HouseholdId })
             .HasPrincipalKey(r => new { r.Id, r.HouseholdId }).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(s => new { s.RoutineId, s.Date });
@@ -99,8 +98,6 @@ internal sealed class ExerciseCompletionConfiguration : IEntityTypeConfiguration
             t.HasCheckConstraint("ck_exercise_completion_value", "\"Value\" >= 1 AND \"Value\" <= 10000");
             t.HasCheckConstraint("ck_exercise_completion_load", "\"LoadKg\" IS NULL OR (\"LoadKg\" >= 0 AND \"LoadKg\" <= 500)");
             t.HasCheckConstraint("ck_exercise_completion_sets", "\"SetsDone\" >= 1 AND \"SetsDone\" <= 20");
-            t.HasCheckConstraint("ck_exercise_completion_effort", "\"Effort\" IS NULL OR (\"Effort\" >= 1 AND \"Effort\" <= 10)");
-            t.HasCheckConstraint("ck_exercise_completion_discomfort", "\"Discomfort\" IS NULL OR (\"Discomfort\" >= 0 AND \"Discomfort\" <= 10)");
         });
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).ValueGeneratedNever();
@@ -114,22 +111,5 @@ internal sealed class ExerciseCompletionConfiguration : IEntityTypeConfiguration
         builder.HasIndex(c => new { c.SessionId, c.ExerciseId }).IsUnique();
         builder.HasIndex(c => new { c.RoutineId, c.Date });
         builder.HasIndex(c => new { c.HouseholdId, c.ExerciseId });
-    }
-}
-
-internal sealed class SportProfileSettingsConfiguration : IEntityTypeConfiguration<SportProfileSettings>
-{
-    public void Configure(EntityTypeBuilder<SportProfileSettings> builder)
-    {
-        builder.ToTable("profile_settings", SportsSchema.Name, t =>
-        {
-            t.HasCheckConstraint("ck_sport_settings_effort", "\"DefaultEffort\" >= 1 AND \"DefaultEffort\" <= 10");
-            t.HasCheckConstraint("ck_sport_settings_discomfort", "\"DefaultDiscomfort\" >= 0 AND \"DefaultDiscomfort\" <= 10");
-        });
-        builder.HasKey(s => s.MemberProfileId);
-        builder.HasOne<Household>().WithMany().HasForeignKey(s => s.HouseholdId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasOne<MemberProfile>().WithMany().HasForeignKey(s => new { s.MemberProfileId, s.HouseholdId })
-            .HasPrincipalKey(p => new { p.Id, p.HouseholdId }).OnDelete(DeleteBehavior.Cascade);
-        builder.HasIndex(s => s.HouseholdId);
     }
 }

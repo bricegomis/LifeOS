@@ -1804,12 +1804,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
-                    b.Property<int?>("Discomfort")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("Effort")
-                        .HasColumnType("integer");
-
                     b.Property<Guid>("ExerciseId")
                         .HasColumnType("uuid");
 
@@ -1852,10 +1846,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
 
                     b.ToTable("exercise_completions", "sports", t =>
                         {
-                            t.HasCheckConstraint("ck_exercise_completion_discomfort", "\"Discomfort\" IS NULL OR (\"Discomfort\" >= 0 AND \"Discomfort\" <= 10)");
-
-                            t.HasCheckConstraint("ck_exercise_completion_effort", "\"Effort\" IS NULL OR (\"Effort\" >= 1 AND \"Effort\" <= 10)");
-
                             t.HasCheckConstraint("ck_exercise_completion_load", "\"LoadKg\" IS NULL OR (\"LoadKg\" >= 0 AND \"LoadKg\" <= 500)");
 
                             t.HasCheckConstraint("ck_exercise_completion_sets", "\"SetsDone\" >= 1 AND \"SetsDone\" <= 20");
@@ -1903,10 +1893,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Comment")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -1926,34 +1912,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasIndex("RoutineId", "HouseholdId");
 
                     b.ToTable("routine_sessions", "sports");
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Sports.SportProfileSettings", b =>
-                {
-                    b.Property<Guid>("MemberProfileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("DefaultDiscomfort")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("DefaultEffort")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("HouseholdId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("MemberProfileId");
-
-                    b.HasIndex("HouseholdId");
-
-                    b.HasIndex("MemberProfileId", "HouseholdId");
-
-                    b.ToTable("profile_settings", "sports", t =>
-                        {
-                            t.HasCheckConstraint("ck_sport_settings_discomfort", "\"DefaultDiscomfort\" >= 0 AND \"DefaultDiscomfort\" <= 10");
-
-                            t.HasCheckConstraint("ck_sport_settings_effort", "\"DefaultEffort\" >= 1 AND \"DefaultEffort\" <= 10");
-                        });
                 });
 
             modelBuilder.Entity("LifeOS.Domain.Sports.SportSession", b =>
@@ -3652,22 +3610,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.HasOne("LifeOS.Domain.Sports.Routine", null)
                         .WithMany()
                         .HasForeignKey("RoutineId", "HouseholdId")
-                        .HasPrincipalKey("Id", "HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("LifeOS.Domain.Sports.SportProfileSettings", b =>
-                {
-                    b.HasOne("LifeOS.Domain.Households.Household", null)
-                        .WithMany()
-                        .HasForeignKey("HouseholdId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
-                        .WithMany()
-                        .HasForeignKey("MemberProfileId", "HouseholdId")
                         .HasPrincipalKey("Id", "HouseholdId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

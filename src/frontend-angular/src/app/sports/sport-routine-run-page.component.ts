@@ -1,14 +1,11 @@
 import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core'
 import { MatButtonModule } from '@angular/material/button'
-import { MatDialog } from '@angular/material/dialog'
 import { MatIconModule } from '@angular/material/icon'
 import { MatSnackBar } from '@angular/material/snack-bar'
 import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { firstValueFrom, type Observable } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
-import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { ExerciseImageComponent } from './exercise-image.component'
-import { RoutineFeelingDialogComponent, type FeelingDialogData } from './routine-feeling-dialog.component'
 import { nextDayLabel, openPass, routineCelebration, setsDone, targetText } from './routine-format'
 import {
   countdownText, currentStepIndex, elapsedPercent, LEAD_SECONDS, nextLabel, nextStep, roundCount, runSteps, runSummary, setTarget, stepPosition,
@@ -16,7 +13,7 @@ import {
 } from './routine-run'
 import { RoutineSignals } from './routine-signals'
 import { SportsApiService } from './sports-api.service'
-import type { RoutineReportDto, RoutineSessionDto, SportSettingsDto } from './sports.models'
+import type { RoutineReportDto } from './sports.models'
 
 type Phase = 'idle' | 'lead' | 'hold'
 
@@ -147,10 +144,8 @@ export class SportRoutineRunPageComponent implements OnInit, OnDestroy {
   private readonly api = inject(SportsApiService)
   private readonly route = inject(ActivatedRoute)
   private readonly router = inject(Router)
-  private readonly dialog = inject(MatDialog)
   private readonly snack = inject(MatSnackBar)
   private readonly signals = new RoutineSignals()
-  private settings: SportSettingsDto = { memberProfileId: '', defaultEffort: 7, defaultDiscomfort: 2 }
   private timer: ReturnType<typeof setInterval> | null = null
   private endsAt = 0
   /** Exercises ticked during this run, latest last, for « Annuler la série précédente ». */
@@ -181,7 +176,6 @@ export class SportRoutineRunPageComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     try {
       await this.reload()
-      try { this.settings = await firstValueFrom(this.api.settings()) } catch { /* 7 and 2 */ }
     } catch (error) { this.error.set(apiErrorMessage(error)) }
     finally { this.loading.set(false) }
     void this.signals.keepAwake()
@@ -246,7 +240,7 @@ export class SportRoutineRunPageComponent implements OnInit, OnDestroy {
     if (!after) return
     this.ticked.update(list => [...list, exerciseId])
     const session = after.todaySessions.find(item => item.id === pass.id)
-    if (session?.finished) await this.finish(report, after, session)
+    if (session?.finished) await this.finish(report, after)
   }
 
   async undo(): Promise<void> {
@@ -257,12 +251,9 @@ export class SportRoutineRunPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async finish(before: RoutineReportDto, after: RoutineReportDto, session: RoutineSessionDto): Promise<void> {
+  private async finish(before: RoutineReportDto, after: RoutineReportDto): Promise<void> {
     const message = routineCelebration(before, after)
-    if (message) this.snack.open(message, undefined, { duration: 5000 })
-    const saved = await firstValueFrom(openEditor<RoutineFeelingDialogComponent, FeelingDialogData, RoutineReportDto>(
-      this.dialog, RoutineFeelingDialogComponent, { report: after, session, settings: this.settings }).afterClosed())
-    if (saved) this.snack.open('Ressenti enregistré', undefined, { duration: 4000 })
+    this.snack.open(message || 'Passage terminé', undefined, { duration: 5000 })
     await this.router.navigate(['/sports/routine', after.routine.id])
   }
 

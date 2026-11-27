@@ -49,7 +49,6 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<Routine> Routines => Set<Routine>();
     public DbSet<ExerciseCompletion> ExerciseCompletions => Set<ExerciseCompletion>();
     public DbSet<RoutineSession> RoutineSessions => Set<RoutineSession>();
-    public DbSet<SportProfileSettings> SportProfileSettings => Set<SportProfileSettings>();
     public DbSet<Vo2MaxMeasure> Vo2MaxMeasures => Set<Vo2MaxMeasure>();
 
     // Tasks module (ADR 0017)

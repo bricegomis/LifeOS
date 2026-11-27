@@ -9,13 +9,10 @@ namespace LifeOS.Domain.Sports;
 /// </summary>
 public sealed class RoutineSession : Entity
 {
-    public const int MaxCommentLength = 1000;
-
     public Guid HouseholdId { get; private set; }
     public Guid RoutineId { get; private set; }
     public DateOnly Date { get; private set; }
     public DateTimeOffset StartedAt { get; private set; }
-    public string? Comment { get; private set; }
 
     private RoutineSession() { }
 
@@ -28,13 +25,6 @@ public sealed class RoutineSession : Entity
         {
             Id = Guid.NewGuid(), HouseholdId = routine.HouseholdId, RoutineId = routine.Id, Date = day, StartedAt = startedAt,
         };
-    }
-
-    public void SetComment(string? comment)
-    {
-        var text = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
-        if (text?.Length > MaxCommentLength) throw new ArgumentException("Commentaire : 1000 caractères maximum.");
-        Comment = text;
     }
 
     /// <summary>Exercises of the routine that day with all their sets ticked in this pass.</summary>
@@ -50,7 +40,7 @@ public sealed class RoutineSession : Entity
 
 /// <summary>
 /// An exercise ticked in a pass (ADR 0014, ADR 0015): how many of its sets are done, the value and load of
-/// each set (the target unless corrected through the API) and the optional feeling. One per exercise and per pass.
+/// each set (the target unless corrected through the API). One per exercise and per pass.
 /// </summary>
 public sealed class ExerciseCompletion : Entity
 {
@@ -63,10 +53,6 @@ public sealed class ExerciseCompletion : Entity
     public int SetsDone { get; private set; }
     public int Value { get; private set; }
     public decimal? LoadKg { get; private set; }
-    /// <summary>Perceived effort, 1 to 10; null when not noted.</summary>
-    public int? Effort { get; private set; }
-    /// <summary>Discomfort, 0 (none) to 10; null when not noted. Training data, not health data.</summary>
-    public int? Discomfort { get; private set; }
     public DateTimeOffset LoggedAt { get; private set; }
 
     private ExerciseCompletion() { }
@@ -102,14 +88,6 @@ public sealed class ExerciseCompletion : Entity
     {
         var done = routine.CheckCompletion(Date, ExerciseId, value ?? Value, loadKg ?? LoadKg ?? 0);
         (Value, LoadKg) = done;
-    }
-
-    public void SetFeeling(int? effort, int? discomfort)
-    {
-        if (effort is < 1 or > 10) throw new ArgumentException("Effort : 1 à 10.");
-        if (discomfort is < 0 or > 10) throw new ArgumentException("Gêne : 0 (aucune) à 10.");
-        Effort = effort;
-        Discomfort = discomfort;
     }
 
     private static ArgumentException FinishedPass() =>

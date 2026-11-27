@@ -92,7 +92,7 @@ public sealed class RoutineAssistantTools
     [McpServerTool(Name = "get_exercise_progress", ReadOnly = true, Title = "Progression d'un exercice")]
     [Description("Suivi d'un exercice pour un profil : record de valeur (secondes ou répétitions), record de charge, la " +
         "meilleure valeur et la meilleure charge de chaque semaine, toutes routines et tous passages confondus, et les dernières " +
-        "coches (recent) avec les séries faites, l'effort (1 à 10) et la gêne (0 à 10) quand ils ont été notés.")]
+        "coches (recent) avec les séries faites.")]
     public static async Task<ExerciseProgressDto> GetExerciseProgress(IHttpContextAccessor accessor, ExerciseLibrary exercises,
         Guid exerciseId, [Description("Nombre de semaines (1 à 104).")] int weeks = 12,
         [Description(SportAssistantTools.ProfileHelp)] Guid? profileId = null, CancellationToken ct = default)
@@ -103,7 +103,7 @@ public sealed class RoutineAssistantTools
 
     [McpServerTool(Name = "list_routines", ReadOnly = true, Title = "Routines")]
     [Description("Routines d'un profil avec leurs exercices et cibles, les passages du jour (todaySessions, avec leurs coches, " +
-        "séries faites, effort et gêne), le nombre de passages terminés (passesToday), la série en cours, le record et les jokers " +
+        "séries faites), le nombre de passages terminés (passesToday), la série en cours, le record et les jokers " +
         "restants cette semaine. Une routine est faite pour le jour dès qu'un passage est terminé ; les jours non prévus ne " +
         "comptent pas. " + PassHelp)]
     public static async Task<IReadOnlyList<RoutineReportDto>> ListRoutines(IHttpContextAccessor accessor, SportProfiles profiles,
@@ -166,14 +166,12 @@ public sealed class RoutineAssistantTools
         [Description("Séries faites ; toutes les séries de la cible si omis.")] int? setsDone = null,
         [Description("Secondes ou répétitions par série réellement faites ; la cible si omis.")] int? value = null,
         [Description("Charge réellement utilisée en kg ; celle de la cible si omis, 0 = au poids du corps.")] decimal? loadKg = null,
-        [Description("Effort perçu, 1 à 10.")] int? effort = null,
-        [Description("Gêne ressentie, 0 (aucune) à 10.")] int? discomfort = null,
         [Description("Jour (aaaa-MM-jj) ; aujourd'hui si omis, jamais dans le futur, seulement un jour prévu.")] DateOnly? date = null,
         [Description("Passage visé (todaySessions de list_routines) ; le passage en cours du jour si omis.")] Guid? sessionId = null,
         CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        var request = AssistantRequest.Validated(new ExerciseCompletionRequest(exerciseId, setsDone, value, loadKg, effort, discomfort, date, sessionId));
+        var request = AssistantRequest.Validated(new ExerciseCompletionRequest(exerciseId, setsDone, value, loadKg, date, sessionId));
         return (await routines.CompleteAsync(household.HouseholdId, routineId, request, ct)).OrNotFound("Routine");
     }
 
@@ -189,18 +187,16 @@ public sealed class RoutineAssistantTools
 
     [McpServerTool(Name = "log_routine_session", Title = "Enregistrer un passage")]
     [Description("Enregistre un passage entier d'une routine en un appel (« j'ai fait ma routine Boulot à 10 h ») : chaque exercice " +
-        "fait avec ses séries, et en option sa valeur, sa charge, l'effort et la gêne. Les exercices omis ne sont pas cochés. " + PassHelp)]
+        "fait avec ses séries, et en option sa valeur et sa charge. Les exercices omis ne sont pas cochés. " + PassHelp)]
     public static async Task<RoutineReportDto> LogRoutineSession(IHttpContextAccessor accessor, RoutineLibrary routines,
         Guid routineId,
-        [Description("Exercices faits : exerciseId, setsDone (toutes les séries si omis), value, loadKg (0 = au poids du corps), " +
-            "effort (1 à 10), discomfort (0 à 10).")] SessionExerciseRequest[] exercises,
+        [Description("Exercices faits : exerciseId, setsDone (toutes les séries si omis), value, loadKg (0 = au poids du corps).")] SessionExerciseRequest[] exercises,
         [Description("Jour (aaaa-MM-jj) ; aujourd'hui si omis.")] DateOnly? date = null,
         [Description("Heure de début (HH:mm, heure de Paris) ; maintenant, ou midi pour un jour passé, si omise.")] TimeOnly? time = null,
-        [Description("Commentaire du passage (1000 caractères maximum).")] string? comment = null,
         CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        var request = AssistantRequest.Validated(new RoutineSessionLogRequest(date, time, comment, exercises));
+        var request = AssistantRequest.Validated(new RoutineSessionLogRequest(date, time, exercises));
         return (await routines.LogSessionAsync(household.HouseholdId, routineId, request, ct)).OrNotFound("Routine");
     }
 

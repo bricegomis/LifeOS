@@ -29,25 +29,14 @@ public sealed record RoutineSessionStartRequest(DateOnly? Date);
 /// <param name="SetsDone">Sets done, 0 (untick) to the sets of the target.</param>
 public sealed record ExerciseSetsRequest([property: Range(0, 20)] int SetsDone);
 
-/// <param name="Effort">Perceived effort 1 to 10; null when not noted.</param>
-/// <param name="Discomfort">Discomfort 0 (none) to 10; null when not noted.</param>
-public sealed record ExerciseFeelingRequest(Guid ExerciseId, [property: Range(1, 10)] int? Effort, [property: Range(0, 10)] int? Discomfort);
-
-/// <param name="Exercises">Feeling per exercise of the pass; exercises left out keep theirs.</param>
-public sealed record RoutineSessionFeelingRequest(
-    [property: StringLength(RoutineSession.MaxCommentLength)] string? Comment,
-    IReadOnlyList<ExerciseFeelingRequest>? Exercises);
-
 /// <param name="SetsDone">Sets done; all the sets of the target when omitted.</param>
 /// <param name="Value">Seconds or repetitions per set; the target when omitted.</param>
 /// <param name="LoadKg">Load per set; the target's when omitted, 0 for bodyweight.</param>
-public sealed record SessionExerciseRequest(Guid ExerciseId, [property: Range(1, 20)] int? SetsDone, int? Value, decimal? LoadKg,
-    [property: Range(1, 10)] int? Effort, [property: Range(0, 10)] int? Discomfort);
+public sealed record SessionExerciseRequest(Guid ExerciseId, [property: Range(1, 20)] int? SetsDone, int? Value, decimal? LoadKg);
 
 /// <param name="Date">Day of the pass; today when omitted.</param>
 /// <param name="Time">Start time (Europe/Paris); now, or noon for a past day, when omitted.</param>
 public sealed record RoutineSessionLogRequest(DateOnly? Date, TimeOnly? Time,
-    [property: StringLength(RoutineSession.MaxCommentLength)] string? Comment,
     [property: Required] IReadOnlyList<SessionExerciseRequest> Exercises);
 
 /// <summary>Ticks an exercise in the open pass of the day (opening one if needed), or in a given pass.</summary>
@@ -57,12 +46,7 @@ public sealed record RoutineSessionLogRequest(DateOnly? Date, TimeOnly? Time,
 /// <param name="Date">Day done; today when omitted.</param>
 /// <param name="SessionId">The pass to tick in; the open pass of the day (or a new one) when omitted.</param>
 public sealed record ExerciseCompletionRequest(Guid ExerciseId, [property: Range(1, 20)] int? SetsDone, int? Value, decimal? LoadKg,
-    [property: Range(1, 10)] int? Effort, [property: Range(0, 10)] int? Discomfort, DateOnly? Date, Guid? SessionId);
-
-/// <param name="DefaultEffort">Effort offered when a pass ends, 1 to 10.</param>
-/// <param name="DefaultDiscomfort">Discomfort offered when a pass ends, 0 to 10.</param>
-public sealed record SportSettingsRequest(Guid? MemberProfileId, [property: Range(1, 10)] int DefaultEffort,
-    [property: Range(0, 10)] int DefaultDiscomfort);
+    DateOnly? Date, Guid? SessionId);
 
 public static class RoutinesEndpoints
 {
@@ -102,21 +86,9 @@ public static class RoutinesEndpoints
                 ExerciseSetsRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
             await routines.SetSetsAsync(household.HouseholdId, id, sessionId, exerciseId, request.SetsDone, ct) is { } report ? Results.Ok(report) : Results.NotFound())
             .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
-        g.MapPut("/{id:guid}/sessions/{sessionId:guid}/feeling", async (Guid id, Guid sessionId, RoutineSessionFeelingRequest request,
-                HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
-            await routines.SetFeelingAsync(household.HouseholdId, id, sessionId, request, ct) is { } report ? Results.Ok(report) : Results.NotFound())
-            .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
         g.MapDelete("/{id:guid}/sessions/{sessionId:guid}", async (Guid id, Guid sessionId, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
             await routines.DeleteSessionAsync(household.HouseholdId, id, sessionId, ct) is { } report ? Results.Ok(report) : Results.NotFound())
             .Produces<RoutineReportDto>().ProducesProblem(StatusCodes.Status404NotFound);
-
-        var settings = app.MapGroup("/api/sport/settings").RequireAuthorization().WithTags("Sport").AddRequestValidation();
-        settings.MapGet("/", async (Guid? profileId, HouseholdContext household, SportProfiles profiles, SportReadContract contract, CancellationToken ct) =>
-            Results.Ok(await contract.SettingsAsync(household.HouseholdId, await profiles.ResolveAsync(household.HouseholdId, profileId, ct), ct)))
-            .Produces<SportSettingsDto>();
-        settings.MapPut("/", async (SportSettingsRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
-            Results.Ok(await routines.ChangeSettingsAsync(household.HouseholdId, request, ct)))
-            .Produces<SportSettingsDto>().ProducesValidationProblem();
         return app;
     }
 }
@@ -193,25 +165,6 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         return await ReportAsync(routine, ct);
     }
 
-    /// <summary>Notes the effort and discomfort of the exercises of a pass, and its comment.</summary>
-    public async Task<RoutineReportDto?> SetFeelingAsync(Guid householdId, Guid id, Guid sessionId, RoutineSessionFeelingRequest r, CancellationToken ct)
-    {
-        var routine = await FindAsync(householdId, id, ct);
-        if (routine is null) return null;
-        var session = await FindSessionAsync(routine, sessionId, ct);
-        if (session is null) return null;
-        var ticks = await TicksAsync(session, ct);
-        session.SetComment(r.Comment);
-        foreach (var feeling in r.Exercises ?? [])
-        {
-            var tick = ticks.SingleOrDefault(t => t.ExerciseId == feeling.ExerciseId)
-                ?? throw new ArgumentException("Cet exercice n'est pas coché dans ce passage.");
-            tick.SetFeeling(feeling.Effort, feeling.Discomfort);
-        }
-        await db.SaveChangesAsync(ct);
-        return await ReportAsync(routine, ct);
-    }
-
     /// <summary>Deletes a pass with its ticks.</summary>
     public async Task<RoutineReportDto?> DeleteSessionAsync(Guid householdId, Guid id, Guid sessionId, CancellationToken ct)
     {
@@ -225,7 +178,7 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         return await ReportAsync(routine, ct);
     }
 
-    /// <summary>Records a whole pass in one call (the assistant): each exercise with its sets, values and feeling.</summary>
+    /// <summary>Records a whole pass in one call (the assistant): each exercise with its sets and values.</summary>
     public async Task<RoutineReportDto?> LogSessionAsync(Guid householdId, Guid id, RoutineSessionLogRequest r, CancellationToken ct)
     {
         var routine = await FindAsync(householdId, id, ct);
@@ -236,21 +189,16 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         var day = r.Date ?? today;
         var startedAt = r.Time is { } time ? SportClock.At(day, time) : day == today ? clock.GetUtcNow() : SportClock.At(day, new TimeOnly(12, 0));
         var session = await StartAsync(routine, day, startedAt, ct);
-        session.SetComment(r.Comment);
         foreach (var e in r.Exercises)
-        {
-            var tick = ExerciseCompletion.Create(routine, session, e.ExerciseId, e.SetsDone ?? routine.LineOn(day, e.ExerciseId).Sets,
-                e.Value, e.LoadKg, startedAt, passFinished: false);
-            tick.SetFeeling(e.Effort, e.Discomfort);
-            db.ExerciseCompletions.Add(tick);
-        }
+            db.ExerciseCompletions.Add(ExerciseCompletion.Create(routine, session, e.ExerciseId, e.SetsDone ?? routine.LineOn(day, e.ExerciseId).Sets,
+                e.Value, e.LoadKg, startedAt, passFinished: false));
         await db.SaveChangesAsync(ct);
         return await ReportAsync(routine, ct);
     }
 
     /// <summary>
     /// Ticks an exercise (the assistant): in the given pass, or the open pass of the day, or a new one. Sets,
-    /// values and feeling given are recorded; the target is used otherwise.
+    /// values given are recorded; the target is used otherwise.
     /// </summary>
     public async Task<RoutineReportDto?> CompleteAsync(Guid householdId, Guid id, ExerciseCompletionRequest r, CancellationToken ct)
     {
@@ -279,7 +227,6 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
             if (tick.SetsDone != sets) tick.SetSets(routine, sets, now, finished);
             tick.Correct(routine, r.Value, r.LoadKg);
         }
-        if (r.Effort is not null || r.Discomfort is not null) tick.SetFeeling(r.Effort ?? tick.Effort, r.Discomfort ?? tick.Discomfort);
         await db.SaveChangesAsync(ct);
         return await ReportAsync(routine, ct);
     }
@@ -301,20 +248,6 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         }
         if (session is null) return await ReportAsync(routine, ct);
         return await SetSetsAsync(householdId, id, session.Id, exerciseId, 0, ct);
-    }
-
-    public async Task<SportSettingsDto> ChangeSettingsAsync(Guid householdId, SportSettingsRequest r, CancellationToken ct)
-    {
-        var profile = await profiles.ResolveAsync(householdId, r.MemberProfileId, ct);
-        var settings = await db.SportProfileSettings.SingleOrDefaultAsync(s => s.HouseholdId == householdId && s.MemberProfileId == profile, ct);
-        if (settings is null)
-        {
-            settings = SportProfileSettings.Create(householdId, profile);
-            db.SportProfileSettings.Add(settings);
-        }
-        settings.Change(r.DefaultEffort, r.DefaultDiscomfort);
-        await db.SaveChangesAsync(ct);
-        return new SportSettingsDto(profile, settings.DefaultEffort, settings.DefaultDiscomfort);
     }
 
     private async Task<RoutineSession> StartAsync(Routine routine, DateOnly day, DateTimeOffset startedAt, CancellationToken ct)

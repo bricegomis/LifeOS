@@ -9,7 +9,7 @@ import { calendarWeeks, dayMonth } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto } from './sports.models'
 
-/** Follow-up of routines (calendar with passes, streak, record) and of each exercise (value, load, feeling), ADR 0014, ADR 0015. */
+/** Follow-up of routines (calendar with passes, streak, record) and of each exercise (value, load), ADR 0014, ADR 0015. */
 @Component({
   selector: 'app-routine-progress',
   standalone: true,
@@ -94,15 +94,14 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
                   @if (data.recent.length) {
                     <table class="recent">
                       <caption>Dernières fois</caption>
-                      <thead><tr><th scope="col">Jour</th><th scope="col">Fait</th><th scope="col">Effort</th><th scope="col">Gêne</th></tr></thead>
+                      <thead><tr><th scope="col">Jour</th><th scope="col">Fait</th></tr></thead>
                       <tbody>
                         @for (tick of data.recent; track tick.sessionId) {
-                          <tr><td>{{ dayMonth(tick.date) }}</td><td>{{ doneLine(item, tick) }}</td>
-                            <td>{{ tick.effort ?? '—' }}</td><td>{{ tick.discomfort ?? '—' }}</td></tr>
+                          <tr><td>{{ dayMonth(tick.date) }}</td><td>{{ doneLine(item, tick) }}</td></tr>
                         }
                       </tbody>
                     </table>
-                    <p class="lo-muted lo-small">« — » : non noté. La cible se règle à la main dans la routine.</p>
+                    <p class="lo-muted lo-small">La cible se règle à la main dans la routine.</p>
                   }
                 }
               } @else if (!error()) { <p class="lo-status" role="status">Chargement…</p> }

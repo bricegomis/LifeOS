@@ -25,7 +25,7 @@ code, identifiers and code comments are English.
   and load really done, streak per routine, manual targets).
 - Sport rework (accepted, mockup validated 2026-11-16): ADR 0015 (one page per element with
   edit popups, menu grouped by domain on desktop and phone, routine passes with one
-  counter tick per set, per-exercise effort and discomfort).
+  counter tick per set; the per-exercise effort and discomfort were removed on 2026-11-27).
 - Step 3 target: ADR 0017 (tasks: todos with due date, duration, priority, image or
   initial, checklist, tags; household routines on fixed dates or a delay after the last
   time, with history and streak; projects as plain groups; an all-tasks page with text search; no inbox).

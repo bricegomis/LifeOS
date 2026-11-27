@@ -237,10 +237,6 @@ export interface ExerciseCompletionDto {
   setsDone: number
   value: number
   loadKg: number | null
-  /** 1 to 10; null when not noted. */
-  effort: number | null
-  /** 0 (none) to 10; null when not noted. */
-  discomfort: number | null
   loggedAt: string
 }
 
@@ -253,7 +249,6 @@ export interface RoutineSessionDto {
   finished: boolean
   exercisesDone: number
   exercisesTotal: number
-  comment: string | null
   completions: ExerciseCompletionDto[]
 }
 
@@ -286,9 +281,7 @@ export interface ExerciseProgressDto {
   bestLoadKg: number | null
   daysDone: number
   weeks: ExerciseWeekDto[]
-  /** Latest ticks first, with their feeling. */
+  /** Latest ticks first. */
   recent: ExerciseCompletionDto[]
 }
 
-export interface ExerciseFeeling { exerciseId: string, effort: number | null, discomfort: number | null }
-export interface SportSettingsDto { memberProfileId: string, defaultEffort: number, defaultDiscomfort: number }

@@ -59,18 +59,18 @@ public sealed class AssistantSportToolsTests(PostgresContainerFixture postgres)
         var report = await Call(mcp, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId, ["setsDone"] = 1 });
         Assert.False(report.GetProperty("completedToday").GetBoolean());
         Assert.False((await Call(mcp, "uncomplete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId })).GetProperty("completedToday").GetBoolean());
-        report = await Call(mcp, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId, ["value"] = 60, ["loadKg"] = 12, ["effort"] = 8, ["discomfort"] = 1 });
+        report = await Call(mcp, "complete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId, ["value"] = 60, ["loadKg"] = 12 });
         Assert.True(report.GetProperty("completedToday").GetBoolean());
         Assert.Equal(1, report.GetProperty("streak").GetInt32());
         var progress = await Call(mcp, "get_exercise_progress", new() { ["exerciseId"] = exerciseId });
         Assert.Equal(60, progress.GetProperty("bestValue").GetInt32());
-        Assert.Equal(8, progress.GetProperty("recent")[0].GetProperty("effort").GetInt32());
+        Assert.Equal(12m, progress.GetProperty("recent")[0].GetProperty("loadKg").GetDecimal());
         Assert.Contains("terminé", await Error(mcp, "uncomplete_exercise", new() { ["routineId"] = routineId, ["exerciseId"] = exerciseId }));
 
         report = await Call(mcp, "log_routine_session", new()
         {
             ["routineId"] = routineId, ["time"] = "18:30",
-            ["exercises"] = new[] { new Dictionary<string, object?> { ["exerciseId"] = exerciseId, ["discomfort"] = 0 } },
+            ["exercises"] = new[] { new Dictionary<string, object?> { ["exerciseId"] = exerciseId } },
         });
         Assert.Equal(2, report.GetProperty("passesToday").GetInt32());
         var sessionId = report.GetProperty("todaySessions")[1].GetProperty("id").GetString();

@@ -115,7 +115,7 @@ public sealed class RoutineTests
     }
 
     [Fact]
-    public void A_pass_is_finished_when_every_exercise_has_all_its_sets_and_carries_an_optional_feeling()
+    public void A_pass_is_finished_when_every_exercise_has_all_its_sets()
     {
         var routine = Tendons(Monday);
         var pass = RoutineSession.Start(routine, Monday, Now, Monday, false);
@@ -124,27 +124,6 @@ public sealed class RoutineTests
         Assert.False(pass.IsFinished(routine, [sit, bridge]));
         bridge.SetSets(routine, 2, Now, false);
         Assert.True(pass.IsFinished(routine, [sit, bridge]));
-
-        sit.SetFeeling(7, 0);
-        Assert.Equal((7, 0), (sit.Effort, sit.Discomfort));
-        sit.SetFeeling(null, null);
-        Assert.Null(sit.Effort);
-        Assert.Throws<ArgumentException>(() => sit.SetFeeling(0, null));
-        Assert.Throws<ArgumentException>(() => sit.SetFeeling(null, 11));
-        pass.SetComment("  Genou un peu raide.  ");
-        Assert.Equal("Genou un peu raide.", pass.Comment);
-        Assert.Throws<ArgumentException>(() => pass.SetComment(new string('a', 1001)));
-    }
-
-    [Fact]
-    public void Profile_settings_offer_seven_and_two_until_changed()
-    {
-        var settings = SportProfileSettings.Create(Household, Profile);
-        Assert.Equal((7, 2), (settings.DefaultEffort, settings.DefaultDiscomfort));
-        settings.Change(6, 0);
-        Assert.Equal((6, 0), (settings.DefaultEffort, settings.DefaultDiscomfort));
-        Assert.Throws<ArgumentException>(() => settings.Change(0, 2));
-        Assert.Throws<ArgumentException>(() => settings.Change(7, 11));
     }
 
     [Fact]

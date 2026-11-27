@@ -25,7 +25,7 @@
   ADR 0012 (food classification: family, roles, conservation, season, tags),
   ADR 0013 (step 2 sport module: sessions, weekly goals, daily challenges),
   ADR 0014 (sport: daily routines and exercise library),
-  ADR 0015 (sport rework: pages per element, routine passes, feeling),
+  ADR 0015 (sport rework: pages per element, routine passes),
   ADR 0016 (UI kit: Angular Material and screen conventions),
   ADR 0017 (step 3 tasks module: todos, routines, projects, all-tasks page),
   ADR 0018 (step 5 health module: supplements, symptoms, blood markers, documents),

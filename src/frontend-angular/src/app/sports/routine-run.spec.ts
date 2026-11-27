@@ -15,7 +15,7 @@ const lines = [wallSit, bridge, plank]
 
 function pass(ticks: Record<string, number>): RoutineSessionDto {
   const completions: ExerciseCompletionDto[] = Object.entries(ticks).map(([exerciseId, setsDone]) => ({
-    sessionId: 's', exerciseId, date: '2026-11-27', setsDone, value: 0, loadKg: null, effort: null, discomfort: null, loggedAt: '',
+    sessionId: 's', exerciseId, date: '2026-11-27', setsDone, value: 0, loadKg: null, loggedAt: '',
   }))
   return { id: 's', date: '2026-11-27', startedAt: '', finishedAt: null, finished: false, exercisesDone: 0, exercisesTotal: 3, comment: null, completions }
 }

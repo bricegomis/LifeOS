@@ -118,9 +118,10 @@ exercices faits sur prévus).
 - Progression automatique ou suggérée de la cible.
 - Programmes à durée fixe (« 6 semaines, puis phase 2 »).
 - Rappels et notifications (étape 6).
+- Ressenti (effort, gêne) par exercice : essayé puis retiré le 2026-11-27
+  ([ADR 0015](0015-sport-pages-and-routine-sessions.md)).
 - Diagnostic, soins ou suivi médical : ils relèvent du module Santé, propre au
-  profil. La consigne d'un exercice et la gêne notée en fin de passage
-  ([ADR 0015](0015-sport-pages-and-routine-sessions.md)) restent des données de sport.
+  profil. La consigne d'un exercice reste une donnée de sport.
 
 ## Conséquences
 

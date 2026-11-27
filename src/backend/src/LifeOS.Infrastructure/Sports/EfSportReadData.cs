@@ -64,10 +64,6 @@ internal sealed class EfSportReadData(LifeOSDbContext db) : ISportReadData
             .Where(s => s.HouseholdId == householdId && routineIds.Contains(s.RoutineId))
             .ToListAsync(ct);
 
-    public async Task<SportProfileSettings?> SettingsAsync(Guid householdId, Guid profileId, CancellationToken ct) =>
-        await db.SportProfileSettings.AsNoTracking()
-            .SingleOrDefaultAsync(s => s.HouseholdId == householdId && s.MemberProfileId == profileId, ct);
-
     public async Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct) =>
         await db.ExerciseCompletions.AsNoTracking()
             .Where(c => c.HouseholdId == householdId && c.ExerciseId == exerciseId)

@@ -21,8 +21,6 @@ public interface ISportReadData
     Task<IReadOnlyList<ExerciseCompletion>> CompletionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct);
     /// <summary>Passes of the given routines, all days.</summary>
     Task<IReadOnlyList<RoutineSession>> RoutineSessionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct);
-    /// <summary>The profile's sport settings; null when never changed.</summary>
-    Task<SportProfileSettings?> SettingsAsync(Guid householdId, Guid profileId, CancellationToken ct);
     /// <summary>Completions of one exercise in the routines of a profile.</summary>
     Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct);
 }
@@ -98,14 +96,8 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
         var total = routine.VersionOn(session.Date).Lines.Count;
         var finished = done == total;
         return new RoutineSessionDto(session.Id, session.Date, session.StartedAt, finished ? ticks.Max(t => t.LoggedAt) : null, finished,
-            done, total, session.Comment, ticks.OrderBy(t => t.LoggedAt).Select(ExerciseCompletionDto.From).ToList());
+            done, total, ticks.OrderBy(t => t.LoggedAt).Select(ExerciseCompletionDto.From).ToList());
     }
-
-    /// <summary>The effort and discomfort offered at the end of a pass; 7 and 2 until changed.</summary>
-    public async Task<SportSettingsDto> SettingsAsync(Guid householdId, Guid profileId, CancellationToken ct) =>
-        await data.SettingsAsync(householdId, profileId, ct) is { } s
-            ? new SportSettingsDto(profileId, s.DefaultEffort, s.DefaultDiscomfort)
-            : new SportSettingsDto(profileId, SportProfileSettings.DefaultEffortValue, SportProfileSettings.DefaultDiscomfortValue);
 
     /// <summary>Records of one exercise and its best value and load of each of the last <paramref name="weeks"/> weeks.</summary>
     public async Task<ExerciseProgressDto> ExerciseProgressAsync(Guid householdId, Guid profileId, Guid exerciseId, int weeks,

@@ -3,8 +3,8 @@ import { from, switchMap, type Observable } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LIBRARY_IMAGE, reduceImage } from '@/app/shared/image-reduction'
 import type {
-  ChallengeReportDto, DailyChallengeDto, DailyChallengeRequest, ExerciseDto, ExerciseFeeling, ExerciseProgressDto, ExerciseRequest,
-  CreatedImportTokenDto, GarminStatusDto, ImportTokenDto, RoutineReportDto, RoutineRequest, SportCatalog, SportSessionDto, Vo2MaxDto, SportSessionRequest, SportSettingsDto,
+  ChallengeReportDto, DailyChallengeDto, DailyChallengeRequest, ExerciseDto, ExerciseProgressDto, ExerciseRequest,
+  CreatedImportTokenDto, GarminStatusDto, ImportTokenDto, RoutineReportDto, RoutineRequest, SportCatalog, SportSessionDto, Vo2MaxDto, SportSessionRequest,
   SportTemplateDto, SportTemplateRequest, WeekReportDto, WeeklyGoalDto, WeeklyGoalRequest,
 } from './sports.models'
 
@@ -105,15 +105,7 @@ export class SportsApiService {
   setSets(routineId: string, sessionId: string, exerciseId: string, setsDone: number): Observable<RoutineReportDto> {
     return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}/exercises/${id(exerciseId)}`, { setsDone })
   }
-  setFeeling(routineId: string, sessionId: string, comment: string | null, exercises: ExerciseFeeling[]): Observable<RoutineReportDto> {
-    return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}/feeling`, { comment, exercises })
-  }
   deletePass(routineId: string, sessionId: string): Observable<RoutineReportDto> {
     return this.api.delete<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}`)
-  }
-
-  settings(): Observable<SportSettingsDto> { return this.api.get<SportSettingsDto>('/sport/settings') }
-  saveSettings(defaultEffort: number, defaultDiscomfort: number): Observable<SportSettingsDto> {
-    return this.api.put<SportSettingsDto>('/sport/settings', { defaultEffort, defaultDiscomfort })
   }
 }

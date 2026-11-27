@@ -5,7 +5,7 @@
 - Structure: `src/app/core` (api client, auth, native/Capacitor bridge), `shared`
   (dialog, household reviews, build version, picture reduction before upload, and
   `shared/ui`: Material building blocks of ADR 0016 — icon registry, list page,
-  editor window frame and `openEditor`, stepper, breakpoints), `shell` (Material side menu with one
+  editor window frame and `openEditor`, breakpoints), `shell` (Material side menu with one
   foldable group per domain; on the phone a panel opened from the top bar, no tab
   bar), `login`, and one folder per module: `food` (recipes, foods, products and prices,
   stores, tickets), `sports` (today, history, progress, one page per element —

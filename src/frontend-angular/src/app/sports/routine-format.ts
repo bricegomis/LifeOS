@@ -1,6 +1,6 @@
 import type {
-  ExerciseCompletionDto, ExerciseDto, ExerciseFeeling, ExerciseMeasure, ExerciseProgressDto, ExerciseRequest, RoutineDayDto, RoutineDto,
-  RoutineLineDto, RoutineReportDto, RoutineRequest, RoutineSessionDto, SportSettingsDto,
+  ExerciseCompletionDto, ExerciseDto, ExerciseMeasure, ExerciseProgressDto, ExerciseRequest, RoutineDayDto, RoutineDto,
+  RoutineLineDto, RoutineReportDto, RoutineRequest, RoutineSessionDto,
 } from './sports.models.ts'
 
 const SHORT_DAYS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.']
@@ -105,19 +105,6 @@ export function setButton(line: RoutineLineDto, done: number): SetButton {
   }
 }
 
-/** Feeling to show when a pass ends: what was noted, else the profile's values. */
-export interface FeelingDraft extends ExerciseFeeling { effort: number, discomfort: number }
-export function feelingDrafts(session: RoutineSessionDto, settings: Pick<SportSettingsDto, 'defaultEffort' | 'defaultDiscomfort'>): FeelingDraft[] {
-  return session.completions.map(completion => ({
-    exerciseId: completion.exerciseId,
-    effort: completion.effort ?? settings.defaultEffort,
-    discomfort: completion.discomfort ?? settings.defaultDiscomfort,
-  }))
-}
-/** A − / + step within bounds. */
-export function stepWithin(value: number, direction: 1 | -1, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value + direction))
-}
 
 /** Calendar cell level of a routine day, from the share of exercises ticked. */
 export function routineDayLevel(day: RoutineDayDto): string {
