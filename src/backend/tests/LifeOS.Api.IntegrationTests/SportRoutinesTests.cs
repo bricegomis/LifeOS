@@ -37,6 +37,7 @@ public sealed class SportRoutinesTests(PostgresContainerFixture postgres)
         var id = report.Routine.Id;
         Assert.Equal([1, 2, 3, 4, 5, 6, 7], report.Routine.Days);
         Assert.Equal(new decimal?[] { 10, null }, report.Routine.Lines.Select(line => line.LoadKg));
+        Assert.All(report.Routine.Lines, line => Assert.False(line.PerSide));
         Assert.Equal((0, 2, 0), (report.DoneToday, report.TotalToday, report.PassesToday));
 
         // One pass at a time; its sets are ticked one by one with the target.
@@ -100,6 +101,12 @@ public sealed class SportRoutinesTests(PostgresContainerFixture postgres)
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/sport/exercises/{wallSit.Id}",
             new ExerciseRequest("Chaise", null, "reps", 10))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.DeleteAsync($"/api/sport/exercises/{wallSit.Id}")).StatusCode);
+
+        // Done or not, an exercise can become per side: its routine lines say so, the target applies to each side.
+        var perSide = await client.PutAsJsonAsync($"/api/sport/exercises/{wallSit.Id}", new ExerciseRequest("Chaise", null, "hold", 10, PerSide: true));
+        Assert.True((await perSide.Content.ReadFromJsonAsync<ExerciseDto>())!.PerSide);
+        var routines = (await client.GetFromJsonAsync<List<RoutineReportDto>>("/api/sport/routines"))!;
+        Assert.True(routines.Single(r => r.Routine.Id == id).Routine.Lines.Single(line => line.ExerciseId == wallSit.Id).PerSide);
 
         // The routine changes from today: same day, the version is edited in place.
         report = await Report(await client.PutAsJsonAsync($"/api/sport/routines/{id}", new RoutineRequest(null, "Tendons du matin",

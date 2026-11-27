@@ -7,11 +7,11 @@ import {
 } from './routine-format.ts'
 import type { ExerciseCompletionDto, ExerciseDto, RoutineDto, RoutineLineDto, RoutineReportDto, RoutineSessionDto } from './sports.models.ts'
 
-const wallSit: ExerciseDto = { id: 'e1', name: 'Chaise contre le mur', instructions: 'Dos au mur.', measure: 'hold', defaultLoadKg: 10, hasImage: false, isArchived: false, measureLocked: true }
-const bridge: ExerciseDto = { id: 'e2', name: 'Pont fessier', instructions: null, measure: 'reps', defaultLoadKg: null, hasImage: false, isArchived: false, measureLocked: false }
+const wallSit: ExerciseDto = { id: 'e1', name: 'Chaise contre le mur', instructions: 'Dos au mur.', measure: 'hold', defaultLoadKg: 10, hasImage: false, isArchived: false, measureLocked: true, perSide: false }
+const bridge: ExerciseDto = { id: 'e2', name: 'Pont fessier', instructions: null, measure: 'reps', defaultLoadKg: null, hasImage: false, isArchived: false, measureLocked: false, perSide: false }
 
 function line(exercise: ExerciseDto, sets: number, target: number, loadKg: number | null): RoutineLineDto {
-  return { exerciseId: exercise.id, exerciseName: exercise.name, instructions: exercise.instructions, measure: exercise.measure, hasImage: false, sets, target, loadKg }
+  return { exerciseId: exercise.id, exerciseName: exercise.name, instructions: exercise.instructions, measure: exercise.measure, hasImage: false, sets, target, loadKg, perSide: exercise.perSide }
 }
 function tick(exerciseId: string, sets: number, patch: Partial<ExerciseCompletionDto> = {}): ExerciseCompletionDto {
   return { sessionId: 's', exerciseId, date: '2026-11-17', setsDone: sets, value: 45, loadKg: null, loggedAt: '', ...patch }
@@ -38,6 +38,8 @@ describe('routine formatting', () => {
     assert.equal(doneText(routine.lines[1]!, tick('e2', 1, { value: 8 })), '8 rép.')
     assert.equal(exerciseSummary(wallSit), 'Tenue en secondes · 10 kg')
     assert.equal(exerciseSummary(bridge), 'Répétitions · poids du corps')
+    assert.equal(exerciseSummary({ ...bridge, perSide: true }), 'Répétitions par côté · poids du corps')
+    assert.equal(targetText({ ...routine.lines[0]!, perSide: true }), '2 × 45 s par côté · 10 kg')
   })
 
   it('names the days of a routine and its next day', () => {
@@ -131,9 +133,9 @@ describe('routine formatting', () => {
     assert.equal(optionalLoad(0), null)
     assert.equal(optionalLoad('12.5'), 12.5)
     assert.equal(optionalLoad(12.3), undefined)
-    assert.deepEqual(exerciseRequest({ name: ' Gainage ', instructions: ' ', measure: 'hold', defaultLoadKg: 0 }),
-      { name: 'Gainage', instructions: null, measure: 'hold', defaultLoadKg: null })
-    assert.equal(exerciseRequest({ name: 'Gainage', instructions: null, measure: 'hold', defaultLoadKg: 501 }),
+    assert.deepEqual(exerciseRequest({ name: ' Gainage ', instructions: ' ', measure: 'hold', defaultLoadKg: 0, perSide: true }),
+      { name: 'Gainage', instructions: null, measure: 'hold', defaultLoadKg: null, perSide: true })
+    assert.equal(exerciseRequest({ name: 'Gainage', instructions: null, measure: 'hold', defaultLoadKg: 501, perSide: false }),
       'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.')
   })
 })
