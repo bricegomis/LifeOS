@@ -60,6 +60,7 @@ internal sealed class MeasureTypeConfiguration : IEntityTypeConfiguration<Measur
         builder.Property(t => t.Unit).HasMaxLength(30).IsRequired();
         builder.Property(t => t.TargetMin).HasPrecision(14, 4);
         builder.Property(t => t.TargetMax).HasPrecision(14, 4);
+        builder.Property(t => t.Source).HasMaxLength(40);
         HealthOwnership.Configure(builder);
     }
 }

@@ -106,6 +106,10 @@ une unité et une **cible personnelle facultative** (min et/ou max ; aucune pour
 change pas, comme la taille) ; une mesure a une date, une valeur et une note. Chaque valeur
 est placée sous, dans ou au-dessus de la cible quand il y en a une. Courbe dans le temps.
 Une tension se suit en deux mesures (systolique, diastolique).
+Une mesure peut **reprendre une valeur Garmin** (aujourd'hui la FC au repos, liée par défaut à
+« Fréquence cardiaque au repos ») : chaque jour importé (ADR 0019) s'ajoute à la lecture aux
+valeurs notées à la main, placé par rapport à la cible ; une valeur notée à la main le même jour
+l'emporte. Les jours Garmin ne sont pas recopiés et ne se suppriment pas depuis les mesures.
 
 ### 4. Documents et rendez-vous
 

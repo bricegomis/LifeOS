@@ -32,8 +32,9 @@ public sealed record AnalysisRequest(DateOnly? Day, [property: StringLength(100)
     Guid? DocumentId, [property: Required] IReadOnlyList<AnalysisValueRequest> Values);
 
 /// <param name="TargetMin">Optional personal target; leave both empty for what does not change (height…).</param>
+/// <param name="Source">Garmin value to follow (garmin_resting_heart_rate); null for a measure typed by hand only.</param>
 public sealed record MeasureTypeRequest([property: Required, StringLength(100)] string Name, [property: Required, StringLength(30)] string Unit,
-    decimal? TargetMin = null, decimal? TargetMax = null);
+    decimal? TargetMin = null, decimal? TargetMax = null, [property: StringLength(40)] string? Source = null);
 
 /// <param name="Day">Today when omitted.</param>
 public sealed record MeasurementRequest(Guid MeasureTypeId, DateOnly? Day, decimal Value, [property: StringLength(500)] string? Note);
@@ -192,30 +193,31 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
         if (types.Count == 0)
         {
             var owner = await owners.ResolveAsync(household, ct);
-            types = MeasureType.Defaults.Select(d => MeasureType.Create(owner.HouseholdId, owner.UserId, owner.ProfileId, d.Name, d.Unit)).ToList();
+            types = MeasureType.Defaults.Select(d => MeasureType.Create(owner.HouseholdId, owner.UserId, owner.ProfileId, d.Name, d.Unit, source: d.Source)).ToList();
             db.MeasureTypes.AddRange(types);
             await db.SaveChangesAsync(ct);
         }
         var values = await db.Measurements.Where(m => m.HouseholdId == household.HouseholdId && m.OwnerUserId == household.UserId).ToListAsync(ct);
-        return types.OrderBy(t => t.IsArchived).ThenBy(t => t.Name).Select(t => MeasureDto(t, values)).ToList();
+        var garmin = await GarminAsync(household, types, ct);
+        return types.OrderBy(t => t.IsArchived).ThenBy(t => t.Name).Select(t => MeasureDto(t, values, garmin)).ToList();
     }
 
     public async Task<MeasureTypeDto> CreateMeasureTypeAsync(HouseholdContext household, MeasureTypeRequest r, CancellationToken ct)
     {
         var owner = await owners.ResolveAsync(household, ct);
-        var type = MeasureType.Create(owner.HouseholdId, owner.UserId, owner.ProfileId, r.Name, r.Unit, r.TargetMin, r.TargetMax);
+        var type = MeasureType.Create(owner.HouseholdId, owner.UserId, owner.ProfileId, r.Name, r.Unit, r.TargetMin, r.TargetMax, r.Source);
         db.MeasureTypes.Add(type);
         await db.SaveChangesAsync(ct);
-        return MeasureDto(type, []);
+        return await MeasureDtoAsync(household, type, ct);
     }
 
     public async Task<MeasureTypeDto?> UpdateMeasureTypeAsync(HouseholdContext household, Guid id, MeasureTypeRequest r, CancellationToken ct)
     {
         var type = await MyMeasureTypes(household).SingleOrDefaultAsync(t => t.Id == id, ct);
         if (type is null) return null;
-        type.Update(r.Name, r.Unit, r.TargetMin, r.TargetMax);
+        type.Update(r.Name, r.Unit, r.TargetMin, r.TargetMax, r.Source);
         await db.SaveChangesAsync(ct);
-        return MeasureDto(type, await db.Measurements.Where(m => m.MeasureTypeId == id && m.OwnerUserId == household.UserId).ToListAsync(ct));
+        return await MeasureDtoAsync(household, type, ct);
     }
 
     public async Task<MeasureTypeDto?> ArchiveMeasureTypeAsync(HouseholdContext household, Guid id, bool archive, CancellationToken ct)
@@ -224,7 +226,7 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
         if (type is null) return null;
         if (archive) type.Archive(); else type.Restore();
         await db.SaveChangesAsync(ct);
-        return MeasureDto(type, await db.Measurements.Where(m => m.MeasureTypeId == id && m.OwnerUserId == household.UserId).ToListAsync(ct));
+        return await MeasureDtoAsync(household, type, ct);
     }
 
     public async Task<MeasureTypeDto> AddMeasurementAsync(HouseholdContext household, MeasurementRequest r, CancellationToken ct)
@@ -233,7 +235,7 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
             ?? throw new ArgumentException("Mesure introuvable dans ta liste.");
         db.Measurements.Add(Measurement.Create(type, r.Day ?? Today, r.Value, r.Note, Today));
         await db.SaveChangesAsync(ct);
-        return MeasureDto(type, await db.Measurements.Where(m => m.MeasureTypeId == type.Id && m.OwnerUserId == household.UserId).ToListAsync(ct));
+        return await MeasureDtoAsync(household, type, ct);
     }
 
     public async Task<bool> RemoveMeasurementAsync(HouseholdContext household, Guid id, CancellationToken ct)
@@ -258,11 +260,35 @@ public sealed class AnalysisLibrary(LifeOSDbContext db, HealthOwners owners, Tim
     private Task<bool> DocumentExistsAsync(HouseholdContext household, Guid id, CancellationToken ct) =>
         db.HealthDocuments.AnyAsync(d => d.Id == id && d.HouseholdId == household.HouseholdId && d.OwnerUserId == household.UserId, ct);
 
-    private static MeasureTypeDto MeasureDto(MeasureType t, IEnumerable<Measurement> values)
+    private async Task<MeasureTypeDto> MeasureDtoAsync(HouseholdContext household, MeasureType type, CancellationToken ct) =>
+        MeasureDto(type, await db.Measurements.Where(m => m.MeasureTypeId == type.Id && m.OwnerUserId == household.UserId).ToListAsync(ct),
+            await GarminAsync(household, [type], ct));
+
+    /// <summary>The Garmin values the given measures follow, by source then day (only the caller's own days).</summary>
+    private async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<DateOnly, decimal>>> GarminAsync(
+        HouseholdContext household, IReadOnlyCollection<MeasureType> types, CancellationToken ct)
     {
-        var list = values.Where(v => v.MeasureTypeId == t.Id).OrderBy(v => v.Day)
-            .Select(v => new MeasurementDto(v.Id, v.Day, v.Value, v.Note, t.StatusOf(v.Value))).ToList();
-        return new(t.Id, t.Name, t.Unit, t.TargetMin, t.TargetMax, t.IsArchived, list, list.LastOrDefault()?.Status);
+        var result = new Dictionary<string, IReadOnlyDictionary<DateOnly, decimal>>();
+        if (types.Any(t => t.Source == MeasureType.GarminRestingHeartRate))
+            result[MeasureType.GarminRestingHeartRate] = await db.DailyWellness.AsNoTracking()
+                .Where(w => w.HouseholdId == household.HouseholdId && w.OwnerUserId == household.UserId && w.RestingHeartRate != null)
+                .ToDictionaryAsync(w => w.Date, w => (decimal)w.RestingHeartRate!.Value, ct);
+        return result;
+    }
+
+    /// <summary>Hand-typed values, plus for a linked measure Garmin's days that have no hand-typed value.</summary>
+    private static MeasureTypeDto MeasureDto(MeasureType t, IEnumerable<Measurement> values,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<DateOnly, decimal>> garmin)
+    {
+        var manual = values.Where(v => v.MeasureTypeId == t.Id)
+            .Select(v => new MeasurementDto(v.Id, v.Day, v.Value, v.Note, t.StatusOf(v.Value), "manual")).ToList();
+        var typedDays = manual.Select(v => v.Day).ToHashSet();
+        var imported = t.Source is { } source && garmin.TryGetValue(source, out var days)
+            ? days.Where(d => !typedDays.Contains(d.Key)).Select(d => new MeasurementDto(null, d.Key, d.Value, null, t.StatusOf(d.Value), "garmin"))
+            : [];
+        var list = manual.Concat(imported).OrderBy(v => v.Day).ToList();
+        return new(t.Id, t.Name, t.Unit, t.TargetMin, t.TargetMax, t.IsArchived, list, list.LastOrDefault()?.Status,
+            t.Source, t.Source is { } s ? MeasureType.Sources[s].Label : null);
     }
 
     private IQueryable<Marker> MyMarkers(HouseholdContext household) =>

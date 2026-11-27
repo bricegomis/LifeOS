@@ -37,19 +37,21 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
               <button mat-button type="button" (click)="add(t.id)"><mat-icon svgIcon="add" />Noter</button>
               <button mat-icon-button type="button" (click)="edit(t)" [attr.aria-label]="'Modifier « ' + t.name + ' »'" title="Modifier la mesure et sa cible"><mat-icon svgIcon="edit" /></button>
             </span></div>
-          <p class="lo-muted target">{{ targetText(t) }}</p>
+          <p class="lo-muted target">{{ targetText(t) }}@if (t.sourceLabel) { · Reprend la {{ t.sourceLabel }} }</p>
           @if (t.values.length) {
             <div class="lo-card chart" role="img" [attr.aria-label]="t.name + ' dans le temps'">
-              @for (v of recent(t); track v.id) {
+              @for (v of recent(t); track v.day + v.source) {
                 <div class="col"><span class="col-value">{{ num(v.value) }}</span><span class="col-bar" [attr.data-status]="v.status" [style.height.px]="height(t, v)"></span>
                   <span class="lo-muted col-label">{{ short(v.day) }}</span></div>
               }
             </div>
             <details class="values"><summary>Toutes les valeurs ({{ t.values.length }})</summary>
               <div class="lo-card">
-                @for (v of reversed(t); track v.id) {
+                @for (v of reversed(t); track v.day + v.source) {
                   <div class="row"><span>{{ date(v.day) }}{{ v.note ? ' · ' + v.note : '' }}</span><span class="row-end"><strong>{{ num(v.value) }} {{ t.unit }}</strong>
-                    <button mat-icon-button type="button" (click)="remove(v)" [attr.aria-label]="'Supprimer la mesure du ' + date(v.day)" title="Supprimer"><mat-icon svgIcon="delete" /></button></span></div>
+                    @if (v.id) {
+                      <button mat-icon-button type="button" (click)="remove(v)" [attr.aria-label]="'Supprimer la mesure du ' + date(v.day)" title="Supprimer"><mat-icon svgIcon="delete" /></button>
+                    } @else { <span class="lo-tag garmin" title="Importée de la Garmin, non supprimable ici">Garmin</span> }</span></div>
                 }
               </div>
             </details>
@@ -79,6 +81,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
     .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 4px 4px 16px; }
     .row + .row { border-top: 1px solid var(--mat-sys-outline-variant); }
     .row-end { display: flex; align-items: center; gap: 4px; }
+    .garmin { margin: 0 8px; }
   `],
 })
 export class MeasuresPageComponent implements OnInit {
@@ -141,8 +144,10 @@ export class MeasuresPageComponent implements OnInit {
   }
 
   async remove(v: MeasurementDto): Promise<void> {
+    if (!v.id) return
+    const measurementId = v.id
     if (!await this.confirm.ask({ message: 'Supprimer cette mesure ?', confirmLabel: 'Supprimer', danger: true })) return
-    try { await firstValueFrom(this.api.removeMeasurement(v.id)); this.snack.open('Mesure supprimée', undefined, { duration: 3000 }); await this.load() }
+    try { await firstValueFrom(this.api.removeMeasurement(measurementId)); this.snack.open('Mesure supprimée', undefined, { duration: 3000 }); await this.load() }
     catch (error) { this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 }) }
   }
 

@@ -72,6 +72,17 @@ public sealed class MarkerTests
         Assert.Null(height.StatusOf(180));
         var weight = MeasureType.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "Poids", "kg", 70, 74);
         Assert.Equal(("below_target", "in_target", "above_target"), (weight.StatusOf(69), weight.StatusOf(72), weight.StatusOf(76)));
-        Assert.Throws<ArgumentException>(() => weight.Update("Poids", "kg", 75, 74));
+        Assert.Throws<ArgumentException>(() => weight.Update("Poids", "kg", 75, 74, null));
+    }
+
+    [Fact]
+    public void A_body_measure_may_follow_a_known_Garmin_value_only()
+    {
+        var heart = MeasureType.Create(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), "FC", "bpm", 45, 55, MeasureType.GarminRestingHeartRate);
+        Assert.Equal(MeasureType.GarminRestingHeartRate, heart.Source);
+        heart.Update("FC", "bpm", 45, 55, " ");
+        Assert.Null(heart.Source);
+        Assert.Throws<ArgumentException>(() => heart.Update("FC", "bpm", 45, 55, "garmin_steps"));
+        Assert.Equal(MeasureType.GarminRestingHeartRate, MeasureType.Defaults.Single(d => d.Name == "Fréquence cardiaque au repos").Source);
     }
 }

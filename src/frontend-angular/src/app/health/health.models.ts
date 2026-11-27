@@ -96,12 +96,16 @@ export interface AnalysisValueDto { markerId: string, markerName: string, unit: 
 export interface AnalysisDto { id: string, day: string, laboratory: string | null, notes: string | null, documentId: string | null, values: AnalysisValueDto[] }
 export interface AnalysisRequest { day: string | null, laboratory: string | null, notes: string | null, documentId: string | null, values: { markerId: string, value: number }[] }
 export type MeasureStatus = 'below_target' | 'in_target' | 'above_target'
-export interface MeasurementDto { id: string, day: string, value: number, note: string | null, status: MeasureStatus | null }
+/** A hand-typed value (`manual`, with its id) or a day read from Garmin (`garmin`, no id, not deletable here). */
+export interface MeasurementDto { id: string | null, day: string, value: number, note: string | null, status: MeasureStatus | null, source: 'manual' | 'garmin' }
 /** A kind of body measure with an optional personal target; status is the last value's, null without a target. */
 export interface MeasureTypeDto {
-  id: string, name: string, unit: string, targetMin: number | null, targetMax: number | null, isArchived: boolean, values: MeasurementDto[], status: MeasureStatus | null
+  id: string, name: string, unit: string, targetMin: number | null, targetMax: number | null, isArchived: boolean, values: MeasurementDto[], status: MeasureStatus | null,
+  /** The Garmin value it follows (garmin_resting_heart_rate) and its label, or null. */
+  source: MeasureSource | null, sourceLabel: string | null
 }
-export interface MeasureTypeRequest { name: string, unit: string, targetMin: number | null, targetMax: number | null }
+export type MeasureSource = 'garmin_resting_heart_rate'
+export interface MeasureTypeRequest { name: string, unit: string, targetMin: number | null, targetMax: number | null, source: MeasureSource | null }
 
 export type HealthDocumentType = 'ordonnance' | 'compte_rendu' | 'resultat' | 'bilan' | 'autre'
 export interface HealthDocumentFileDto { id: string, contentType: string, size: number, originalName: string | null }

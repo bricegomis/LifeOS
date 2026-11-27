@@ -5,6 +5,7 @@ using LifeOS.Api.Authentication;
 using LifeOS.Api.Health;
 using LifeOS.Api.Households;
 using LifeOS.Api.Sports;
+using LifeOS.Application.Health.Contracts;
 using LifeOS.Application.Sports.Contracts;
 using LifeOS.Domain.Households;
 using ModelContextProtocol.Client;
@@ -128,6 +129,38 @@ public sealed class GarminImportTests(PostgresContainerFixture postgres)
         Assert.Equal("balanced", day.HrvStatus);
         Assert.Equal(HttpStatusCode.OK, (await user.GetAsync($"/api/health/wellness/{Yesterday:yyyy-MM-dd}/raw")).StatusCode);
         Assert.Empty((await stranger.GetFromJsonAsync<List<WellnessDto>>($"/api/health/wellness?from={Yesterday.AddDays(-1):yyyy-MM-dd}"))!);
+    }
+
+    [Fact]
+    public async Task The_resting_heart_rate_measure_reads_Garmin_days_and_a_typed_value_wins()
+    {
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        using var user = factory.CreateClient().AsUser(Guid.NewGuid());
+        using var stranger = factory.CreateClient().AsUser(Guid.NewGuid());
+        using var service = await ServiceAsync(factory, user);
+        static WellnessInput Day(DateOnly date, int? heart) => new(date, null, null, null, null, null, null, null, null, null,
+            heart, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        (await service.PostAsJsonAsync("/api/import/garmin/wellness", new WellnessImportRequest(
+            [Day(Yesterday.AddDays(-2), 51), Day(Yesterday.AddDays(-1), 57), Day(Yesterday, 49), Day(Yesterday.AddDays(-3), null)]))).EnsureSuccessStatusCode();
+
+        var heart = (await user.GetFromJsonAsync<List<MeasureTypeDto>>("/api/health/measures"))!.Single(t => t.Name == "Fréquence cardiaque au repos");
+        Assert.Equal(("garmin_resting_heart_rate", "FC au repos de la Garmin"), (heart.Source, heart.SourceLabel));
+        Assert.Equal([51m, 57m, 49m], heart.Values.Select(v => v.Value));
+        Assert.All(heart.Values, v => Assert.Equal(("garmin", (Guid?)null), (v.Source, v.Id)));
+
+        var targeted = await (await user.PutAsJsonAsync($"/api/health/measures/types/{heart.Id}",
+            new MeasureTypeRequest(heart.Name, "bpm", 45, 55, heart.Source))).Content.ReadFromJsonAsync<MeasureTypeDto>();
+        Assert.Equal(["in_target", "above_target", "in_target"], targeted!.Values.Select(v => v.Status));
+        var typed = await (await user.PostAsJsonAsync("/api/health/measures/values",
+            new MeasurementRequest(heart.Id, Yesterday.AddDays(-1), 54, "Au réveil"))).Content.ReadFromJsonAsync<MeasureTypeDto>();
+        Assert.Equal([("garmin", 51m), ("manual", 54m), ("garmin", 49m)], typed!.Values.Select(v => (v.Source, v.Value)));
+
+        var unlinked = await (await user.PutAsJsonAsync($"/api/health/measures/types/{heart.Id}",
+            new MeasureTypeRequest(heart.Name, "bpm", 45, 55))).Content.ReadFromJsonAsync<MeasureTypeDto>();
+        Assert.Equal([54m], unlinked!.Values.Select(v => v.Value));
+        Assert.Equal(HttpStatusCode.BadRequest, (await user.PutAsJsonAsync($"/api/health/measures/types/{heart.Id}",
+            new MeasureTypeRequest(heart.Name, "bpm", null, null, "garmin_steps"))).StatusCode);
+        Assert.All((await stranger.GetFromJsonAsync<List<MeasureTypeDto>>("/api/health/measures"))!, t => Assert.Empty(t.Values));
     }
 
     [Fact]

@@ -29,8 +29,9 @@ describe('markers', () => {
   })
 
   it('checks a body measure kind with an optional target', () => {
-    assert.deepEqual(measureTypeRequest(' Taille ', 'cm', '', ' '), { name: 'Taille', unit: 'cm', targetMin: null, targetMax: null })
-    assert.deepEqual(measureTypeRequest('Poids', 'kg', '70', '74,5'), { name: 'Poids', unit: 'kg', targetMin: 70, targetMax: 74.5 })
+    assert.deepEqual(measureTypeRequest(' Taille ', 'cm', '', ' '), { name: 'Taille', unit: 'cm', targetMin: null, targetMax: null, source: null })
+    assert.deepEqual(measureTypeRequest('Poids', 'kg', '70', '74,5'), { name: 'Poids', unit: 'kg', targetMin: 70, targetMax: 74.5, source: null })
+    assert.equal((measureTypeRequest('FC', 'bpm', '45', '55', 'garmin_resting_heart_rate') as { source: string }).source, 'garmin_resting_heart_rate')
     assert.equal(measureTypeRequest('Poids', 'kg', '75', '74'), 'Cible : le minimum dépasse le maximum.')
     assert.equal(measureTypeRequest('Poids', '', '', ''), 'Nom et unité sont obligatoires.')
   })

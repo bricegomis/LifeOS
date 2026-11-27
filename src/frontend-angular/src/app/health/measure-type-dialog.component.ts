@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog'
 import { MatFormFieldModule } from '@angular/material/form-field'
+import { MatSlideToggleModule } from '@angular/material/slide-toggle'
 import { MatInputModule } from '@angular/material/input'
 import { firstValueFrom } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
@@ -10,11 +11,11 @@ import { HealthApiService } from './health-api.service'
 import { measureTypeRequest, num } from './marker-rules'
 import type { MeasureTypeDto } from './health.models'
 
-/** Edits a kind of body measure (ADR 0018): name, unit and optional personal target; archived from here. */
+/** Edits a kind of body measure (ADR 0018): name, unit, optional personal target and Garmin link; archived from here. */
 @Component({
   selector: 'app-measure-type-dialog',
   standalone: true,
-  imports: [EditorFrameComponent, FormsModule, MatFormFieldModule, MatInputModule],
+  imports: [EditorFrameComponent, FormsModule, MatFormFieldModule, MatInputModule, MatSlideToggleModule],
   template: `
     <app-editor-frame heading="Modifier la mesure" formId="measure-type-form" saveLabel="Enregistrer" [busy]="busy()" [dirty]="dirty()" [error]="error()"
       dangerLabel="Archiver" (danger)="archive()">
@@ -30,6 +31,8 @@ import type { MeasureTypeDto } from './health.models'
             <mat-form-field appearance="outline" subscriptSizing="dynamic"><mat-label>Max</mat-label><input matInput name="targetMax" inputmode="decimal" [(ngModel)]="targetMax" /></mat-form-field>
           </div>
         </div>
+        <mat-slide-toggle name="garmin" [(ngModel)]="garmin">Reprendre la FC au repos de la Garmin</mat-slide-toggle>
+        <p class="lo-muted">Chaque jour synchronisé s'ajoute aux valeurs ; une valeur notée à la main le même jour l'emporte.</p>
       </form>
     </app-editor-frame>
   `,
@@ -44,13 +47,14 @@ export class MeasureTypeDialogComponent {
   unit = this.type.unit
   targetMin = this.type.targetMin === null ? '' : num(this.type.targetMin)
   targetMax = this.type.targetMax === null ? '' : num(this.type.targetMax)
-  private readonly initial = JSON.stringify([this.name, this.unit, this.targetMin, this.targetMax])
+  garmin = this.type.source === 'garmin_resting_heart_rate'
+  private readonly initial = this.snapshot()
 
-  dirty(): boolean { return JSON.stringify([this.name, this.unit, this.targetMin, this.targetMax]) !== this.initial }
+  dirty(): boolean { return this.snapshot() !== this.initial }
 
   async save(): Promise<void> {
     if (this.busy()) return
-    const request = measureTypeRequest(this.name, this.unit, this.targetMin, this.targetMax)
+    const request = measureTypeRequest(this.name, this.unit, this.targetMin, this.targetMax, this.garmin ? 'garmin_resting_heart_rate' : null)
     if (typeof request === 'string') { this.error.set(request); return }
     this.busy.set(true); this.error.set('')
     try { await firstValueFrom(this.api.updateMeasureType(this.type.id, request)); this.ref.close('Mesure enregistrée') }
@@ -63,4 +67,6 @@ export class MeasureTypeDialogComponent {
     try { await firstValueFrom(this.api.archiveMeasureType(this.type.id)); this.ref.close('Mesure archivée ; ses valeurs restent') }
     catch (error) { this.error.set(apiErrorMessage(error)); this.busy.set(false) }
   }
+
+  private snapshot(): string { return JSON.stringify([this.name, this.unit, this.targetMin, this.targetMax, this.garmin]) }
 }
