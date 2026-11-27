@@ -10,7 +10,7 @@
   bar), `login`, and one folder per module: `food` (recipes, foods, products and prices,
   stores, tickets), `sports` (today, history, progress, one page per element —
   routines, exercises, challenges, goals, templates — with their windows, and the
-  routine page `sports/routine/:id` with its passes; rules in `sports/routine-format.ts`),
+  routine page `sports/routine/:id` with its passes and its guided run `sports/routine/:id/run`; rules in `sports/routine-format.ts` and `sports/routine-run.ts`),
   `tasks` (today, all tasks with search, routines, projects, one page per todo `tasks/todo/:id`, routine
   `tasks/routine/:id` and project `tasks/project/:id`, their windows; rules in `tasks/task-format.ts` and `tasks/routine-rules.ts`),
   `health` (private health: today, supplements, symptoms, analyses with markers and panels, body
