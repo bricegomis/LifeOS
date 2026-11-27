@@ -249,6 +249,8 @@ export interface RoutineSessionDto {
   finished: boolean
   exercisesDone: number
   exercisesTotal: number
+  /** Free note on the pass; null when none. */
+  comment: string | null
   completions: ExerciseCompletionDto[]
 }
 

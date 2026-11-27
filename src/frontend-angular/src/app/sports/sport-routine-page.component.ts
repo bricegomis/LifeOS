@@ -8,6 +8,7 @@ import { firstValueFrom, type Observable } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { openEditor } from '@/app/shared/ui/editor-dialog'
 import { ExerciseImageComponent } from './exercise-image.component'
+import { RoutineCommentDialogComponent, type CommentDialogData } from './routine-comment-dialog.component'
 import { RoutineDialogComponent, type RoutineDialogData, type RoutineDialogResult } from './routine-dialog.component'
 import {
   clockTime, daysLabel, nextDayLabel, openPass, routineCelebration, setButton, setsDone, targetText,
@@ -94,7 +95,11 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
                   <span class="lo-lead-icon" aria-hidden="true"><mat-icon svgIcon="schedule" /></span>
                   <span class="lo-row-text">
                     <span class="lo-row-title">{{ passTime(session) }} · {{ session.finished ? 'Terminé' : 'En cours, ' + session.exercisesDone + ' / ' + session.exercisesTotal }}</span>
+                    @if (session.comment) { <span class="lo-row-sub comment">{{ session.comment }}</span> }
                   </span>
+                  <button mat-icon-button type="button" (click)="openComment(report, session)"
+                    [attr.aria-label]="session.comment ? 'Modifier le commentaire du passage' : 'Commenter le passage'"
+                    [attr.title]="session.comment ? 'Modifier le commentaire' : 'Commenter'"><mat-icon svgIcon="rate_review" /></button>
                   <button mat-icon-button type="button" class="delete" (click)="deletePass(session)" aria-label="Supprimer le passage" title="Supprimer le passage">
                     <mat-icon svgIcon="delete" />
                   </button>
@@ -132,6 +137,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
     .set-counter { font: var(--mat-sys-title-medium); }
     .undo { border: 1px solid var(--mat-sys-outline); }
     .pass { gap: 12px; padding: 8px 8px 8px 16px; min-height: 72px; }
+    .pass .comment { white-space: pre-line; }
     .delete { color: var(--mat-sys-error); }
     @media (max-width: 760px) {
       .exercise-actions { flex-basis: 100%; }
@@ -186,6 +192,15 @@ export class SportRoutinePageComponent implements OnInit {
     if (finished?.finished) {
       const message = routineCelebration(before, after)
       this.snack.open(message || 'Passage terminé', undefined, { duration: 5000 })
+    }
+  }
+
+  async openComment(report: RoutineReportDto, session: RoutineSessionDto): Promise<void> {
+    const saved = await firstValueFrom(openEditor<RoutineCommentDialogComponent, CommentDialogData, RoutineReportDto>(
+      this.dialog, RoutineCommentDialogComponent, { report, session }).afterClosed())
+    if (saved) {
+      this.report.set(saved)
+      this.snack.open('Commentaire enregistré', undefined, { duration: 4000 })
     }
   }
 

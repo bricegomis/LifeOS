@@ -1893,6 +1893,10 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 

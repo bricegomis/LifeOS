@@ -115,7 +115,7 @@ public sealed class RoutineTests
     }
 
     [Fact]
-    public void A_pass_is_finished_when_every_exercise_has_all_its_sets()
+    public void A_pass_is_finished_when_every_exercise_has_all_its_sets_and_carries_an_optional_comment()
     {
         var routine = Tendons(Monday);
         var pass = RoutineSession.Start(routine, Monday, Now, Monday, false);
@@ -124,6 +124,12 @@ public sealed class RoutineTests
         Assert.False(pass.IsFinished(routine, [sit, bridge]));
         bridge.SetSets(routine, 2, Now, false);
         Assert.True(pass.IsFinished(routine, [sit, bridge]));
+
+        pass.SetComment("  Genou un peu raide.  ");
+        Assert.Equal("Genou un peu raide.", pass.Comment);
+        pass.SetComment(" ");
+        Assert.Null(pass.Comment);
+        Assert.Throws<ArgumentException>(() => pass.SetComment(new string('a', 1001)));
     }
 
     [Fact]

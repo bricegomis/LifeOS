@@ -193,11 +193,25 @@ public sealed class RoutineAssistantTools
         [Description("Exercices faits : exerciseId, setsDone (toutes les séries si omis), value, loadKg (0 = au poids du corps).")] SessionExerciseRequest[] exercises,
         [Description("Jour (aaaa-MM-jj) ; aujourd'hui si omis.")] DateOnly? date = null,
         [Description("Heure de début (HH:mm, heure de Paris) ; maintenant, ou midi pour un jour passé, si omise.")] TimeOnly? time = null,
+        [Description("Commentaire du passage (1000 caractères maximum).")] string? comment = null,
         CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
-        var request = AssistantRequest.Validated(new RoutineSessionLogRequest(date, time, exercises));
+        var request = AssistantRequest.Validated(new RoutineSessionLogRequest(date, time, comment, exercises));
         return (await routines.LogSessionAsync(household.HouseholdId, routineId, request, ct)).OrNotFound("Routine");
+    }
+
+    [McpServerTool(Name = "comment_routine_session", Idempotent = true, Title = "Commenter un passage")]
+    [Description("Note, remplace ou efface (texte vide) le commentaire d'un passage d'une routine, terminé ou non " +
+        "(todaySessions de list_routines).")]
+    public static async Task<RoutineReportDto> CommentRoutineSession(IHttpContextAccessor accessor, RoutineLibrary routines,
+        Guid routineId, Guid sessionId,
+        [Description("Commentaire du passage (1000 caractères maximum) ; vide pour l'effacer.")] string? comment = null,
+        CancellationToken ct = default)
+    {
+        var household = await AssistantRequest.HouseholdAsync(accessor);
+        var request = AssistantRequest.Validated(new RoutineSessionCommentRequest(comment));
+        return (await routines.SetCommentAsync(household.HouseholdId, routineId, sessionId, request.Comment, ct)).OrNotFound("Routine");
     }
 
     [McpServerTool(Name = "delete_routine_session", Destructive = true, Title = "Supprimer un passage")]

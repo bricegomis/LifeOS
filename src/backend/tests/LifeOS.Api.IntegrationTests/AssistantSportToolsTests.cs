@@ -74,6 +74,8 @@ public sealed class AssistantSportToolsTests(PostgresContainerFixture postgres)
         });
         Assert.Equal(2, report.GetProperty("passesToday").GetInt32());
         var sessionId = report.GetProperty("todaySessions")[1].GetProperty("id").GetString();
+        report = await Call(mcp, "comment_routine_session", new() { ["routineId"] = routineId, ["sessionId"] = sessionId, ["comment"] = "Le soir." });
+        Assert.Equal("Le soir.", report.GetProperty("todaySessions")[1].GetProperty("comment").GetString());
         report = await Call(mcp, "delete_routine_session", new() { ["routineId"] = routineId, ["sessionId"] = sessionId });
         Assert.Equal(1, report.GetProperty("passesToday").GetInt32());
 

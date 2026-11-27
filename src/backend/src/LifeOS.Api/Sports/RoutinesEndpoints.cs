@@ -29,6 +29,9 @@ public sealed record RoutineSessionStartRequest(DateOnly? Date);
 /// <param name="SetsDone">Sets done, 0 (untick) to the sets of the target.</param>
 public sealed record ExerciseSetsRequest([property: Range(0, 20)] int SetsDone);
 
+/// <param name="Comment">Free note on the pass; empty or null clears it.</param>
+public sealed record RoutineSessionCommentRequest([property: StringLength(RoutineSession.MaxCommentLength)] string? Comment);
+
 /// <param name="SetsDone">Sets done; all the sets of the target when omitted.</param>
 /// <param name="Value">Seconds or repetitions per set; the target when omitted.</param>
 /// <param name="LoadKg">Load per set; the target's when omitted, 0 for bodyweight.</param>
@@ -37,6 +40,7 @@ public sealed record SessionExerciseRequest(Guid ExerciseId, [property: Range(1,
 /// <param name="Date">Day of the pass; today when omitted.</param>
 /// <param name="Time">Start time (Europe/Paris); now, or noon for a past day, when omitted.</param>
 public sealed record RoutineSessionLogRequest(DateOnly? Date, TimeOnly? Time,
+    [property: StringLength(RoutineSession.MaxCommentLength)] string? Comment,
     [property: Required] IReadOnlyList<SessionExerciseRequest> Exercises);
 
 /// <summary>Ticks an exercise in the open pass of the day (opening one if needed), or in a given pass.</summary>
@@ -85,6 +89,10 @@ public static class RoutinesEndpoints
         g.MapPut("/{id:guid}/sessions/{sessionId:guid}/exercises/{exerciseId:guid}", async (Guid id, Guid sessionId, Guid exerciseId,
                 ExerciseSetsRequest request, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
             await routines.SetSetsAsync(household.HouseholdId, id, sessionId, exerciseId, request.SetsDone, ct) is { } report ? Results.Ok(report) : Results.NotFound())
+            .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
+        g.MapPut("/{id:guid}/sessions/{sessionId:guid}/comment", async (Guid id, Guid sessionId, RoutineSessionCommentRequest request,
+                HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
+            await routines.SetCommentAsync(household.HouseholdId, id, sessionId, request.Comment, ct) is { } report ? Results.Ok(report) : Results.NotFound())
             .Produces<RoutineReportDto>().ProducesValidationProblem().ProducesProblem(StatusCodes.Status404NotFound);
         g.MapDelete("/{id:guid}/sessions/{sessionId:guid}", async (Guid id, Guid sessionId, HouseholdContext household, RoutineLibrary routines, CancellationToken ct) =>
             await routines.DeleteSessionAsync(household.HouseholdId, id, sessionId, ct) is { } report ? Results.Ok(report) : Results.NotFound())
@@ -165,6 +173,18 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         return await ReportAsync(routine, ct);
     }
 
+    /// <summary>Notes, changes or clears the comment of a pass, finished or not.</summary>
+    public async Task<RoutineReportDto?> SetCommentAsync(Guid householdId, Guid id, Guid sessionId, string? comment, CancellationToken ct)
+    {
+        var routine = await FindAsync(householdId, id, ct);
+        if (routine is null) return null;
+        var session = await FindSessionAsync(routine, sessionId, ct);
+        if (session is null) return null;
+        session.SetComment(comment);
+        await db.SaveChangesAsync(ct);
+        return await ReportAsync(routine, ct);
+    }
+
     /// <summary>Deletes a pass with its ticks.</summary>
     public async Task<RoutineReportDto?> DeleteSessionAsync(Guid householdId, Guid id, Guid sessionId, CancellationToken ct)
     {
@@ -178,7 +198,7 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         return await ReportAsync(routine, ct);
     }
 
-    /// <summary>Records a whole pass in one call (the assistant): each exercise with its sets and values.</summary>
+    /// <summary>Records a whole pass in one call (the assistant): each exercise with its sets and values, and its comment.</summary>
     public async Task<RoutineReportDto?> LogSessionAsync(Guid householdId, Guid id, RoutineSessionLogRequest r, CancellationToken ct)
     {
         var routine = await FindAsync(householdId, id, ct);
@@ -189,6 +209,7 @@ public sealed class RoutineLibrary(LifeOSDbContext db, SportProfiles profiles, S
         var day = r.Date ?? today;
         var startedAt = r.Time is { } time ? SportClock.At(day, time) : day == today ? clock.GetUtcNow() : SportClock.At(day, new TimeOnly(12, 0));
         var session = await StartAsync(routine, day, startedAt, ct);
+        session.SetComment(r.Comment);
         foreach (var e in r.Exercises)
             db.ExerciseCompletions.Add(ExerciseCompletion.Create(routine, session, e.ExerciseId, e.SetsDone ?? routine.LineOn(day, e.ExerciseId).Sets,
                 e.Value, e.LoadKg, startedAt, passFinished: false));

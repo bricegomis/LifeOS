@@ -9,10 +9,14 @@ namespace LifeOS.Domain.Sports;
 /// </summary>
 public sealed class RoutineSession : Entity
 {
+    public const int MaxCommentLength = 1000;
+
     public Guid HouseholdId { get; private set; }
     public Guid RoutineId { get; private set; }
     public DateOnly Date { get; private set; }
     public DateTimeOffset StartedAt { get; private set; }
+    /// <summary>Free note on the pass, typed at any time; null when none.</summary>
+    public string? Comment { get; private set; }
 
     private RoutineSession() { }
 
@@ -25,6 +29,13 @@ public sealed class RoutineSession : Entity
         {
             Id = Guid.NewGuid(), HouseholdId = routine.HouseholdId, RoutineId = routine.Id, Date = day, StartedAt = startedAt,
         };
+    }
+
+    public void SetComment(string? comment)
+    {
+        var text = string.IsNullOrWhiteSpace(comment) ? null : comment.Trim();
+        if (text?.Length > MaxCommentLength) throw new ArgumentException("Commentaire : 1000 caractères maximum.");
+        Comment = text;
     }
 
     /// <summary>Exercises of the routine that day with all their sets ticked in this pass.</summary>

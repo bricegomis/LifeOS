@@ -96,7 +96,7 @@ public sealed class SportReadContract(ISportReadData data, TimeProvider clock)
         var total = routine.VersionOn(session.Date).Lines.Count;
         var finished = done == total;
         return new RoutineSessionDto(session.Id, session.Date, session.StartedAt, finished ? ticks.Max(t => t.LoggedAt) : null, finished,
-            done, total, ticks.OrderBy(t => t.LoggedAt).Select(ExerciseCompletionDto.From).ToList());
+            done, total, session.Comment, ticks.OrderBy(t => t.LoggedAt).Select(ExerciseCompletionDto.From).ToList());
     }
 
     /// <summary>Records of one exercise and its best value and load of each of the last <paramref name="weeks"/> weeks.</summary>

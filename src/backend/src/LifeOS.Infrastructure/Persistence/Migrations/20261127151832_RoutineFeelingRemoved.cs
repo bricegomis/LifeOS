@@ -26,11 +26,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                 table: "exercise_completions");
 
             migrationBuilder.DropColumn(
-                name: "Comment",
-                schema: "sports",
-                table: "routine_sessions");
-
-            migrationBuilder.DropColumn(
                 name: "Discomfort",
                 schema: "sports",
                 table: "exercise_completions");
@@ -44,14 +39,6 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "Comment",
-                schema: "sports",
-                table: "routine_sessions",
-                type: "character varying(1000)",
-                maxLength: 1000,
-                nullable: true);
-
             migrationBuilder.AddColumn<int>(
                 name: "Discomfort",
                 schema: "sports",

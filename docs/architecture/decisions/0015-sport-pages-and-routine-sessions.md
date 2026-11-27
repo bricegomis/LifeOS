@@ -135,12 +135,16 @@ exercice se coche une fois par passage.
   dernières semaines. La progression d'un exercice (courbe, records) prend tous
   les passages où au moins une de ses séries est cochée.
 
-### Pas de ressenti par exercice
+### Pas de ressenti par exercice, un commentaire par passage
 
 Le 2026-11-27, l'utilisateur a retiré le ressenti des routines : l'effort (1 à 10) et la
-gêne (0 à 10) par exercice, la fenêtre « Passage terminé » qui les demandait, le commentaire
-du passage et les valeurs proposées du profil. Trop long à remplir pour ce qu'il apportait.
-Un passage terminé affiche seulement un message. **La cible reste réglée à la main** :
+gêne (0 à 10) par exercice, la fenêtre « Passage terminé » qui les demandait et les valeurs
+proposées du profil. Trop long à remplir pour ce qu'il apportait. Un passage terminé affiche
+seulement un message.
+
+Chaque passage garde un **commentaire** facultatif (1000 caractères au plus). Sur la page de
+la routine, chaque passage du jour, en cours ou terminé, a un bouton « Commenter » qui ouvre
+une fenêtre de saisie ; le commentaire s'affiche sous le passage, un texte vide l'efface. **La cible reste réglée à la main** :
 l'application ne propose pas de l'augmenter. Le ressenti d'une séance réalisée (effort et
 sensation, [ADR 0019](0019-garmin-import.md)) n'est pas concerné.
 
@@ -178,8 +182,8 @@ Rien ne change dans l'API : le mode guidé n'utilise que l'ouverture d'un passag
   accepte le nombre de séries faites (toutes par défaut), la valeur et la charge.
   `uncomplete_exercise` vise un passage.
 - Nouvel outil pour enregistrer un passage entier en un appel : routine, date, heure
-  facultative, exercices avec séries, valeur et charge.
-- Nouvel outil pour supprimer un passage.
+  facultative, exercices avec séries, valeur et charge, commentaire.
+- Nouveaux outils pour commenter un passage et pour supprimer un passage.
 - `list_routines` renvoie les passages du jour ; `get_exercise_progress` renvoie
   les dernières coches.
 - Un objectif de la semaine se modifie par `change_weekly_goal`, déjà présent.
@@ -199,8 +203,10 @@ L'état des routines du jour gagne le nombre de passages terminés.
 
 - Migration additive `SportRoutineSessions` : nouvelle table des passages ; les
   coches gagnent leur passage et le nombre de séries faites. La migration
-  `RoutineFeelingRemoved` (2026-11-27) supprime l'effort, la gêne, le commentaire du passage
-  et la table `sports.profile_settings`, avec leurs données.
+  `RoutineFeelingRemoved` (2026-11-27) supprime l'effort, la gêne et la table
+  `sports.profile_settings`, avec leurs données. Sa première version publiée supprimait aussi
+  le commentaire ; `RoutineSessionCommentKept` remet la colonne là où elle avait déjà été appliquée
+  (les commentaires de ces bases sont perdus).
   L'unicité passe de (routine, exercice, jour) à (passage, exercice).
 - **Reprise de l'existant** : pour chaque routine et chaque jour ayant des coches,
   un passage est créé et les reçoit ; son début est la première coche, sa fin la

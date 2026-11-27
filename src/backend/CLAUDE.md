@@ -49,7 +49,7 @@
 - Routines (ADR 0014, ADR 0015): a `Routine` owns dated versions (days of the week as bits,
   jokers, ordered lines with targets and an optional load, null = bodyweight); a change
   applies from today and past days are judged with the version they had. A routine is done
-  in passes (`RoutineSession`, several per day, one unfinished at a time); an
+  in passes (`RoutineSession`, several per day, one unfinished at a time, with an optional comment); an
   `ExerciseCompletion` is one exercise in one pass with its sets done, value and load (no
   feeling: effort and discomfort were removed on 2026-11-27). A pass is finished, never stored, when every line of that
   day has all its sets; a finished pass is not reopened. A day is done once one pass is

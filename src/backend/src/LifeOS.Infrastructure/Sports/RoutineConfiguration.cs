@@ -83,6 +83,7 @@ internal sealed class RoutineSessionConfiguration : IEntityTypeConfiguration<Rou
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).ValueGeneratedNever();
         builder.HasAlternateKey(s => new { s.Id, s.HouseholdId });
+        builder.Property(s => s.Comment).HasMaxLength(RoutineSession.MaxCommentLength);
         builder.HasOne<Routine>().WithMany().HasForeignKey(s => new { s.RoutineId, s.HouseholdId })
             .HasPrincipalKey(r => new { r.Id, r.HouseholdId }).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(s => new { s.RoutineId, s.Date });

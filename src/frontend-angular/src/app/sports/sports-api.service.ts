@@ -105,6 +105,10 @@ export class SportsApiService {
   setSets(routineId: string, sessionId: string, exerciseId: string, setsDone: number): Observable<RoutineReportDto> {
     return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}/exercises/${id(exerciseId)}`, { setsDone })
   }
+  /** Notes, changes or clears (null) the comment of a pass. */
+  setComment(routineId: string, sessionId: string, comment: string | null): Observable<RoutineReportDto> {
+    return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}/comment`, { comment })
+  }
   deletePass(routineId: string, sessionId: string): Observable<RoutineReportDto> {
     return this.api.delete<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions/${id(sessionId)}`)
   }

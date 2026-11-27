@@ -119,7 +119,7 @@ public sealed record ExerciseCompletionDto(Guid SessionId, Guid ExerciseId, Date
 /// <summary>One pass of a routine (ADR 0015); finished when every exercise has all its sets.</summary>
 /// <param name="FinishedAt">Time of the last tick once finished; null while in progress.</param>
 public sealed record RoutineSessionDto(Guid Id, DateOnly Date, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt, bool Finished,
-    int ExercisesDone, int ExercisesTotal, IReadOnlyList<ExerciseCompletionDto> Completions);
+    int ExercisesDone, int ExercisesTotal, string? Comment, IReadOnlyList<ExerciseCompletionDto> Completions);
 
 /// <param name="Done">Exercises done in the best pass of the day.</param>
 /// <param name="Passes">Passes finished that day.</param>

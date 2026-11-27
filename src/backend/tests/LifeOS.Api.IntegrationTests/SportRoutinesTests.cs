@@ -58,9 +58,13 @@ public sealed class SportRoutinesTests(PostgresContainerFixture postgres)
         Assert.Equal((1, 1), (report.PassesToday, report.Streak));
         Assert.Equal("done", report.Calendar[^1].Status);
 
-        // A finished pass is not reopened.
+        // A finished pass is not reopened; its comment is noted.
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/sport/routines/{id}/sessions/{pass}/exercises/{bridge.Id}",
             new ExerciseSetsRequest(1))).StatusCode);
+        report = await Report(await client.PutAsJsonAsync($"/api/sport/routines/{id}/sessions/{pass}/comment", new RoutineSessionCommentRequest("  Bien.  ")));
+        Assert.Equal("Bien.", report.TodaySessions[0].Comment);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/sport/routines/{id}/sessions/{pass}/comment",
+            new RoutineSessionCommentRequest(new string('a', 1001)))).StatusCode);
 
         // The assistant's tick opens a second pass and records what was really done.
         report = await Report(await client.PutAsJsonAsync($"/api/sport/routines/{id}/completions",
@@ -75,10 +79,10 @@ public sealed class SportRoutinesTests(PostgresContainerFixture postgres)
         Assert.Single(report.TodaySessions);
 
         // A whole pass in one call.
-        report = await Report(await client.PostAsJsonAsync($"/api/sport/routines/{id}/sessions/log", new RoutineSessionLogRequest(null, new TimeOnly(18, 30),
+        report = await Report(await client.PostAsJsonAsync($"/api/sport/routines/{id}/sessions/log", new RoutineSessionLogRequest(null, new TimeOnly(18, 30), "Le soir.",
             [new SessionExerciseRequest(wallSit.Id, null, null, 0), new SessionExerciseRequest(bridge.Id, null, 10, null)])));
         Assert.Equal(2, report.PassesToday);
-        Assert.Null(report.TodaySessions[^1].Completions.Single(c => c.ExerciseId == wallSit.Id).LoadKg);
+        Assert.Null(report.TodaySessions.Single(s => s.Comment == "Le soir.").Completions.Single(c => c.ExerciseId == wallSit.Id).LoadKg);
         Assert.Equal(2, report.Calendar[^1].Passes);
 
         var progress = (await client.GetFromJsonAsync<ExerciseProgressDto>($"/api/sport/exercises/{wallSit.Id}/progress?weeks=2"))!;
@@ -87,7 +91,7 @@ public sealed class SportRoutinesTests(PostgresContainerFixture postgres)
 
         // The feeling of a pass and the profile's feeling defaults are gone.
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/sport/settings")).StatusCode);
-        Assert.True((await client.PutAsJsonAsync($"/api/sport/routines/{id}/sessions/{pass}/feeling", new { comment = "Bien." })).StatusCode
+        Assert.True((await client.PutAsJsonAsync($"/api/sport/routines/{id}/sessions/{pass}/feeling", new { effort = 7 })).StatusCode
             is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed);
 
         // A done exercise keeps its measure and cannot be archived while a routine uses it.
@@ -167,9 +171,11 @@ public sealed class SportRoutinesTests(PostgresContainerFixture postgres)
         Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsJsonAsync($"/api/sport/routines/{routine.Id}/sessions", new RoutineSessionStartRequest(null))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.PutAsJsonAsync($"/api/sport/routines/{routine.Id}/sessions/{pass}/exercises/{exercise.Id}",
             new ExerciseSetsRequest(1))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PutAsJsonAsync($"/api/sport/routines/{routine.Id}/sessions/{pass}/comment",
+            new RoutineSessionCommentRequest("Volé"))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.DeleteAsync($"/api/sport/routines/{routine.Id}/sessions/{pass}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsJsonAsync($"/api/sport/routines/{routine.Id}/sessions/log",
-            new RoutineSessionLogRequest(null, null, [new SessionExerciseRequest(exercise.Id, null, null, null)]))).StatusCode);
+            new RoutineSessionLogRequest(null, null, null, [new SessionExerciseRequest(exercise.Id, null, null, null)]))).StatusCode);
 
         // Another household's exercise or profile is never accepted.
         Assert.Equal(HttpStatusCode.BadRequest, (await other.PostAsJsonAsync("/api/sport/routines", new RoutineRequest(null, "Dos", null, 0, lines))).StatusCode);
