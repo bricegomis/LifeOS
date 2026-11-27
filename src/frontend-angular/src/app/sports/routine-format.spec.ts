@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  clockTime, daysLabel, doneText, draftFromRoutine, emptyRoutineDraft, exerciseCharts, exerciseRequest, exerciseSummary, moveLine,
+  clockTime, completionText, daysLabel, doneText, emptyLogDraft, exerciseLogRequest, logValueLabel, draftFromRoutine, emptyRoutineDraft, exerciseCharts, exerciseRequest, exerciseSummary, moveLine,
   newLine, nextDayLabel, openPass, optionalLoad, passesLine, routineAction, routineCelebration, routineChip, routineDayLevel, routinePercent,
   routineRequest, routineSummary, setButton, setsDone, targetText,
 } from './routine-format.ts'
@@ -14,14 +14,14 @@ function line(exercise: ExerciseDto, sets: number, target: number, loadKg: numbe
   return { exerciseId: exercise.id, exerciseName: exercise.name, instructions: exercise.instructions, measure: exercise.measure, hasImage: false, sets, target, loadKg, perSide: exercise.perSide }
 }
 function tick(exerciseId: string, sets: number, patch: Partial<ExerciseCompletionDto> = {}): ExerciseCompletionDto {
-  return { sessionId: 's', exerciseId, date: '2026-11-17', setsDone: sets, value: 45, loadKg: null, loggedAt: '', ...patch }
+  return { id: `${exerciseId}-${sets}`, sessionId: 's', exerciseId, date: '2026-11-17', setsDone: sets, value: 45, loadKg: null, loggedAt: '', ...patch }
 }
 function pass(finished: boolean, startedAt: string, completions: ExerciseCompletionDto[] = []): RoutineSessionDto {
   return { id: startedAt, date: '2026-11-17', startedAt, finishedAt: null, finished, exercisesDone: finished ? 2 : 1, exercisesTotal: 2, comment: null, completions }
 }
 const routine: RoutineDto = {
   id: 'r', name: 'Tendons', days: [2, 4, 6], jokersPerWeek: 1, lines: [line(wallSit, 2, 45, 10), line(bridge, 1, 12, null)],
-  startedOn: '2026-11-01', stoppedOn: null, isActive: true,
+  startedOn: '2026-11-01',
 }
 function report(patch: Partial<RoutineReportDto>): RoutineReportDto {
   return {
@@ -137,5 +137,20 @@ describe('routine formatting', () => {
       { name: 'Gainage', instructions: null, measure: 'hold', defaultLoadKg: null, perSide: true })
     assert.equal(exerciseRequest({ name: 'Gainage', instructions: null, measure: 'hold', defaultLoadKg: 501, perSide: false }),
       'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.')
+  })
+
+  it('notes an exercise done alone, the load starting at its usual load and empty meaning bodyweight', () => {
+    const draft = emptyLogDraft(wallSit, '2026-11-27')
+    assert.deepEqual(draft, { date: '2026-11-27', setsDone: 1, value: null, loadKg: 10 })
+    assert.equal(exerciseLogRequest(draft, '2026-11-27'), 'Valeur par série : 1 à 10 000.')
+    assert.deepEqual(exerciseLogRequest({ ...draft, setsDone: '2', value: '40' }, '2026-11-27'), { date: '2026-11-27', setsDone: 2, value: 40, loadKg: 10 })
+    assert.deepEqual(exerciseLogRequest({ ...draft, value: 40, loadKg: null }, '2026-11-27'), { date: '2026-11-27', setsDone: 1, value: 40, loadKg: 0 })
+    assert.equal(exerciseLogRequest({ ...draft, value: 40, date: '2026-11-28' }, '2026-11-27'), 'Choisissez un jour, au plus tard aujourd’hui.')
+    assert.equal(exerciseLogRequest({ ...draft, value: 40, setsDone: 21 }, '2026-11-27'), 'Séries : 1 à 20.')
+    assert.equal(exerciseLogRequest({ ...draft, value: 40, loadKg: 12.3 }, '2026-11-27'), 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.')
+    assert.equal(logValueLabel(wallSit), 'Secondes par série')
+    assert.equal(logValueLabel({ ...bridge, perSide: true }), 'Répétitions par série (par côté)')
+    assert.equal(completionText('hold', tick('e1', 2, { value: 40, loadKg: 10 })), '2 séries × 40 s à 10 kg')
+    assert.equal(completionText('reps', tick('e2', 1, { value: 12 })), '1 série × 12 rép.')
   })
 })

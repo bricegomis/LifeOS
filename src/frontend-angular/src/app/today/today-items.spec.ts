@@ -43,16 +43,15 @@ describe('today: tasks', () => {
 
 describe('today: sport', () => {
   const report = (over: Partial<TodaySportRoutine>): TodaySportRoutine => ({
-    routine: { id: 's', name: 'Gainage', lines: [1, 2, 3], isActive: true }, plannedToday: true, completedToday: false, streak: 12, todaySessions: [], ...over,
+    routine: { id: 's', name: 'Gainage', lines: [1, 2, 3] }, plannedToday: true, completedToday: false, streak: 12, todaySessions: [], ...over,
   })
 
   it('shows routines planned today, with the pass in progress', () => {
     const items = sportRoutineItems([
       report({}),
-      report({ routine: { id: 'p', name: 'Mobilité', lines: [1], isActive: true }, streak: 0, todaySessions: [{ finished: false, exercisesDone: 2, exercisesTotal: 5 }] }),
-      report({ routine: { id: 'n', name: 'Repos', lines: [], isActive: true }, plannedToday: false }),
-      report({ routine: { id: 'x', name: 'Arrêtée', lines: [], isActive: false } }),
-      report({ routine: { id: 'd', name: 'Faite', lines: [1], isActive: true }, completedToday: true }),
+      report({ routine: { id: 'p', name: 'Mobilité', lines: [1] }, streak: 0, todaySessions: [{ finished: false, exercisesDone: 2, exercisesTotal: 5 }] }),
+      report({ routine: { id: 'n', name: 'Repos', lines: [] }, plannedToday: false }),
+      report({ routine: { id: 'd', name: 'Faite', lines: [1] }, completedToday: true }),
     ])
     assert.deepEqual(items.map(i => [i.id, i.done, i.inProgress]), [['s', false, false], ['p', false, true], ['d', true, false]])
     assert.equal(items[0]!.sub, '3 exercices · série 12 j')

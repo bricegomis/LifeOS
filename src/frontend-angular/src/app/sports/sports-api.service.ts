@@ -3,7 +3,7 @@ import { from, switchMap, type Observable } from 'rxjs'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { LIBRARY_IMAGE, reduceImage } from '@/app/shared/image-reduction'
 import type {
-  ChallengeReportDto, DailyChallengeDto, DailyChallengeRequest, ExerciseDto, ExerciseProgressDto, ExerciseRequest,
+  ChallengeReportDto, DailyChallengeDto, DailyChallengeRequest, ExerciseCompletionDto, ExerciseDto, ExerciseLogRequest, ExerciseProgressDto, ExerciseRequest,
   CreatedImportTokenDto, GarminStatusDto, ImportTokenDto, RoutineReportDto, RoutineRequest, SportCatalog, SportSessionDto, Vo2MaxDto, SportSessionRequest,
   SportTemplateDto, SportTemplateRequest, WeekReportDto, WeeklyGoalDto, WeeklyGoalRequest,
 } from './sports.models'
@@ -85,18 +85,25 @@ export class SportsApiService {
     }))
   }
   removeExerciseImage(exerciseId: string): Observable<void> { return this.api.delete(`/sport/exercises/${id(exerciseId)}/image`) }
+  logExercise(exerciseId: string, request: ExerciseLogRequest): Observable<ExerciseCompletionDto> {
+    return this.api.post<ExerciseCompletionDto>(`/sport/exercises/${id(exerciseId)}/logs`, request)
+  }
+  deleteExerciseLog(exerciseId: string, completionId: string): Observable<void> {
+    return this.api.delete(`/sport/exercises/${id(exerciseId)}/logs/${id(completionId)}`)
+  }
   exerciseProgress(exerciseId: string, weeks = 12): Observable<ExerciseProgressDto> {
     return this.api.get<ExerciseProgressDto>(`/sport/exercises/${id(exerciseId)}/progress`, { weeks })
   }
 
-  routines(calendarWeeks = 1, includeStopped = false): Observable<RoutineReportDto[]> {
-    return this.api.get<RoutineReportDto[]>('/sport/routines', { calendarWeeks, includeStopped })
+  routines(calendarWeeks = 1): Observable<RoutineReportDto[]> {
+    return this.api.get<RoutineReportDto[]>('/sport/routines', { calendarWeeks })
   }
   createRoutine(request: RoutineRequest): Observable<RoutineReportDto> { return this.api.post<RoutineReportDto>('/sport/routines', request) }
   updateRoutine(routineId: string, request: RoutineRequest): Observable<RoutineReportDto> {
     return this.api.put<RoutineReportDto>(`/sport/routines/${id(routineId)}`, request)
   }
-  stopRoutine(routineId: string): Observable<void> { return this.api.delete(`/sport/routines/${id(routineId)}`) }
+  /** Deletes the routine with its passes; the exercises done stay in their history. */
+  deleteRoutine(routineId: string): Observable<void> { return this.api.delete(`/sport/routines/${id(routineId)}`) }
   /** Opens a pass for today; refused while another pass of the day is unfinished. */
   startSession(routineId: string): Observable<RoutineReportDto> {
     return this.api.post<RoutineReportDto>(`/sport/routines/${id(routineId)}/sessions`, { date: null })

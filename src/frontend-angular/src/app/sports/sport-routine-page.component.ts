@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button'
 import { MatDialog } from '@angular/material/dialog'
 import { MatIconModule } from '@angular/material/icon'
 import { MatSnackBar } from '@angular/material/snack-bar'
-import { ActivatedRoute, RouterLink } from '@angular/router'
+import { ActivatedRoute, Router, RouterLink } from '@angular/router'
 import { firstValueFrom, type Observable } from 'rxjs'
 import { apiErrorMessage } from '@/app/core/api/lifeos-api.service'
 import { openEditor } from '@/app/shared/ui/editor-dialog'
@@ -36,11 +36,9 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
             <h1>{{ report.routine.name }}</h1>
             <span class="lo-muted">{{ daysLabel(report.routine.days) }} · série de {{ report.streak }} jour{{ report.streak > 1 ? 's' : '' }} · record {{ report.record }}</span>
           </div>
-          @if (report.routine.isActive) {
-            <button mat-flat-button type="button" class="tonal lo-desktop-only" (click)="editRoutine(report)"><mat-icon svgIcon="edit" />Modifier la routine</button>
-            <button mat-icon-button type="button" class="lo-phone-only" (click)="editRoutine(report)" aria-label="Modifier la routine"
-              title="Modifier la routine"><mat-icon svgIcon="edit" /></button>
-          }
+          <button mat-flat-button type="button" class="tonal lo-desktop-only" (click)="editRoutine(report)"><mat-icon svgIcon="edit" />Modifier la routine</button>
+          <button mat-icon-button type="button" class="lo-phone-only" (click)="editRoutine(report)" aria-label="Modifier la routine"
+            title="Modifier la routine"><mat-icon svgIcon="edit" /></button>
         </header>
 
         @if (pass(); as current) {
@@ -75,14 +73,14 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
             }
             <p class="lo-help">Un appui par série faite, avec la cible ; la flèche retire la dernière. Le passage se termine à la dernière série.</p>
           </section>
-        } @else if (report.plannedToday && report.routine.isActive) {
+        } @else if (report.plannedToday) {
           <div class="start-row">
             <a mat-flat-button class="start" [routerLink]="['/sports/routine', report.routine.id, 'run']"><mat-icon svgIcon="timer" />Mode guidé</a>
             <button mat-stroked-button type="button" class="free" [disabled]="pending() === 'start'" (click)="start()">
               <mat-icon svgIcon="play_arrow" />{{ report.completedToday ? 'Nouveau passage' : 'Commencer un passage' }}</button>
           </div>
           <p class="lo-help">Le mode guidé enchaîne les exercices un par un, avec un chrono et un bip pour les exercices tenus.</p>
-        } @else if (report.routine.isActive) {
+        } @else {
           <p class="lo-muted">Pas prévue aujourd’hui. {{ nextDayLabel(report.today, report.nextPlannedDay) }}</p>
         }
 
@@ -148,6 +146,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
 export class SportRoutinePageComponent implements OnInit {
   private readonly api = inject(SportsApiService)
   private readonly confirm = inject(ConfirmService)
+  private readonly router = inject(Router)
   private readonly route = inject(ActivatedRoute)
   private readonly dialog = inject(MatDialog)
   private readonly snack = inject(MatSnackBar)
@@ -219,12 +218,13 @@ export class SportRoutinePageComponent implements OnInit {
       this.dialog, RoutineDialogComponent, { routine: report.routine, exercises }).afterClosed())
     if (!result) return
     this.snack.open(result.message, undefined, { duration: 4000 })
-    await this.reload()
+    if (result.deleted) await this.router.navigate(['/sports/routines'])
+    else await this.reload()
   }
 
   private async reload(): Promise<void> {
     const id = this.route.snapshot.paramMap.get('id')
-    this.report.set((await firstValueFrom(this.api.routines(1, true))).find(item => item.routine.id === id) ?? null)
+    this.report.set((await firstValueFrom(this.api.routines(1))).find(item => item.routine.id === id) ?? null)
   }
 
   private async call(key: string, request: Observable<RoutineReportDto>): Promise<RoutineReportDto | null> {

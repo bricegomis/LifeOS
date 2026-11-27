@@ -123,9 +123,41 @@ public sealed class SportRoutinesTests(PostgresContainerFixture postgres)
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/sport/routines",
             new RoutineRequest(null, "Jour inconnu", [8], 0, [new RoutineLineRequest(wallSit.Id, 1, 10, null)]))).StatusCode);
 
+        // An exercise is also done alone, outside any routine; it joins the exercise's history.
+        var alone = await client.PostAsJsonAsync($"/api/sport/exercises/{wallSit.Id}/logs", new ExerciseLogRequest(2, 40));
+        Assert.True(alone.IsSuccessStatusCode, await alone.Content.ReadAsStringAsync());
+        var log = (await alone.Content.ReadFromJsonAsync<ExerciseCompletionDto>())!;
+        Assert.Equal((null, 2, 40, 10m), (log.SessionId, log.SetsDone, log.Value, log.LoadKg));
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync($"/api/sport/exercises/{wallSit.Id}/logs",
+            new ExerciseLogRequest(1, 40, null, today.AddDays(1)))).StatusCode);
+
+        // Deleting a routine deletes its passes, never the exercises done: they stay without routine or pass.
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/sport/routines/{id}")).StatusCode);
         Assert.Empty((await client.GetFromJsonAsync<List<RoutineReportDto>>("/api/sport/routines"))!);
-        Assert.Single((await client.GetFromJsonAsync<List<RoutineReportDto>>("/api/sport/routines?includeStopped=true&calendarWeeks=12"))!);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.DeleteAsync($"/api/sport/routines/{id}")).StatusCode);
+        var kept = (await client.GetFromJsonAsync<ExerciseProgressDto>($"/api/sport/exercises/{wallSit.Id}/progress"))!;
+        Assert.Equal(3, kept.Recent.Count);
+        Assert.All(kept.Recent, done => Assert.Null(done.SessionId));
+        Assert.Equal(2, (await client.GetFromJsonAsync<ExerciseProgressDto>($"/api/sport/exercises/{bridge.Id}/progress"))!.Recent.Count);
+
+        // What stays out of a pass is deleted from the exercise.
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/sport/exercises/{wallSit.Id}/logs/{log.Id}")).StatusCode);
+        Assert.Equal(2, (await client.GetFromJsonAsync<ExerciseProgressDto>($"/api/sport/exercises/{wallSit.Id}/progress"))!.Recent.Count);
+    }
+
+    [Fact]
+    public async Task A_tick_in_a_pass_is_not_deleted_as_an_exercise_done_alone()
+    {
+        await using var factory = new LifeOSApiFactory(postgres.ConnectionString);
+        using var client = factory.CreateClient().AsUser(Guid.NewGuid());
+        var plank = await Exercise(client, "Planche", "hold", null);
+        var routine = (await Report(await client.PostAsJsonAsync("/api/sport/routines",
+            new RoutineRequest(null, "Dos", null, 0, [new RoutineLineRequest(plank.Id, 1, 30, null)])))).Routine;
+        await Report(await client.PutAsJsonAsync($"/api/sport/routines/{routine.Id}/completions",
+            new ExerciseCompletionRequest(plank.Id, null, null, null, null, null)));
+        var tick = Assert.Single((await client.GetFromJsonAsync<ExerciseProgressDto>($"/api/sport/exercises/{plank.Id}/progress"))!.Recent);
+        Assert.NotNull(tick.SessionId);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.DeleteAsync($"/api/sport/exercises/{plank.Id}/logs/{tick.Id}")).StatusCode);
     }
 
     [Fact]
@@ -163,7 +195,11 @@ public sealed class SportRoutinesTests(PostgresContainerFixture postgres)
         var routine = (await Report(await client.PostAsJsonAsync("/api/sport/routines", new RoutineRequest(null, "Dos", null, 0, lines)))).Routine;
 
         Assert.Empty((await other.GetFromJsonAsync<List<ExerciseDto>>("/api/sport/exercises?includeArchived=true"))!);
-        Assert.Empty((await other.GetFromJsonAsync<List<RoutineReportDto>>("/api/sport/routines?includeStopped=true"))!);
+        Assert.Empty((await other.GetFromJsonAsync<List<RoutineReportDto>>("/api/sport/routines"))!);
+        var log = (await (await client.PostAsJsonAsync($"/api/sport/exercises/{exercise.Id}/logs", new ExerciseLogRequest(1, 30)))
+            .Content.ReadFromJsonAsync<ExerciseCompletionDto>())!;
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsJsonAsync($"/api/sport/exercises/{exercise.Id}/logs", new ExerciseLogRequest(1, 30))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.DeleteAsync($"/api/sport/exercises/{exercise.Id}/logs/{log.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.PutAsJsonAsync($"/api/sport/exercises/{exercise.Id}",
             new ExerciseRequest("Volé", null, "hold", null))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.DeleteAsync($"/api/sport/exercises/{exercise.Id}")).StatusCode);

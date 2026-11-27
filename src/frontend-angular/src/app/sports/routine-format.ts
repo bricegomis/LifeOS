@@ -1,5 +1,5 @@
 import type {
-  ExerciseCompletionDto, ExerciseDto, ExerciseMeasure, ExerciseProgressDto, ExerciseRequest, RoutineDayDto, RoutineDto,
+  ExerciseCompletionDto, ExerciseDto, ExerciseLogRequest, ExerciseMeasure, ExerciseProgressDto, ExerciseRequest, RoutineDayDto, RoutineDto,
   RoutineLineDto, RoutineReportDto, RoutineRequest, RoutineSessionDto,
 } from './sports.models.ts'
 
@@ -204,6 +204,33 @@ export function optionalLoad(value: number | string | null | undefined): number 
   const load = Number(value)
   if (!Number.isFinite(load) || load < 0 || load > 500 || !Number.isInteger(load * 2)) return undefined
   return load === 0 ? null : load
+}
+
+/** What the window « Faire l'exercice » holds: the load starts at the exercise's usual load, empty = bodyweight. */
+export interface ExerciseLogDraft { date: string, setsDone: number | string | null, value: number | string | null, loadKg: number | string | null }
+
+export function emptyLogDraft(exercise: ExerciseDto, today: string): ExerciseLogDraft {
+  return { date: today, setsDone: 1, value: null, loadKg: exercise.defaultLoadKg }
+}
+/** "Secondes par série (par côté)" or "Répétitions par série". */
+export function logValueLabel(exercise: ExerciseDto): string {
+  return (exercise.measure === 'hold' ? 'Secondes par série' : 'Répétitions par série') + (exercise.perSide ? ' (par côté)' : '')
+}
+/** An exercise done alone: 1 to 20 sets, a value of 1 to 10 000, an optional load, never in the future. */
+export function exerciseLogRequest(draft: ExerciseLogDraft, today: string): ExerciseLogRequest | string {
+  const sets = Number(draft.setsDone), value = Number(draft.value)
+  if (!draft.date || draft.date > today) return 'Choisissez un jour, au plus tard aujourd’hui.'
+  if (!Number.isInteger(sets) || sets < 1 || sets > 20) return 'Séries : 1 à 20.'
+  if (draft.value === null || draft.value === '' || !Number.isInteger(value) || value < 1 || value > 10000) return 'Valeur par série : 1 à 10 000.'
+  const load = optionalLoad(draft.loadKg)
+  if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.'
+  // 0 says bodyweight explicitly: null would take the exercise's usual load.
+  return { date: draft.date, setsDone: sets, value, loadKg: load ?? 0 }
+}
+/** "2 séries × 40 s à 10 kg", for a tick or an exercise done alone. */
+export function completionText(measure: ExerciseMeasure, completion: ExerciseCompletionDto): string {
+  const load = hasLoad(completion.loadKg) ? ` à ${kilos(completion.loadKg)} kg` : ''
+  return `${completion.setsDone} série${completion.setsDone > 1 ? 's' : ''} × ${completion.value} ${measureUnit(measure)}${load}`
 }
 
 export function emptyExerciseDraft(): ExerciseRequest { return { name: '', instructions: '', measure: 'hold', defaultLoadKg: null, perSide: false } }

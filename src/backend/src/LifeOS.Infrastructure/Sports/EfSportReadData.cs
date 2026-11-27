@@ -44,10 +44,9 @@ internal sealed class EfSportReadData(LifeOSDbContext db) : ISportReadData
             .Where(e => e.HouseholdId == householdId && challengeIds.Contains(e.ChallengeId) && e.Date == day)
             .ToListAsync(ct);
 
-    public async Task<IReadOnlyList<Routine>> RoutinesAsync(Guid householdId, Guid profileId, bool activeOnly, CancellationToken ct) =>
+    public async Task<IReadOnlyList<Routine>> RoutinesAsync(Guid householdId, Guid profileId, CancellationToken ct) =>
         await db.Routines.AsNoTracking()
             .Where(r => r.HouseholdId == householdId && r.MemberProfileId == profileId)
-            .Where(r => !activeOnly || r.StoppedOn == null)
             .OrderBy(r => r.StartedOn).ThenBy(r => r.Name)
             .ToListAsync(ct);
 
@@ -56,7 +55,7 @@ internal sealed class EfSportReadData(LifeOSDbContext db) : ISportReadData
 
     public async Task<IReadOnlyList<ExerciseCompletion>> CompletionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct) =>
         await db.ExerciseCompletions.AsNoTracking()
-            .Where(c => c.HouseholdId == householdId && routineIds.Contains(c.RoutineId))
+            .Where(c => c.HouseholdId == householdId && c.RoutineId != null && routineIds.Contains(c.RoutineId.Value))
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<RoutineSession>> RoutineSessionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct) =>
@@ -66,7 +65,6 @@ internal sealed class EfSportReadData(LifeOSDbContext db) : ISportReadData
 
     public async Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct) =>
         await db.ExerciseCompletions.AsNoTracking()
-            .Where(c => c.HouseholdId == householdId && c.ExerciseId == exerciseId)
-            .Where(c => db.Routines.Any(r => r.Id == c.RoutineId && r.MemberProfileId == profileId))
+            .Where(c => c.HouseholdId == householdId && c.ExerciseId == exerciseId && c.MemberProfileId == profileId)
             .ToListAsync(ct);
 }

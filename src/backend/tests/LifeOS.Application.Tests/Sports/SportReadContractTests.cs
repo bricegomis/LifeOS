@@ -40,17 +40,17 @@ public sealed class SportReadContractTests
                 .GroupBy(e => e.ChallengeId).ToDictionary(g => g.Key, g => g.GroupBy(e => e.Date).ToDictionary(d => d.Key, d => d.Sum(e => e.Quantity))));
         public Task<IReadOnlyList<ChallengeEntry>> EntriesAsync(Guid householdId, IReadOnlyCollection<Guid> challengeIds, DateOnly day, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<ChallengeEntry>>(Entries.Where(e => challengeIds.Contains(e.ChallengeId) && e.Date == day).ToList());
-        public Task<IReadOnlyList<Routine>> RoutinesAsync(Guid householdId, Guid profileId, bool activeOnly, CancellationToken ct) =>
-            Task.FromResult<IReadOnlyList<Routine>>(Routines.Where(r => r.MemberProfileId == profileId && (!activeOnly || r.IsActive)).ToList());
+        public Task<IReadOnlyList<Routine>> RoutinesAsync(Guid householdId, Guid profileId, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<Routine>>(Routines.Where(r => r.MemberProfileId == profileId).ToList());
         public Task<IReadOnlyDictionary<Guid, Exercise>> ExercisesAsync(Guid householdId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyDictionary<Guid, Exercise>>(Exercises.ToDictionary(e => e.Id));
         public Task<IReadOnlyList<ExerciseCompletion>> CompletionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct) =>
-            Task.FromResult<IReadOnlyList<ExerciseCompletion>>(Completions.Where(c => routineIds.Contains(c.RoutineId)).ToList());
+            Task.FromResult<IReadOnlyList<ExerciseCompletion>>(Completions.Where(c => c.RoutineId is { } routineId && routineIds.Contains(routineId)).ToList());
         public Task<IReadOnlyList<RoutineSession>> RoutineSessionsAsync(Guid householdId, IReadOnlyCollection<Guid> routineIds, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<RoutineSession>>(Passes.Where(p => routineIds.Contains(p.RoutineId)).ToList());
         public Task<IReadOnlyList<ExerciseCompletion>> ExerciseCompletionsAsync(Guid householdId, Guid profileId, Guid exerciseId, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<ExerciseCompletion>>(Completions.Where(c => c.ExerciseId == exerciseId
-                && Routines.Any(r => r.Id == c.RoutineId && r.MemberProfileId == profileId)).ToList());
+                && c.MemberProfileId == profileId).ToList());
     }
 
     private static SportSession Session(Guid profile, DateOnly date, Guid? template, int? calories) =>
@@ -151,7 +151,7 @@ public sealed class SportReadContractTests
         data.Completions.Add(ExerciseCompletion.Create(routine, evening, wallSit.Id, 1, 60, 12, now, false));
         var contract = new SportReadContract(data, LateEvening);
 
-        var report = Assert.Single(await contract.RoutinesAsync(Household, Profile, 1, false, CancellationToken.None));
+        var report = Assert.Single(await contract.RoutinesAsync(Household, Profile, 1, CancellationToken.None));
 
         Assert.Equal("Tendons", report.Routine.Name);
         Assert.Equal([1, 2, 3, 4, 5, 6, 7], report.Routine.Days);
