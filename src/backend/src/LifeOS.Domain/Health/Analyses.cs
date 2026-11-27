@@ -199,12 +199,21 @@ public sealed class AnalysisValue
 
 /// <summary>
 /// A kind of body measure (weight, waist, resting heart rate…) with its unit and an optional personal
-/// target (min and/or max; none for what cannot change, such as height).
+/// target (min and/or max; none for what cannot change, such as height). It may be linked to a value
+/// imported from Garmin (<see cref="Source"/>): those days then join the hand-typed values on read.
 /// </summary>
 public sealed class MeasureType : Entity
 {
-    public static readonly IReadOnlyList<(string Name, string Unit)> Defaults =
-        [("Poids", "kg"), ("Tour de taille", "cm"), ("Fréquence cardiaque au repos", "bpm")];
+    public const string GarminRestingHeartRate = "garmin_resting_heart_rate";
+
+    /// <summary>The Garmin values a measure can follow, with their label and unit.</summary>
+    public static readonly IReadOnlyDictionary<string, (string Label, string Unit)> Sources = new Dictionary<string, (string, string)>
+    {
+        [GarminRestingHeartRate] = ("FC au repos de la Garmin", "bpm"),
+    };
+
+    public static readonly IReadOnlyList<(string Name, string Unit, string? Source)> Defaults =
+        [("Poids", "kg", null), ("Tour de taille", "cm", null), ("Fréquence cardiaque au repos", "bpm", GarminRestingHeartRate)];
 
     public Guid HouseholdId { get; private set; }
     public Guid OwnerUserId { get; private set; }
@@ -213,20 +222,24 @@ public sealed class MeasureType : Entity
     public string Unit { get; private set; } = "";
     public decimal? TargetMin { get; private set; }
     public decimal? TargetMax { get; private set; }
+    /// <summary>A key of <see cref="Sources"/>, or null for a measure typed by hand only.</summary>
+    public string? Source { get; private set; }
     public bool IsArchived { get; private set; }
 
     private MeasureType() { }
 
     public static MeasureType Create(Guid householdId, Guid ownerUserId, Guid memberProfileId, string name, string unit,
-        decimal? targetMin = null, decimal? targetMax = null)
+        decimal? targetMin = null, decimal? targetMax = null, string? source = null)
     {
         var type = new MeasureType { Id = Guid.NewGuid(), HouseholdId = householdId, OwnerUserId = ownerUserId, MemberProfileId = memberProfileId };
-        type.Update(name, unit, targetMin, targetMax);
+        type.Update(name, unit, targetMin, targetMax, source);
         return type;
     }
 
-    public void Update(string name, string unit, decimal? targetMin, decimal? targetMax)
+    public void Update(string name, string unit, decimal? targetMin, decimal? targetMax, string? source)
     {
+        var key = string.IsNullOrWhiteSpace(source) ? null : source.Trim();
+        if (key is not null && !Sources.ContainsKey(key)) throw new ArgumentException("Source Garmin inconnue.");
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 100) throw new ArgumentException("Nom de la mesure obligatoire (100 caractères maximum).");
         if (string.IsNullOrWhiteSpace(unit) || unit.Trim().Length > 30) throw new ArgumentException("Unité obligatoire (30 caractères maximum).");
         if (targetMin > targetMax) throw new ArgumentException("Cible : le minimum dépasse le maximum.");
@@ -235,6 +248,7 @@ public sealed class MeasureType : Entity
         Unit = unit.Trim();
         TargetMin = targetMin;
         TargetMax = targetMax;
+        Source = key;
     }
 
     /// <summary><c>below_target</c>, <c>in_target</c> or <c>above_target</c>; null without a target.</summary>

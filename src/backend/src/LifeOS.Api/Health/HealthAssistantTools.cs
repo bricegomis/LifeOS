@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using LifeOS.Api.Assistant;
 using LifeOS.Application.Health.Contracts;
+using LifeOS.Domain.Health;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -214,7 +215,9 @@ public sealed class HealthAssistantTools
 
     [McpServerTool(Name = "list_body_measures", ReadOnly = true, Title = "Mesures corporelles")]
     [Description("Les mesures corporelles suivies (poids, tour de taille, fréquence cardiaque au repos… créées la première fois), leur cible " +
-        "personnelle facultative et leurs valeurs, avec la position de chacune (below_target, in_target, above_target ; null sans cible).")]
+        "personnelle facultative et leurs valeurs, avec la position de chacune (below_target, in_target, above_target ; null sans cible). " +
+        "Une mesure liée à la Garmin (source garmin_resting_heart_rate) reprend aussi la FC au repos importée chaque jour (valeurs source garmin, " +
+        "sans id, non supprimables) ; une valeur notée à la main le même jour l'emporte.")]
     public static async Task<List<MeasureTypeDto>> ListBodyMeasures(IHttpContextAccessor accessor, AnalysisLibrary library, CancellationToken ct = default) =>
         await library.MeasuresAsync(await AssistantRequest.HouseholdAsync(accessor), ct);
 
@@ -228,15 +231,18 @@ public sealed class HealthAssistantTools
             AssistantRequest.Validated(new MeasureTypeRequest(name, unit, targetMin, targetMax)), ct);
 
     [McpServerTool(Name = "update_body_measure_type", Idempotent = true, Title = "Modifier une mesure suivie")]
-    [Description("Modifie le nom, l'unité ou la cible personnelle d'une mesure suivie ; un champ omis reste inchangé, clearTarget = true retire la cible.")]
+    [Description("Modifie le nom, l'unité, la cible personnelle ou la liaison Garmin d'une mesure suivie ; un champ omis reste inchangé, " +
+        "clearTarget = true retire la cible.")]
     public static async Task<MeasureTypeDto> UpdateBodyMeasureType(IHttpContextAccessor accessor, AnalysisLibrary library, Guid measureTypeId,
         string? name = null, string? unit = null, decimal? targetMin = null, decimal? targetMax = null, bool clearTarget = false,
+        [Description("true : reprendre la FC au repos de la Garmin ; false : ne plus la reprendre ; omis : inchangé.")] bool? linkGarminRestingHeartRate = null,
         CancellationToken ct = default)
     {
         var household = await AssistantRequest.HouseholdAsync(accessor);
         var t = (await library.MeasuresAsync(household, ct)).SingleOrDefault(x => x.Id == measureTypeId).OrNotFound("Mesure");
         var request = AssistantRequest.Validated(new MeasureTypeRequest(name ?? t.Name, unit ?? t.Unit,
-            clearTarget ? targetMin : targetMin ?? t.TargetMin, clearTarget ? targetMax : targetMax ?? t.TargetMax));
+            clearTarget ? targetMin : targetMin ?? t.TargetMin, clearTarget ? targetMax : targetMax ?? t.TargetMax,
+            linkGarminRestingHeartRate switch { true => MeasureType.GarminRestingHeartRate, false => null, null => t.Source }));
         return (await library.UpdateMeasureTypeAsync(household, measureTypeId, request, ct)).OrNotFound("Mesure");
     }
 

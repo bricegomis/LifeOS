@@ -98,14 +98,17 @@ public sealed record AnalysisDto(Guid Id, DateOnly Day, string? Laboratory, stri
             .OrderBy(v => v.MarkerName).ToList());
 }
 
+/// <param name="Id">Null for a value read from Garmin (it cannot be deleted here).</param>
 /// <param name="Status">below_target, in_target or above_target; null without a target.</param>
-public sealed record MeasurementDto(Guid Id, DateOnly Day, decimal Value, string? Note, string? Status);
+/// <param name="Source"><c>manual</c> (typed by hand) or <c>garmin</c> (imported, read-only).</param>
+public sealed record MeasurementDto(Guid? Id, DateOnly Day, decimal Value, string? Note, string? Status, string Source);
 
 /// <param name="TargetMin">Optional personal target (min and/or max).</param>
-/// <param name="Values">Oldest first.</param>
+/// <param name="Values">Oldest first; one per day at most for a linked measure (a hand-typed value wins over Garmin's).</param>
 /// <param name="Status">Of the last value: below_target, in_target or above_target; null without a target or a value.</param>
+/// <param name="Source">The Garmin value it follows (garmin_resting_heart_rate), or null.</param>
 public sealed record MeasureTypeDto(Guid Id, string Name, string Unit, decimal? TargetMin, decimal? TargetMax, bool IsArchived,
-    IReadOnlyList<MeasurementDto> Values, string? Status);
+    IReadOnlyList<MeasurementDto> Values, string? Status, string? Source, string? SourceLabel);
 
 public sealed record HealthDocumentFileDto(Guid Id, string ContentType, long Size, string? OriginalName);
 

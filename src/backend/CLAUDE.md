@@ -90,7 +90,8 @@
   lab range, a personal target, a frequency (0 = once), panels and three optional texts (`Description`, `WhenLow`,
   `WhenHigh`, written by hand or by the assistant); an `Analysis` holds one value
   per marker; status, trend and next due day are computed on read. `MeasureType` (defaults on
-  first read) and `Measurement`. A `HealthDocument` (type, title, day, doctor, notes) owns its
+  first read; an optional `Source` such as `garmin_resting_heart_rate` merges the owner's `DailyWellness` days on read,
+  a hand-typed `Measurement` of the same day winning) and `Measurement`. A `HealthDocument` (type, title, day, doctor, notes) owns its
   encrypted files (photos or PDF, 20 at most); an analysis may point to it (set null on delete). An
   `Appointment` has a day, optional time, booking link (https; LifeOS never calls the site) and an
   optional report document. Management code: `SupplementLibrary`, `SymptomLibrary`,

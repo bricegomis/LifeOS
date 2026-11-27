@@ -1,4 +1,4 @@
-import type { MarkerDto, MarkerRequest, MarkerStatus, MarkerTrend, MeasureStatus, MeasureTypeRequest } from './health.models.ts'
+import type { MarkerDto, MarkerRequest, MarkerStatus, MarkerTrend, MeasureSource, MeasureStatus, MeasureTypeRequest } from './health.models.ts'
 
 const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 function parts(iso: string): Date { return new Date(`${iso}T12:00:00Z`) }
@@ -38,12 +38,12 @@ export const MEASURE_STATUS: Record<MeasureStatus, { label: string, tag: string 
 }
 
 /** A body measure kind from the form; the target is optional (none for what cannot change, such as height). */
-export function measureTypeRequest(name: string, unit: string, targetMin: string, targetMax: string): MeasureTypeRequest | string {
+export function measureTypeRequest(name: string, unit: string, targetMin: string, targetMax: string, source: MeasureSource | null = null): MeasureTypeRequest | string {
   if (!name.trim() || !unit.trim()) return 'Nom et unité sont obligatoires.'
   const min = parseNumber(targetMin), max = parseNumber(targetMax)
   if (Number.isNaN(min) || Number.isNaN(max)) return 'Les bornes de la cible sont des nombres.'
   if (min !== null && max !== null && min > max) return 'Cible : le minimum dépasse le maximum.'
-  return { name: name.trim(), unit: unit.trim(), targetMin: min, targetMax: max }
+  return { name: name.trim(), unit: unit.trim(), targetMin: min, targetMax: max, source }
 }
 
 export function frequencyLabel(months: number): string {
