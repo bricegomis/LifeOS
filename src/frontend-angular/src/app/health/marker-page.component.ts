@@ -11,18 +11,19 @@ import { HealthApiService } from './health-api.service'
 import type { MarkerDto } from './health.models'
 import { MarkerDialogComponent, type MarkerDialogData } from './marker-dialog.component'
 import { dateLabel, dueLabel, frequencyLabel, monthLabel, num, rangeBar, rangeLabel, STATUS, TREND, valueLabel } from './marker-rules'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** One marker (ADR 0018): last value placed against the lab range and the target, what it is for and what a low or high value can mean, evolution, details and values. */
 @Component({
   selector: 'app-marker-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page detail-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (marker(); as m) {
         <header class="head">
-          <a mat-icon-button routerLink="/health/analyses" aria-label="Retour aux analyses"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/health/analyses" aria-label="Retour aux analyses"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">{{ m.name }}</h1>
           <button mat-icon-button type="button" (click)="edit(m)" aria-label="Modifier le marqueur" title="Modifier le marqueur"><mat-icon svgIcon="edit" /></button>
         </header>
@@ -78,7 +79,7 @@ import { dateLabel, dueLabel, frequencyLabel, monthLabel, num, rangeBar, rangeLa
               }
             </div></section>
         }
-      } @else if (!error()) { <p class="lo-muted" role="status">Chargement…</p> }
+      } @else if (!error()) { <app-skeleton variant="page" /> }
     </div>
   `,
   styles: [`

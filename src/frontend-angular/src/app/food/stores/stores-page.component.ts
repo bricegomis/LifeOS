@@ -9,18 +9,19 @@ import { ListPageComponent, matchesQuery } from '@/app/shared/ui/list-page.compo
 import { FoodApiService } from '../food-api.service'
 import type { StoreDto } from '../food.models'
 import { StoreDialogComponent } from './store-dialog.component'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** Stores where the household buys, used by prices and tickets. */
 @Component({
   selector: 'app-stores-page',
   standalone: true,
-  imports: [ListPageComponent, MatIconModule],
+  imports: [SkeletonComponent, ListPageComponent, MatIconModule],
   template: `
     <app-list-page heading="Magasins" intro="Les magasins où le foyer fait ses courses, pour y relever des prix." addLabel="Ajouter un magasin"
       [(query)]="query" (add)="open(null)">
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (loading()) {
-        <p class="lo-status" role="status">Chargement des magasins…</p>
+        <app-skeleton />
       } @else if (shown().length) {
         <div class="lo-list">
           @for (store of shown(); track store.id) {
@@ -38,7 +39,7 @@ import { StoreDialogComponent } from './store-dialog.component'
           }
         </div>
       } @else {
-        <p class="lo-empty">{{ stores().length ? 'Aucun résultat.' : 'Aucun magasin. Ajoutez ceux où le foyer fait ses courses pour y relever des prix.' }}</p>
+        <p class="lo-empty">{{ stores().length ? 'Aucun résultat.' : 'Aucun magasin. Ajoute ceux où le foyer fait ses courses pour y relever des prix.' }}</p>
       }
     </app-list-page>
   `,

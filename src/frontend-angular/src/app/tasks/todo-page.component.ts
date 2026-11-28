@@ -18,18 +18,19 @@ import { TasksApiService } from './tasks-api.service'
 import type { ChecklistItemDto, TodoDto } from './tasks.models'
 import { TodoActionsService } from './todo-actions.service'
 import { TodoDialogComponent, type TodoDialogData, type TodoDialogResult } from './todo-dialog.component'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** One todo (ADR 0017): its details, Fait / Reporter / Rouvrir, and its checklist; edits in a window. */
 @Component({
   selector: 'app-todo-page',
   standalone: true,
-  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, RouterLink, TaskImageComponent],
+  imports: [SkeletonComponent, FormsModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatIconModule, MatInputModule, RouterLink, TaskImageComponent],
   template: `
     <div class="lo-page todo-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (todo(); as t) {
         <header class="head">
-          <a mat-icon-button routerLink="/tasks" aria-label="Retour à Aujourd’hui"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/tasks" aria-label="Retour à Aujourd’hui"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">Todo</h1>
           <button mat-flat-button type="button" class="lo-desktop-only" (click)="edit(t)"><mat-icon svgIcon="edit" />Modifier</button>
           <button mat-icon-button type="button" class="lo-phone-only" (click)="edit(t)" aria-label="Modifier le todo" title="Modifier le todo">
@@ -97,7 +98,7 @@ import { TodoDialogComponent, type TodoDialogData, type TodoDialogResult } from 
           <p class="lo-help">Cocher toutes les sous-tâches ne termine pas le todo.</p>
         </section>
       } @else if (!error()) {
-        <p class="lo-muted" role="status">Chargement…</p>
+        <app-skeleton variant="page" />
       }
     </div>
   `,

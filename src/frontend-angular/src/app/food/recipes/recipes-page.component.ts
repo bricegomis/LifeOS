@@ -12,12 +12,13 @@ import { RecipeEditorComponent } from './recipe-editor.component'
 import { recipeTags, visibleRecipes } from './recipe-form'
 import type { RecipeCostDto, RecipeDto } from './recipe.models'
 import { RecipesApiService } from './recipes-api.service'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** Recipe library (validated step 1 mockup): cards with their photo, filtered by name and category. */
 @Component({
   selector: 'app-recipes-page',
   standalone: true,
-  imports: [FoodImageComponent, ListPageComponent, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, FoodImageComponent, ListPageComponent, MatIconModule, RouterLink],
   template: `
     <app-list-page heading="Recettes" addLabel="Ajouter une recette" [(query)]="search" (add)="create()">
       @if (tags().length) {
@@ -32,9 +33,9 @@ import { RecipesApiService } from './recipes-api.service'
       }
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (loading()) {
-        <p class="lo-status" role="status">Chargement des recettes…</p>
+        <app-skeleton />
       } @else if (!recipes().length) {
-        <p class="lo-empty">Aucune recette pour le moment. Ajoutez la première avec « Ajouter une recette ».</p>
+        <p class="lo-empty">Aucune recette pour le moment. Ajoute la première avec « Ajouter une recette ».</p>
       } @else if (!visible().length) {
         <p class="lo-empty">Aucune recette ne correspond à ce filtre.</p>
       } @else {

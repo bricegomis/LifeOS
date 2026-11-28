@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { currentEntry, NAVIGATION_BLOCKS, pageTitle, readMenuOpen, writeMenuOpen } from './navigation.ts'
+import { currentEntry, fallbackBackPath, isDetailPage, NAVIGATION_BLOCKS, openBlocksAfterNavigation, pageTitle, readMenuOpen, writeMenuOpen } from './navigation.ts'
 
 describe('navigation', () => {
   it('groups every page in one block per domain', () => {
@@ -20,22 +20,46 @@ describe('navigation', () => {
     assert.equal(currentEntry('/sports/routine/42')?.item, null)
     assert.equal(currentEntry('/sports/routine/42')?.block.id, 'sport')
     assert.equal(currentEntry('/elsewhere'), null)
-    assert.equal(pageTitle('/sports/exercises'), 'Sport · Exercices')
+    assert.equal(pageTitle('/sports/exercises'), 'Exercices')
     assert.equal(pageTitle('/sports/routine/42'), 'Sport')
     assert.equal(pageTitle('/settings'), 'Paramètres')
-    assert.equal(pageTitle('/tasks/all'), 'Tâches · Toutes les tâches')
+    assert.equal(pageTitle('/tasks/all'), 'Toutes les tâches')
     assert.equal(currentEntry('/tasks/todo/7')?.block.id, 'tasks')
     assert.equal(pageTitle('/tasks/todo/7'), 'Tâches')
     assert.equal(currentEntry('/tasks/routine/3')?.block.id, 'tasks')
-    assert.equal(pageTitle('/health/supplements'), 'Santé · Compléments')
+    assert.equal(pageTitle('/health/supplements'), 'Compléments')
     assert.equal(currentEntry('/health/supplement/4')?.block.id, 'health')
     assert.equal(currentEntry('/budget/line/4')?.block.id, 'budget')
-    assert.equal(pageTitle('/budget/rules'), 'Budget · Règles')
+    assert.equal(pageTitle('/budget/rules'), 'Règles')
     assert.equal(currentEntry('/sports/session/9')?.block.id, 'sport')
-    assert.equal(pageTitle('/today'), 'Accueil · Aujourd’hui')
-    assert.equal(pageTitle('/reading'), 'Loisirs · Lecture')
+    assert.equal(pageTitle('/today'), 'Aujourd’hui')
+    assert.equal(pageTitle('/reading'), 'Lecture')
     assert.equal(currentEntry('/reading/book/3')?.block.id, 'leisure')
-    assert.equal(pageTitle('/reading/series/2'), 'Loisirs · Séries')
+    assert.equal(pageTitle('/reading/series/2'), 'Séries de livres')
+  })
+
+  it('names the module homes by their module, not « Aujourd’hui »', () => {
+    assert.equal(pageTitle('/sports'), 'Sport')
+    assert.equal(pageTitle('/tasks?tag=maison'), 'Tâches')
+    assert.equal(pageTitle('/health'), 'Santé')
+    assert.equal(pageTitle('/budget'), 'Budget')
+  })
+
+  it('offers a way back on detail pages only', () => {
+    assert.equal(isDetailPage('/tasks/todo/7'), true)
+    assert.equal(isDetailPage('/sports/routine/42/run'), true)
+    assert.equal(isDetailPage('/tasks/all'), false)
+    assert.equal(isDetailPage('/today'), false)
+    assert.equal(isDetailPage('/settings'), false)
+    assert.equal(fallbackBackPath('/tasks/todo/7'), '/tasks')
+    assert.equal(fallbackBackPath('/reading/book/3'), '/reading')
+    assert.equal(fallbackBackPath('/elsewhere'), '/today')
+  })
+
+  it('keeps only the domain of the current page open after a navigation', () => {
+    assert.deepEqual([...openBlocksAfterNavigation('/sports/routines')], ['sport'])
+    assert.deepEqual([...openBlocksAfterNavigation('/recipes/3')], ['food'])
+    assert.deepEqual([...openBlocksAfterNavigation('/settings')], [])
   })
 
   it('remembers the menu state and survives an unavailable storage', () => {

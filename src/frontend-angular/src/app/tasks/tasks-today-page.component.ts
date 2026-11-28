@@ -17,6 +17,7 @@ import type { TaskRoutineDto, TaskTodayDto, TodoDto } from './tasks.models'
 import { TodoActionsService } from './todo-actions.service'
 import { TodoCardComponent } from './todo-card.component'
 import { TodoDialogComponent, type TodoDialogData, type TodoDialogResult } from './todo-dialog.component'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /**
  * Home of the Tasks module (ADR 0017): late, today, then the next seven days, todos and routines
@@ -25,7 +26,7 @@ import { TodoDialogComponent, type TodoDialogData, type TodoDialogResult } from 
 @Component({
   selector: 'app-tasks-today-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, NgTemplateOutlet, RoutineCardComponent, TodoCardComponent],
+  imports: [SkeletonComponent, MatButtonModule, MatIconModule, NgTemplateOutlet, RoutineCardComponent, TodoCardComponent],
   template: `
     <div class="lo-page">
       <header class="lo-page-head" [class.is-phone]="handset()">
@@ -47,6 +48,7 @@ import { TodoDialogComponent, type TodoDialogData, type TodoDialogResult } from 
         </div>
       }
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
+      @else if (!page()) { <app-skeleton [rows]="5" /> }
       @if (page(); as p) {
         @for (section of view().sections; track section.id) {
           <section class="lo-section" [attr.aria-labelledby]="'s-' + section.id">

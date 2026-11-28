@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  challengeItems, daySummary, doneItems, openSections, sportRoutineItems, supplementItems, taskItems,
+  challengeItems, daySummary, doneItems, openSections, sportRoutineItems, supplementItems, taskItems, withMarks,
   type TodayChallenge, type TodaySportRoutine, type TodaySupplement, type TodayTodo, type TodayTaskRoutine,
 } from './today-items.ts'
 
@@ -101,5 +101,17 @@ describe('today: supplements and sections', () => {
     assert.deepEqual(openSections(items).map(s => s.key), ['late', 'supplements'])
     assert.deepEqual(daySummary(items), { open: 2, done: 1, percent: 33, text: '2 à faire, 1 fait' })
     assert.equal(daySummary([]).text, 'rien de prévu')
+  })
+
+  it('shows a tick at once, before the server answers', () => {
+    const items = supplementItems([
+      { id: 'a', name: 'D3', dose: 1, unit: 'gelule', moment: 'matin', isStopped: false, status: { active: true }, takenToday: false },
+      { id: 'b', name: 'Oméga 3', dose: 1, unit: 'gelule', moment: 'matin', isStopped: false, status: { active: true }, takenToday: true },
+    ])
+    assert.equal(withMarks(items, new Map()), items)
+    const marked = withMarks(items, new Map([['supplement-a', true], ['supplement-b', false]]))
+    assert.deepEqual(marked.map(item => item.done), [true, false])
+    assert.deepEqual(doneItems(marked).map(item => item.id), ['a'])
+    assert.equal(items[0]!.done, false)
   })
 })

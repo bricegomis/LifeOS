@@ -24,7 +24,7 @@ import { RuleDialogComponent, type RuleDialogData, type RuleDialogResult } from 
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (detail(); as d) {
         <header class="head">
-          <a mat-icon-button routerLink="/budget/lines" aria-label="Retour aux lignes prévues"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/budget/lines" aria-label="Retour aux lignes prévues"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">Ligne</h1>
           <button mat-flat-button type="button" class="lo-desktop-only" (click)="edit()"><mat-icon svgIcon="edit" />Modifier</button>
           <button mat-icon-button type="button" class="lo-phone-only" (click)="edit()" aria-label="Modifier la ligne" title="Modifier la ligne"><mat-icon svgIcon="edit" /></button>

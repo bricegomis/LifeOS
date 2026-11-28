@@ -1,9 +1,13 @@
 <div class="shell">
   <mat-toolbar class="top-bar">
-    <button mat-icon-button type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpened()"
-      aria-controls="main-menu" [attr.aria-label]="menuOpened() ? 'Fermer le menu' : 'Ouvrir le menu'">
-      <mat-icon svgIcon="menu" />
-    </button>
+    @if (detail()) {
+      <button mat-icon-button type="button" (click)="back()" aria-label="Retour"><mat-icon svgIcon="arrow_back" /></button>
+    } @else {
+      <button mat-icon-button type="button" (click)="toggleMenu()" [attr.aria-expanded]="menuOpened()"
+        aria-controls="main-menu" [attr.aria-label]="menuOpened() ? 'Fermer le menu' : 'Ouvrir le menu'">
+        <mat-icon svgIcon="menu" />
+      </button>
+    }
     <span class="top-title">{{ handset() ? title() : 'LifeOS' }}</span>
   </mat-toolbar>
 

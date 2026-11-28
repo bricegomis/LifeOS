@@ -17,12 +17,13 @@ import {
 } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto, WeekReportDto } from './sports.models'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** Sport home (validated mockups): today's routines and challenges first, then the current week. */
 @Component({
   selector: 'app-sport-today-page',
   standalone: true,
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, RouterLink, RoutinesTodayComponent],
+  imports: [SkeletonComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, RouterLink, RoutinesTodayComponent],
   template: `
     <div class="lo-page">
       <header class="lo-page-head">
@@ -36,13 +37,13 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
           <button mat-icon-button type="button" aria-label="Fermer le message" (click)="banner.set('')"><mat-icon svgIcon="close" /></button></div>
       }
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p class="lo-status" role="status">Chargement…</p> } @else {
+      @if (loading()) { <app-skeleton /> } @else {
         <app-routines-today />
         <section class="sport-section" aria-labelledby="sport-challenges">
           <div class="sport-section-head"><h2 id="sport-challenges">Défis du jour</h2>
             <a mat-button routerLink="/sports/challenges"><mat-icon svgIcon="tune" />Gérer</a></div>
           @if (!challenges().length) {
-            <p class="lo-empty">Aucun défi. Ajoutez par exemple « 100 pompes par jour » sur la page Défis.</p>
+            <p class="lo-empty">Aucun défi. Ajoute par exemple « 100 pompes par jour » sur la page Défis.</p>
           }
           <div class="challenge-grid">
             @for (report of challenges(); track report.challenge.id) {
@@ -106,7 +107,7 @@ import type { ChallengeReportDto, SportOption, SportSessionDto, SportTemplateDto
                   }
                 </div>
               } @else {
-                <p class="lo-empty">Aucun objectif. Fixez par exemple « 2 footings » ou « 4 séances » par semaine sur la page Objectifs.</p>
+                <p class="lo-empty">Aucun objectif. Fixe par exemple « 2 footings » ou « 4 séances » par semaine sur la page Objectifs.</p>
               }
             </section>
             <section class="sport-section" aria-labelledby="sport-recent">

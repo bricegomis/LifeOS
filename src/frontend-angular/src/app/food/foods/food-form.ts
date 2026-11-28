@@ -69,7 +69,7 @@ export function parseOptionalNumber(text: string): number | null {
 export function buildFoodRequest(values: FoodFormValues): FormResult<FoodRequest> {
   const name = values.name.trim()
   if (!name || name.length > 200) return { ok: false, error: 'Nom requis (200 caractères maximum).' }
-  if (!values.family || !(values.family in FAMILY_LABELS)) return { ok: false, error: 'Choisissez la famille de l’aliment.' }
+  if (!values.family || !(values.family in FAMILY_LABELS)) return { ok: false, error: 'Choisis la famille de l’aliment.' }
   const tags = values.tags.map(tag => tag.trim()).filter(Boolean)
   if (tags.length > MAX_TAGS) return { ok: false, error: `${MAX_TAGS} étiquettes au plus.` }
   if (tags.some(tag => tag.length > MAX_TAG_LENGTH)) return { ok: false, error: `Une étiquette fait au plus ${MAX_TAG_LENGTH} caractères.` }

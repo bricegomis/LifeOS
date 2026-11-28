@@ -2,7 +2,7 @@
   <a mat-button class="lo-back" [routerLink]="back().link"><mat-icon svgIcon="arrow_back" />{{ back().label }}</a>
 
   @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
-  @if (loading()) { <p class="lo-status" role="status">Chargement de l’aliment…</p> }
+  @if (loading()) { <app-skeleton variant="page" /> }
 
   @if (food(); as food) {
     <div class="food-hero">

@@ -39,7 +39,7 @@ describe('routine form', () => {
       title: 'Poubelles', notes: null, durationMinutes: null, priority: 'normal', tags: [], startOn: today,
       recurrence: { kind: 'fixed', unit: 'week', every: 1, days: [1, 4], monthDay: null, delayDays: null },
     })
-    assert.equal(routineRequest({ ...draft, title: 'A', days: [] }), 'Choisissez au moins un jour de la semaine.')
+    assert.equal(routineRequest({ ...draft, title: 'A', days: [] }), 'Choisis au moins un jour de la semaine.')
     assert.equal(routineRequest({ ...draft, title: 'A', unit: 'month', monthDay: 32 }), 'Jour du mois : de 1 à 31.')
     assert.deepEqual((routineRequest({ ...draft, title: 'A', kind: 'delay', delayDays: '10' }) as { recurrence: unknown }).recurrence,
       { kind: 'delay', unit: null, every: null, days: null, monthDay: null, delayDays: 10 })

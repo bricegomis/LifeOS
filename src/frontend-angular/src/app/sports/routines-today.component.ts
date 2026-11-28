@@ -23,7 +23,7 @@ import type { RoutineReportDto } from './sports.models'
         <div class="lo-section-head"><h2 id="sport-routines">Routines du jour</h2>
           <a mat-button routerLink="/sports/routines"><mat-icon svgIcon="tune" />Gérer</a></div>
         @if (!routines().length) {
-          <p class="lo-muted">Aucune routine. Créez vos exercices puis une routine quotidienne, sur les pages Exercices et Routines.</p>
+          <p class="lo-muted">Aucune routine. Crée tes exercices puis une routine quotidienne, sur les pages Exercices et Routines.</p>
         }
         <div class="cards">
           @for (report of planned(); track report.routine.id) {

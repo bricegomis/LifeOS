@@ -46,8 +46,8 @@ export class NewFoodDialogComponent {
   async create(): Promise<void> {
     const name = this.name.trim()
     const family = this.family
-    if (!name) { this.error.set('Indiquez le nom de l’aliment.'); return }
-    if (!family) { this.error.set('Choisissez la famille de l’aliment.'); return }
+    if (!name) { this.error.set('Indique le nom de l’aliment.'); return }
+    if (!family) { this.error.set('Choisis la famille de l’aliment.'); return }
     this.busy.set(true)
     this.error.set('')
     try {

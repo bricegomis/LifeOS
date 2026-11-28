@@ -43,7 +43,7 @@ export class LoginPageComponent {
     try {
       await this.auth.signInWithGoogle(this.redirectPath)
     } catch (error) {
-      this.message.set(error instanceof Error ? error.message : 'Impossible de lancer la connexion. Réessayez.')
+      this.message.set(error instanceof Error ? error.message : 'Impossible de lancer la connexion. Réessaie.')
       this.googleSubmitting.set(false)
     }
   }

@@ -16,6 +16,7 @@ import { PriceFormComponent } from '../products/price-form.component'
 import { ProductEditorComponent, type ProductEditorData } from '../products/product-editor.component'
 import { pendingCount, receiptSubtitle, todayInputValue, uploadDay, visibleReceipts, type ReceiptFilter } from './receipt-view'
 import { ConfirmService } from '@/app/shared/ui/confirm'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /**
  * A receipt is only a stored photo (ADR 0010): take or pick a picture, optionally say where
@@ -25,7 +26,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
 @Component({
   selector: 'app-tickets-page',
   standalone: true,
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, PriceFormComponent],
+  imports: [SkeletonComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule, PriceFormComponent],
   template: `
     <div class="lo-page is-wide">
       <header class="lo-page-head">
@@ -76,7 +77,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
           @if (filter() === 'all') { <mat-icon svgIcon="check" /> }Tous ({{ receipts().length }})</button>
       </div>
 
-      @if (loading()) { <p class="lo-status" role="status">Chargement…</p> }
+      @if (loading()) { <app-skeleton /> }
       @if (!loading() && !visible().length) {
         <p class="lo-empty">{{ receipts().length ? 'Aucun ticket à traiter.' : 'Aucun ticket enregistré.' }}</p>
       }

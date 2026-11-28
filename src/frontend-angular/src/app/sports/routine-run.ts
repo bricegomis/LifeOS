@@ -11,7 +11,7 @@ import type { ExerciseDto, RoutineLineDto, RoutineSessionDto } from './sports.mo
 export type Side = 'left' | 'right'
 export interface RunStep { line: RoutineLineDto, round: number, side: Side | null }
 
-/** Seconds of « Préparez-vous » before a hold starts. */
+/** Seconds of « Prépare-toi » before a hold starts. */
 export const LEAD_SECONDS = 5
 /** Beeps on the last seconds of a countdown. */
 export const WARNING_SECONDS = 3

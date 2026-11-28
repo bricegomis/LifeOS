@@ -51,7 +51,7 @@ export interface BookDialogResult { book: BookDto | null, message: string }
               </label>
             </div>
             <div class="photo-side">
-              <span class="lo-help">Facultative. Claude peut aussi la trouver pour vous.</span>
+              <span class="lo-help">Facultative. Claude peut aussi la trouver pour toi.</span>
               @if (hasCover()) {
                 <button mat-button type="button" class="photo-delete" (click)="dropCover()"><mat-icon svgIcon="delete" />Retirer la couverture</button>
               }

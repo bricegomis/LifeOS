@@ -8,9 +8,10 @@ import { firstValueFrom, type Observable } from 'rxjs'
 import { apiErrorMessage, LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { ChallengeSetDialogComponent, type ChallengeSetData } from './challenge-set-dialog.component'
 import {
-  challengeAmount, challengeItems, daySummary, doneItems, openSections, sportRoutineItems, supplementItems, taskItems,
+  challengeAmount, challengeItems, daySummary, doneItems, openSections, sportRoutineItems, supplementItems, taskItems, withMarks,
   type TodayChallenge, type TodayItem, type TodaySportRoutine, type TodaySupplement, type TodayTasks,
 } from './today-items'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 interface RoutinePasses { passes: { id: string, kind: 'done' | 'skipped', day: string }[] }
 const enc = encodeURIComponent
@@ -23,7 +24,7 @@ const enc = encodeURIComponent
 @Component({
   selector: 'app-today-agenda',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="agenda">
       <div class="day">
@@ -31,6 +32,7 @@ const enc = encodeURIComponent
         <div class="bar" role="progressbar" aria-label="Avancement de la journée" aria-valuemin="0"
           [attr.aria-valuemax]="items().length" [attr.aria-valuenow]="summary().done"><span [style.width.%]="summary().percent"></span></div>
       </div>
+      @if (!loaded()) { <app-skeleton [rows]="5" /> }
       @if (loaded() && items().length && !summary().open) {
         <p class="lo-notice all-done"><mat-icon svgIcon="task_alt" />Tout est fait pour aujourd’hui.</p>
       }
@@ -47,7 +49,7 @@ const enc = encodeURIComponent
                   @if (item.kind === 'sport-routine' || item.kind === 'challenge') {
                     <span class="lead"><span class="lo-lead-icon"><mat-icon [svgIcon]="item.kind === 'challenge' ? 'local_fire_department' : 'self_improvement'" /></span></span>
                   } @else {
-                    <button mat-icon-button type="button" class="check" [disabled]="busy()" (click)="check(item)"
+                    <button mat-icon-button type="button" class="check" [disabled]="pending().has(item.key)" (click)="check(item)"
                       [attr.aria-label]="'Marquer « ' + item.title + ' » comme fait'" title="Marquer comme fait"><mat-icon svgIcon="radio_button_unchecked" /></button>
                   }
                   <a class="text" [routerLink]="item.link">
@@ -60,7 +62,7 @@ const enc = encodeURIComponent
                       <mat-icon svgIcon="play_arrow" />{{ item.inProgress ? 'Continuer' : 'Démarrer' }}</a>
                   }
                   @if (item.kind === 'challenge') {
-                    <button mat-flat-button type="button" class="tonal" [disabled]="busy()" (click)="addSet(item)"
+                    <button mat-flat-button type="button" class="tonal" [disabled]="pending().has(item.key)" (click)="addSet(item)"
                       [attr.aria-label]="'Ajouter une série au défi « ' + item.title + ' »'"><mat-icon svgIcon="add" />Série</button>
                   }
                 </div>
@@ -80,7 +82,7 @@ const enc = encodeURIComponent
                   @if (item.kind === 'sport-routine') {
                     <span class="lead"><span class="lo-lead-icon"><mat-icon svgIcon="check" /></span></span>
                   } @else {
-                    <button mat-icon-button type="button" class="check is-done" [disabled]="busy()" (click)="uncheck(item)"
+                    <button mat-icon-button type="button" class="check is-done" [disabled]="pending().has(item.key)" (click)="uncheck(item)"
                       [attr.aria-label]="uncheckLabel(item)" [attr.title]="uncheckLabel(item)"><mat-icon svgIcon="check_circle" /></button>
                   }
                   <a class="text" [routerLink]="item.link"><span class="lo-row-title">{{ item.title }}</span><span class="lo-row-sub">{{ item.sub }}</span></a>
@@ -129,15 +131,18 @@ export class TodayAgendaComponent implements OnInit {
   readonly challenges = signal<TodayChallenge[]>([])
   readonly supplements = signal<TodaySupplement[]>([])
   readonly loaded = signal(false)
-  readonly busy = signal(false)
+  /** Items waiting for the server: only their own button is disabled. */
+  readonly pending = signal(new Set<string>())
+  /** Ticks shown before the server answers (ADR 0021 « Cocher depuis l'accueil »). */
+  private readonly marks = signal(new Map<string, boolean>())
   readonly doneOpen = signal(false)
 
-  readonly items = computed<TodayItem[]>(() => [
+  readonly items = computed<TodayItem[]>(() => withMarks([
     ...(this.tasks() ? taskItems(this.tasks()!) : []),
     ...sportRoutineItems(this.sportRoutines()),
     ...challengeItems(this.challenges()),
     ...supplementItems(this.supplements()),
-  ])
+  ], this.marks()))
   readonly sections = computed(() => openSections(this.items()))
   readonly done = computed(() => doneItems(this.items()))
   readonly summary = computed(() => daySummary(this.items()))
@@ -150,23 +155,23 @@ export class TodayAgendaComponent implements OnInit {
   }
 
   async check(item: TodayItem): Promise<void> {
-    await this.act(async () => {
+    await this.tick(item, true, async () => {
       if (item.kind === 'todo') {
         await this.call(this.api.post(`/tasks/todos/${enc(item.id)}/complete`, { doneOn: null }))
-        this.done$(item, () => this.api.post(`/tasks/todos/${enc(item.id)}/reopen`, {}))
-      } else if (item.kind === 'task-routine') {
+        return () => this.api.post(`/tasks/todos/${enc(item.id)}/reopen`, {})
+      }
+      if (item.kind === 'task-routine') {
         const detail = await this.call(this.api.post<RoutinePasses>(`/tasks/routines/${enc(item.id)}/done`, { day: null, note: null }))
         const pass = detail.passes.find(p => p.kind === 'done')
-        this.done$(item, pass ? () => this.api.delete(`/tasks/routines/${enc(item.id)}/passes/${enc(pass.id)}`) : null)
-      } else if (item.kind === 'supplement') {
-        await this.call(this.api.post(`/health/supplements/${enc(item.id)}/intakes`, { day: null, taken: true }))
-        this.done$(item, () => this.api.post(`/health/supplements/${enc(item.id)}/intakes`, { day: null, taken: false }))
+        return pass ? () => this.api.delete(`/tasks/routines/${enc(item.id)}/passes/${enc(pass.id)}`) : null
       }
+      await this.call(this.api.post(`/health/supplements/${enc(item.id)}/intakes`, { day: null, taken: true }))
+      return () => this.api.post(`/health/supplements/${enc(item.id)}/intakes`, { day: null, taken: false })
     })
   }
 
   async uncheck(item: TodayItem): Promise<void> {
-    await this.act(async () => {
+    const ok = await this.tick(item, item.kind === 'challenge' ? null : false, async () => {
       if (item.kind === 'todo') await this.call(this.api.post(`/tasks/todos/${enc(item.id)}/reopen`, {}))
       else if (item.kind === 'supplement') await this.call(this.api.post(`/health/supplements/${enc(item.id)}/intakes`, { day: null, taken: false }))
       else if (item.kind === 'task-routine') {
@@ -178,8 +183,9 @@ export class TodayAgendaComponent implements OnInit {
         const entry = this.lastEntry(this.challenges().find(c => c.challenge.id === item.id))
         if (entry) await this.call(this.api.delete(`/sport/challenges/${enc(item.id)}/entries/${enc(entry.id)}`))
       }
-      this.snack.open(item.kind === 'challenge' ? `Dernière série de « ${item.title} » retirée` : `« ${item.title} » remis à faire`, undefined, { duration: 4000 })
-    })
+      return null
+    }, false)
+    if (ok) this.snack.open(item.kind === 'challenge' ? `Dernière série de « ${item.title} » retirée` : `« ${item.title} » remis à faire`, undefined, { duration: 4000 })
   }
 
   async addSet(item: TodayItem): Promise<void> {
@@ -189,39 +195,73 @@ export class TodayAgendaComponent implements OnInit {
     })
     const quantity = await firstValueFrom(ref.afterClosed())
     if (!quantity) return
-    await this.act(async () => {
+    this.setPending(item.key, true)
+    try {
+      // The answer is the challenge's fresh report: it replaces the line without reloading the page.
       const report = await this.call(this.api.post<TodayChallenge>(`/sport/challenges/${enc(item.id)}/entries`, { quantity }))
+      this.challenges.update(list => list.map(c => c.challenge.id === item.id ? { ...c, ...report } : c))
       const entry = this.lastEntry(report)
       const message = report.reachedToday && !item.done
         ? `Défi « ${item.title} » atteint pour aujourd’hui`
         : `+${challengeAmount(data.unit, quantity)} au défi « ${item.title} »`
-      this.offerUndo(message, entry ? () => this.api.delete(`/sport/challenges/${enc(item.id)}/entries/${enc(entry.id)}`) : null)
-    })
+      this.offerUndo(item, message, entry ? () => this.api.delete(`/sport/challenges/${enc(item.id)}/entries/${enc(entry.id)}`) : null, null)
+    } catch (error) {
+      this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 })
+    } finally {
+      this.setPending(item.key, false)
+    }
+  }
+
+  /**
+   * Ticks an item at once (`mark`, or no visible change for a challenge), calls the module, then
+   * reloads only that module. A failed request drops the mark and says why.
+   */
+  private async tick(item: TodayItem, mark: boolean | null, work: () => Promise<(() => Observable<unknown>) | null>, undoable = true): Promise<boolean> {
+    if (this.pending().has(item.key)) return false
+    this.setPending(item.key, true)
+    if (mark !== null) this.setMark(item.key, mark)
+    try {
+      const undo = await work()
+      await this.reload(item.kind)
+      if (undoable) this.offerUndo(item, `« ${item.title} » fait`, undo, mark === null ? null : !mark)
+      return true
+    } catch (error) {
+      this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 })
+      return false
+    } finally {
+      this.setMark(item.key, null)
+      this.setPending(item.key, false)
+    }
   }
 
   private lastEntry(report: TodayChallenge | undefined): TodayChallenge['todayEntries'][number] | null {
     return report?.todayEntries.reduce<TodayChallenge['todayEntries'][number] | null>((last, entry) => !last || entry.loggedAt >= last.loggedAt ? entry : last, null) ?? null
   }
 
-  private done$(item: TodayItem, undo: (() => Observable<unknown>) | null): void {
-    this.offerUndo(`« ${item.title} » fait`, undo)
-  }
-
-  private offerUndo(message: string, undo: (() => Observable<unknown>) | null): void {
+  private offerUndo(item: TodayItem, message: string, undo: (() => Observable<unknown>) | null, undoMark: boolean | null): void {
     const ref = this.snack.open(message, undo ? 'Annuler' : undefined, { duration: 6000 })
     if (!undo) return
-    ref.onAction().subscribe(() => { void this.act(async () => { await this.call(undo()) }) })
+    ref.onAction().subscribe(() => {
+      void this.tick(item, undoMark, async () => { await this.call(undo()); return null }, false)
+    })
   }
 
-  private async act(work: () => Promise<void>): Promise<void> {
-    this.busy.set(true)
-    try { await work() } catch (error) { this.snack.open(apiErrorMessage(error), undefined, { duration: 6000 }) } finally {
-      await this.load()
-      this.busy.set(false)
-    }
+  private setPending(key: string, on: boolean): void {
+    this.pending.update(set => { const next = new Set(set); if (on) next.add(key); else next.delete(key); return next })
+  }
+
+  private setMark(key: string, done: boolean | null): void {
+    this.marks.update(map => { const next = new Map(map); if (done === null) next.delete(key); else next.set(key, done); return next })
   }
 
   private call<T>(request: Observable<T>): Promise<T> { return firstValueFrom(request) }
+
+  /** Reloads the module of a ticked item only; errors go to the caller. */
+  private async reload(kind: TodayItem['kind']): Promise<void> {
+    if (kind === 'todo' || kind === 'task-routine') this.tasks.set(await this.call(this.api.get<TodayTasks>('/tasks/today')))
+    else if (kind === 'supplement') this.supplements.set((await this.call(this.api.get<{ supplements: TodaySupplement[] }>('/health/supplements', { includeStopped: false }))).supplements)
+    else if (kind === 'challenge') this.challenges.set(await this.call(this.api.get<TodayChallenge[]>('/sport/challenges', { calendarWeeks: 1, includeStopped: false })))
+  }
 
   private async load(): Promise<void> {
     const errors: string[] = []

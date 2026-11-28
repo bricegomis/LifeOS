@@ -30,7 +30,7 @@ import type { TaskProjectDto } from './tasks.models'
             @for (project of shown(); track project.id) { <app-project-card [project]="project" [today]="today()" [path]="query().trim() ? parentPath(project) : ''" /> }
           </div>
         } @else {
-          <p class="lo-empty">{{ projects().length ? 'Aucun résultat.' : 'Aucun projet. Ajoutez par exemple « Chambre de Léa ».' }}</p>
+          <p class="lo-empty">{{ projects().length ? 'Aucun résultat.' : 'Aucun projet. Ajoute par exemple « Chambre de Léa ».' }}</p>
         }
       }
     </app-list-page>

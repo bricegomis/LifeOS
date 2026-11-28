@@ -153,7 +153,7 @@ export class AuthService {
     writeStorage(PENDING_KEY, null)
     if (callback.kind === 'none') throw new Error('Paramètres de retour de connexion manquants.')
     if (!pending || callback.state !== pending.state) {
-      throw new Error('Retour de connexion inattendu. Relancez la connexion depuis cet appareil.')
+      throw new Error('Retour de connexion inattendu. Relance la connexion depuis cet appareil.')
     }
     if (callback.kind === 'error') throw new Error(callbackErrorMessage(callback.error, callback.description))
 
@@ -190,7 +190,7 @@ export class AuthService {
         // A network failure keeps the session for a later retry; a refused token ends it.
         if (error instanceof TokenError && error.code === 'network') return null
         this.store(null)
-        this.error.set('Session expirée. Reconnectez-vous.')
+        this.error.set('Session expirée. Reconnecte-toi.')
         return null
       }
     })().finally(() => { this.refreshPromise = null })

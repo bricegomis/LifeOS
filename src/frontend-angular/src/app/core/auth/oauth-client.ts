@@ -101,7 +101,7 @@ export function callbackErrorMessage(error: string, description: string | null):
   if (error === 'access_denied') {
     return description || 'La connexion a été annulée ou refusée.'
   }
-  return description ? `Connexion impossible : ${description}` : 'Connexion impossible. Réessayez.'
+  return description ? `Connexion impossible : ${description}` : 'Connexion impossible. Réessaie.'
 }
 
 export function decodeJwtPayload(token: string): Record<string, unknown> {
@@ -185,7 +185,7 @@ export async function postForm(
       body: new URLSearchParams(params).toString(),
     })
   } catch {
-    throw new TokenError('network', 'LifeOS API injoignable. Vérifiez la connexion.')
+    throw new TokenError('network', 'LifeOS API injoignable. Vérifie la connexion.')
   }
   const text = await response.text()
   let body: Record<string, unknown> = {}

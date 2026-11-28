@@ -11,6 +11,7 @@ import { SessionEditorComponent, type SessionEditorData } from './session-editor
 import { dayMonth, decimal, duration, integer, sessionCalories, sessionDetails, sessionTitle, shortDay } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { SportOption, SportSessionDto, SportTemplateDto, WeekReportDto } from './sports.models'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 const STEP = 6
 
@@ -18,7 +19,7 @@ const STEP = 6
 @Component({
   selector: 'app-sport-history-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page">
       <header class="lo-page-head">
@@ -34,7 +35,7 @@ const STEP = 6
         }
       </div>
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
-      @if (loading() && !weeks().length) { <p class="lo-status" role="status">Chargement…</p> }
+      @if (loading() && !weeks().length) { <app-skeleton /> }
       @for (week of newestFirst(); track week.monday; let first = $first) {
         <section class="sport-section" [attr.aria-label]="weekTitle(week, first)">
           <div class="sport-section-head">

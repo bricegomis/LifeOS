@@ -15,19 +15,20 @@ import { dayLabel, durationLabel, priorityLabel } from './task-format'
 import { TasksApiService } from './tasks-api.service'
 import type { RoutinePassDto, TaskRoutineDetailDto } from './tasks.models'
 import { TodoActionsService } from './todo-actions.service'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** One household routine (ADR 0017): next due day, streak, Fait / Sauter / Pause, details and history. */
 @Component({
   selector: 'app-routine-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink, TaskImageComponent],
+  imports: [SkeletonComponent, MatButtonModule, MatIconModule, RouterLink, TaskImageComponent],
   template: `
     <div class="lo-page routine-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (detail(); as d) {
         @let r = d.routine;
         <header class="head">
-          <a mat-icon-button routerLink="/tasks/routines" aria-label="Retour aux routines"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/tasks/routines" aria-label="Retour aux routines"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">Routine</h1>
           @if (r.state !== 'stopped') {
             <button mat-flat-button type="button" class="lo-desktop-only" (click)="edit()"><mat-icon svgIcon="edit" />Modifier</button>
@@ -61,7 +62,7 @@ import { TodoActionsService } from './todo-actions.service'
           <div class="actions"><button mat-flat-button type="button" [disabled]="busy()" (click)="resume()"><mat-icon svgIcon="play_arrow" />Reprendre</button></div>
         }
         @if (r.isLate && r.nextDueOn) {
-          <p class="lo-notice is-off" role="status">Échéance {{ day(r.nextDueOn).toLocaleLowerCase('fr') }} pas encore faite. Les échéances suivantes ne s’empilent pas : faites-la ou sautez-la.</p>
+          <p class="lo-notice is-off" role="status">Échéance {{ day(r.nextDueOn).toLocaleLowerCase('fr') }} pas encore faite. Les échéances suivantes ne s’empilent pas : fais-la ou saute-la.</p>
         }
 
         <div class="lo-stats">
@@ -106,7 +107,7 @@ import { TodoActionsService } from './todo-actions.service'
           <div><button mat-button type="button" [disabled]="busy()" (click)="pause()"><mat-icon svgIcon="pause" />Mettre en pause</button></div>
         }
       } @else if (!error()) {
-        <p class="lo-muted" role="status">Chargement…</p>
+        <app-skeleton variant="page" />
       }
     </div>
   `,

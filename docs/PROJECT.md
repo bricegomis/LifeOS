@@ -54,10 +54,11 @@ lecture) ; reste l'usage réel. Étape 9 (Films et séries) prévue, pas commenc
 | Accueil | Page Aujourd'hui, ouverte au lancement ([ADR 0021](architecture/decisions/0021-today-home.md)) : d'abord ce qu'il reste à cocher (en retard, tâches et routines du foyer du jour, routines sportives à démarrer ou continuer, défis avec « + Série », compléments par moment), le reste replié dans « Fait aujourd'hui » d'où l'on peut décocher ; puis la nuit, l'énergie, les séances du jour, l'avancement des objectifs de la semaine, les pas, et un bandeau quand Garmin attend un code |
 | Import Garmin | Service `garmin-sync` (conteneur à part, bibliothèque non officielle python-garminconnect à version figée) qui lit Garmin Connect à 7 h, 13 h, 19 h et 23 h ou à la demande et écrit par les endpoints d'import avec un jeton d'import ; l'API n'appelle jamais Garmin ; historique complet au premier lancement (sommeil remonté par tranches de 60 jours à chaque synchro) |
 
-Navigation : un menu à gauche avec Accueil puis un groupe par domaine (Alimentation, Sport, Tâches, Santé, Budget) qui s'ouvre sur
-ses pages, Paramètres et compte en bas. Une barre du haut fixe porte le bouton menu : sur
-ordinateur le menu reste affiché (repliable par ce bouton), sur téléphone il s'ouvre en panneau
-et la barre rappelle la page affichée. Seul le contenu de la page défile. Plus d'onglets en bas. Tous les écrans (Alimentation, Sport, Tâches, Santé, Paramètres, connexion) utilisent
+Navigation : un menu à gauche avec Accueil puis un groupe par domaine (Alimentation, Sport, Tâches, Santé, Budget, Loisirs) qui s'ouvre sur
+ses pages, Paramètres et compte en bas ; seul le groupe de la page courante est ouvert. Une barre du haut fixe porte le bouton menu : sur
+ordinateur le menu reste affiché (repliable par ce bouton), sur téléphone il s'ouvre en panneau,
+la barre donne le titre de la page et, sur une page détail, une flèche de retour. Seul le contenu de la page défile.
+Une coche s'affiche aussitôt, les chargements montrent des emplacements gris, et l'interface tutoie. Plus d'onglets en bas. Tous les écrans (Alimentation, Sport, Tâches, Santé, Paramètres, connexion) utilisent
 Angular Material 3 avec le thème LifeOS et les icônes Material Symbols
 ([ADR 0016](architecture/decisions/0016-angular-material-ui-kit.md)) : chaque liste commence
 par une zone de recherche et de filtres, chaque création ou modification s'ouvre dans une

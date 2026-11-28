@@ -113,9 +113,9 @@ describe('routine formatting', () => {
       name: 'Tendons', days: [2, 4, 6], jokersPerWeek: 1,
       lines: [{ exerciseId: 'e1', sets: 2, target: 45, loadKg: 10 }, { exerciseId: 'e2', sets: 1, target: 12, loadKg: 0 }],
     })
-    assert.equal(routineRequest(emptyRoutineDraft(), []), 'Donnez un nom à la routine.')
-    assert.equal(routineRequest({ ...draft, days: Array<boolean>(7).fill(false) }, [wallSit, bridge]), 'Choisissez au moins un jour.')
-    assert.equal(routineRequest({ ...draft, lines: [] }, [wallSit, bridge]), 'Ajoutez au moins un exercice.')
+    assert.equal(routineRequest(emptyRoutineDraft(), []), 'Donne un nom à la routine.')
+    assert.equal(routineRequest({ ...draft, days: Array<boolean>(7).fill(false) }, [wallSit, bridge]), 'Choisis au moins un jour.')
+    assert.equal(routineRequest({ ...draft, lines: [] }, [wallSit, bridge]), 'Ajoute au moins un exercice.')
     assert.equal(routineRequest({ ...draft, lines: [{ exerciseId: 'e1', sets: 2, target: 45, loadKg: 10.2 }] }, [wallSit]), 'Chaise contre le mur : charge de 0 à 500 kg, par pas de 0,5.')
     assert.equal(routineRequest({ ...draft, lines: [{ exerciseId: 'e2', sets: 0, target: 12, loadKg: null }] }, [bridge]), 'Pont fessier : 1 à 20 séries.')
   })
@@ -136,7 +136,7 @@ describe('routine formatting', () => {
     assert.deepEqual(exerciseRequest({ name: ' Gainage ', instructions: ' ', measure: 'hold', defaultLoadKg: 0, perSide: true }),
       { name: 'Gainage', instructions: null, measure: 'hold', defaultLoadKg: null, perSide: true })
     assert.equal(exerciseRequest({ name: 'Gainage', instructions: null, measure: 'hold', defaultLoadKg: 501, perSide: false }),
-      'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.')
+      'Charge : 0 à 500 kg, par pas de 0,5 ; laisse vide au poids du corps.')
   })
 
   it('notes an exercise done alone, the load starting at its usual load and empty meaning bodyweight', () => {
@@ -145,9 +145,9 @@ describe('routine formatting', () => {
     assert.equal(exerciseLogRequest(draft, '2026-11-27'), 'Valeur par série : 1 à 10 000.')
     assert.deepEqual(exerciseLogRequest({ ...draft, setsDone: '2', value: '40' }, '2026-11-27'), { date: '2026-11-27', setsDone: 2, value: 40, loadKg: 10 })
     assert.deepEqual(exerciseLogRequest({ ...draft, value: 40, loadKg: null }, '2026-11-27'), { date: '2026-11-27', setsDone: 1, value: 40, loadKg: 0 })
-    assert.equal(exerciseLogRequest({ ...draft, value: 40, date: '2026-11-28' }, '2026-11-27'), 'Choisissez un jour, au plus tard aujourd’hui.')
+    assert.equal(exerciseLogRequest({ ...draft, value: 40, date: '2026-11-28' }, '2026-11-27'), 'Choisis un jour, au plus tard aujourd’hui.')
     assert.equal(exerciseLogRequest({ ...draft, value: 40, setsDone: 21 }, '2026-11-27'), 'Séries : 1 à 20.')
-    assert.equal(exerciseLogRequest({ ...draft, value: 40, loadKg: 12.3 }, '2026-11-27'), 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.')
+    assert.equal(exerciseLogRequest({ ...draft, value: 40, loadKg: 12.3 }, '2026-11-27'), 'Charge : 0 à 500 kg, par pas de 0,5 ; laisse vide au poids du corps.')
     assert.equal(logValueLabel(wallSit), 'Secondes par série')
     assert.equal(logValueLabel({ ...bridge, perSide: true }), 'Répétitions par série (par côté)')
     assert.equal(completionText('hold', tick('e1', 2, { value: 40, loadKg: 10 })), '2 séries × 40 s à 10 kg')

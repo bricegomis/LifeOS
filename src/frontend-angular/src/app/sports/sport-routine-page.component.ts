@@ -16,6 +16,7 @@ import {
 import { SportsApiService } from './sports-api.service'
 import type { RoutineLineDto, RoutineReportDto, RoutineSessionDto } from './sports.models'
 import { ConfirmService } from '@/app/shared/ui/confirm'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /**
  * Doing a routine (ADR 0014, ADR 0015): today's open pass with one "Série faite" button per exercise
@@ -24,14 +25,14 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
 @Component({
   selector: 'app-sport-routine-page',
   standalone: true,
-  imports: [ExerciseImageComponent, MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, ExerciseImageComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page routine-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p class="lo-muted" role="status">Chargement…</p> }
+      @if (loading()) { <app-skeleton variant="page" /> }
       @else if (report(); as report) {
         <header class="head">
-          <a mat-icon-button routerLink="/sports" aria-label="Retour à l’accueil du sport"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/sports" aria-label="Retour à l’accueil du sport"><mat-icon svgIcon="arrow_back" /></a>
           <div class="lo-page-title">
             <h1>{{ report.routine.name }}</h1>
             <span class="lo-muted">{{ daysLabel(report.routine.days) }} · série de {{ report.streak }} jour{{ report.streak > 1 ? 's' : '' }} · record {{ report.record }}</span>

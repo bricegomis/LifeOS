@@ -22,12 +22,13 @@ import { recipeNutrition } from './recipe-nutrition'
 import type { RecipeCostDto, RecipeDto, RecipeIngredientDto } from './recipe.models'
 import { RecipesApiService } from './recipes-api.service'
 import { ConfirmService } from '@/app/shared/ui/confirm'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** A recipe: photo, ingredients with their season, preparation, reviews, nutrition per portion and cost range. */
 @Component({
   selector: 'app-recipe-page',
   standalone: true,
-  imports: [FoodImageComponent, HouseholdReviewsComponent, MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, FoodImageComponent, HouseholdReviewsComponent, MatButtonModule, MatIconModule, RouterLink],
   templateUrl: './recipe-page.component.html',
   styleUrl: './recipe-page.css',
 })

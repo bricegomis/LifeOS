@@ -37,6 +37,9 @@
 .sign-out { margin: 0 16px; }
 
 @media (max-width: 760px) {
+  /* Compact phone bar: 56 px and the page title alone. */
+  .top-bar { min-height: 56px; }
+  .top-title { font: var(--mat-sys-title-large); font-weight: 600; }
   .side-menu { width: min(300px, 85vw); }
   .shell-main { padding: 8px 16px 96px; padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 }

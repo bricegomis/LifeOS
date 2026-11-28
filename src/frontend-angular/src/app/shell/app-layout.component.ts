@@ -1,4 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout'
+import { Location } from '@angular/common'
 import { Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { MatButtonModule } from '@angular/material/button'
@@ -12,7 +13,7 @@ import { AuthService } from '@/app/core/auth/auth.service'
 import { LifeosApiService } from '@/app/core/api/lifeos-api.service'
 import { NativeSyncService } from '@/app/core/native/native-sync.service'
 import { HANDSET_QUERY } from '@/app/shared/ui/breakpoints'
-import { currentEntry, NAVIGATION_BLOCKS, pageTitle, readMenuOpen, writeMenuOpen } from './navigation'
+import { fallbackBackPath, isDetailPage, NAVIGATION_BLOCKS, openBlocksAfterNavigation, pageTitle, readMenuOpen, writeMenuOpen } from './navigation'
 
 
 @Component({
@@ -25,6 +26,7 @@ import { currentEntry, NAVIGATION_BLOCKS, pageTitle, readMenuOpen, writeMenuOpen
 export class AppLayoutComponent implements OnInit {
   readonly auth = inject(AuthService)
   private readonly router = inject(Router)
+  private readonly location = inject(Location)
   private readonly api = inject(LifeosApiService)
   private readonly nativeSync = inject(NativeSyncService)
   readonly blocks = NAVIGATION_BLOCKS
@@ -38,20 +40,26 @@ export class AppLayoutComponent implements OnInit {
   /** The only scrolling area of the app; brought back to the top when the page changes. */
   private readonly content = viewChild(MatSidenavContent)
   readonly title = computed(() => pageTitle(this.url()))
-  /** Blocks unfolded by hand; the block of the current page is always open on arrival. */
-  readonly openBlocks = signal(new Set<string>())
+  /** Phone: a detail page shows a back arrow in the top bar instead of the menu button. */
+  readonly detail = computed(() => this.handset() && isDetailPage(this.url()))
+  /** Only the block of the current page is open on arrival; a block unfolded by hand stays until the next page. */
+  readonly openBlocks = signal(openBlocksAfterNavigation(this.router.url))
+  /** Pages opened inside the app since it started: the back arrow uses the history only when there is one. */
+  private pagesSeen = 0
   readonly pendingReceipts = signal(0)
   readonly signOutError = signal('')
   readonly email = computed(() => this.auth.user()?.email ?? '')
   readonly initial = computed(() => (this.email()[0] ?? 'L').toLocaleUpperCase('fr'))
 
   constructor() {
-    this.openCurrentBlock()
     const subscription = this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       const samePage = pathOf(this.url()) === pathOf(this.router.url)
       this.url.set(this.router.url)
-      if (!samePage) this.content()?.scrollTo({ top: 0 })
-      this.openCurrentBlock()
+      if (!samePage) {
+        this.content()?.scrollTo({ top: 0 })
+        this.openBlocks.set(openBlocksAfterNavigation(this.router.url))
+        this.pagesSeen++
+      }
       this.phoneOpen.set(false)
       void this.refreshPendingReceipts()
     })
@@ -90,9 +98,10 @@ export class AppLayoutComponent implements OnInit {
     writeMenuOpen(open)
   }
 
-  private openCurrentBlock(): void {
-    const block = currentEntry(this.router.url)?.block.id
-    if (block && !this.openBlocks().has(block)) this.openBlocks.update(open => new Set([...open, block]))
+  /** Back arrow of a detail page: the previous page, or the domain's first page when the app opened here. */
+  back(): void {
+    if (this.pagesSeen > 1) this.location.back()
+    else void this.router.navigateByUrl(fallbackBackPath(this.router.url))
   }
 
   /** Badge of the Tickets entry: receipts still waiting for their prices. */

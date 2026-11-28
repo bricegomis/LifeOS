@@ -27,10 +27,10 @@ const decimal = (text: string) => Number(text.trim().replace(',', '.'))
 export function buildProductRequest(values: ProductFormValues): FormResult<ProductRequest> {
   const name = values.name.trim()
   const quantity = decimal(values.packageQuantity)
-  if (!values.foodItemId) return { ok: false, error: 'Choisissez l’aliment de ce produit.' }
+  if (!values.foodItemId) return { ok: false, error: 'Choisis l’aliment de ce produit.' }
   if (!name || name.length > 200) return { ok: false, error: 'Nom du produit requis (200 caractères maximum).' }
   if (!values.packageQuantity.trim() || !Number.isFinite(quantity) || quantity <= 0 || !PACKAGE_UNITS.includes(values.packageUnit)) {
-    return { ok: false, error: 'Indiquez la contenance : une quantité supérieure à zéro en g, kg, ml, L ou pièce.' }
+    return { ok: false, error: 'Indique la contenance : une quantité supérieure à zéro en g, kg, ml, L ou pièce.' }
   }
   return {
     ok: true,
@@ -44,10 +44,10 @@ export function buildProductRequest(values: ProductFormValues): FormResult<Produ
 /** The price paid for one package, in euros and cents, on a past or present date. */
 export function buildPriceRequest(values: PriceFormValues, todayIso: string): FormResult<PriceRequest> {
   const price = decimal(values.price)
-  if (!values.productId) return { ok: false, error: 'Choisissez un produit.' }
-  if (!values.storeId) return { ok: false, error: 'Choisissez le magasin.' }
+  if (!values.productId) return { ok: false, error: 'Choisis un produit.' }
+  if (!values.storeId) return { ok: false, error: 'Choisis le magasin.' }
   if (!Number.isFinite(price) || price <= 0 || Math.abs(price * 100 - Math.round(price * 100)) > 1e-6) {
-    return { ok: false, error: 'Indiquez le prix payé, en euros et centimes.' }
+    return { ok: false, error: 'Indique le prix payé, en euros et centimes.' }
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(values.observedOn) || values.observedOn > todayIso) {
     return { ok: false, error: 'La date du relevé ne peut pas être dans le futur.' }

@@ -11,6 +11,7 @@ import { SessionEditorComponent, type SessionEditorData } from './session-editor
 import { decimal, duration, integer, longDay, sessionPace, sessionTitle, timeRange, zoneRows } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { SportOption, SportSessionDto, SportTemplateDto } from './sports.models'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 const SPORT_ICONS: Record<string, string> = {
   running: 'directions_run', walking: 'directions_walk', hiking: 'hiking', cycling: 'directions_bike', swimming: 'pool',
@@ -21,7 +22,7 @@ const SPORT_ICONS: Record<string, string> = {
 @Component({
   selector: 'app-sport-session-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page is-narrow">
       <a mat-button class="lo-back" routerLink="/sports/sessions"><mat-icon svgIcon="arrow_back" />Séances</a>
@@ -87,7 +88,7 @@ const SPORT_ICONS: Record<string, string> = {
             ? 'Les valeurs viennent de Garmin et suivent ses modifications à chaque synchro ; tes notes, la séance type et un sport changé ici ne sont jamais écrasés. Supprimer l’activité dans Garmin Connect la supprime aussi ici.'
             : 'Si la montre envoie la même séance (même sport, horaires qui se chevauchent), les deux fusionnent : valeurs Garmin, tes notes gardées.' }}</p>
         </section>
-      } @else if (!error()) { <p class="lo-status" role="status">Chargement…</p> }
+      } @else if (!error()) { <app-skeleton variant="page" /> }
     </div>
   `,
   styleUrl: './sports.css',

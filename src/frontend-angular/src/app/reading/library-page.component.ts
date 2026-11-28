@@ -12,6 +12,7 @@ import { BookDialogComponent, type BookDialogData, type BookDialogResult } from 
 import { ReadingApiService } from './reading-api.service'
 import type { BookDto, BookFormat, BookState } from './reading.models'
 import { cardMeta, filterBooks, FORMATS, formatInfo, genresOf, STATES, TABS, tabCounts, tomeLabel } from './reading-rules'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 const VIEW_KEY = 'lifeos.reading.view'
 
@@ -22,7 +23,7 @@ const VIEW_KEY = 'lifeos.reading.view'
 @Component({
   selector: 'app-library-page',
   standalone: true,
-  imports: [BookCoverComponent, ListPageComponent, MatButtonToggleModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, BookCoverComponent, ListPageComponent, MatButtonToggleModule, MatIconModule, RouterLink],
   template: `
     <app-list-page heading="Lecture" intro="Les livres lus, en cours, à lire ou écartés." addLabel="Ajouter un livre"
       [(query)]="query" (add)="add()">
@@ -60,7 +61,7 @@ const VIEW_KEY = 'lifeos.reading.view'
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (loaded()) {
         @if (!shown().length) {
-          <p class="lo-empty">{{ books().length ? 'Aucun livre ici. Changez de filtre.' : 'Aucun livre. Ajoutez-en un, ou demandez à Claude d’importer votre liste.' }}</p>
+          <p class="lo-empty">{{ books().length ? 'Aucun livre ici. Change de filtre.' : 'Aucun livre. Ajoutes-en un, ou demande à Claude d’importer ta liste.' }}</p>
         } @else if (view() === 'grid') {
           <div class="grid">
             @for (b of shown(); track b.id) {
@@ -95,7 +96,7 @@ const VIEW_KEY = 'lifeos.reading.view'
           </div>
         }
       } @else if (!error()) {
-        <p class="lo-muted" role="status">Chargement…</p>
+        <app-skeleton />
       }
     </app-list-page>
   `,

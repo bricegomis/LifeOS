@@ -17,18 +17,20 @@ import { SupplementActionsService } from './supplement-actions.service'
 import { SupplementCardComponent } from './supplement-card.component'
 import { todayGroups } from './supplement-rules'
 import { appointmentWhen, inDays } from './document-rules'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** Home of the Health module (ADR 0018): today's supplements by moment, one tick each, and the daily check-in. */
 @Component({
   selector: 'app-health-today-page',
   standalone: true,
-  imports: [MarkerCardComponent, MatButtonModule, MatIconModule, RouterLink, SupplementCardComponent],
+  imports: [SkeletonComponent, MarkerCardComponent, MatButtonModule, MatIconModule, RouterLink, SupplementCardComponent],
   template: `
     <div class="lo-page">
       <header class="lo-page-head">
         <div class="lo-page-title"><h1 class="lo-bar-title">Aujourd’hui</h1><p class="lo-intro">Ta santé, visible par toi seul.</p></div>
       </header>
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
+      @else if (!list()) { <app-skeleton [rows]="3" /> }
       @if (list(); as l) {
         <section class="lo-section" aria-labelledby="supps">
           <div class="lo-section-head"><h2 id="supps">Compléments du jour</h2>

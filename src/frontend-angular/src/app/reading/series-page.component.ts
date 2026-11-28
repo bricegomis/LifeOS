@@ -15,18 +15,19 @@ import type { BookSeriesDetailDto } from './reading.models'
 import { formatInfo, STATES, tomeLabel } from './reading-rules'
 import { SeriesDialogComponent, type SeriesDialogData, type SeriesDialogResult } from './series-dialog.component'
 import { seriesSummary } from './series-list-page.component'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** One series (ADR 0022): its tomes in order, read, to read and missing; a missing tome is added from its row. */
 @Component({
   selector: 'app-series-page',
   standalone: true,
-  imports: [BookCoverComponent, MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, BookCoverComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page series-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (detail(); as d) {
         <header class="head">
-          <a mat-icon-button routerLink="/reading/series" aria-label="Retour aux séries"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/reading/series" aria-label="Retour aux séries"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">Série · {{ d.series.name }}</h1>
           <button mat-flat-button type="button" class="lo-desktop-only" (click)="edit()"><mat-icon svgIcon="edit" />Modifier</button>
           <button mat-icon-button type="button" class="lo-phone-only" (click)="edit()" aria-label="Modifier la série" title="Modifier la série">
@@ -66,11 +67,11 @@ import { seriesSummary } from './series-list-page.component'
             }
           </div>
         } @else {
-          <p class="lo-muted">Aucun livre dans cette série. Rangez un livre ici depuis sa fiche, ou donnez le nombre de tomes.</p>
+          <p class="lo-muted">Aucun livre dans cette série. Range un livre ici depuis sa fiche, ou donne le nombre de tomes.</p>
         }
         <p class="lo-help">Sans nombre de tomes, LifeOS ne montre pas de tomes manquants.</p>
       } @else if (!error()) {
-        <p class="lo-muted" role="status">Chargement…</p>
+        <app-skeleton variant="page" />
       }
     </div>
   `,

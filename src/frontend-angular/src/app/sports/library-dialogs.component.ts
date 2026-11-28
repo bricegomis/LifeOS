@@ -90,7 +90,7 @@ export class ChallengeDialogComponent extends LibraryDialog {
 
   save(): Promise<void> {
     const name = this.draft.name.trim(), target = Number(this.draft.dailyTarget)
-    if (!name) { this.error.set('Donnez un nom au défi.'); return Promise.resolve() }
+    if (!name) { this.error.set('Donne un nom au défi.'); return Promise.resolve() }
     if (!Number.isInteger(target) || target < 1) { this.error.set('La cible est un nombre entier d’au moins 1.'); return Promise.resolve() }
     const request = { ...this.draft, name, dailyTarget: target }
     return this.run(() => this.challenge ? this.api.updateChallenge(this.challenge.id, request) : this.api.createChallenge(request),
@@ -120,7 +120,7 @@ export const GOAL_KINDS: { id: GoalKind, label: string }[] = [
       <form id="goal-form" class="lo-form" (ngSubmit)="save()">
         @if (goal) {
           <div class="lo-field-group"><span class="lo-field-label">Objectif</span><span>{{ goal.label }}</span>
-            <p class="lo-help">La forme d’un objectif ne change pas : pour une autre forme, arrêtez-le et créez-en un.</p></div>
+            <p class="lo-help">La forme d’un objectif ne change pas : pour une autre forme, arrête-le et crées-en un.</p></div>
         } @else {
           <div class="lo-field-group" role="group" aria-label="Forme de l’objectif">
             <span class="lo-field-label">Forme</span>
@@ -197,8 +197,8 @@ export class GoalDialogComponent extends LibraryDialog {
 
   save(): Promise<void> {
     const d = this.draft, target = Number(d.target)
-    if (!(target > 0)) { this.error.set('Donnez une cible.'); return Promise.resolve() }
-    if (d.kind === 'template' && !d.templateId) { this.error.set('Choisissez une séance type.'); return Promise.resolve() }
+    if (!(target > 0)) { this.error.set('Donne une cible.'); return Promise.resolve() }
+    if (d.kind === 'template' && !d.templateId) { this.error.set('Choisis une séance type.'); return Promise.resolve() }
     const request: WeeklyGoalRequest = {
       kind: d.kind, target, templateId: d.kind === 'template' ? d.templateId : null,
       sport: d.kind === 'sport' ? d.sport : null, unit: d.kind === 'volume' ? d.unit : null,
@@ -271,7 +271,7 @@ export class TemplateDialogComponent extends LibraryDialog {
 
   save(): Promise<void> {
     const name = this.draft.name.trim()
-    if (!name) { this.error.set('Donnez un nom à la séance type.'); return Promise.resolve() }
+    if (!name) { this.error.set('Donne un nom à la séance type.'); return Promise.resolve() }
     const distance = this.draft.distanceKm === null || String(this.draft.distanceKm) === '' ? null : Number(this.draft.distanceKm)
     const request: SportTemplateRequest = {
       ...this.draft, name, durationMinutes: Number(this.draft.durationMinutes), calories: Number(this.draft.calories),

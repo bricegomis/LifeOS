@@ -5,6 +5,8 @@ export interface NavigationItem {
   receiptsBadge?: boolean
   /** Active only on this exact path (a module home whose sub-pages have their own entries). */
   exact?: boolean
+  /** Title of the phone's top bar when the label alone is too vague (« Aujourd'hui » of a module). */
+  title?: string
 }
 
 export interface NavigationBlock {
@@ -43,7 +45,7 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
     title: 'Sport',
     icon: 'fitness_center',
     items: [
-      { path: '/sports', label: 'Aujourd’hui', exact: true },
+      { path: '/sports', label: 'Aujourd’hui', exact: true, title: 'Sport' },
       { path: '/sports/sessions', label: 'Séances' },
       { path: '/sports/progress', label: 'Progression' },
       { path: '/sports/vo2max', label: 'VO2max' },
@@ -60,7 +62,7 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
     title: 'Tâches',
     icon: 'task_alt',
     items: [
-      { path: '/tasks', label: 'Aujourd’hui', exact: true },
+      { path: '/tasks', label: 'Aujourd’hui', exact: true, title: 'Tâches' },
       { path: '/tasks/all', label: 'Toutes les tâches' },
       { path: '/tasks/routines', label: 'Routines' },
       { path: '/tasks/projects', label: 'Projets' },
@@ -71,7 +73,7 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
     title: 'Santé',
     icon: 'favorite',
     items: [
-      { path: '/health', label: 'Aujourd’hui', exact: true },
+      { path: '/health', label: 'Aujourd’hui', exact: true, title: 'Santé' },
       { path: '/health/sleep', label: 'Sommeil et récupération' },
       { path: '/health/supplements', label: 'Compléments' },
       { path: '/health/symptoms', label: 'Symptômes' },
@@ -86,7 +88,7 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
     title: 'Budget',
     icon: 'account_balance_wallet',
     items: [
-      { path: '/budget', label: 'Mois', exact: true },
+      { path: '/budget', label: 'Mois', exact: true, title: 'Budget' },
       { path: '/budget/operations', label: 'Opérations' },
       { path: '/budget/lines', label: 'Lignes prévues' },
       { path: '/budget/rules', label: 'Règles' },
@@ -99,14 +101,14 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
     icon: 'theater_comedy',
     items: [
       { path: '/reading', label: 'Lecture', exact: true },
-      { path: '/reading/series', label: 'Séries' },
+      { path: '/reading/series', label: 'Séries', title: 'Séries de livres' },
     ],
   },
 ]
 
 /** The menu entry of a URL: the longest matching path, so `/sports/routine/42` belongs to Sport. */
 export function currentEntry(url: string): { block: NavigationBlock, item: NavigationItem | null } | null {
-  const path = url.split(/[?#]/)[0] ?? ''
+  const path = pathOf(url)
   let best: { block: NavigationBlock, item: NavigationItem, length: number } | null = null
   for (const block of NAVIGATION_BLOCKS) {
     for (const item of block.items) {
@@ -120,12 +122,39 @@ export function currentEntry(url: string): { block: NavigationBlock, item: Navig
   return { block: best.block, item }
 }
 
-/** Title of the phone's top bar: "Sport · Routines", the domain alone on a sub-page, or Paramètres. */
+/**
+ * Title of the phone's top bar: the page alone (« Routines », « Sport » for the module home), the
+ * domain on a detail page, or Paramètres. The domain is already given by the menu.
+ */
 export function pageTitle(url: string): string {
-  if ((url.split(/[?#]/)[0] ?? '').startsWith('/settings')) return 'Paramètres'
+  if (pathOf(url).startsWith('/settings')) return 'Paramètres'
   const entry = currentEntry(url)
   if (!entry) return 'LifeOS'
-  return entry.item ? `${entry.block.title} · ${entry.item.label}` : entry.block.title
+  return entry.item ? entry.item.title ?? entry.item.label : entry.block.title
+}
+
+/** A page below a menu entry (a todo, a routine, a book): the phone's top bar offers a way back. */
+export function isDetailPage(url: string): boolean {
+  const entry = currentEntry(url)
+  return entry !== null && entry.item === null
+}
+
+/** Where the top bar's back arrow goes when the app has no history of its own (opened on a detail page). */
+export function fallbackBackPath(url: string): string {
+  return currentEntry(url)?.block.items[0]?.path ?? '/today'
+}
+
+/**
+ * Menu groups open after a navigation: only the domain of the new page, so the menu never grows
+ * with every domain visited. A group unfolded by hand stays open until the next page change.
+ */
+export function openBlocksAfterNavigation(url: string): Set<string> {
+  const block = currentEntry(url)?.block.id
+  return new Set(block ? [block] : [])
+}
+
+function pathOf(url: string): string {
+  return url.split(/[?#]/)[0] ?? ''
 }
 
 const MENU_KEY = 'lifeos.menu-open'
