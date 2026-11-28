@@ -355,7 +355,7 @@ par LifeOS plutôt que saisies.
 1. **Cadrage fonctionnel.** Fait.
 2. **Maquette cliquable** : mois, opérations et import, lignes prévues, règles,
    évolution (ordinateur et smartphone). Validée le 2026-11-23.
-3. **Postes, lignes prévues et revenus.** Fait ; reste la mise en place depuis l'Excel par Claude.
+3. **Postes, lignes prévues et revenus.** Fait ; lignes et règles reprises de l'Excel par Claude.
 4. **Opérations** : import OFX, saisie, étalement. Fait.
 5. **Règles de classement.** Fait.
 6. **Mois et évolution.** Fait.
