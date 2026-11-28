@@ -27,8 +27,8 @@ pour le semainier livrés en code ; reste l'usage réel.
 maquette validée le 2026-11-22 ; compléments, symptômes, analyses, mesures, documents, rendez-vous et
 outils de l'assistant livrés ; reste l'usage réel.
 Étape 7, « Budget », avancée avant le semainier ([ADR 0020](architecture/decisions/0020-budget-module.md)) :
-maquette validée et module livré en code le 2026-11-23 ; reste la mise en place des lignes depuis l'Excel
-(par Claude) et l'usage réel. Étapes 8 (Lecture) et 9 (Films et séries) prévues, pas commencées.
+maquette validée et module livré en code le 2026-11-23 ; lignes et règles reprises de l'Excel
+par Claude ; reste l'usage réel. Étapes 8 (Lecture) et 9 (Films et séries) prévues, pas commencées.
 
 ## Ce qui existe
 
