@@ -8,6 +8,7 @@ using LifeOS.Domain.Food.Stores;
 using LifeOS.Domain.Households;
 using LifeOS.Domain.Sports;
 using LifeOS.Domain.Health;
+using LifeOS.Domain.Reading;
 using LifeOS.Domain.Tasks;
 using Microsoft.EntityFrameworkCore;
 
@@ -68,6 +69,10 @@ public sealed class LifeOSDbContext(DbContextOptions<LifeOSDbContext> options) :
     public DbSet<HealthDocument> HealthDocuments => Set<HealthDocument>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<DailyWellness> DailyWellness => Set<DailyWellness>();
+
+    // Reading module (ADR 0022)
+    public DbSet<Book> Books => Set<Book>();
+    public DbSet<BookSeries> Series => Set<BookSeries>();
 
     // Budget module (ADR 0020): private per account, reads published contracts only
     public DbSet<BudgetLine> BudgetLines => Set<BudgetLine>();

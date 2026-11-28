@@ -18,6 +18,8 @@ using LifeOS.Infrastructure.Persistence;
 using LifeOS.Infrastructure.Sports;
 using LifeOS.Infrastructure.Health;
 using LifeOS.Infrastructure.Tasks;
+using LifeOS.Infrastructure.Reading;
+using LifeOS.Application.Reading.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,6 +76,10 @@ public static class DependencyInjection
         services.AddScoped<IHealthReadData, EfHealthReadData>();
         services.AddScoped<HealthReadContract>();
 
+        // Reading module: published read contract (ADR 0022)
+        services.AddScoped<IReadingReadData, EfReadingReadData>();
+        services.AddScoped<ReadingReadContract>();
+
         // Food module files
         services.Configure<FoodImageStorageOptions>(configuration.GetSection("FoodImages"));
         services.AddSingleton<FoodImageStorage>();
@@ -81,6 +87,8 @@ public static class DependencyInjection
         services.AddSingleton<SportImageStorage>();
         services.Configure<TaskImageStorageOptions>(configuration.GetSection("TaskImages"));
         services.AddSingleton<TaskImageStorage>();
+        services.Configure<BookImageStorageOptions>(configuration.GetSection("BookImages"));
+        services.AddSingleton<BookImageStorage>();
         services.Configure<HealthFileStorageOptions>(configuration.GetSection("HealthFiles"));
         services.AddSingleton<HealthFileStorage>();
         services.Configure<ReceiptPhotoStorageOptions>(configuration.GetSection("Receipts"));

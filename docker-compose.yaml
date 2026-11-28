@@ -33,6 +33,9 @@ services:
       # Durable storage for optional todo images
       TaskImages__StoragePath: /data/tasks
       TaskImages__MaxFileBytes: 10485760
+      # Durable storage for optional book covers
+      BookImages__StoragePath: /data/books
+      BookImages__MaxFileBytes: 10485760
       # Health files (documents, photos), encrypted at rest. The key (32 bytes, base64:
       # `openssl rand -base64 32`) is backed up apart: without it the files are unreadable.
       HealthFiles__StoragePath: /data/health
@@ -52,6 +55,7 @@ services:
       - food_images:/data/foods
       - sport_images:/data/sports
       - task_images:/data/tasks
+      - book_images:/data/books
       - health_files:/data/health
   web:
     image: ghcr.io/bricegomis/lifeos-web:latest
@@ -99,6 +103,8 @@ volumes:
     name: lifeos_sport_images
   task_images:
     name: lifeos_task_images
+  book_images:
+    name: lifeos_book_images
   health_files:
     name: lifeos_health_files
   garmin_tokens:

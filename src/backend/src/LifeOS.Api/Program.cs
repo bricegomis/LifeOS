@@ -12,6 +12,7 @@ using LifeOS.Api.Households;
 using LifeOS.Api.Sports;
 using LifeOS.Api.Budget;
 using LifeOS.Api.Health;
+using LifeOS.Api.Reading;
 using LifeOS.Api.Tasks;
 using LifeOS.Infrastructure;
 using LifeOS.Infrastructure.Persistence;
@@ -29,6 +30,7 @@ builder.Services.AddScoped<GarminLinks>();
 builder.Services.AddSportLibraries();
 builder.Services.AddTaskLibraries();
 builder.Services.AddHealthLibraries();
+builder.Services.AddReadingLibraries();
 builder.Services.AddBudgetLibraries();
 
 builder.AddLifeOSAuthentication();
@@ -127,6 +129,8 @@ app.MapSportEndpoints();
 app.MapTaskEndpoints();
 // Health module
 app.MapHealthEndpoints();
+// Reading module (ADR 0022)
+app.MapReadingEndpoints();
 
 // Budget module (ADR 0020)
 app.MapBudgetEndpoints();

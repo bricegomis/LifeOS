@@ -48,7 +48,7 @@ code, identifiers and code comments are English.
 - Home page (delivered 2026-11-26): ADR 0021 (« Aujourd'hui » lists what is left to tick today —
   late and due todos and household routines, sport routines to start, challenges with « + Série »,
   supplements by moment — through the modules' own endpoints; ticked items fold into « Fait aujourd'hui »).
-- Step 8 target (proposed, scoped 2026-11-28): ADR 0022 (reading: a book library with states
+- Reading (step 8, delivered 2026-11-28): ADR 0022 (reading: a book library with states
   to read / reading / read / stopped / not interested, dated readings with a 0-10 rating and
   review, series with missing tomes, quotes, menu domain « Loisirs »; no sessions, minutes or
   pages in V1; the assistant adds, imports pasted lists and recommends).
@@ -136,7 +136,7 @@ code, identifiers and code comments are English.
   migration is allowed there, once the user confirms what is reset.
 - Never run migrations against a shared/production database, reset user data, or
   touch the VPS. The user backs up PostgreSQL **and** the `lifeos_receipts`,
-  `lifeos_food_images`, `lifeos_sport_images`, `lifeos_task_images`, `lifeos_health_files` and `lifeos_garmin_tokens` volumes, plus the
+  `lifeos_food_images`, `lifeos_sport_images`, `lifeos_task_images`, `lifeos_book_images`, `lifeos_health_files` and `lifeos_garmin_tokens` volumes, plus the
   `HEALTH_FILES_KEY` encryption key kept apart, then refreshes the containers themselves.
 - When behaviour changes, update the directly affected docs (ADR status/extension,
   `docs/PROJECT.md`, `docs/02-core-model.md`, the relevant README). Replace stale

@@ -1684,6 +1684,122 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                     b.ToTable("users", "households");
                 });
 
+            modelBuilder.Entity("LifeOS.Domain.Reading.Book", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Authors")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.PrimitiveCollection<List<string>>("Genres")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("genres");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImageContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("MemberProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("NotWanted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NotWantedReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal?>("Tome")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("Id", "HouseholdId");
+
+                    b.HasIndex("HouseholdId", "Title");
+
+                    b.HasIndex("MemberProfileId", "HouseholdId");
+
+                    b.HasIndex("SeriesId", "HouseholdId");
+
+                    b.ToTable("books", "reading", t =>
+                        {
+                            t.HasCheckConstraint("ck_book_format", "\"Format\" IN ('paper', 'ereader', 'audio', 'comic')");
+
+                            t.HasCheckConstraint("ck_book_image", "(\"ImagePath\" IS NULL) = (\"ImageContentType\" IS NULL)");
+
+                            t.HasCheckConstraint("ck_book_tome", "\"Tome\" IS NULL OR (\"SeriesId\" IS NOT NULL AND \"Tome\" > 0)");
+                        });
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Reading.BookSeries", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("HouseholdId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("TotalTomes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HouseholdId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("series", "reading", t =>
+                        {
+                            t.HasCheckConstraint("ck_book_series_tomes", "\"TotalTomes\" IS NULL OR (\"TotalTomes\" >= 1 AND \"TotalTomes\" <= 999)");
+                        });
+                });
+
             modelBuilder.Entity("LifeOS.Domain.Sports.ChallengeEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3436,6 +3552,128 @@ namespace LifeOS.Infrastructure.Persistence.Migrations
                 {
                     b.HasOne("LifeOS.Domain.Households.Household", null)
                         .WithMany("MemberProfiles")
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Reading.Book", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
+                        .HasForeignKey("HouseholdId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Households.MemberProfile", null)
+                        .WithMany()
+                        .HasForeignKey("MemberProfileId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("LifeOS.Domain.Reading.BookSeries", null)
+                        .WithMany()
+                        .HasForeignKey("SeriesId", "HouseholdId")
+                        .HasPrincipalKey("Id", "HouseholdId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsMany("LifeOS.Domain.Reading.BookQuote", "Quotes", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("BookId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Place")
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)");
+
+                            b1.Property<int>("Position")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Text")
+                                .IsRequired()
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("BookId", "Position")
+                                .IsUnique();
+
+                            b1.ToTable("book_quotes", "reading");
+
+                            b1.WithOwner()
+                                .HasForeignKey("BookId");
+                        });
+
+                    b.OwnsMany("LifeOS.Domain.Reading.BookReading", "Readings", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("BookId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateOnly?>("FinishedOn")
+                                .HasColumnType("date");
+
+                            b1.Property<string>("Outcome")
+                                .IsRequired()
+                                .HasMaxLength(10)
+                                .HasColumnType("character varying(10)");
+
+                            b1.Property<int>("Position")
+                                .HasColumnType("integer");
+
+                            b1.Property<int?>("Rating")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Review")
+                                .HasMaxLength(4000)
+                                .HasColumnType("character varying(4000)");
+
+                            b1.Property<DateOnly?>("StartedOn")
+                                .HasColumnType("date");
+
+                            b1.Property<string>("StopReason")
+                                .HasMaxLength(300)
+                                .HasColumnType("character varying(300)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("BookId")
+                                .IsUnique()
+                                .HasDatabaseName("ix_book_readings_one_in_progress")
+                                .HasFilter("\"Outcome\" = 'reading'");
+
+                            b1.HasIndex("BookId", "Position")
+                                .IsUnique();
+
+                            b1.ToTable("book_readings", "reading", t =>
+                                {
+                                    t.HasCheckConstraint("ck_book_reading_dates", "\"StartedOn\" IS NULL OR \"FinishedOn\" IS NULL OR \"FinishedOn\" >= \"StartedOn\"");
+
+                                    t.HasCheckConstraint("ck_book_reading_outcome", "\"Outcome\" IN ('reading', 'read', 'stopped')");
+
+                                    t.HasCheckConstraint("ck_book_reading_rating", "\"Rating\" IS NULL OR (\"Rating\" >= 0 AND \"Rating\" <= 10)");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("BookId");
+                        });
+
+                    b.Navigation("Quotes");
+
+                    b.Navigation("Readings");
+                });
+
+            modelBuilder.Entity("LifeOS.Domain.Reading.BookSeries", b =>
+                {
+                    b.HasOne("LifeOS.Domain.Households.Household", null)
+                        .WithMany()
                         .HasForeignKey("HouseholdId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

@@ -16,7 +16,7 @@ Vision : [00-vision.md](00-vision.md).
 | 5 | Santé | Dossier de santé privé, relié au semainier |
 | 6 | iPhone natif | Hors ligne, widgets, notifications |
 | 7 | Budget | Budget mensuel, alimenté par les relevés et les compléments (livré) |
-| 8 | Lecture | Livres lus, en cours, à lire ou écartés ; temps de lecture plus tard |
+| 8 | Lecture | Livres lus, en cours, à lire ou écartés ; temps de lecture plus tard (livré) |
 | 9 | Films et séries | Ce qui est vu, à voir ou écarté, avec notes ; suggestions par l'assistant |
 
 ## Règles communes à toutes les étapes
@@ -82,7 +82,7 @@ proposé (chaque point commence par un cadrage, puis une maquette validée) :
    (compléments, routines, échéances des todos), widget « à faire aujourd'hui »,
    retrait du code Swift du widget « prochain événement » et de la Live Activity de
    cuisine. Demande macOS et Xcode.
-4. **Budget** (étape 7), puis **Lecture** (étape 8) et **Films et séries** (étape 9).
+4. **Budget** (étape 7) et **Lecture** (étape 8), livrés, puis **Films et séries** (étape 9).
    Les étapes 7 à 9 sont des domaines indépendants du semainier ; elles peuvent
    passer avant ou après lui.
 
@@ -384,11 +384,11 @@ en un écran.
 **Déroulé.**
 
 1. **Cadrage fonctionnel.** Fait.
-2. **Maquette cliquable** : bibliothèque, fiche livre, série (ordinateur et smartphone).
-3. **Livres, séries et lectures.**
-4. **Citations et couvertures.**
-5. **Outils de l'assistant** pour tout le module.
-6. **Contrat de lecture** pour le semainier.
+2. **Maquette cliquable** : bibliothèque, fiche livre, série (ordinateur et smartphone). Validée le 2026-11-28.
+3. **Livres, séries et lectures.** Fait.
+4. **Citations et couvertures.** Fait.
+5. **Outils de l'assistant** pour tout le module. Fait.
+6. **Contrat de lecture** pour le semainier. Fait.
 
 **Terminé quand.** La bibliothèque est remplie (avec l'aide de Claude) et tenue à jour, et
 Claude propose la prochaine lecture à partir des notes et des livres écartés.

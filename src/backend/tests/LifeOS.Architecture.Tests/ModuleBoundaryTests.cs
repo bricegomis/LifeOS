@@ -14,7 +14,7 @@ public sealed class ModuleBoundaryTests
 {
     private const string Core = "Households";
     /// <summary>Domain modules. Add a module here when its folder is created.</summary>
-    private static readonly string[] DomainModules = ["Food", "Sports", "Tasks", "Health"];
+    private static readonly string[] DomainModules = ["Food", "Sports", "Tasks", "Health", "Reading"];
     private const string Planning = "Planning";
     /// <summary>Synthesis modules (ADR 0020) read the published contracts of domain modules; no module reads them.</summary>
     private static readonly string[] SynthesisModules = ["Budget"];

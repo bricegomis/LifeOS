@@ -1,6 +1,7 @@
 # ADR 0022 — Lecture : une bibliothèque de livres lus, à lire ou écartés
 
-Statut : proposé, 2026-11-28 (cadrage). Étape 8 de la [roadmap](../../01-roadmap.md).
+Statut : accepté, 2026-11-28. Étape 8 de la [roadmap](../../01-roadmap.md). Maquette validée le 2026-11-28 (canevas des
+maquettes, « Lecture — ordinateur » et « Lecture — smartphone ») ; livré en code le même jour.
 Applique l'[ADR 0009](0009-modular-monolith-and-planning-core.md) (module à part, contrat publié),
 l'[ADR 0011](0011-conversational-assistant-mcp.md) (outils de l'assistant, l'API n'appelle aucun
 service externe) et l'[ADR 0016](0016-angular-material-ui-kit.md) (UI kit).
@@ -44,14 +45,15 @@ Un livre a un **état** affiché, calculé à partir de ses lectures :
 | Lu | la dernière lecture est terminée |
 | Arrêté | la dernière lecture est arrêtée (raison facultative) |
 
-Une **lecture** a une date de début et une date de fin facultatives (on peut ajouter un livre lu
-il y a longtemps sans dates, ou avec l'année seule saisie comme 1er janvier), une issue (en cours,
-lu, arrêté), une **note** facultative de 0 à 10 et un **avis** facultatif. 0 est une note, pas
+Une **lecture** a une date de début et une date de fin facultatives pour une lecture passée (on peut ajouter un livre
+lu il y a longtemps sans dates, ou avec l'année seule saisie comme 1er janvier ; une lecture en cours a toujours son
+jour de début), une issue (en cours, lu, arrêté), une **note** facultative de 0 à 10 et un **avis** facultatif. 0 est une note, pas
 « non noté ». Relire un livre lu ajoute une nouvelle lecture ; la fiche montre toutes les
 lectures datées et la dernière note. Une seule lecture en cours à la fois par livre.
 
-« Pas envie » se retire (le livre revient à « À lire ») ; commencer une lecture d'un livre
-écarté le retire aussi.
+« Pas envie » ne vaut que pour un livre jamais commencé ; il se retire (le livre revient à « À lire ») et commencer une
+lecture d'un livre écarté le retire aussi. Une lecture se corrige (dates, note, avis, raison) ou se retire ; un livre et
+une série se suppriment (les livres d'une série supprimée restent, sans série).
 
 ### Série
 
@@ -73,7 +75,7 @@ Pas de bilan en V1. L'accueil « Aujourd'hui » ne change pas : il n'y a rien à
 ### Assistant (outils MCP)
 
 - Rechercher, créer et modifier livres, séries, lectures et citations ; changer l'état ;
-  couverture par URL.
+  couverture par URL. Les suppressions de livres et de séries restent à l'interface.
 - **Conseil** : Claude lit la bibliothèque, les notes, les avis et les « pas envie », puis
   propose ; il peut ajouter les livres proposés à « À lire ».
 - **Import d'une liste** : l'utilisateur colle une liste ou une capture (Goodreads, Babelio…),

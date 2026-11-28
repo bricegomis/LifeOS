@@ -8,7 +8,7 @@
 - Modules (ADR 0009): `Households` (core: households, members, profiles), `Food`
   (foods, recipes, reviews, stores, products and prices, receipts), `Sports` (session
   templates, logged sessions, weekly goals, daily challenges; ADR 0013; exercises and
-  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines, projects; ADR 0017), `Health` (supplements, symptoms, analyses, body measures, documents, appointments; ADR 0018), and the synthesis module `Budget` (ADR 0020). Each has a folder in every project: `Domain/Food/Recipes` (entities and
+  daily routines and their passes; ADR 0014, ADR 0015), `Tasks` (todos with checklist, household routines, projects; ADR 0017), `Health` (supplements, symptoms, analyses, body measures, documents, appointments; ADR 0018), `Reading` (books, readings, quotes, series; ADR 0022), and the synthesis module `Budget` (ADR 0020). Each has a folder in every project: `Domain/Food/Recipes` (entities and
   rules), `Infrastructure/Food/Recipes` (EF mapping), `Api/Food/Recipes` (endpoints and
   DTOs). Plain management endpoints use the DbContext directly on their own module's
   tables; actions with real rules, or called by another module, are use cases in
@@ -24,11 +24,11 @@
   Domain/Application reference EF or HTTP. Add a new module's name to its list when
   you create the folder.
 - Files (receipt photos `/data/receipts`, food and recipe images `/data/foods`, exercise
-  images `/data/sports`, todo images `/data/tasks`, health files `/data/health`, encrypted at rest with `HealthFiles:EncryptionKey`
+  images `/data/sports`, todo images `/data/tasks`, book covers `/data/books`, health files `/data/health`, encrypted at rest with `HealthFiles:EncryptionKey`
   through `EncryptedFileStorage`) live on durable volumes, only served through authenticated,
   household-checked routes. The storage code is shared, outside the modules
   (`Infrastructure/Files`, `Api/Files`); each module declares its own storage class
-  (`FoodImageStorage`, `ReceiptPhotoStorage`, `SportImageStorage`, `TaskImageStorage`,
+  (`FoodImageStorage`, `ReceiptPhotoStorage`, `SportImageStorage`, `TaskImageStorage`, `BookImageStorage`,
   `HealthFileStorage`).
 - A receipt is only a stored photo (ADR 0010): no OCR, no lines, no purchases.
 - Sport (ADR 0013): every row carries a household profile (`SportProfiles` resolves the
@@ -96,6 +96,15 @@
   `Appointment` has a day, optional time, booking link (https; LifeOS never calls the site) and an
   optional report document. Management code: `SupplementLibrary`, `SymptomLibrary`,
   `AnalysisLibrary`, `HealthDocumentLibrary`, `AppointmentLibrary` (registered in `Api/Health/HealthModule.cs`).
+- Reading (ADR 0022): a `Book` belongs to a household profile (`ReadingProfiles`, main profile by default), with free
+  genres, an optional `BookSeries` (composite FK in the household) and tome (decimal), notes, owned `BookReading`s and
+  `BookQuote`s. Its state is never stored: the last reading decides (`reading`, `read`, `stopped`), else `notwanted` (only a
+  book never read) or `toread`. One reading in progress per book (filtered unique index); a past reading may have no
+  dates; a rating 0..10 and a review belong to a finished reading, a reason to a stopped one. Missing tomes (whole numbers
+  1..TotalTomes without a book) are computed on read; deleting a series keeps its books. Search runs in memory, ignoring case
+  and accents. Management code: `BookLibrary`, `BookSeriesLibrary` (`Api/Reading`, endpoints `/api/reading/*`, tools in
+  `ReadingAssistantTools`); read contract `Application/Reading/Contracts/ReadingReadContract` (books in progress, readings
+  ended per day and profile). The API calls no book database.
 - Budget (ADR 0020): a synthesis module, private to an account like Health (rows carry `HouseholdId`, `OwnerUserId`,
   `MemberProfileId`; every query filters on household and account). It reads domain modules only through their published
   contracts (`HealthReadContract.SupplementsMonthlyCostAsync`); the architecture test allows `Application/<Module>/Contracts`
@@ -110,7 +119,7 @@
 ## Migrations
 - In `src/LifeOS.Infrastructure/Persistence/Migrations`, applied at API startup unless
   `SkipDatabaseMigration=true`. Each module owns a PostgreSQL schema (`households`,
-  `food`, `sports`, `tasks`, `health`, `budget`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
+  `food`, `sports`, `tasks`, `health`, `reading`, `budget`; OpenIddict uses `auth`); `public` only holds `__EFMigrationsHistory`.
 - `FoodModuleReset` (roadmap step 1, ADR 0010) replaced the whole previous history:
   it drops every table of `public` with its data. Never edit it; add a new migration:
   `dotnet ef migrations add <Name> --project src/LifeOS.Infrastructure --startup-project src/LifeOS.Api --output-dir Persistence/Migrations`
