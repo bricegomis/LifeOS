@@ -35,7 +35,7 @@ import { TodoActionsService } from './todo-actions.service'
           }
         }
         @if (!shownCount()) {
-          <p class="lo-empty">{{ routines().length ? 'Aucun résultat.' : 'Aucune routine. Ajoutez par exemple « Sortir les poubelles ».' }}</p>
+          <p class="lo-empty">{{ routines().length ? 'Aucun résultat.' : 'Aucune routine. Ajoute par exemple « Sortir les poubelles ».' }}</p>
         }
       }
     </app-list-page>

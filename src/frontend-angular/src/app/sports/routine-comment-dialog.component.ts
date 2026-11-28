@@ -20,7 +20,7 @@ export interface CommentDialogData { report: RoutineReportDto, session: RoutineS
   template: `
     <app-editor-frame heading="Commentaire du passage" formId="comment-form" saveLabel="Enregistrer" [busy]="busy()" [error]="error()">
       <form id="comment-form" class="lo-form" (ngSubmit)="save()">
-        <p class="lo-muted">{{ data.report.routine.name }} · {{ times() }}. Laissez vide pour effacer le commentaire.</p>
+        <p class="lo-muted">{{ data.report.routine.name }} · {{ times() }}. Laisse vide pour effacer le commentaire.</p>
         <mat-form-field appearance="outline">
           <mat-label>Commentaire</mat-label>
           <textarea matInput name="comment" rows="4" maxlength="1000" [(ngModel)]="comment" cdkFocusInitial></textarea>

@@ -15,12 +15,13 @@ import type { FoodDto, ProductDto, StoreDto } from '../food.models'
 import { PriceDialogComponent, type PriceDialogData } from './price-dialog.component'
 import { ProductEditorComponent, type ProductEditorData } from './product-editor.component'
 import { productRows } from './product-form'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** Products and their latest price per store (ADR 0010), one column per store; prices are typed on the computer. */
 @Component({
   selector: 'app-products-page',
   standalone: true,
-  imports: [FormsModule, ListPageComponent, MatButtonModule, MatFormFieldModule, MatIconModule, MatSelectModule, RouterLink],
+  imports: [SkeletonComponent, FormsModule, ListPageComponent, MatButtonModule, MatFormFieldModule, MatIconModule, MatSelectModule, RouterLink],
   template: `
     <app-list-page heading="Produits et prix" addLabel="Ajouter un produit" [(query)]="search" (add)="edit(null)">
       <button pageActions mat-stroked-button type="button" [disabled]="!products().length || !stores().length" (click)="recordPrice()">
@@ -36,15 +37,15 @@ import { productRows } from './product-form'
       }
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (loading()) {
-        <p class="lo-status" role="status">Chargement des produits…</p>
+        <app-skeleton />
       } @else if (!foods().length) {
-        <p class="lo-empty">Un produit appartient à un aliment : créez d’abord vos aliments.</p>
+        <p class="lo-empty">Un produit appartient à un aliment : crée d’abord tes aliments.</p>
       } @else if (!products().length) {
-        <p class="lo-empty">Aucun produit pour le moment. Ajoutez-en avec « Ajouter un produit ».</p>
+        <p class="lo-empty">Aucun produit pour le moment. Ajoutes-en avec « Ajouter un produit ».</p>
       } @else if (!rows().length) {
         <p class="lo-empty">Aucun produit ne correspond à ce filtre.</p>
       } @else {
-        @if (!stores().length) { <p class="lo-notice">Ajoutez un magasin pour relever des prix.</p> }
+        @if (!stores().length) { <p class="lo-notice">Ajoute un magasin pour relever des prix.</p> }
         <div class="lo-table">
           <div class="lo-table-head" [style.grid-template-columns]="gridColumns()" [style.min-width]="minWidth()" aria-hidden="true">
             <span>Aliment</span><span>Produit</span><span>Conditionnement</span>

@@ -45,7 +45,7 @@ import type { RoutineDto, RoutineReportDto } from './sports.models'
             }
           </div>
         } @else {
-          <p class="lo-empty">{{ routines().length ? 'Aucun résultat.' : 'Aucune routine. Créez vos exercices, puis une routine quotidienne.' }}</p>
+          <p class="lo-empty">{{ routines().length ? 'Aucun résultat.' : 'Aucune routine. Crée tes exercices, puis une routine quotidienne.' }}</p>
         }
       }
     </app-list-page>

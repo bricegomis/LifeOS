@@ -11,18 +11,19 @@ import { AnalysisDialogComponent, type AnalysisDialogData } from './analysis-dia
 import { HealthApiService } from './health-api.service'
 import type { AnalysisDto } from './health.models'
 import { dateLabel, STATUS, valueLabel } from './marker-rules'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** One analysis (ADR 0018): its values, each placed against the personal target, and its document. */
 @Component({
   selector: 'app-analysis-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page detail-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (analysis(); as a) {
         <header class="head">
-          <a mat-icon-button routerLink="/health/analyses" aria-label="Retour aux analyses"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/health/analyses" aria-label="Retour aux analyses"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">Analyse du {{ date(a.day) }}</h1>
           <button mat-icon-button type="button" (click)="edit(a)" aria-label="Modifier l’analyse" title="Modifier l’analyse"><mat-icon svgIcon="edit" /></button>
         </header>
@@ -35,7 +36,7 @@ import { dateLabel, STATUS, valueLabel } from './marker-rules'
           }
         </div>
         @if (a.notes) { <p class="notes">{{ a.notes }}</p> }
-      } @else if (!error()) { <p class="lo-muted" role="status">Chargement…</p> }
+      } @else if (!error()) { <app-skeleton variant="page" /> }
     </div>
   `,
   styles: [`

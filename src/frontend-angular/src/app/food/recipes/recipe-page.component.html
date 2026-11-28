@@ -1,7 +1,7 @@
 <div class="lo-page is-wide">
   <a mat-button class="lo-back" routerLink="/recipes"><mat-icon svgIcon="arrow_back" />Recettes</a>
   @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
-  @if (loading()) { <p class="lo-status" role="status">Chargement de la recette…</p> }
+  @if (loading()) { <app-skeleton variant="page" /> }
 
   @if (recipe(); as recipe) {
     <div class="recipe-hero">
@@ -37,7 +37,7 @@
           </div>
           @if (seasonNotice(); as notice) { <p class="lo-notice is-off">{{ notice }}</p> }
           @if (!recipe.ingredients.length) {
-            <p class="lo-muted">Aucun ingrédient. Ajoutez-en pour calculer la nutrition et le coût.</p>
+            <p class="lo-muted">Aucun ingrédient. Ajoutes-en pour calculer la nutrition et le coût.</p>
           } @else {
             <div class="lo-table ingredients">
               <div class="ingredient-row lo-table-head" aria-hidden="true">
@@ -74,7 +74,7 @@
               }
             </ol>
           } @else {
-            <p class="lo-muted">Aucune étape. Ajoutez-les avec « Modifier ».</p>
+            <p class="lo-muted">Aucune étape. Ajoute-les avec « Modifier ».</p>
           }
         </section>
 
@@ -107,7 +107,7 @@
           @if (costError()) { <p class="lo-error" role="alert">{{ costError() }}</p> }
           @if (costLines(); as view) {
             @if (!recipe.ingredients.length) {
-              <p class="lo-muted">Ajoutez des ingrédients pour estimer le coût.</p>
+              <p class="lo-muted">Ajoute des ingrédients pour estimer le coût.</p>
             } @else {
               <div class="lo-stats">
                 <div class="lo-stat"><div class="lo-stat-label">Au moins cher</div><div class="cost-value">{{ view.min }}</div><div class="lo-muted lo-small">{{ view.minPerServing }}</div></div>

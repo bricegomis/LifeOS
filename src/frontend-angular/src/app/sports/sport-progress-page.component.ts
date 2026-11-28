@@ -5,6 +5,7 @@ import { RoutineProgressComponent } from './routine-progress.component'
 import { calendarWeeks, challengeAmount, dayLevel, dayMonth, decimal, duration, integer } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { ChallengeDayDto, ChallengeReportDto, WeekReportDto } from './sports.models'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 type Metric = 'calories' | 'sessions' | 'distance' | 'duration'
 
@@ -21,12 +22,12 @@ const STATUS_LABELS: Record<string, string> = { reached: 'atteint', joker: 'joke
 @Component({
   selector: 'app-sport-progress-page',
   standalone: true,
-  imports: [RoutineProgressComponent],
+  imports: [SkeletonComponent, RoutineProgressComponent],
   template: `
     <div class="lo-page">
       <header class="lo-page-head"><h1 class="lo-bar-title">Progression</h1></header>
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p class="lo-status" role="status">Chargement…</p> } @else {
+      @if (loading()) { <app-skeleton variant="page" /> } @else {
         <div class="lo-grid-2">
           <section class="lo-panel" aria-labelledby="progress-weeks">
             <h2 id="progress-weeks">8 dernières semaines</h2>

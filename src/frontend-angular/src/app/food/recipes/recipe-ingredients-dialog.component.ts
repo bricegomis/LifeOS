@@ -98,13 +98,13 @@ interface IngredientDraft { id: string; quantity: string; unit: IngredientUnit }
               </button>
             </div>
           } @empty {
-            <p class="lo-empty">{{ activeFoods().length ? 'Aucun aliment ne correspond.' : 'Créez d’abord des aliments dans la page Aliments.' }}</p>
+            <p class="lo-empty">{{ activeFoods().length ? 'Aucun aliment ne correspond.' : 'Crée d’abord des aliments dans la page Aliments.' }}</p>
           }
         </div>
         <form class="add-row" (ngSubmit)="addIngredient()">
           <div class="lo-field-group picked">
             <span class="lo-field-label">Aliment choisi</span>
-            <strong>{{ picked.foodItemId ? (food(picked.foodItemId)?.name ?? '') : 'Choisissez un aliment ci-dessus' }}</strong>
+            <strong>{{ picked.foodItemId ? (food(picked.foodItemId)?.name ?? '') : 'Choisis un aliment ci-dessus' }}</strong>
           </div>
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="quantity">
             <mat-label>Quantité</mat-label>
@@ -194,7 +194,7 @@ export class RecipeIngredientsDialogComponent {
   async addIngredient(): Promise<void> {
     const recipe = this.recipe()
     const request = buildIngredientRequest(this.picked.quantity, this.picked.unit)
-    if (!this.picked.foodItemId) { this.error.set('Choisissez un aliment.'); return }
+    if (!this.picked.foodItemId) { this.error.set('Choisis un aliment.'); return }
     if (!request.ok) { this.error.set(request.error); return }
     await this.action(async () => {
       const updated = await firstValueFrom(this.api.addIngredient(recipe.id, { foodItemId: this.picked.foodItemId, ...request.value }))

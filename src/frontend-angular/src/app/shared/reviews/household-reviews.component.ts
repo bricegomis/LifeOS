@@ -49,9 +49,9 @@ type ReviewTarget = 'food' | 'recipe'
           }
         </div>
       } @else if (!loading()) {
-        <p class="lo-muted">Aucun avis pour le moment. Les avis restent visibles dans votre foyer.</p>
+        <p class="lo-muted">Aucun avis pour le moment. Les avis restent visibles dans ton foyer.</p>
       }
-      @if (!profiles().length) { <p class="lo-muted">Ajoutez d’abord un profil dans Paramètres pour saisir un avis.</p> }
+      @if (!profiles().length) { <p class="lo-muted">Ajoute d’abord un profil dans Paramètres pour saisir un avis.</p> }
     </section>
   `,
   styles: [`
@@ -165,7 +165,7 @@ export class HouseholdReviewsComponent implements OnChanges {
     const text = this.comment.trim()
     if (!id || (this.score === null && !text)
       || (this.score !== null && (!Number.isInteger(this.score) || this.score < 0 || this.score > 10))) {
-      this.error.set('Choisissez un profil et renseignez une note de 0 à 10 ou un commentaire.')
+      this.error.set('Choisis un profil et renseigne une note de 0 à 10 ou un commentaire.')
       return
     }
     const body: SaveReviewRequest = {

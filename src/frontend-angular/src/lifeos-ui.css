@@ -33,6 +33,12 @@ h1, h2, h3 { line-height: 1.2; }
   }
 }
 @media (min-width: 761px) { .lo-phone-only { display: none !important; } }
+/* The phone's top bar holds the back arrow of a detail page: the page's own back link is for the computer. */
+@media (max-width: 760px) {
+  .lo-back, .lo-back-link { display: none !important; }
+  /* Without its back link, a detail page's header keeps its actions on the right. */
+  :has(> .lo-back-link) { justify-content: flex-end; }
+}
 
 .lo-page { display: flex; max-width: 1080px; flex-direction: column; gap: 16px; }
 .lo-page.is-wide { max-width: 1240px; }

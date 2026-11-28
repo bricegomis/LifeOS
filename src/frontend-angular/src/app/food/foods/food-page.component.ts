@@ -22,11 +22,12 @@ import { FoodImageComponent } from '../shared/food-image.component'
 import { FODMAP_LABELS, NOVA_LABELS } from '../shared/format'
 import { buildFoodRequest, emptyFoodForm, foodFormFrom, foodPriceSummary, type FoodFormValues, NUTRITION_FIELDS } from './food-form'
 import { ConfirmService } from '@/app/shared/ui/confirm'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 @Component({
   selector: 'app-food-page',
   standalone: true,
-  imports: [
+  imports: [SkeletonComponent, 
     FoodImageComponent, FormsModule, HouseholdReviewsComponent, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule,
     MatSelectModule, RouterLink,
   ],

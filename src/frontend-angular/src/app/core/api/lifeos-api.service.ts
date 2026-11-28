@@ -45,7 +45,7 @@ export class LifeosApiService {
 
   private url(path: string): Observable<string> {
     if (!apiBaseUrl) {
-      return throwError(() => new Error('Configurez LIFEOS_API_URL pour connecter l’application à LifeOS API.'))
+      return throwError(() => new Error('Configure LIFEOS_API_URL pour connecter l’application à LifeOS API.'))
     }
     return of(`${apiBaseUrl}/api${path.startsWith('/') ? path : `/${path}`}`)
   }
@@ -70,7 +70,7 @@ export function apiErrorMessage(error: unknown): string {
     }
 
     if (error.status) return `LifeOS API a répondu avec le statut HTTP ${error.status}.`
-    return 'LifeOS API est inaccessible. Vérifiez le réseau et la configuration CORS.'
+    return 'LifeOS API est inaccessible. Vérifie le réseau et la configuration CORS.'
   }
 
   if (error instanceof Error) {

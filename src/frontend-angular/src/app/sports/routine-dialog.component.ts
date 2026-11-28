@@ -95,7 +95,7 @@ export interface RoutineDialogResult { routineId: string, message: string, delet
               <button mat-flat-button type="button" class="tonal" (click)="addLine()"><mat-icon svgIcon="add" />Ajouter</button>
             </div>
           } @else if (!exercises.length) {
-            <p class="lo-help">Créez d’abord un exercice, sur la page Exercices.</p>
+            <p class="lo-help">Crée d’abord un exercice, sur la page Exercices.</p>
           }
           <p class="lo-help">Charge vide ou 0 : au poids du corps.@if (routine) { Les changements valent à partir d’aujourd’hui ; les jours passés restent jugés avec la routine d’alors.}</p>
         </div>

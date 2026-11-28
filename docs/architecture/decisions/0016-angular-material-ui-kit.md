@@ -4,6 +4,8 @@ Statut : accepté, 2026-11-16 ; maquette Sport en Material 3 validée le même j
 règle « contrôles HTML natifs, aucune bibliothèque d'interface ». Appliqué à toute
 l'application le 2026-11-22 : Sport ([ADR 0015](0015-sport-pages-and-routine-sessions.md)),
 Alimentation, avis du foyer, Paramètres et connexion. C'est la norme de tout nouvel écran.
+Complété le 2026-11-28 (revue UX, plan 1) : menu, barre du haut du téléphone, coche immédiate,
+chargement et ton.
 
 ## Contexte
 
@@ -68,12 +70,14 @@ Elles valent pour tous les modules ; les composants LifeOS partagés les appliqu
 
 | Élément | Convention |
 | --- | --- |
-| Navigation | Menu latéral (`mat-sidenav`) avec un groupe par domaine qui s'ouvre (Alimentation, Sport…), Paramètres en bas. Sur ordinateur il reste affiché ; sur téléphone il s'ouvre depuis la barre du haut (ADR 0015). |
-| Barre du haut | Fixe, sur ordinateur et téléphone : bouton menu (replie le menu sur ordinateur, l'ouvre sur téléphone), « LifeOS » sur ordinateur, titre de la page sur téléphone. Seul le contenu sous la barre défile. |
+| Navigation | Menu latéral (`mat-sidenav`) avec un groupe par domaine qui s'ouvre (Alimentation, Sport…), Paramètres en bas. Seul le groupe de la page courante est ouvert à l'arrivée sur une page ; un groupe ouvert à la main le reste jusqu'au changement de page. Sur ordinateur il reste affiché ; sur téléphone il s'ouvre depuis la barre du haut (ADR 0015). |
+| Barre du haut | Fixe, sur ordinateur et téléphone : bouton menu (replie le menu sur ordinateur, l'ouvre sur téléphone), « LifeOS » sur ordinateur. Sur téléphone, 56 px et le titre de la page seul (« Routines », « Sport » pour l'accueil du module) ; sur une page détail (un todo, un livre…), une flèche de retour remplace le bouton menu et le lien de retour de la page n'est affiché que sur ordinateur (`lo-back`, `lo-back-link`). Seul le contenu sous la barre défile. |
 | Page de liste | Champ de filtre en haut, puis une liste ou des cartes. **Ajouter** : bouton flottant « + » en bas à droite sur téléphone, bouton principal dans la barre de la page sur ordinateur. |
 | Élément d'une liste | Photo ou vignette à gauche, titre et résumé au centre, menu « ⋯ » ou action principale à droite. Un appui sur l'élément l'ouvre. Sans photo, une icône en tient lieu. |
 | Création et modification | Fenêtre de dialogue sur ordinateur ; **plein écran sur téléphone**. « Enregistrer » en haut à droite (téléphone) ou en bas à droite (ordinateur) ; l'action dangereuse (archiver, arrêter, supprimer) en bas à gauche, avec confirmation. Fermer un brouillon modifié demande d'abord. |
-| Retour d'une action | Bandeau bref en bas (`mat-snack-bar`) : « Routine enregistrée ». |
+| Retour d'une action | Bandeau bref en bas (`mat-snack-bar`) : « Routine enregistrée ». Une coche s'affiche tout de suite, avant la réponse du serveur ; seul l'élément touché attend, et une erreur annule la coche. |
+| Chargement | Emplacements gris à la taille du contenu attendu (`app-skeleton`, en liste ou en page), jamais un « Chargement… » seul. |
+| Ton | Tutoiement dans toute l'interface (« Ajoute », « Ta cible »), décidé le 2026-11-28. |
 | Choix | Pastilles au dessin des chips Material 3 (`lo-chip`, `lo-filter-chip` pour un filtre) pour plusieurs choix, bouton segmenté (`mat-button-toggle`) pour deux à quatre options exclusives, liste déroulante (`mat-select`) au-delà. |
 | Saisie de nombres courts | Compteur − / + (composant LifeOS, sur les boutons Material). |
 
@@ -93,7 +97,7 @@ icônes modifier et supprimer, vignette d'image chargée par l'API.
   recherche, filtre des archivés, bouton d'ajout et actions secondaires), cadre de fenêtre
   (`app-editor-frame`, ouvert par `openEditor`, plein écran sur téléphone ; sans
   `formId`, une fenêtre dont chaque ligne s'enregistre seule n'a que « Fermer »),
-  compteur − / +, registre d'icônes, petite fenêtre de confirmation (`ConfirmService`,
+  compteur − / +, emplacements de chargement (`app-skeleton`), registre d'icônes, petite fenêtre de confirmation (`ConfirmService`,
   `shared/ui/confirm.ts`) pour toute question avant une action hors d'une fenêtre de
   modification ; les boîtes natives du navigateur (`confirm`, `alert`) ne sont pas utilisées.
 - Toutes les fenêtres passent par `MatDialog` ; la garde de brouillon modifié

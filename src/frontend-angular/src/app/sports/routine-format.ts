@@ -179,10 +179,10 @@ export function moveLine(lines: RoutineLineDraft[], index: number, direction: 1 
 /** The request to send, or the French message of the first problem. */
 export function routineRequest(draft: RoutineDraft, exercises: ExerciseDto[]): RoutineRequest | string {
   const name = draft.name.trim()
-  if (!name) return 'Donnez un nom à la routine.'
+  if (!name) return 'Donne un nom à la routine.'
   const days = draft.days.flatMap((on, index) => on ? [index + 1] : [])
-  if (!days.length) return 'Choisissez au moins un jour.'
-  if (!draft.lines.length) return 'Ajoutez au moins un exercice.'
+  if (!days.length) return 'Choisis au moins un jour.'
+  if (!draft.lines.length) return 'Ajoute au moins un exercice.'
   const lines: RoutineRequest['lines'] = []
   for (const line of draft.lines) {
     const exercise = exercises.find(item => item.id === line.exerciseId)
@@ -219,11 +219,11 @@ export function logValueLabel(exercise: ExerciseDto): string {
 /** An exercise done alone: 1 to 20 sets, a value of 1 to 10 000, an optional load, never in the future. */
 export function exerciseLogRequest(draft: ExerciseLogDraft, today: string): ExerciseLogRequest | string {
   const sets = Number(draft.setsDone), value = Number(draft.value)
-  if (!draft.date || draft.date > today) return 'Choisissez un jour, au plus tard aujourd’hui.'
+  if (!draft.date || draft.date > today) return 'Choisis un jour, au plus tard aujourd’hui.'
   if (!Number.isInteger(sets) || sets < 1 || sets > 20) return 'Séries : 1 à 20.'
   if (draft.value === null || draft.value === '' || !Number.isInteger(value) || value < 1 || value > 10000) return 'Valeur par série : 1 à 10 000.'
   const load = optionalLoad(draft.loadKg)
-  if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.'
+  if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laisse vide au poids du corps.'
   // 0 says bodyweight explicitly: null would take the exercise's usual load.
   return { date: draft.date, setsDone: sets, value, loadKg: load ?? 0 }
 }
@@ -236,8 +236,8 @@ export function completionText(measure: ExerciseMeasure, completion: ExerciseCom
 export function emptyExerciseDraft(): ExerciseRequest { return { name: '', instructions: '', measure: 'hold', defaultLoadKg: null, perSide: false } }
 export function exerciseRequest(draft: ExerciseRequest): ExerciseRequest | string {
   const name = draft.name.trim()
-  if (!name) return 'Donnez un nom à l’exercice.'
+  if (!name) return 'Donne un nom à l’exercice.'
   const load = optionalLoad(draft.defaultLoadKg)
-  if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laissez vide au poids du corps.'
+  if (load === undefined) return 'Charge : 0 à 500 kg, par pas de 0,5 ; laisse vide au poids du corps.'
   return { name, instructions: draft.instructions?.trim() || null, measure: draft.measure, defaultLoadKg: load, perSide: draft.perSide }
 }

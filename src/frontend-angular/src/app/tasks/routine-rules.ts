@@ -73,7 +73,7 @@ export function routineRequest(draft: RoutineDraft): TaskRoutineRequest | string
   if (!title) return 'Le titre est obligatoire.'
   const duration = whole(draft.durationMinutes, 1, 1440)
   if (Number.isNaN(duration)) return 'Durée estimée : un nombre entier de minutes, de 1 à 1440.'
-  if (!draft.startOn) return 'Choisissez la date de départ.'
+  if (!draft.startOn) return 'Choisis la date de départ.'
   let recurrence: TaskRoutineRequest['recurrence']
   if (draft.kind === 'delay') {
     const delay = whole(draft.delayDays, 1, 365)
@@ -82,7 +82,7 @@ export function routineRequest(draft: RoutineDraft): TaskRoutineRequest | string
   } else {
     const every = whole(draft.every, 1, 365)
     if (every === null || Number.isNaN(every)) return 'Tous les … : de 1 à 365.'
-    if (draft.unit === 'week' && !draft.days.length) return 'Choisissez au moins un jour de la semaine.'
+    if (draft.unit === 'week' && !draft.days.length) return 'Choisis au moins un jour de la semaine.'
     const monthDay = whole(draft.monthDay, 1, 31)
     if (draft.unit === 'month' && (monthDay === null || Number.isNaN(monthDay))) return 'Jour du mois : de 1 à 31.'
     recurrence = {

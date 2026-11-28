@@ -36,7 +36,7 @@ export function buildRecipeRequest(values: RecipeFormValues): FormResult<RecipeR
   const durationMinutes = Number(values.durationMinutes)
   if (!name || name.length > MAX_RECIPE_NAME_LENGTH || !Number.isInteger(servings) || servings < 1
     || !Number.isInteger(durationMinutes) || durationMinutes < 0) {
-    return { ok: false, error: 'Vérifiez le nom (200 caractères maximum), les portions (au moins 1) et la durée (0 minute ou plus).' }
+    return { ok: false, error: 'Vérifie le nom (200 caractères maximum), les portions (au moins 1) et la durée (0 minute ou plus).' }
   }
   const tags = parseTags(values.tagsText)
   if (tags.length > MAX_TAGS || tags.some(tag => tag.length > MAX_TAG_LENGTH || tag.includes('|'))) {
@@ -50,7 +50,7 @@ export function buildRecipeRequest(values: RecipeFormValues): FormResult<RecipeR
 export function buildIngredientRequest(quantity: number | string, unit: string): FormResult<RecipeIngredientRequest> {
   const value = Number(String(quantity).trim().replace(',', '.'))
   if (!Number.isFinite(value) || value <= 0 || !INGREDIENT_UNITS.includes(unit as IngredientUnit)) {
-    return { ok: false, error: 'Indiquez une quantité supérieure à zéro, en g, ml ou pièce.' }
+    return { ok: false, error: 'Indique une quantité supérieure à zéro, en g, ml ou pièce.' }
   }
   return { ok: true, value: { quantity: value, unit: unit as IngredientUnit } }
 }

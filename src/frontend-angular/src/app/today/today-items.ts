@@ -221,6 +221,15 @@ export function openSections(items: TodayItem[]): TodaySection[] {
   })
 }
 
+/**
+ * Ticks shown before the server answers: an item ticked or unticked moves at once, then the module's
+ * fresh data replaces the mark (or the mark is dropped when the request fails).
+ */
+export function withMarks(items: TodayItem[], marks: ReadonlyMap<string, boolean>): TodayItem[] {
+  if (!marks.size) return items
+  return items.map(item => marks.has(item.key) ? { ...item, done: marks.get(item.key)! } : item)
+}
+
 export function doneItems(items: TodayItem[]): TodayItem[] { return items.filter(item => item.done) }
 
 export function daySummary(items: TodayItem[]): { open: number, done: number, percent: number, text: string } {

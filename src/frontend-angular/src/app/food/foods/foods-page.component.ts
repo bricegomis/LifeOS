@@ -18,12 +18,13 @@ import {
 import { FoodImageComponent } from '../shared/food-image.component'
 import { fodmapLabel, formatNumber } from '../shared/format'
 import { NewFoodDialogComponent } from './new-food-dialog.component'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** Food library (ADR 0010, ADR 0012): filters by state, classification, season and tag; each food opens its sheet. */
 @Component({
   selector: 'app-foods-page',
   standalone: true,
-  imports: [FoodImageComponent, FormsModule, ListPageComponent, MatFormFieldModule, MatIconModule, MatSelectModule, RouterLink],
+  imports: [SkeletonComponent, FoodImageComponent, FormsModule, ListPageComponent, MatFormFieldModule, MatIconModule, MatSelectModule, RouterLink],
   template: `
     <app-list-page heading="Aliments" addLabel="Ajouter un aliment" [(query)]="search" (add)="create()">
       <div class="filters">
@@ -79,9 +80,9 @@ import { NewFoodDialogComponent } from './new-food-dialog.component'
 
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (loading()) {
-        <p class="lo-status" role="status">Chargement des aliments…</p>
+        <app-skeleton />
       } @else if (!foods().length) {
-        <p class="lo-empty">Aucun aliment pour le moment. Ajoutez le premier avec « Ajouter un aliment ».</p>
+        <p class="lo-empty">Aucun aliment pour le moment. Ajoute le premier avec « Ajouter un aliment ».</p>
       } @else if (!visible().length) {
         <p class="lo-empty">Aucun aliment ne correspond aux filtres.</p>
       } @else {

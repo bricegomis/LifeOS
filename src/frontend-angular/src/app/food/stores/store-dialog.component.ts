@@ -50,7 +50,7 @@ export class StoreDialogComponent {
 
   save(): Promise<void> {
     const name = this.values.name.trim()
-    if (!name) { this.error.set('Indiquez le nom du magasin.'); return Promise.resolve() }
+    if (!name) { this.error.set('Indique le nom du magasin.'); return Promise.resolve() }
     const request = { ...this.values, name, address: this.values.address.trim() }
     return this.run(() => this.store ? this.api.updateStore(this.store.id, request) : this.api.createStore(request),
       this.store ? 'Magasin enregistré' : 'Magasin ajouté')

@@ -14,6 +14,7 @@ import {
 import { RoutineSignals } from './routine-signals'
 import { SportsApiService } from './sports-api.service'
 import type { RoutineReportDto } from './sports.models'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 type Phase = 'idle' | 'lead' | 'hold'
 /** What « Annuler » takes back: a left side done in this page, or a set ticked in the pass. */
@@ -29,11 +30,11 @@ type Done = { kind: 'left', key: string } | { kind: 'set', exerciseId: string, k
 @Component({
   selector: 'app-sport-routine-run-page',
   standalone: true,
-  imports: [ExerciseImageComponent, MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, ExerciseImageComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page run-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p class="lo-muted" role="status">Chargement…</p> }
+      @if (loading()) { <app-skeleton variant="page" /> }
       @else if (report(); as report) {
         <header class="head">
           <a mat-icon-button [routerLink]="['/sports/routine', report.routine.id]" aria-label="Quitter le mode guidé"><mat-icon svgIcon="close" /></a>
@@ -179,7 +180,7 @@ export class SportRoutineRunPageComponent implements OnInit, OnDestroy {
     const last = this.history().at(-1)
     return last?.kind === 'left' ? 'Annuler le côté gauche' : last?.kind === 'set' && last.perSide ? 'Annuler le côté droit' : 'Annuler la série précédente'
   })
-  readonly leadLabel = signal('Préparez-vous')
+  readonly leadLabel = signal('Prépare-toi')
   readonly phase = signal<Phase>('idle')
   readonly paused = signal(false)
   readonly remainingMs = signal(0)
@@ -223,10 +224,10 @@ export class SportRoutineRunPageComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * « Préparez-vous » for a few seconds, then the hold; the step is done when it reaches 0. After a left
+   * « Prépare-toi » for a few seconds, then the hold; the step is done when it reaches 0. After a left
    * side, the right side follows by itself, after the same few seconds to change side.
    */
-  startTimer(step: RunStep, lead = 'Préparez-vous'): void {
+  startTimer(step: RunStep, lead = 'Prépare-toi'): void {
     this.signals.unlock()
     this.paused.set(false)
     this.leadLabel.set(lead)
@@ -237,7 +238,7 @@ export class SportRoutineRunPageComponent implements OnInit, OnDestroy {
         this.phase.set('idle')
         void this.complete(step).then(() => {
           const right = this.step()
-          if (step.side === 'left' && right?.side === 'right' && setKey(right) === setKey(step)) this.startTimer(right, 'Changez de côté')
+          if (step.side === 'left' && right?.side === 'right' && setKey(right) === setKey(step)) this.startTimer(right, 'Change de côté')
         })
       })
     })

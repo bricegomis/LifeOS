@@ -13,18 +13,19 @@ import type { SupplementDayDto, SupplementDto } from './health.models'
 import { SupplementActionsService } from './supplement-actions.service'
 import { SupplementDialogComponent, type SupplementDialogData, type SupplementDialogResult } from './supplement-dialog.component'
 import { dayOfMonth, decimal, doseLabel, euro, momentLabel, periodLabel, statusLabel, unitLabel, unitPrice, weekday } from './supplement-rules'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** One supplement (ADR 0018): tick of the day, cost, streak, the last 14 days, package, period and purchase links. */
 @Component({
   selector: 'app-supplement-page',
   standalone: true,
-  imports: [HealthImageComponent, MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, HealthImageComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page detail-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (supplement(); as s) {
         <header class="head">
-          <a mat-icon-button routerLink="/health/supplements" aria-label="Retour aux compléments"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/health/supplements" aria-label="Retour aux compléments"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">Complément</h1>
           <button mat-flat-button type="button" class="lo-desktop-only" (click)="edit(s)"><mat-icon svgIcon="edit" />Modifier</button>
           <button mat-icon-button type="button" class="lo-phone-only" (click)="edit(s)" aria-label="Modifier le complément" title="Modifier le complément"><mat-icon svgIcon="edit" /></button>
@@ -88,7 +89,7 @@ import { dayOfMonth, decimal, doseLabel, euro, momentLabel, periodLabel, statusL
           }
         </section>
       } @else if (!error()) {
-        <p class="lo-muted" role="status">Chargement…</p>
+        <app-skeleton variant="page" />
       }
     </div>
   `,

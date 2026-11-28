@@ -12,12 +12,13 @@ import { completionText, daysLabel, exerciseCharts, kilos, measureUnit, routineD
 import { calendarWeeks, dayMonth } from './sport-format'
 import { SportsApiService } from './sports-api.service'
 import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDayDto, RoutineReportDto } from './sports.models'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** Follow-up of routines (calendar with passes, streak, record) and of each exercise (value, load), ADR 0014, ADR 0015. */
 @Component({
   selector: 'app-routine-progress',
   standalone: true,
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatSelectModule],
+  imports: [SkeletonComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatSelectModule],
   template: `
     @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
     @if (loaded() && (routines().length || exercises().length)) {
@@ -113,7 +114,7 @@ import type { ExerciseCompletionDto, ExerciseDto, ExerciseProgressDto, RoutineDa
                     <p class="lo-muted lo-small">La cible se règle à la main dans la routine.</p>
                   }
                 }
-              } @else if (!error()) { <p class="lo-status" role="status">Chargement…</p> }
+              } @else if (!error()) { <app-skeleton [rows]="2" /> }
             }
           }
         </section>

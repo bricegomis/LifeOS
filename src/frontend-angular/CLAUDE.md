@@ -5,9 +5,9 @@
 - Structure: `src/app/core` (api client, auth, native/Capacitor bridge), `shared`
   (dialog, household reviews, build version, picture reduction before upload, and
   `shared/ui`: Material building blocks of ADR 0016 — icon registry, list page,
-  editor window frame and `openEditor`, breakpoints), `shell` (Material side menu with one
-  foldable group per domain; on the phone a panel opened from the top bar, no tab
-  bar), `login`, and one folder per module: `food` (recipes, foods, products and prices,
+  editor window frame and `openEditor`, breakpoints, loading placeholder `app-skeleton`), `shell` (Material side menu with one
+  foldable group per domain, only the current page's group open; on the phone a panel opened from the top bar, which shows
+  the page title and a back arrow on detail pages, no tab bar), `login`, and one folder per module: `food` (recipes, foods, products and prices,
   stores, tickets), `sports` (today, history, progress, one page per element —
   routines, exercises, challenges, goals, templates — with their windows, and the
   routine page `sports/routine/:id` with its passes and its guided run `sports/routine/:id/run`, the chrono of an exercise done alone `sports/exercise/:id/run`; rules in `sports/routine-format.ts` and `sports/routine-run.ts`),
@@ -50,6 +50,8 @@
     sections of a detail page, `lo-table` for grids, `lo-stat`, `lo-tag` (`is-ok`, `is-warn`,
     `is-off`, `is-done`), `lo-chip` / `lo-filter-chip`, `lo-notice`, `lo-error`, `lo-status`,
     `lo-desktop-only` / `lo-phone-only`, `lo-bar-title` on a page `h1` the phone top bar already shows. Library pages use `app-list-page`; on the phone, adding is always the floating `lo-fab`.
+  - Loading: `app-skeleton` (list rows or `variant="page"`), never a bare « Chargement… ». A tick shows at once
+    (optimistic), only the touched item waits. UI text uses « tu » (ADR 0016).
   - Colours only from theme variables (`var(--mat-sys-*)`): no hex value, no `--lifeos-*`
     token (they are gone). The theme follows the system light/dark setting (each variable is
     a `light-dark()` value), so a screen must read well in both schemes.

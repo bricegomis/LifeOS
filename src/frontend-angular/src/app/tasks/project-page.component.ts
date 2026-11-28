@@ -19,6 +19,7 @@ import { TasksApiService } from './tasks-api.service'
 import type { TaskProjectDetailDto, TaskProjectDto, TodoDto } from './tasks.models'
 import { TodoActionsService } from './todo-actions.service'
 import { TodoCardComponent } from './todo-card.component'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /**
  * One project (ADR 0017): the path of its parents, progress (sub-projects included), its sub-projects,
@@ -28,7 +29,7 @@ import { TodoCardComponent } from './todo-card.component'
 @Component({
   selector: 'app-project-page',
   standalone: true,
-  imports: [FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, ProjectCardComponent, RouterLink, TaskImageComponent, TodoCardComponent],
+  imports: [SkeletonComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, ProjectCardComponent, RouterLink, TaskImageComponent, TodoCardComponent],
   template: `
     <div class="lo-page project-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
@@ -36,9 +37,9 @@ import { TodoCardComponent } from './todo-card.component'
         @let p = d.project;
         <header class="head">
           @if (parent(); as up) {
-            <a mat-icon-button [routerLink]="['/tasks/project', up.id]" [attr.aria-label]="'Retour au projet « ' + up.title + ' »'"><mat-icon svgIcon="arrow_back" /></a>
+            <a mat-icon-button class="lo-back-link" [routerLink]="['/tasks/project', up.id]" [attr.aria-label]="'Retour au projet « ' + up.title + ' »'"><mat-icon svgIcon="arrow_back" /></a>
           } @else {
-            <a mat-icon-button routerLink="/tasks/projects" aria-label="Retour aux projets"><mat-icon svgIcon="arrow_back" /></a>
+            <a mat-icon-button class="lo-back-link" routerLink="/tasks/projects" aria-label="Retour aux projets"><mat-icon svgIcon="arrow_back" /></a>
           }
           <h1 class="lo-bar-title head-title">Projet</h1>
           <button mat-flat-button type="button" class="lo-desktop-only" (click)="edit(p)"><mat-icon svgIcon="edit" />Modifier</button>
@@ -93,7 +94,7 @@ import { TodoCardComponent } from './todo-card.component'
                 @for (sub of d.subProjects; track sub.id) { <app-project-card [project]="sub" [today]="today()" /> }
               </div>
             } @else {
-              <p class="lo-muted">Aucun sous-projet. Découpez par exemple « Chalet » en « Plafond » et « Électricité ».</p>
+              <p class="lo-muted">Aucun sous-projet. Découpe par exemple « Chalet » en « Plafond » et « Électricité ».</p>
             }
           </section>
         }
@@ -136,7 +137,7 @@ import { TodoCardComponent } from './todo-card.component'
           </section>
         }
       } @else if (!error()) {
-        <p class="lo-muted" role="status">Chargement…</p>
+        <app-skeleton variant="page" />
       }
     </div>
   `,

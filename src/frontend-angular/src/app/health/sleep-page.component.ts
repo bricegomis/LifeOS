@@ -5,12 +5,13 @@ import { LineChartComponent } from '@/app/shared/ui/line-chart.component'
 import { HealthApiService } from './health-api.service'
 import type { WellnessDto } from './health.models'
 import { average, hoursMinutes, hrvBand, periodStart, series, sleepColumns, type WellnessPeriod } from './wellness-rules'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** Sleep and recovery imported from Garmin (ADR 0019): sleep phases, HRV, resting heart rate, Body Battery and stress. */
 @Component({
   selector: 'app-sleep-page',
   standalone: true,
-  imports: [LineChartComponent],
+  imports: [SkeletonComponent, LineChartComponent],
   template: `
     <div class="lo-page">
       <header class="lo-page-head"><h1 class="lo-bar-title">Sommeil et récupération</h1></header>
@@ -21,7 +22,7 @@ import { average, hoursMinutes, hrvBand, periodStart, series, sleepColumns, type
             (click)="period.set(option.id)">{{ option.label }}</button>
         }
       </div>
-      @if (loading()) { <p class="lo-status" role="status">Chargement…</p> }
+      @if (loading()) { <app-skeleton variant="page" /> }
       @else if (!days().length) { <p class="lo-empty">Pas encore de données : elles arrivent avec la synchro Garmin (Sport › Garmin).</p> }
       @else {
         <div class="lo-stats">

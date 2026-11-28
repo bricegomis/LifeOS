@@ -28,7 +28,7 @@ import { dateLabel } from './marker-rules'
     <div class="lo-page">
       <header class="lo-page-head" [class.is-phone]="handset()">
         <div class="lo-page-title"><h1 class="lo-bar-title">Documents</h1>
-          <p class="lo-intro">Ordonnances, comptes rendus, résultats et bilans. Visibles par vous seul, fichiers chiffrés.</p></div>
+          <p class="lo-intro">Ordonnances, comptes rendus, résultats et bilans. Visibles par toi seul, fichiers chiffrés.</p></div>
         @if (!handset()) { <div class="lo-actions"><button mat-flat-button type="button" (click)="add()"><mat-icon svgIcon="add" />Nouveau document</button></div> }
       </header>
       <div class="lo-filters">
@@ -54,7 +54,7 @@ import { dateLabel } from './marker-rules'
           }
         </div>
       } @else if (loaded()) {
-        <p class="lo-empty">{{ q || type() ? 'Aucun document ne correspond.' : 'Pas encore de document. Ajoutez une ordonnance, un compte rendu ou un résultat.' }}</p>
+        <p class="lo-empty">{{ q || type() ? 'Aucun document ne correspond.' : 'Pas encore de document. Ajoute une ordonnance, un compte rendu ou un résultat.' }}</p>
       }
       @if (handset()) {
         <button mat-fab type="button" class="lo-fab" (click)="add()" aria-label="Nouveau document" title="Nouveau document"><mat-icon svgIcon="add" /></button>

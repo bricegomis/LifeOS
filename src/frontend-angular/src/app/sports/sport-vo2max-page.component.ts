@@ -6,12 +6,13 @@ import { decimal } from './sport-format'
 import { monthlyVo2, vo2Summary } from './vo2max-rules'
 import { SportsApiService } from './sports-api.service'
 import type { Vo2MaxDto } from './sports.models'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /** VO2max estimated by the watch (ADR 0019): the last value of each month, per sport. */
 @Component({
   selector: 'app-sport-vo2max-page',
   standalone: true,
-  imports: [LineChartComponent],
+  imports: [SkeletonComponent, LineChartComponent],
   template: `
     <div class="lo-page is-narrow">
       <header class="lo-page-head"><h1 class="lo-bar-title">VO2max</h1></header>
@@ -22,7 +23,7 @@ import type { Vo2MaxDto } from './sports.models'
             (click)="sport.set(option.code)">{{ option.label }}</button>
         }
       </div>
-      @if (loading()) { <p class="lo-status" role="status">Chargement…</p> } @else {
+      @if (loading()) { <app-skeleton variant="page" /> } @else {
         @if (summary(); as s) {
           <div class="lo-stats">
             <div class="lo-stat"><div class="lo-stat-label">Dernière valeur</div><div class="lo-stat-value">{{ decimal(s.last) }}</div><div class="lo-help">{{ s.lastDay }}</div></div>

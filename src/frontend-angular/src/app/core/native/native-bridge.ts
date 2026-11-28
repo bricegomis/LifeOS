@@ -11,7 +11,7 @@ export function nativeBridgeStatus(): 'web' | 'available' | 'unavailable' {
 
 export function requireNativeBridge(): void {
   if (nativeBridgeStatus() === 'unavailable') {
-    throw new Error('Pont iOS LifeosNativeBridge non enregistré : synchronisez puis reconstruisez dans Xcode')
+    throw new Error('Pont iOS LifeosNativeBridge non enregistré : synchronise puis reconstruis dans Xcode')
   }
 }
 

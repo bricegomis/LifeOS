@@ -50,7 +50,7 @@ const ACCEPTED = 'image/jpeg,image/png,image/webp,application/pdf'
           <span class="lo-field-label">Fichiers</span>
           <div class="drop">
             <mat-icon svgIcon="upload_file" />
-            <span>Ajoutez des photos du document ou un PDF. Ils sont chiffrés sur le serveur.</span>
+            <span>Ajoute des photos du document ou un PDF. Ils sont chiffrés sur le serveur.</span>
             <div class="drop-actions">
               <label mat-stroked-button class="picker"><mat-icon svgIcon="photo_camera" />Prendre une photo
                 <input class="sr-only" type="file" accept="image/*" capture="environment" (change)="pick($event)" /></label>

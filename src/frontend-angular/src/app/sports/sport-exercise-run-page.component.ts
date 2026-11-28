@@ -17,6 +17,7 @@ import {
 import { RoutineSignals } from './routine-signals'
 import { SportsApiService } from './sports-api.service'
 import type { ExerciseDto } from './sports.models'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 type Phase = 'idle' | 'lead' | 'hold'
 
@@ -32,11 +33,11 @@ function parisToday(): string { return new Intl.DateTimeFormat('fr-CA', { timeZo
 @Component({
   selector: 'app-sport-exercise-run-page',
   standalone: true,
-  imports: [ExerciseImageComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, RouterLink],
+  imports: [SkeletonComponent, ExerciseImageComponent, FormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, RouterLink],
   template: `
     <div class="lo-page run-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
-      @if (loading()) { <p class="lo-muted" role="status">Chargement…</p> }
+      @if (loading()) { <app-skeleton variant="page" /> }
       @else if (exercise(); as exercise) {
         <header class="head">
           <a mat-icon-button routerLink="/sports/exercises" aria-label="Quitter le chrono"><mat-icon svgIcon="close" /></a>
@@ -47,7 +48,7 @@ function parisToday(): string { return new Intl.DateTimeFormat('fr-CA', { timeZo
         </header>
 
         @if (exercise.measure !== 'hold') {
-          <p class="lo-muted">Cet exercice se compte en répétitions : notez-le depuis la liste des exercices.</p>
+          <p class="lo-muted">Cet exercice se compte en répétitions : note-le depuis la liste des exercices.</p>
         } @else if (!line()) {
           <section class="lo-section setup" aria-labelledby="setup-title">
             <app-exercise-image class="photo" [exerciseId]="exercise.id" [hasImage]="exercise.hasImage" [size]="photoSize" [alt]="'Photo : ' + exercise.name" />
@@ -165,7 +166,7 @@ export class SportExerciseRunPageComponent implements OnInit, OnDestroy {
   readonly paused = signal(false)
   readonly remainingMs = signal(0)
   readonly totalMs = signal(0)
-  readonly leadLabel = signal('Préparez-vous')
+  readonly leadLabel = signal('Prépare-toi')
   readonly photoSize = globalThis.matchMedia?.('(max-width: 760px)').matches ? 150 : 240
   sets: number | string | null = 1
   seconds: number | string | null = null
@@ -210,7 +211,7 @@ export class SportExerciseRunPageComponent implements OnInit, OnDestroy {
   clockPercent(): number { return this.phase() === 'idle' ? 0 : elapsedPercent(this.remainingMs(), this.totalMs()) }
 
   /** Lead, hold, then the next step; after a left side the right side follows by itself. */
-  startTimer(step: RunStep, lead = 'Préparez-vous'): void {
+  startTimer(step: RunStep, lead = 'Prépare-toi'): void {
     this.signals.unlock()
     this.paused.set(false)
     this.leadLabel.set(lead)
@@ -222,7 +223,7 @@ export class SportExerciseRunPageComponent implements OnInit, OnDestroy {
         this.index.update(index => index + 1)
         const next = this.step()
         if (!next) { void this.save(); return }
-        if (step.side === 'left' && next.side === 'right' && setKey(next) === setKey(step)) this.startTimer(next, 'Changez de côté')
+        if (step.side === 'left' && next.side === 'right' && setKey(next) === setKey(step)) this.startTimer(next, 'Change de côté')
       })
     })
   }

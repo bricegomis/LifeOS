@@ -52,7 +52,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
             }
           </div>
         } @else {
-          <p class="lo-muted">Aucun profil. Ajoutez les personnes du foyer pour saisir leurs avis.</p>
+          <p class="lo-muted">Aucun profil. Ajoute les personnes du foyer pour saisir leurs avis.</p>
         }
         <form class="profile-form" (ngSubmit)="saveProfile()" [attr.aria-label]="editingProfileId() ? 'Modifier le profil' : 'Ajouter un profil'">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -74,7 +74,7 @@ import { ConfirmService } from '@/app/shared/ui/confirm'
       <section class="lo-panel" aria-labelledby="assistants-title">
         <div class="lo-page-title">
           <h2 id="assistants-title">Assistants connectés</h2>
-          <p class="lo-muted">Claude peut remplir et lire LifeOS pendant une discussion, avec les droits de votre compte. Ajoutez cette adresse comme connecteur personnalisé dans claude.ai, ou avec <code>claude mcp add</code> dans Claude Code.</p>
+          <p class="lo-muted">Claude peut remplir et lire LifeOS pendant une discussion, avec les droits de ton compte. Ajoute cette adresse comme connecteur personnalisé dans claude.ai, ou avec <code>claude mcp add</code> dans Claude Code.</p>
         </div>
         <div class="mcp-url">
           <code>{{ mcpUrl || 'Adresse de l’API non configurée' }}</code>
@@ -240,7 +240,7 @@ export class SettingsPageComponent implements OnInit {
       this.copied.set(true)
       setTimeout(() => this.copied.set(false), 2000)
     } catch {
-      this.error.set('Copie impossible : sélectionnez l’adresse à la main.')
+      this.error.set('Copie impossible : sélectionne l’adresse à la main.')
     }
   }
 
@@ -252,7 +252,7 @@ export class SettingsPageComponent implements OnInit {
     try {
       await firstValueFrom(this.api.delete(`/account/connections/${encodeURIComponent(connection.id)}`))
       this.connections.update(items => items.filter(item => item.id !== connection.id))
-      this.snack.open('Accès retiré. L’assistant devra demander à nouveau votre autorisation.', undefined, { duration: 4000 })
+      this.snack.open('Accès retiré. L’assistant devra demander à nouveau ton autorisation.', undefined, { duration: 4000 })
     } catch (error) {
       this.error.set(apiErrorMessage(error))
     } finally {
@@ -276,7 +276,7 @@ export class SettingsPageComponent implements OnInit {
     const displayName = this.profileName.trim()
     const coefficient = Number(this.profileCoefficient)
     if (!displayName || !Number.isFinite(coefficient) || coefficient < 0.01 || coefficient > 100) {
-      this.error.set('Indiquez un nom et un coefficient entre 0,01 et 100.')
+      this.error.set('Indique un nom et un coefficient entre 0,01 et 100.')
       return
     }
     this.busy.set(true)

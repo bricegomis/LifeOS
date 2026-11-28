@@ -47,7 +47,7 @@ import type { ExerciseCompletionDto, ExerciseDto } from './sports.models'
             }
           </div>
         } @else {
-          <p class="lo-empty">{{ exercises().length ? 'Aucun résultat.' : 'Aucun exercice. Ajoutez par exemple « Chaise contre le mur ».' }}</p>
+          <p class="lo-empty">{{ exercises().length ? 'Aucun résultat.' : 'Aucun exercice. Ajoute par exemple « Chaise contre le mur ».' }}</p>
         }
       }
     </app-list-page>

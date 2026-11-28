@@ -13,6 +13,7 @@ import { documentTypeLabel, fileLabel } from './document-rules'
 import { HealthApiService } from './health-api.service'
 import type { AnalysisDto, HealthDocumentDto, HealthDocumentFileDto } from './health.models'
 import { dateLabel } from './marker-rules'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 /**
  * One health document (ADR 0018): its files (photos shown, PDF opened in a new tab, both decrypted by
@@ -21,13 +22,13 @@ import { dateLabel } from './marker-rules'
 @Component({
   selector: 'app-document-page',
   standalone: true,
-  imports: [MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page detail-page">
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }
       @if (doc(); as d) {
         <header class="head">
-          <a mat-icon-button routerLink="/health/documents" aria-label="Retour aux documents"><mat-icon svgIcon="arrow_back" /></a>
+          <a mat-icon-button class="lo-back-link" routerLink="/health/documents" aria-label="Retour aux documents"><mat-icon svgIcon="arrow_back" /></a>
           <h1 class="lo-bar-title head-title">{{ d.title }}</h1>
           <button mat-icon-button type="button" (click)="edit(d)" aria-label="Modifier le document" title="Modifier le document"><mat-icon svgIcon="edit" /></button>
         </header>
@@ -48,7 +49,7 @@ import { dateLabel } from './marker-rules'
                 }
               }
             </div>
-          } @else { <p class="lo-muted">Pas de fichier. Ajoutez une photo ou un PDF depuis « Modifier ».</p> }
+          } @else { <p class="lo-muted">Pas de fichier. Ajoute une photo ou un PDF depuis « Modifier ».</p> }
         </section>
 
         @if (d.type === 'resultat' || d.type === 'bilan' || analyses().length) {
@@ -60,11 +61,11 @@ import { dateLabel } from './marker-rules'
                 Analyse du {{ date(a.day) }} · {{ a.values.length }} valeur{{ a.values.length > 1 ? 's' : '' }}<mat-icon svgIcon="chevron_right" /></a>
             }
             @if (!analyses().length) {
-              <p class="lo-notice">Demandez à Claude : « lis le document « {{ d.title }} » et saisis les valeurs ». Il lit les fichiers et propose les marqueurs ; LifeOS ne lit rien lui-même.</p>
+              <p class="lo-notice">Demande à Claude : « lis le document « {{ d.title }} » et saisis les valeurs ». Il lit les fichiers et propose les marqueurs ; LifeOS ne lit rien lui-même.</p>
             }
           </section>
         }
-      } @else if (!error()) { <p class="lo-muted" role="status">Chargement…</p> }
+      } @else if (!error()) { <app-skeleton variant="page" /> }
     </div>
   `,
   styles: [`

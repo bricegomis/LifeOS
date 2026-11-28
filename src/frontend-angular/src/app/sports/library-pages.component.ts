@@ -36,7 +36,7 @@ import type { ChallengeReportDto, SportOption, SportTemplateDto, WeeklyGoalDto }
               </div>
             }
           </div>
-        } @else { <p class="lo-empty">{{ challenges().length ? 'Aucun résultat.' : 'Aucun défi. Ajoutez par exemple « 100 pompes par jour ».' }}</p> }
+        } @else { <p class="lo-empty">{{ challenges().length ? 'Aucun résultat.' : 'Aucun défi. Ajoute par exemple « 100 pompes par jour ».' }}</p> }
       }
     </app-list-page>
   `,
@@ -96,7 +96,7 @@ export class ChallengesPageComponent implements OnInit {
               </div>
             }
           </div>
-        } @else { <p class="lo-empty">{{ goals().length ? 'Aucun résultat.' : 'Aucun objectif. Ajoutez par exemple « 3 séances par semaine ».' }}</p> }
+        } @else { <p class="lo-empty">{{ goals().length ? 'Aucun résultat.' : 'Aucun objectif. Ajoute par exemple « 3 séances par semaine ».' }}</p> }
       }
     </app-list-page>
   `,
@@ -154,7 +154,7 @@ export class GoalsPageComponent implements OnInit {
               </div>
             }
           </div>
-        } @else { <p class="lo-empty">{{ templates().length ? 'Aucun résultat.' : 'Aucune séance type. Ajoutez par exemple « Footing 45 min ».' }}</p> }
+        } @else { <p class="lo-empty">{{ templates().length ? 'Aucun résultat.' : 'Aucune séance type. Ajoute par exemple « Footing 45 min ».' }}</p> }
       }
     </app-list-page>
   `,

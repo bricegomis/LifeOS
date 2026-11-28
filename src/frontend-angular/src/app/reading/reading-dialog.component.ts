@@ -33,7 +33,7 @@ const HEADINGS: Record<ReadingDialogMode, string> = {
       [dangerLabel]="mode === 'edit' ? 'Retirer cette lecture' : ''" dangerIcon="delete" (danger)="remove()">
       <form id="reading-form" class="lo-form" (ngSubmit)="save()">
         @if (mode === 'notwanted' || mode === 'stop') {
-          <p class="lo-help">{{ mode === 'stop' ? 'Le livre passe dans « Arrêté ». Vous pourrez le reprendre plus tard.'
+          <p class="lo-help">{{ mode === 'stop' ? 'Le livre passe dans « Arrêté ». Tu pourras le reprendre plus tard.'
             : 'Le livre passe dans « Pas envie ». Claude ne le proposera plus.' }}</p>
         }
         @if (mode === 'past') {

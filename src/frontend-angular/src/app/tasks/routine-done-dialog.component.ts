@@ -63,7 +63,7 @@ export class RoutineDoneDialogComponent {
 
   async save(): Promise<void> {
     if (this.busy()) return
-    if (!this.day) { this.error.set('Choisissez le jour.'); return }
+    if (!this.day) { this.error.set('Choisis le jour.'); return }
     this.busy.set(true); this.error.set('')
     try {
       const detail = await firstValueFrom(this.api.routineDone(this.data.routine.id, this.day, this.note.trim() || null))

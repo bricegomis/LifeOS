@@ -16,6 +16,7 @@ import { ReadingApiService } from './reading-api.service'
 import { ReadingDialogComponent, type ReadingDialogData, type ReadingDialogMode, type ReadingDialogResult } from './reading-dialog.component'
 import type { BookDto, BookQuoteDto, BookReadingDto } from './reading.models'
 import { formatInfo, localToday, readingDates, readingTitle, seriesLabel, stateDetail, STATES } from './reading-rules'
+import { SkeletonComponent } from '@/app/shared/ui/skeleton.component'
 
 interface Action { label: string, icon: string, main: boolean, run: () => void }
 
@@ -27,13 +28,13 @@ interface Action { label: string, icon: string, main: boolean, run: () => void }
 @Component({
   selector: 'app-book-page',
   standalone: true,
-  imports: [BookCoverComponent, MatButtonModule, MatIconModule, RouterLink],
+  imports: [SkeletonComponent, BookCoverComponent, MatButtonModule, MatIconModule, RouterLink],
   template: `
     <div class="lo-page book-page">
       @if (error()) { <p class="lo-empty" role="alert">{{ error() }}</p> }
       @if (book(); as b) {
         <header class="head">
-          <button mat-icon-button type="button" (click)="back()" aria-label="Retour"><mat-icon svgIcon="arrow_back" /></button>
+          <button mat-icon-button class="lo-back-link" type="button" (click)="back()" aria-label="Retour"><mat-icon svgIcon="arrow_back" /></button>
           <h1 class="lo-bar-title head-title">Livre</h1>
           <button mat-flat-button type="button" class="lo-desktop-only" (click)="edit(b)"><mat-icon svgIcon="edit" />Modifier</button>
           <button mat-icon-button type="button" class="lo-phone-only" (click)="edit(b)" aria-label="Modifier le livre" title="Modifier le livre">
@@ -122,7 +123,7 @@ interface Action { label: string, icon: string, main: boolean, run: () => void }
           </div>
         </div>
       } @else if (!error()) {
-        <p class="lo-muted" role="status">Chargement…</p>
+        <app-skeleton variant="page" />
       }
     </div>
   `,

@@ -28,7 +28,7 @@ import type { AppointmentDto, AppointmentListDto } from './health.models'
     <div class="lo-page">
       <header class="lo-page-head" [class.is-phone]="handset()">
         <div class="lo-page-title"><h1 class="lo-bar-title">Rendez-vous</h1>
-          <p class="lo-intro">Vos rendez-vous médicaux. Claude peut les remplir depuis vos e-mails ou votre agenda.</p></div>
+          <p class="lo-intro">Tes rendez-vous médicaux. Claude peut les remplir depuis tes e-mails ou ton agenda.</p></div>
         @if (!handset()) { <div class="lo-actions"><button mat-flat-button type="button" (click)="edit(null)"><mat-icon svgIcon="add" />Nouveau rendez-vous</button></div> }
       </header>
       @if (error()) { <p class="lo-error" role="alert">{{ error() }}</p> }

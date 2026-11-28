@@ -34,7 +34,7 @@ import { SeriesDialogComponent, type SeriesDialogData, type SeriesDialogResult }
             }
           </div>
         } @else {
-          <p class="lo-empty">{{ series().length ? 'Aucun résultat.' : 'Aucune série. Ajoutez par exemple « Dune » avec ses 6 tomes.' }}</p>
+          <p class="lo-empty">{{ series().length ? 'Aucun résultat.' : 'Aucune série. Ajoute par exemple « Dune » avec ses 6 tomes.' }}</p>
         }
       }
     </app-list-page>
