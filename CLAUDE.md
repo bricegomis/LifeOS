@@ -48,6 +48,10 @@ code, identifiers and code comments are English.
 - Home page (delivered 2026-11-26): ADR 0021 (« Aujourd'hui » lists what is left to tick today —
   late and due todos and household routines, sport routines to start, challenges with « + Série »,
   supplements by moment — through the modules' own endpoints; ticked items fold into « Fait aujourd'hui »).
+- Step 8 target (proposed, scoped 2026-11-28): ADR 0022 (reading: a book library with states
+  to read / reading / read / stopped / not interested, dated readings with a 0-10 rating and
+  review, series with missing tomes, quotes, menu domain « Loisirs »; no sessions, minutes or
+  pages in V1; the assistant adds, imports pasted lists and recommends).
 - Step 1 bis target: ADR 0011 (conversational assistant through an MCP endpoint in the
   API; Supabase removed, the API signs users in with Google and becomes the OAuth
   server; the assistant acts with the account's rights, writes libraries directly

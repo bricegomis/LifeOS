@@ -16,7 +16,7 @@ Vision : [00-vision.md](00-vision.md).
 | 5 | Santé | Dossier de santé privé, relié au semainier |
 | 6 | iPhone natif | Hors ligne, widgets, notifications |
 | 7 | Budget | Budget mensuel, alimenté par les relevés et les compléments (livré) |
-| 8 | Lecture | Livres lus, en cours et à lire, temps de lecture et objectifs |
+| 8 | Lecture | Livres lus, en cours, à lire ou écartés ; temps de lecture plus tard |
 | 9 | Films et séries | Ce qui est vu, à voir ou écarté, avec notes ; suggestions par l'assistant |
 
 ## Règles communes à toutes les étapes
@@ -368,21 +368,30 @@ en un écran.
 
 ## Étape 8 — Lecture
 
-**But.** Suivre ses lectures et tenir un rythme de lecture.
+**But.** Savoir ce qui est lu, à lire ou écarté, et laisser Claude conseiller la suite.
 
-**Contenu pressenti.**
+**Décisions prises.** Cadrage fait le 2026-11-28 :
+[ADR 0022](architecture/decisions/0022-reading-module.md).
 
-- Bibliothèque de livres : titre, auteur, couverture (trouvée par l'assistant),
-  pages, format (papier, liseuse, audio) ; à lire, en cours, lu ou abandonné.
-- Séances de lecture : pages ou minutes lues un jour ; avancement du livre calculé.
-- Objectifs de temps : par jour (30 min) ou par semaine (3 h), avec série et jokers
-  comme les défis du Sport ; objectif de livres par an.
-- Note sur 10, avis, notes et citations par livre.
-- Outils de l'assistant (ajouter un livre, noter une séance, retrouver une citation,
-  conseiller la prochaine lecture).
+- V1 simple : une bibliothèque de livres (titre, auteurs, couverture, format, genres, série et
+  tome, notes, citations), sans séances, minutes ni pages.
+- États À lire, En cours, Lu, Arrêté, Pas envie ; relire ajoute une lecture datée, avec sa note
+  sur 10 et son avis.
+- Une page par livre et par série (tomes lus, à lire, manquants) ; menu « Loisirs ».
+- Claude ajoute et range les livres, importe une liste collée et conseille quoi lire.
+- Objectif de temps par jour, séances et bilan : V2, à cadrer plus tard.
 
-**À cadrer.** Champs exacts, objectif par jour ou par semaine (ou les deux), lien
-futur avec le semainier (créneau de lecture).
+**Déroulé.**
+
+1. **Cadrage fonctionnel.** Fait.
+2. **Maquette cliquable** : bibliothèque, fiche livre, série (ordinateur et smartphone).
+3. **Livres, séries et lectures.**
+4. **Citations et couvertures.**
+5. **Outils de l'assistant** pour tout le module.
+6. **Contrat de lecture** pour le semainier.
+
+**Terminé quand.** La bibliothèque est remplie (avec l'aide de Claude) et tenue à jour, et
+Claude propose la prochaine lecture à partir des notes et des livres écartés.
 
 ## Étape 9 — Films et séries
 
