@@ -60,10 +60,15 @@ créer, tu valides dans la discussion. Il cherche lui-même les valeurs nutritio
 | Santé : symptômes | `get_symptom_journal` (journal et liste suivie), `create_symptom_type`, `log_symptom` (« j'ai mal au ventre, 6/10 »), `delete_symptom_entry`, `save_symptom_checkin` (bilan du jour, « rien à signaler ») |
 | Santé : analyses et mesures | `list_markers` (position, tendance, à refaire), `create_marker`, `update_marker`, `list_analyses`, `create_analysis` (valeurs lues d'un document, après confirmation), `update_analysis`, `delete_analysis`, `list_body_measures`, `create_body_measure_type` (cible facultative), `update_body_measure_type` (nom, unité, cible), `add_body_measure`, `delete_body_measure` |
 | Budget | `list_budget_lines`, `get_budget_line`, `create_budget_line` (par exemple depuis ton fichier Excel), `update_budget_line` (nouveau montant à partir d'un mois), `stop_budget_line`, `get_budget_month` (prévu, réel, écart, enveloppes, non classées), `get_budget_trend`, `list_budget_operations`, `classify_budget_operation` (avec étalement et règle facultatifs), `add_budget_operation`, `list_budget_rules`, `create_budget_rule`, `update_budget_rule`, `delete_budget_rule` |
+| Lecture | `search_books` (texte, état, format, genre, série ; lectures, notes et citations comprises), `get_book`, `list_book_genres`, `create_book` (déjà lu avec date, note et avis, couverture par URL), `update_book`, `start_book` (aussi relire ou reprendre), `finish_book` (note et avis), `stop_book`, `add_book_reading` (lecture passée), `update_book_reading`, `remove_book_reading`, `set_book_not_wanted` (et retrait), `add_book_quote`, `remove_book_quote`, `set_book_cover_from_url`, `remove_book_cover`, `list_book_series`, `get_book_series` (tomes manquants), `create_book_series`, `update_book_series` |
 | Santé : documents et rendez-vous | `list_health_documents`, `get_health_document_file` (Claude lit la photo ou le PDF), `create_health_document`, `update_health_document`, `list_appointments`, `create_appointment` (depuis un e-mail de confirmation ou l'agenda), `update_appointment` (rendez-vous déplacé, compte rendu), `delete_appointment` |
 
 Images par URL : `https` uniquement, adresse publique (jamais le réseau local), JPEG,
 PNG ou WebP de 10 Mo au plus, téléchargées en 20 secondes au plus.
+
+Lecture : par exemple « Voici ma liste Babelio, ajoute ces livres comme lus avec leur note » (en collant la liste ou une
+capture), ou « Qu'est-ce que je pourrais lire ensuite ? » : Claude lit la bibliothèque, les notes et les « pas envie »,
+puis propose et ajoute à « À lire » ce que tu retiens.
 
 Budget : Claude ne voit que le budget du compte connecté. Le relevé OFX s'importe dans
 l'application ; ensuite, par exemple : « Range mes opérations non classées d'octobre ; pour

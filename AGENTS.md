@@ -9,7 +9,7 @@
 - The API signs users in with Google and is its own OAuth server (ADR 0011); no Supabase.
 - Modules in place: Food (generic foods, recipes, products and prices, receipts kept as
   stored photos), Sport (sessions, goals, challenges, exercises, routines, Garmin import),
-  Tasks, Health (private to the account) and the synthesis module Budget (private to the
+  Tasks, Health (private to the account), Reading (books, readings, series) and the synthesis module Budget (private to the
   account). `src/garmin-sync` copies Garmin Connect through the import endpoints.
   The week planner was removed (ADR 0008) and will be rebuilt later.
 - Products are commercial price references subordinate to foods, not a competing library.
@@ -32,6 +32,7 @@
   ADR 0019 (Garmin import: sessions, VO2max, sleep and recovery),
   ADR 0020 (budget: planned lines, OFX operations, rules, private to the account),
   ADR 0021 (home page « Aujourd'hui »: what is left to tick today),
+  ADR 0022 (step 8 reading: book library, readings, quotes, series),
   ADR 0009 (target architecture and module boundary rules).
 - Prefer simple implementations; no unnecessary dependencies or speculative features.
 - Preserve household isolation and historical snapshots, IDs, aliases, sources and prices.

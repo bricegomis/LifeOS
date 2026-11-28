@@ -93,6 +93,15 @@ export const NAVIGATION_BLOCKS: NavigationBlock[] = [
       { path: '/budget/trend', label: 'Évolution' },
     ],
   },
+  {
+    id: 'leisure',
+    title: 'Loisirs',
+    icon: 'theater_comedy',
+    items: [
+      { path: '/reading', label: 'Lecture', exact: true },
+      { path: '/reading/series', label: 'Séries' },
+    ],
+  },
 ]
 
 /** The menu entry of a URL: the longest matching path, so `/sports/routine/42` belongs to Sport. */

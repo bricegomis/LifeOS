@@ -19,6 +19,9 @@
   `health/symptom-rules.ts`, `health/marker-rules.ts`, `health/document-rules.ts`),
   `budget` (private budget, ADR 0020: month, operations with OFX import and classification, planned lines, one page per line
   `budget/line/:id`, rules, evolution; rules in `budget/budget-rules.ts`),
+  `reading` (ADR 0022, menu « Loisirs »: library `/reading` with state tabs, search, format and genre chips, grid or list;
+  one page per book `reading/book/:id` and per series `reading/series/:id`, series list `reading/series`; covers through
+  `reading/book-cover.component.ts`; rules in `reading/reading-rules.ts`),
   `household` (settings: profiles, versions, account), and `today` (the day at a glance, `/today`, the home page, ADR 0021:
   what is left to tick today, then the night and energy; it reads and ticks through the Tasks, Sport and Health endpoints
   with the API client, without importing their modules; rules in `today/today-items.ts`). Garmin (ADR 0019):

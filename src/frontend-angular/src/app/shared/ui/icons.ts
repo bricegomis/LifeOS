@@ -106,6 +106,19 @@ import AirIcon from '@material-symbols/svg-400/rounded/air.svg'
 import PsychologyIcon from '@material-symbols/svg-400/rounded/psychology.svg'
 import SportsIcon from '@material-symbols/svg-400/rounded/sports.svg'
 import SelfImprovementIcon from '@material-symbols/svg-400/rounded/self_improvement.svg'
+import AutoStoriesIcon from '@material-symbols/svg-400/rounded/auto_stories.svg'
+import BookmarkIcon from '@material-symbols/svg-400/rounded/bookmark.svg'
+import BookmarkAddIcon from '@material-symbols/svg-400/rounded/bookmark_add.svg'
+import PauseCircleIcon from '@material-symbols/svg-400/rounded/pause_circle.svg'
+import DoNotDisturbOnIcon from '@material-symbols/svg-400/rounded/do_not_disturb_on.svg'
+import ReplayIcon from '@material-symbols/svg-400/rounded/replay.svg'
+import HeadphonesIcon from '@material-symbols/svg-400/rounded/headphones.svg'
+import TabletAndroidIcon from '@material-symbols/svg-400/rounded/tablet_android.svg'
+import GridViewIcon from '@material-symbols/svg-400/rounded/grid_view.svg'
+import ViewListIcon from '@material-symbols/svg-400/rounded/view_list.svg'
+import FormatQuoteIcon from '@material-symbols/svg-400/rounded/format_quote.svg'
+import TheaterComedyIcon from '@material-symbols/svg-400/rounded/theater_comedy.svg'
+import CollectionsBookmarkIcon from '@material-symbols/svg-400/rounded/collections_bookmark.svg'
 
 /**
  * Material Symbols used by the app (ADR 0016), bundled as SVG so only these icons ship and nothing is
@@ -217,6 +230,19 @@ export const ICONS: Record<string, string> = {
   help: HelpIcon,
   touch_app: TouchAppIcon,
   smart_toy: SmartToyIcon,
+  auto_stories: AutoStoriesIcon,
+  bookmark: BookmarkIcon,
+  bookmark_add: BookmarkAddIcon,
+  pause_circle: PauseCircleIcon,
+  do_not_disturb_on: DoNotDisturbOnIcon,
+  replay: ReplayIcon,
+  headphones: HeadphonesIcon,
+  tablet_android: TabletAndroidIcon,
+  grid_view: GridViewIcon,
+  view_list: ViewListIcon,
+  format_quote: FormatQuoteIcon,
+  theater_comedy: TheaterComedyIcon,
+  collections_bookmark: CollectionsBookmarkIcon,
 }
 
 export function provideLifeosIcons() {
